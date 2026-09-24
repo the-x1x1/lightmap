@@ -6,3 +6,4 @@ coverage
 pnpm-lock.yaml
 apps/web/public/cesium
 packages/database/migrations/*.sql
+THIRD_PARTY_NOTICES.md

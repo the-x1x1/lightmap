@@ -29,6 +29,12 @@
       "reason": "Code is MIT; bundled timezone-boundary data is ODbL (derived from OpenStreetMap). Attribution carried in THIRD_PARTY_NOTICES.md and the in-app footer. ODbL share-alike applies to the database, which we do not modify or redistribute.",
       "approvedBy": "owner (pending written confirmation)",
       "date": "2026-09-24"
+    },
+    "@img/sharp-*": {
+      "license": ["LGPL-3.0-or-later", "Apache-2.0 AND LGPL-3.0-or-later"],
+      "reason": "Optional dependency of Next.js (next/image optimisation), never imported by LightMap code. The prebuilt libvips binary is LGPL-3.0; it is used unmodified, dynamically loaded as a native module on the server only, and never shipped to browsers. LGPL obligations (notice, unmodified upstream library) are met via THIRD_PARTY_NOTICES.md. Weak copyleft does not extend to LightMap's own code.",
+      "approvedBy": "owner (pending written confirmation)",
+      "date": "2026-09-24"
     }
   },
   "ignore": []

@@ -30,8 +30,9 @@ try {
 } catch {
   /* first release */
 }
+// Double quotes: single quotes are not quoting characters in cmd.exe (Windows).
 const log = sh(
-  `git log ${lastTag ? `${lastTag}..HEAD` : ''} --pretty=format:'- %s (%h)' --no-merges`,
+  `git log ${lastTag ? `${lastTag}..HEAD` : ''} --pretty="format:- %s (%h)" --no-merges`,
 );
 const date = new Date().toISOString().slice(0, 10);
 const entry = `## v${version} — ${date}\n\n${log || '- Initial release'}\n\n`;
