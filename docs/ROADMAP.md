@@ -63,11 +63,11 @@ Outstanding before commercial beta (plan §43):
 - Open-Meteo commercial API subscription (or another approved provider);
 - commercial geocoder contract (Nominatim is development-only);
 - terrain/imagery licensing sign-off and complete attribution UI review;
-- error monitoring DSN; ~~cost telemetry~~ (`pnpm usage:report`, `COST_MODEL.md` §7) — a hosted dashboard when there is a host;
+- ~~error monitoring DSN~~ (`SENTRY_DSN`, dependency-free envelope reporter); ~~cost telemetry~~ (`pnpm usage:report`, `COST_MODEL.md` §7) — a hosted dashboard when there is a host;
 - ~~scheduled retention job~~ (`retention.yml`, needs the production `DATABASE_URL` secret); the
   sign-in-cancels-deletion path exists;
-- privacy policy and terms text; accessibility and mobile usability passes; backups verified;
-  incident runbooks.
+- privacy policy and terms text; mobile usability pass; backups verified on the host;
+  ~~incident runbooks~~ (`RUNBOOKS.md`).
 
 ## Phase 4 — Visual quality (started, 2+ releases)
 

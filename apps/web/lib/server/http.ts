@@ -21,7 +21,6 @@ export function json<T>(body: T, init?: ResponseInit): NextResponse {
 }
 
 export function errorResponse(error: unknown): NextResponse {
-  const { log } = getServices();
   if (error instanceof HttpError)
     return NextResponse.json(
       { error: { code: error.code, message: error.message, ...error.extra } },
@@ -32,7 +31,8 @@ export function errorResponse(error: unknown): NextResponse {
       { error: { code: 'not_found', message: 'Not found' } },
       { status: 404 },
     );
-  log.error('unhandled api error', { error });
+  // The reporter logs (and forwards to the DSN when configured); nothing else touches the error.
+  getServices().errors.capture(error, { where: 'api' });
   return NextResponse.json(
     {
       error: {

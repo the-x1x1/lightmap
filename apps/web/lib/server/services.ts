@@ -19,12 +19,17 @@ import { createDb, type DbHandle } from '@lightmap/database';
 import { createBillingProvider, type BillingProvider } from '@lightmap/billing/stripe';
 import {
   createLogger,
+  createSentryEnvelopeReporter,
   loggingErrorReporter,
   type ErrorReporter,
   type Logger,
 } from '@lightmap/observability';
+import pkg from '../../package.json' with { type: 'json' };
 import { GeoTzTimezoneProvider } from './timezone.ts';
 import { authMethods } from '@lightmap/auth/config';
+
+/** Release identifier: `lightmap@<web package version>` (bumped by `pnpm release`). */
+export const APP_VERSION: string = (pkg as { version?: string }).version ?? '0.0.0';
 
 export interface Services {
   env: Env;
@@ -61,10 +66,21 @@ export function getServices(): Services {
     log.warn(
       'DATABASE_URL unset: accounts, projects and billing are disabled; map exploration works',
     );
+  // Error monitoring: any Sentry-DSN-compatible ingest when SENTRY_DSN is set, logs otherwise.
+  const errors: ErrorReporter = env.SENTRY_DSN
+    ? createSentryEnvelopeReporter({
+        dsn: env.SENTRY_DSN,
+        release: `lightmap@${APP_VERSION}`,
+        environment: env.NODE_ENV,
+        tags: { service: 'web' },
+        log,
+      })
+    : loggingErrorReporter(log);
+  if (env.SENTRY_DSN) log.info('error reporting enabled (envelope transport)');
   services = {
     env,
     log,
-    errors: loggingErrorReporter(log),
+    errors,
     geo,
     weather,
     climatology,

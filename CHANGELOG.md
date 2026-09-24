@@ -4,6 +4,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Error monitoring**: `SENTRY_DSN` enables a dependency-free Sentry-envelope reporter (release,
+  environment, redacted context; tests); API 500s and webhook failures are reported; health
+  reports the real package version. `docs/RUNBOOKS.md` covers provider outage, Stripe webhook
+  failures, database loss/restore, bad release, abuse, data-subject requests, licence issues.
 - Light finder: the target ring can be dragged or nudged with the arrow keys.
 - `pnpm usage:report`: daily per-resource totals from `usage_counters` (aggregates only).
 - **Sensor formats** (Pro camera tools): pick your sensor and type your lens's focal length.

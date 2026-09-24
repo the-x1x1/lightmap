@@ -155,3 +155,4 @@ export const DAILY_BUDGET_LIMITS: Record<
   // One summary = up to ten archive requests upstream; cached 30 days per 0.5° cell.
   climatology: { anonymous: 0, free: 0, pro: 60 },
 };
+export * from './sentry-envelope.ts';
