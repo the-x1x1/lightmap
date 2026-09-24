@@ -9,9 +9,21 @@ const patterns: Array<[string, RegExp]> = [
   ['Google API key', /AIza[0-9A-Za-z_-]{35}/],
   ['Private key block', /-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----/],
   ['Cesium ion token', /eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.[A-Za-z0-9_-]{40,}/],
-  ['Postgres URL with password', /postgres(ql)?:\/\/[^:\s]+:[^@\s]{8,}@(?!localhost|127\.0\.0\.1|db\b|postgres\b)/],
+  [
+    'Postgres URL with password',
+    /postgres(ql)?:\/\/[^:\s]+:[^@\s]{8,}@(?!localhost|127\.0\.0\.1|db\b|postgres\b)/,
+  ],
 ];
-const files = execSync('git ls-files', { encoding: 'utf8' }).split('\n').filter((f) => f && !f.endsWith('.png') && !f.endsWith('.jpg') && !f.includes('pnpm-lock') && f !== 'scripts/scan-secrets.ts');
+const files = execSync('git ls-files', { encoding: 'utf8' })
+  .split('\n')
+  .filter(
+    (f) =>
+      f &&
+      !f.endsWith('.png') &&
+      !f.endsWith('.jpg') &&
+      !f.includes('pnpm-lock') &&
+      f !== 'scripts/scan-secrets.ts',
+  );
 const hits: string[] = [];
 for (const f of files) {
   let text: string;

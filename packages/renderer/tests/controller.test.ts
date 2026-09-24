@@ -1,12 +1,33 @@
 import { describe, expect, it } from 'vitest';
 import { localSelectionToUtc } from '@lightmap/astronomy';
-import { DEFAULT_RENDER_SETTINGS, buildSceneState, defaultCamera, type EnvironmentState, type SceneInputs, type SceneState } from '@lightmap/scene';
+import {
+  DEFAULT_RENDER_SETTINGS,
+  buildSceneState,
+  defaultCamera,
+  type EnvironmentState,
+  type SceneInputs,
+  type SceneState,
+} from '@lightmap/scene';
 import { OPEN_METEO_CAPABILITIES } from '@lightmap/weather';
 import { SceneController, cesiumFovDeg, sunPathForDay } from '../src/cesium/controller.ts';
 import type { SceneHost } from '../src/cesium/host.ts';
 
-const kailua = { point: { latitude: 21.397, longitude: -157.727 }, timeZone: 'Pacific/Honolulu', label: 'Kailua Beach', source: 'search' as const };
-const env: EnvironmentState = { terrainAvailable: true, terrainProviderId: 'reearth-mapterhorn-terrain', basemapProviderId: 'xyz-imagery', basemapDetail: 'street', buildingsAvailable: false, groundElevationM: 2, attributions: [], fixtureMode: false };
+const kailua = {
+  point: { latitude: 21.397, longitude: -157.727 },
+  timeZone: 'Pacific/Honolulu',
+  label: 'Kailua Beach',
+  source: 'search' as const,
+};
+const env: EnvironmentState = {
+  terrainAvailable: true,
+  terrainProviderId: 'reearth-mapterhorn-terrain',
+  basemapProviderId: 'xyz-imagery',
+  basemapDetail: 'street',
+  buildingsAvailable: false,
+  groundElevationM: 2,
+  attributions: [],
+  fixtureMode: false,
+};
 
 function scene(over: Partial<SceneInputs> = {}): SceneState {
   return buildSceneState({
@@ -27,12 +48,42 @@ function scene(over: Partial<SceneInputs> = {}): SceneState {
 
 function fakeHost() {
   const calls: Record<string, unknown[][]> = {};
-  const rec = (k: string) => (...a: unknown[]) => { (calls[k] ??= []).push(a); };
+  const rec =
+    (k: string) =>
+    (...a: unknown[]) => {
+      (calls[k] ??= []).push(a);
+    };
   const host: SceneHost = {
-    setTime: rec('setTime'), setLight: rec('setLight'), setShadows: rec('setShadows'), setAtmosphere: rec('setAtmosphere'), setGrade: rec('setGrade'), setCamera: rec('setCamera'), setOverlay: rec('setOverlay'), setQuality: rec('setQuality'),
-    setTerrain: async (...a) => { rec('setTerrain')(...a); }, setBasemap: async (...a) => { rec('setBasemap')(...a); }, setCelestialBodies: rec('setCelestialBodies'),
-    sunScreenPosition: () => [0.5, 0.6], sampleGroundHeight: async () => 42, requestRender: rec('requestRender'), stats: () => ({ fps: 60, terrainTilesLoaded: 0, terrainTilesLoading: 0, drawCalls: null, cesiumSunDirectionEcef: null }),
-    onPick: () => () => {}, onFrameSample: () => () => {}, resize: () => {}, captureThumbnail: async () => null, destroy: rec('destroy'),
+    setTime: rec('setTime'),
+    setLight: rec('setLight'),
+    setShadows: rec('setShadows'),
+    setAtmosphere: rec('setAtmosphere'),
+    setGrade: rec('setGrade'),
+    setCamera: rec('setCamera'),
+    setOverlay: rec('setOverlay'),
+    setQuality: rec('setQuality'),
+    setTerrain: async (...a) => {
+      rec('setTerrain')(...a);
+    },
+    setBasemap: async (...a) => {
+      rec('setBasemap')(...a);
+    },
+    setCelestialBodies: rec('setCelestialBodies'),
+    sunScreenPosition: () => [0.5, 0.6],
+    sampleGroundHeight: async () => 42,
+    requestRender: rec('requestRender'),
+    stats: () => ({
+      fps: 60,
+      terrainTilesLoaded: 0,
+      terrainTilesLoading: 0,
+      drawCalls: null,
+      cesiumSunDirectionEcef: null,
+    }),
+    onPick: () => () => {},
+    onFrameSample: () => () => {},
+    resize: () => {},
+    captureThumbnail: async () => null,
+    destroy: rec('destroy'),
   };
   return { host, calls };
 }
@@ -41,7 +92,14 @@ describe('SceneController', () => {
   it('applies light, grade, camera and overlay on every tick; expensive work is debounced', () => {
     const timers: Array<() => void> = [];
     const { host, calls } = fakeHost();
-    const c = new SceneController(host, { setTimeoutImpl: (fn) => { timers.push(fn); return timers.length; }, clearTimeoutImpl: () => {}, aspect: () => 16 / 9 });
+    const c = new SceneController(host, {
+      setTimeoutImpl: (fn) => {
+        timers.push(fn);
+        return timers.length;
+      },
+      clearTimeoutImpl: () => {},
+      aspect: () => 16 / 9,
+    });
     c.apply(scene());
     c.apply(scene({ utc: new Date(scene().utc.getTime() + 3_600_000) }));
     expect(calls['setLight']).toHaveLength(2);
@@ -58,13 +116,21 @@ describe('SceneController', () => {
 
   it('map mode → orbit camera with fly on pin move; viewpoint mode → eye camera with aspect-corrected fov', () => {
     const { host, calls } = fakeHost();
-    const c = new SceneController(host, { setTimeoutImpl: () => 0, clearTimeoutImpl: () => {}, aspect: () => 9 / 16 });
+    const c = new SceneController(host, {
+      setTimeoutImpl: () => 0,
+      clearTimeoutImpl: () => {},
+      aspect: () => 9 / 16,
+    });
     c.apply(scene());
     const first = calls['setCamera']![0]![0] as { kind: string; fly: boolean };
     expect(first).toMatchObject({ kind: 'orbit', fly: true });
     const vp = scene({ camera: { ...defaultCamera(kailua.point, 45), mode: 'viewpoint' } });
     c.apply(vp);
-    const cam = calls['setCamera']!.at(-1)![0] as { kind: string; headingDeg: number; fovDeg: number };
+    const cam = calls['setCamera']!.at(-1)![0] as {
+      kind: string;
+      headingDeg: number;
+      fovDeg: number;
+    };
     expect(cam.kind).toBe('viewpoint');
     expect(cam.headingDeg).toBe(45);
     expect(cam.fovDeg).toBeGreaterThan(vp.camera.fovDeg); // portrait: vertical fov is wider than horizontal
@@ -78,7 +144,12 @@ describe('SceneController', () => {
     const c = new SceneController(host, { setTimeoutImpl: () => 0, clearTimeoutImpl: () => {} });
     const s = scene();
     c.apply(s);
-    const o = calls['setOverlay']![0]![0] as { visible: boolean; sunPath: unknown[]; sun: { elevationDeg: number }; shadowAzimuthDeg: number };
+    const o = calls['setOverlay']![0]![0] as {
+      visible: boolean;
+      sunPath: unknown[];
+      sun: { elevationDeg: number };
+      shadowAzimuthDeg: number;
+    };
     expect(o.visible).toBe(true);
     expect(o.sunPath.length).toBeGreaterThan(60);
     expect(o.sun.elevationDeg).toBeGreaterThan(89);
@@ -93,7 +164,11 @@ describe('SceneController', () => {
     expect((calls['setShadows']![0]![0] as { enabled: boolean }).enabled).toBe(false);
     c.apply(scene({ scenario: 'clear' }));
     expect((calls['setShadows']!.at(-1)![0] as { enabled: boolean }).enabled).toBe(true);
-    const terrain = { kind: 'quantized-mesh' as const, url: 'https://t/layer.json', attribution: 'x' };
+    const terrain = {
+      kind: 'quantized-mesh' as const,
+      url: 'https://t/layer.json',
+      attribution: 'x',
+    };
     const basemap = { kind: 'cesium-natural-earth' as const, attribution: 'ne' };
     await c.setProviders(terrain, basemap);
     await c.setProviders(terrain, basemap);

@@ -14,7 +14,17 @@ import type { BasemapDescriptor, GeoPoint, TerrainDescriptor } from '@lightmap/g
 import { GRADE_FRAGMENT_SHADER } from '../shaders/grade.frag.ts';
 import { pickSurface } from '../pick.ts';
 import type { Vec3 } from '../sun-vector.ts';
-import type { HostAtmosphere, HostCamera, HostGradeUniforms, HostLight, HostOverlay, HostQuality, HostShadows, HostStats, SceneHost } from './host.ts';
+import type {
+  HostAtmosphere,
+  HostCamera,
+  HostGradeUniforms,
+  HostLight,
+  HostOverlay,
+  HostQuality,
+  HostShadows,
+  HostStats,
+  SceneHost,
+} from './host.ts';
 
 export type CesiumModule = typeof Cesium;
 
@@ -76,7 +86,9 @@ export class CesiumSceneHost implements SceneHost {
       maximumRenderTimeChange: Number.POSITIVE_INFINITY,
       shadows: true,
       terrainShadows: C.ShadowMode.ENABLED,
-      contextOptions: { webgl: { preserveDrawingBuffer: true, powerPreference: 'high-performance' } },
+      contextOptions: {
+        webgl: { preserveDrawingBuffer: true, powerPreference: 'high-performance' },
+      },
       shouldAnimate: false,
     });
     this.scene = this.widget.scene;
@@ -143,7 +155,11 @@ export class CesiumSceneHost implements SceneHost {
       u_sunScreen: new C.Cartesian2(-1, -1),
       u_sunVisible: 0,
     };
-    this.grade = new C.PostProcessStage({ fragmentShader: GRADE_FRAGMENT_SHADER, uniforms: this.gradeUniforms, name: 'lightmap-grade' });
+    this.grade = new C.PostProcessStage({
+      fragmentShader: GRADE_FRAGMENT_SHADER,
+      uniforms: this.gradeUniforms,
+      name: 'lightmap-grade',
+    });
     scene.postProcessStages.add(this.grade);
 
     // Frame-rate sampling once a second, for the quality governor.
@@ -251,7 +267,11 @@ export class CesiumSceneHost implements SceneHost {
       ssc.enableLook = false;
       const frustum = cam.frustum;
       if (frustum instanceof C.PerspectiveFrustum) frustum.fov = 60 * DEG;
-      const target = C.Cartesian3.fromDegrees(c.target.longitude, c.target.latitude, c.targetHeightM);
+      const target = C.Cartesian3.fromDegrees(
+        c.target.longitude,
+        c.target.latitude,
+        c.targetHeightM,
+      );
       const offset = new C.HeadingPitchRange(c.headingDeg * DEG, c.pitchDeg * DEG, c.rangeM);
       if (c.fly) {
         cam.lookAtTransform(C.Matrix4.IDENTITY);
@@ -275,7 +295,11 @@ export class CesiumSceneHost implements SceneHost {
     const local = (azDeg: number, elDeg: number, r: number): Cesium.Cartesian3 => {
       const az = azDeg * DEG;
       const el = elDeg * DEG;
-      const v = new C.Cartesian3(r * Math.cos(el) * Math.sin(az), r * Math.cos(el) * Math.cos(az), r * Math.sin(el));
+      const v = new C.Cartesian3(
+        r * Math.cos(el) * Math.sin(az),
+        r * Math.cos(el) * Math.cos(az),
+        r * Math.sin(el),
+      );
       return C.Matrix4.multiplyByPoint(enu, v, new C.Cartesian3());
     };
     const add = (opts: Cesium.Entity.ConstructorOptions): void => {
@@ -283,21 +307,59 @@ export class CesiumSceneHost implements SceneHost {
     };
     add({
       position: base,
-      point: { pixelSize: 14, color: C.Color.fromCssColorString('#f4f4f5'), outlineColor: C.Color.fromCssColorString('#0b0b0d'), outlineWidth: 3, disableDepthTestDistance: Number.POSITIVE_INFINITY },
+      point: {
+        pixelSize: 14,
+        color: C.Color.fromCssColorString('#f4f4f5'),
+        outlineColor: C.Color.fromCssColorString('#0b0b0d'),
+        outlineWidth: 3,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+      },
     });
     if (o.sunPath.length > 1) {
       add({
-        polyline: { positions: o.sunPath.map((s) => local(s.azimuthDeg, s.elevationDeg, o.radiusM)), width: 3, material: C.Color.fromCssColorString('#f5b342').withAlpha(0.85), arcType: C.ArcType.NONE },
+        polyline: {
+          positions: o.sunPath.map((s) => local(s.azimuthDeg, s.elevationDeg, o.radiusM)),
+          width: 3,
+          material: C.Color.fromCssColorString('#f5b342').withAlpha(0.85),
+          arcType: C.ArcType.NONE,
+        },
       });
     }
     if (o.sun) {
       const sunPos = local(o.sun.azimuthDeg, o.sun.elevationDeg, o.radiusM);
-      add({ position: sunPos, point: { pixelSize: 18, color: C.Color.fromCssColorString('#f5b342'), outlineColor: C.Color.fromCssColorString('#7a4a00'), outlineWidth: 2, disableDepthTestDistance: Number.POSITIVE_INFINITY } });
-      add({ polyline: { positions: [base, sunPos], width: 2, material: new C.PolylineDashMaterialProperty({ color: C.Color.fromCssColorString('#f5b342').withAlpha(0.7), dashLength: 12 }), arcType: C.ArcType.NONE } });
+      add({
+        position: sunPos,
+        point: {
+          pixelSize: 18,
+          color: C.Color.fromCssColorString('#f5b342'),
+          outlineColor: C.Color.fromCssColorString('#7a4a00'),
+          outlineWidth: 2,
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
+        },
+      });
+      add({
+        polyline: {
+          positions: [base, sunPos],
+          width: 2,
+          material: new C.PolylineDashMaterialProperty({
+            color: C.Color.fromCssColorString('#f5b342').withAlpha(0.7),
+            dashLength: 12,
+          }),
+          arcType: C.ArcType.NONE,
+        },
+      });
     }
     if (o.shadowAzimuthDeg !== null) {
       const shadowEnd = local(o.shadowAzimuthDeg, 0.5, Math.min(o.radiusM * 0.5, 200));
-      add({ polyline: { positions: [base, shadowEnd], width: 6, material: C.Color.fromCssColorString('#0b0b0d').withAlpha(0.6), arcType: C.ArcType.NONE, clampToGround: false } });
+      add({
+        polyline: {
+          positions: [base, shadowEnd],
+          width: 6,
+          material: C.Color.fromCssColorString('#0b0b0d').withAlpha(0.6),
+          arcType: C.ArcType.NONE,
+          clampToGround: false,
+        },
+      });
     }
   }
 
@@ -317,10 +379,19 @@ export class CesiumSceneHost implements SceneHost {
             break;
           case 'quantized-mesh':
             if (!t.url) throw new Error('quantized-mesh terrain needs a url');
-            this.scene.terrainProvider = await C.CesiumTerrainProvider.fromUrl(t.url, { requestVertexNormals: true, requestWaterMask: false });
+            this.scene.terrainProvider = await C.CesiumTerrainProvider.fromUrl(t.url, {
+              requestVertexNormals: true,
+              requestWaterMask: false,
+            });
             break;
           case 'cesium-ion':
-            this.scene.terrainProvider = await C.CesiumTerrainProvider.fromIonAssetId(t.assetId ?? 1, { requestVertexNormals: true, ...(this.ionToken ? { accessToken: this.ionToken } : {}) });
+            this.scene.terrainProvider = await C.CesiumTerrainProvider.fromIonAssetId(
+              t.assetId ?? 1,
+              {
+                requestVertexNormals: true,
+                ...(this.ionToken ? { accessToken: this.ionToken } : {}),
+              },
+            );
             break;
         }
       } catch (error) {
@@ -342,7 +413,10 @@ export class CesiumSceneHost implements SceneHost {
     }
     // Bundled Natural Earth II is always present underneath as the fallback (plan §34).
     if (!this.fallbackLayer) {
-      const ne = await C.TileMapServiceImageryProvider.fromUrl(C.buildModuleUrl('Assets/Textures/NaturalEarthII'), { credit: 'Natural Earth II (public domain)' });
+      const ne = await C.TileMapServiceImageryProvider.fromUrl(
+        C.buildModuleUrl('Assets/Textures/NaturalEarthII'),
+        { credit: 'Natural Earth II (public domain)' },
+      );
       this.fallbackLayer = layers.addImageryProvider(ne, 0);
     }
     try {
@@ -353,15 +427,24 @@ export class CesiumSceneHost implements SceneHost {
           break;
         case 'xyz':
           if (!b.url) throw new Error('xyz basemap needs a url');
-          provider = new C.UrlTemplateImageryProvider({ url: b.url, credit: b.attribution, maximumLevel: b.maxZoom ?? 18 });
+          provider = new C.UrlTemplateImageryProvider({
+            url: b.url,
+            credit: b.attribution,
+            maximumLevel: b.maxZoom ?? 18,
+          });
           break;
         case 'cesium-ion':
-          provider = await C.IonImageryProvider.fromAssetId(b.assetId ?? 2, this.ionToken ? { accessToken: this.ionToken } : {});
+          provider = await C.IonImageryProvider.fromAssetId(
+            b.assetId ?? 2,
+            this.ionToken ? { accessToken: this.ionToken } : {},
+          );
           break;
       }
       if (provider) {
         const layer = layers.addImageryProvider(provider);
-        layer.errorEvent.addEventListener((err: unknown) => this.onError?.('Imagery tile failed — Natural Earth II shown underneath', err));
+        layer.errorEvent.addEventListener((err: unknown) =>
+          this.onError?.('Imagery tile failed — Natural Earth II shown underneath', err),
+        );
         this.baseLayer = layer;
       }
     } catch (error) {
@@ -380,8 +463,19 @@ export class CesiumSceneHost implements SceneHost {
   sunScreenPosition(toward: Vec3): [number, number] | null {
     const C = this.C;
     const cam = this.scene.camera;
-    const far = C.Cartesian3.add(cam.positionWC, C.Cartesian3.multiplyByScalar(new C.Cartesian3(toward.x, toward.y, toward.z), 1e7, new C.Cartesian3()), new C.Cartesian3());
-    const dir = C.Cartesian3.normalize(new C.Cartesian3(toward.x, toward.y, toward.z), new C.Cartesian3());
+    const far = C.Cartesian3.add(
+      cam.positionWC,
+      C.Cartesian3.multiplyByScalar(
+        new C.Cartesian3(toward.x, toward.y, toward.z),
+        1e7,
+        new C.Cartesian3(),
+      ),
+      new C.Cartesian3(),
+    );
+    const dir = C.Cartesian3.normalize(
+      new C.Cartesian3(toward.x, toward.y, toward.z),
+      new C.Cartesian3(),
+    );
     if (C.Cartesian3.dot(dir, cam.directionWC) <= 0) return null;
     const win = C.SceneTransforms.worldToWindowCoordinates(this.scene, far);
     if (!win) return null;
@@ -395,7 +489,9 @@ export class CesiumSceneHost implements SceneHost {
     try {
       const tp = this.scene.terrainProvider;
       if (tp instanceof C.EllipsoidTerrainProvider) return 0;
-      const [res] = await C.sampleTerrainMostDetailed(tp, [C.Cartographic.fromDegrees(p.longitude, p.latitude)]);
+      const [res] = await C.sampleTerrainMostDetailed(tp, [
+        C.Cartographic.fromDegrees(p.longitude, p.latitude),
+      ]);
       return res && Number.isFinite(res.height) ? res.height : null;
     } catch {
       return null;
@@ -407,13 +503,27 @@ export class CesiumSceneHost implements SceneHost {
   }
 
   stats(): HostStats {
-    const globe = this.scene.globe as unknown as { _surface?: { _tilesToRender?: unknown[]; _tileLoadQueueHigh?: unknown[]; _tileLoadQueueMedium?: unknown[]; _tileLoadQueueLow?: unknown[] } };
+    const globe = this.scene.globe as unknown as {
+      _surface?: {
+        _tilesToRender?: unknown[];
+        _tileLoadQueueHigh?: unknown[];
+        _tileLoadQueueMedium?: unknown[];
+        _tileLoadQueueLow?: unknown[];
+      };
+    };
     const surface = globe._surface;
-    const sunWC = (this.scene as unknown as { context?: { uniformState?: { sunDirectionWC?: Cesium.Cartesian3 } } }).context?.uniformState?.sunDirectionWC;
+    const sunWC = (
+      this.scene as unknown as {
+        context?: { uniformState?: { sunDirectionWC?: Cesium.Cartesian3 } };
+      }
+    ).context?.uniformState?.sunDirectionWC;
     return {
       fps: this.lastFps,
       terrainTilesLoaded: surface?._tilesToRender?.length ?? 0,
-      terrainTilesLoading: (surface?._tileLoadQueueHigh?.length ?? 0) + (surface?._tileLoadQueueMedium?.length ?? 0) + (surface?._tileLoadQueueLow?.length ?? 0),
+      terrainTilesLoading:
+        (surface?._tileLoadQueueHigh?.length ?? 0) +
+        (surface?._tileLoadQueueMedium?.length ?? 0) +
+        (surface?._tileLoadQueueLow?.length ?? 0),
       drawCalls: null,
       cesiumSunDirectionEcef: sunWC ? { x: sunWC.x, y: sunWC.y, z: sunWC.z } : null,
     };
@@ -424,22 +534,25 @@ export class CesiumSceneHost implements SceneHost {
     this.pickListeners.add(handler);
     if (!this.pickHandler) {
       this.pickHandler = new C.ScreenSpaceEventHandler(this.widget.canvas);
-      this.pickHandler.setInputAction((movement: Cesium.ScreenSpaceEventHandler.PositionedEvent) => {
-        const scene = this.scene;
-        const hit = pickSurface(
-          {
-            pickPositionSupported: scene.pickPositionSupported,
-            pickPosition: (w) => {
-              const r = scene.pickPosition(new C.Cartesian2(w.x, w.y));
-              return r ?? undefined;
+      this.pickHandler.setInputAction(
+        (movement: Cesium.ScreenSpaceEventHandler.PositionedEvent) => {
+          const scene = this.scene;
+          const hit = pickSurface(
+            {
+              pickPositionSupported: scene.pickPositionSupported,
+              pickPosition: (w) => {
+                const r = scene.pickPosition(new C.Cartesian2(w.x, w.y));
+                return r ?? undefined;
+              },
+              pickEllipsoid: (w) => scene.camera.pickEllipsoid(new C.Cartesian2(w.x, w.y)),
+              toCartographic: (c) => C.Cartographic.fromCartesian(new C.Cartesian3(c.x, c.y, c.z)),
             },
-            pickEllipsoid: (w) => scene.camera.pickEllipsoid(new C.Cartesian2(w.x, w.y)),
-            toCartographic: (c) => C.Cartographic.fromCartesian(new C.Cartesian3(c.x, c.y, c.z)),
-          },
-          movement.position,
-        );
-        if (hit) for (const l of this.pickListeners) l(hit);
-      }, C.ScreenSpaceEventType.LEFT_CLICK);
+            movement.position,
+          );
+          if (hit) for (const l of this.pickListeners) l(hit);
+        },
+        C.ScreenSpaceEventType.LEFT_CLICK,
+      );
     }
     return () => {
       this.pickListeners.delete(handler);

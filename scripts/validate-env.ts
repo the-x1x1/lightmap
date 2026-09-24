@@ -11,7 +11,10 @@ if (existsSync('.env')) {
   }
 }
 const { issues, ok, env } = parseEnv(raw);
-for (const i of issues) console.log(`${i.severity === 'error' ? 'ERROR' : 'warn '}  ${i.key}: ${i.message}`);
-console.log(`\nenvironment: ${env.NODE_ENV} · weather=${env.WEATHER_PROVIDER} geocoder=${env.GEOCODER_PROVIDER} terrain=${env.TERRAIN_PROVIDER} imagery=${env.IMAGERY_PROVIDER} · db=${env.DATABASE_URL ? 'configured' : 'none'} · stripe=${env.STRIPE_SECRET_KEY ? 'configured' : 'none'}`);
+for (const i of issues)
+  console.log(`${i.severity === 'error' ? 'ERROR' : 'warn '}  ${i.key}: ${i.message}`);
+console.log(
+  `\nenvironment: ${env.NODE_ENV} · weather=${env.WEATHER_PROVIDER} geocoder=${env.GEOCODER_PROVIDER} terrain=${env.TERRAIN_PROVIDER} imagery=${env.IMAGERY_PROVIDER} · db=${env.DATABASE_URL ? 'configured' : 'none'} · stripe=${env.STRIPE_SECRET_KEY ? 'configured' : 'none'}`,
+);
 console.log(ok ? 'OK' : 'INVALID');
 process.exit(ok ? 0 : 1);

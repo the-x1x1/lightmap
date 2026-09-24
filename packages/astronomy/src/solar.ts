@@ -92,7 +92,12 @@ export function solarEquatorial(T: number): EquatorialCoordinates {
 export function greenwichMeanSiderealTimeDeg(date: Date): number {
   const jd = julianDay(date);
   const T = julianCenturiesUT(date);
-  return wrap360(280.460_618_37 + 360.985_647_366_29 * (jd - 2_451_545.0) + 0.000_387_933 * T * T - (T * T * T) / 38_710_000);
+  return wrap360(
+    280.460_618_37 +
+      360.985_647_366_29 * (jd - 2_451_545.0) +
+      0.000_387_933 * T * T -
+      (T * T * T) / 38_710_000,
+  );
 }
 
 export interface HorizontalCoordinates {
@@ -105,7 +110,12 @@ export interface HorizontalCoordinates {
 }
 
 /** Equatorial → horizontal for an observer (Meeus ch. 13). Azimuth from north. */
-export function toHorizontal(eq: Pick<EquatorialCoordinates, 'rightAscensionDeg' | 'declinationDeg'>, date: Date, latitudeDeg: number, longitudeDeg: number): HorizontalCoordinates {
+export function toHorizontal(
+  eq: Pick<EquatorialCoordinates, 'rightAscensionDeg' | 'declinationDeg'>,
+  date: Date,
+  latitudeDeg: number,
+  longitudeDeg: number,
+): HorizontalCoordinates {
   const gmst = greenwichMeanSiderealTimeDeg(date);
   let H = wrap360(gmst + longitudeDeg - eq.rightAscensionDeg);
   if (H >= 180) H -= 360;
@@ -115,7 +125,8 @@ export function toHorizontal(eq: Pick<EquatorialCoordinates, 'rightAscensionDeg'
   const sinAlt = Math.sin(phi) * Math.sin(dec) + Math.cos(phi) * Math.cos(dec) * Math.cos(Hr);
   const elevation = Math.asin(Math.max(-1, Math.min(1, sinAlt))) * RAD;
   // Meeus measures azimuth from south; add 180° for the compass convention.
-  const azSouth = Math.atan2(Math.sin(Hr), Math.cos(Hr) * Math.sin(phi) - Math.tan(dec) * Math.cos(phi)) * RAD;
+  const azSouth =
+    Math.atan2(Math.sin(Hr), Math.cos(Hr) * Math.sin(phi) - Math.tan(dec) * Math.cos(phi)) * RAD;
   return { azimuthDeg: wrap360(azSouth + 180), elevationDeg: elevation, hourAngleDeg: H };
 }
 

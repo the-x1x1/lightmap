@@ -21,9 +21,9 @@ see `docs/DATA_SOURCES_AND_LICENSING.md` for the data side and the review status
 
 ## Algorithms
 
-- Solar position: Jean Meeus, *Astronomical Algorithms*, 2nd ed. (Willmann-Bell, 1998), chapters
+- Solar position: Jean Meeus, _Astronomical Algorithms_, 2nd ed. (Willmann-Bell, 1998), chapters
   12, 13, 22, 25, 28. Implemented from the published equations; no code copied.
-- Moon position: low-precision formulae from *The Astronomical Almanac* (US Naval Observatory / HM
+- Moon position: low-precision formulae from _The Astronomical Almanac_ (US Naval Observatory / HM
   Nautical Almanac Office), section D. Illuminated fraction: Meeus ch. 48.
 - Refraction: Sæmundsson's formula (Meeus 16.4).
 - Blackbody tint: Tanner Helland's published approximation of the Planckian locus.
@@ -42,20 +42,20 @@ _Not yet generated: run `pnpm install && pnpm licenses --write-notices` to appen
 from the installed `node_modules`. The declared direct dependencies and their licences (per their
 package manifests) are:_
 
-| Package | Licence |
-|---|---|
-| @cesium/engine | Apache-2.0 |
-| next, react, react-dom | MIT |
-| next-auth, @auth/drizzle-adapter | ISC |
-| drizzle-orm | Apache-2.0 |
-| drizzle-kit (dev) | MIT |
-| postgres | Unlicense |
-| stripe | MIT |
-| nodemailer | MIT-0 |
-| geo-tz | MIT (data: ODbL) |
-| zustand, @tanstack/react-query, @radix-ui/* | MIT |
-| tailwindcss, @tailwindcss/postcss, postcss | MIT |
-| vitest, @vitest/coverage-v8, @playwright/test, @testing-library/* , jsdom (dev) | MIT |
-| typescript (dev) | Apache-2.0 |
-| eslint, typescript-eslint, eslint-plugin-react-hooks, eslint-config-prettier, globals, prettier (dev) | MIT |
-| turbo (dev) | MIT |
+| Package                                                                                               | Licence          |
+| ----------------------------------------------------------------------------------------------------- | ---------------- |
+| @cesium/engine                                                                                        | Apache-2.0       |
+| next, react, react-dom                                                                                | MIT              |
+| next-auth, @auth/drizzle-adapter                                                                      | ISC              |
+| drizzle-orm                                                                                           | Apache-2.0       |
+| drizzle-kit (dev)                                                                                     | MIT              |
+| postgres                                                                                              | Unlicense        |
+| stripe                                                                                                | MIT              |
+| nodemailer                                                                                            | MIT-0            |
+| geo-tz                                                                                                | MIT (data: ODbL) |
+| zustand, @tanstack/react-query, @radix-ui/*                                                           | MIT              |
+| tailwindcss, @tailwindcss/postcss, postcss                                                            | MIT              |
+| vitest, @vitest/coverage-v8, @playwright/test, @testing-library/* , jsdom (dev)                       | MIT              |
+| typescript (dev)                                                                                      | Apache-2.0       |
+| eslint, typescript-eslint, eslint-plugin-react-hooks, eslint-config-prettier, globals, prettier (dev) | MIT              |
+| turbo (dev)                                                                                           | MIT              |

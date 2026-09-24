@@ -5,16 +5,16 @@ vulnerabilities as described in `/SECURITY.md`.
 
 ## 1. Assets and threat model
 
-| Asset | Threat | Primary controls |
-|---|---|---|
-| Provider credentials (weather, terrain, geocoder, Stripe) | Exfiltration from the browser bundle; abuse via our proxy | Server-side only; rate limits and daily budgets; CSP `connect-src` allowlist |
-| User accounts and sessions | Credential theft, session fixation, CSRF | Passwordless magic links, database sessions, secure cookies, Auth.js CSRF |
-| Projects and viewpoints (user location data) | Horizontal privilege escalation by ID guessing or tampering | `WHERE user_id = ?` in every repository query; IDs are never authorization |
-| Entitlements | Forged webhooks, replayed events, client-asserted plan | Stripe signature verification, idempotency by event id, server-only snapshot |
-| Database | Injection, schema drift, silent migration edits | Drizzle parameterised queries, checksum-verified forward-only migrations |
-| Supply chain | Malicious or licence-incompatible dependencies, committed secrets | `pnpm audit`, licence allowlist, secrets scan, CodeQL in CI |
-| Availability and cost | Scraping our provider proxies, timeline scrubbing storms | Burst limiter, per-day budgets, client-side astronomy, one weather fetch per place-day |
-| Browser | XSS, clickjacking, framing, mixed content | Strict CSP, `X-Frame-Options: DENY`, `frame-ancestors 'none'`, HSTS, `upgrade-insecure-requests` |
+| Asset                                                     | Threat                                                            | Primary controls                                                                                 |
+| --------------------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Provider credentials (weather, terrain, geocoder, Stripe) | Exfiltration from the browser bundle; abuse via our proxy         | Server-side only; rate limits and daily budgets; CSP `connect-src` allowlist                     |
+| User accounts and sessions                                | Credential theft, session fixation, CSRF                          | Passwordless magic links, database sessions, secure cookies, Auth.js CSRF                        |
+| Projects and viewpoints (user location data)              | Horizontal privilege escalation by ID guessing or tampering       | `WHERE user_id = ?` in every repository query; IDs are never authorization                       |
+| Entitlements                                              | Forged webhooks, replayed events, client-asserted plan            | Stripe signature verification, idempotency by event id, server-only snapshot                     |
+| Database                                                  | Injection, schema drift, silent migration edits                   | Drizzle parameterised queries, checksum-verified forward-only migrations                         |
+| Supply chain                                              | Malicious or licence-incompatible dependencies, committed secrets | `pnpm audit`, licence allowlist, secrets scan, CodeQL in CI                                      |
+| Availability and cost                                     | Scraping our provider proxies, timeline scrubbing storms          | Burst limiter, per-day budgets, client-side astronomy, one weather fetch per place-day           |
+| Browser                                                   | XSS, clickjacking, framing, mixed content                         | Strict CSP, `X-Frame-Options: DENY`, `frame-ancestors 'none'`, HSTS, `upgrade-insecure-requests` |
 
 Out of scope for v0.1: DDoS mitigation beyond the hosting platform, WAF, SOC-style monitoring.
 

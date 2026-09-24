@@ -59,14 +59,55 @@ const P = (
   saturation: number,
   contrast: number,
   precipitation: number,
-): AtmosphereParameters => ({ cloudCover, cloudOpacity, cloudDensity, sunTransmittance, diffuseFraction, skyLuminance, haze, saturation, contrast, precipitation });
+): AtmosphereParameters => ({
+  cloudCover,
+  cloudOpacity,
+  cloudDensity,
+  sunTransmittance,
+  diffuseFraction,
+  skyLuminance,
+  haze,
+  saturation,
+  contrast,
+  precipitation,
+});
 
 export const SCENARIOS: readonly WeatherScenario[] = Object.freeze([
-  { id: 'clear', label: 'Clear', hint: 'Hard light, deep shadows, saturated sky', cloudCoverPercent: 5, parameters: P(0.05, 0.05, 0.2, 1.0, 0.15, 1.0, 0.1, 1.0, 1.0, 0) },
-  { id: 'mostly-clear', label: 'Mostly Clear', hint: 'Scattered cloud, occasional softening', cloudCoverPercent: 25, parameters: P(0.25, 0.3, 0.35, 0.92, 0.25, 1.0, 0.15, 0.98, 0.97, 0) },
-  { id: 'partly-cloudy', label: 'Partly Cloudy', hint: 'Broken cloud, light comes and goes', cloudCoverPercent: 55, parameters: P(0.55, 0.6, 0.5, 0.7, 0.45, 1.05, 0.25, 0.95, 0.9, 0) },
-  { id: 'overcast', label: 'Overcast', hint: 'Soft, even light, no visible sun or shadows', cloudCoverPercent: 95, parameters: P(0.95, 0.95, 0.85, 0.2, 0.9, 0.85, 0.45, 0.85, 0.75, 0) },
-  { id: 'storm', label: 'Rain / Storm', hint: 'Dark sky, flat light, wet surfaces', cloudCoverPercent: 100, parameters: P(1.0, 1.0, 1.0, 0.08, 0.97, 0.55, 0.7, 0.7, 0.65, 1) },
+  {
+    id: 'clear',
+    label: 'Clear',
+    hint: 'Hard light, deep shadows, saturated sky',
+    cloudCoverPercent: 5,
+    parameters: P(0.05, 0.05, 0.2, 1.0, 0.15, 1.0, 0.1, 1.0, 1.0, 0),
+  },
+  {
+    id: 'mostly-clear',
+    label: 'Mostly Clear',
+    hint: 'Scattered cloud, occasional softening',
+    cloudCoverPercent: 25,
+    parameters: P(0.25, 0.3, 0.35, 0.92, 0.25, 1.0, 0.15, 0.98, 0.97, 0),
+  },
+  {
+    id: 'partly-cloudy',
+    label: 'Partly Cloudy',
+    hint: 'Broken cloud, light comes and goes',
+    cloudCoverPercent: 55,
+    parameters: P(0.55, 0.6, 0.5, 0.7, 0.45, 1.05, 0.25, 0.95, 0.9, 0),
+  },
+  {
+    id: 'overcast',
+    label: 'Overcast',
+    hint: 'Soft, even light, no visible sun or shadows',
+    cloudCoverPercent: 95,
+    parameters: P(0.95, 0.95, 0.85, 0.2, 0.9, 0.85, 0.45, 0.85, 0.75, 0),
+  },
+  {
+    id: 'storm',
+    label: 'Rain / Storm',
+    hint: 'Dark sky, flat light, wet surfaces',
+    cloudCoverPercent: 100,
+    parameters: P(1.0, 1.0, 1.0, 0.08, 0.97, 0.55, 0.7, 0.7, 0.65, 1),
+  },
 ]);
 
 export function scenarioById(id: WeatherScenarioId): WeatherScenario {
@@ -80,8 +121,18 @@ export function isScenarioId(v: unknown): v is WeatherScenarioId {
 }
 
 /** Nearest named scenario for a cloud-cover percentage and precipitation, used to label forecasts. */
-export function scenarioForConditions(cloudCoverPercent: number, opts: { precipitationMm?: number | null; precipitationProbability?: number | null; weatherCode?: number | null } = {}): WeatherScenarioId {
-  const rain = (opts.precipitationMm ?? 0) >= 0.5 || (opts.precipitationProbability ?? 0) >= 60 || (opts.weatherCode !== null && opts.weatherCode !== undefined && opts.weatherCode >= 61);
+export function scenarioForConditions(
+  cloudCoverPercent: number,
+  opts: {
+    precipitationMm?: number | null;
+    precipitationProbability?: number | null;
+    weatherCode?: number | null;
+  } = {},
+): WeatherScenarioId {
+  const rain =
+    (opts.precipitationMm ?? 0) >= 0.5 ||
+    (opts.precipitationProbability ?? 0) >= 60 ||
+    (opts.weatherCode !== null && opts.weatherCode !== undefined && opts.weatherCode >= 61);
   if (rain) return 'storm';
   if (cloudCoverPercent < 12) return 'clear';
   if (cloudCoverPercent < 40) return 'mostly-clear';
@@ -138,9 +189,14 @@ export function parametersForForecast(frame: {
     out.cloudDensity = clamp01(out.cloudDensity + 0.3 * low);
   }
   // Visibility → haze. 40 km+ is crisp; 5 km is noticeably hazy; < 1 km is fog.
-  if (frame.visibility !== null && frame.visibility !== undefined && Number.isFinite(frame.visibility)) {
+  if (
+    frame.visibility !== null &&
+    frame.visibility !== undefined &&
+    Number.isFinite(frame.visibility)
+  ) {
     const km = frame.visibility / 1000;
-    const hazeFromVis = km >= 40 ? 0.05 : km >= 20 ? 0.15 : km >= 10 ? 0.3 : km >= 5 ? 0.5 : km >= 1 ? 0.75 : 0.95;
+    const hazeFromVis =
+      km >= 40 ? 0.05 : km >= 20 ? 0.15 : km >= 10 ? 0.3 : km >= 5 ? 0.5 : km >= 1 ? 0.75 : 0.95;
     out.haze = Math.max(out.haze, hazeFromVis);
     if (km < 1) {
       out.sunTransmittance = Math.min(out.sunTransmittance, 0.15);
@@ -151,8 +207,20 @@ export function parametersForForecast(frame: {
   const rainy = scenarioForConditions(frame.cloudCoverTotal, frame) === 'storm';
   if (rainy) {
     const storm = scenarioById('storm').parameters;
-    const w = clamp01(((frame.precipitationAmount ?? 0) / 2 + (frame.precipitationProbability ?? 50) / 100) / 2 + 0.3);
-    for (const k of ['cloudOpacity', 'cloudDensity', 'sunTransmittance', 'diffuseFraction', 'skyLuminance', 'haze', 'saturation', 'contrast'] as const) {
+    const w = clamp01(
+      ((frame.precipitationAmount ?? 0) / 2 + (frame.precipitationProbability ?? 50) / 100) / 2 +
+        0.3,
+    );
+    for (const k of [
+      'cloudOpacity',
+      'cloudDensity',
+      'sunTransmittance',
+      'diffuseFraction',
+      'skyLuminance',
+      'haze',
+      'saturation',
+      'contrast',
+    ] as const) {
       out[k] = out[k] + (storm[k] - out[k]) * w;
     }
     out.precipitation = w;
@@ -170,19 +238,24 @@ export interface ColorTemperatureCurvePoint {
   kelvin: number;
 }
 
-export const DEFAULT_COLOR_TEMPERATURE_CURVE: readonly ColorTemperatureCurvePoint[] = Object.freeze([
-  { elevationDeg: -18, kelvin: 9000 }, // astronomical twilight: deep blue sky light only
-  { elevationDeg: -12, kelvin: 8500 },
-  { elevationDeg: -6, kelvin: 7800 }, // blue hour
-  { elevationDeg: -4, kelvin: 4200 }, // last direct light is very warm
-  { elevationDeg: 0, kelvin: 2900 }, // sun on the horizon
-  { elevationDeg: 5, kelvin: 3800 }, // golden light
-  { elevationDeg: 10, kelvin: 4800 },
-  { elevationDeg: 20, kelvin: 5400 }, // neutral daylight from here up
-  { elevationDeg: 90, kelvin: 5600 },
-]);
+export const DEFAULT_COLOR_TEMPERATURE_CURVE: readonly ColorTemperatureCurvePoint[] = Object.freeze(
+  [
+    { elevationDeg: -18, kelvin: 9000 }, // astronomical twilight: deep blue sky light only
+    { elevationDeg: -12, kelvin: 8500 },
+    { elevationDeg: -6, kelvin: 7800 }, // blue hour
+    { elevationDeg: -4, kelvin: 4200 }, // last direct light is very warm
+    { elevationDeg: 0, kelvin: 2900 }, // sun on the horizon
+    { elevationDeg: 5, kelvin: 3800 }, // golden light
+    { elevationDeg: 10, kelvin: 4800 },
+    { elevationDeg: 20, kelvin: 5400 }, // neutral daylight from here up
+    { elevationDeg: 90, kelvin: 5600 },
+  ],
+);
 
-export function colorTemperatureKelvin(elevationDeg: number, curve: readonly ColorTemperatureCurvePoint[] = DEFAULT_COLOR_TEMPERATURE_CURVE): number {
+export function colorTemperatureKelvin(
+  elevationDeg: number,
+  curve: readonly ColorTemperatureCurvePoint[] = DEFAULT_COLOR_TEMPERATURE_CURVE,
+): number {
   if (curve.length === 0) return 5600;
   if (elevationDeg <= curve[0]!.elevationDeg) return curve[0]!.kelvin;
   const last = curve[curve.length - 1]!;

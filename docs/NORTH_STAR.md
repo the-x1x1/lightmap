@@ -2,7 +2,7 @@
 
 ## The thesis
 
-Existing planning tools tell a photographer *where the sun will be*. LightMap answers the more
+Existing planning tools tell a photographer _where the sun will be_. LightMap answers the more
 useful question:
 
 > **"What will this place actually look like under this light?"**
@@ -14,7 +14,7 @@ clear, partly cloudy, overcast and storm conditions, golden hour, blue hour and 
 the viewpoint to a shoot, and come back as the shoot approaches to watch a scenario turn into a
 forecast (plan §1).
 
-LightMap is a *visual time machine for natural light*. The product's trust model matters more than
+LightMap is a _visual time machine for natural light_. The product's trust model matters more than
 visual flash: a less pretty image with the correct sun direction beats a beautiful hallucination
 (plan §3).
 
@@ -35,7 +35,7 @@ visual flash: a less pretty image with the correct sun direction beats a beautif
   no user-contributed image library, and none will be added (plan §0, §37).
 - **Not a social network.** No feed, followers, likes or comments.
 - **Not a discovery engine.** Search exists only to find a known place or coordinate so the user can
-  plan *that* place. There is no "best sunset beaches" or "waterfalls with morning light"
+  plan _that_ place. There is no "best sunset beaches" or "waterfalls with morning light"
   recommendation feed (plan §0, §37).
 - **Not an AI image generator.** Text-to-image generation is never the scene source. The render
   pipeline is grounded in coordinates → terrain → map geometry → camera → astronomy → atmosphere →
@@ -49,13 +49,13 @@ visual flash: a less pretty image with the correct sun direction beats a beautif
 
 LightMap separates five kinds of knowledge and never lets one masquerade as another (plan §1).
 
-| Kind | Examples | How LightMap treats it |
-|---|---|---|
-| **A. Deterministic facts** | Solar azimuth and elevation, sunrise, sunset, twilight bands, moon position and phase, seasonal path, light and shadow direction | Computed locally from ephemeris algorithms validated against USNO (sun ±0.01°, moon ±0.3°). Available years ahead. Confidence: HIGH unless the input is invalid. |
-| **B. Forecast conditions** | Cloud cover by layer, precipitation, visibility, humidity, fog, haze, storms | Only inside the provider's forecast horizon (7 days reliable, 8–16 days low confidence). Labelled "Forecast" or "Extended forecast — low confidence". |
-| **C. Long-range scenarios** | Clear, Mostly Clear, Partly Cloudy, Overcast, Rain/Storm | Beyond the horizon the app says "Forecast unavailable this far ahead" and offers user-selectable scenarios. Climatology (Phase 7) may indicate which scenarios are typical; it is never shown as a forecast. |
-| **D. Real-world visual evidence** | Licensed photographs or panoramas near the coordinate | Surfaced as **Real Reference** with attribution, capture date/time and approximate heading when known. Never implies it was captured at the requested date and time unless it was. Disabled in v0.1: no provider contract exists. |
-| **E. Simulation** | Terrain + map geometry + physically grounded lighting | Used whenever real imagery is unavailable, labelled **Simulated Lighting** or **Estimated Preview** depending on how much geometry is real. |
+| Kind                              | Examples                                                                                                                         | How LightMap treats it                                                                                                                                                                                                            |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A. Deterministic facts**        | Solar azimuth and elevation, sunrise, sunset, twilight bands, moon position and phase, seasonal path, light and shadow direction | Computed locally from ephemeris algorithms validated against USNO (sun ±0.01°, moon ±0.3°). Available years ahead. Confidence: HIGH unless the input is invalid.                                                                  |
+| **B. Forecast conditions**        | Cloud cover by layer, precipitation, visibility, humidity, fog, haze, storms                                                     | Only inside the provider's forecast horizon (7 days reliable, 8–16 days low confidence). Labelled "Forecast" or "Extended forecast — low confidence".                                                                             |
+| **C. Long-range scenarios**       | Clear, Mostly Clear, Partly Cloudy, Overcast, Rain/Storm                                                                         | Beyond the horizon the app says "Forecast unavailable this far ahead" and offers user-selectable scenarios. Climatology (Phase 7) may indicate which scenarios are typical; it is never shown as a forecast.                      |
+| **D. Real-world visual evidence** | Licensed photographs or panoramas near the coordinate                                                                            | Surfaced as **Real Reference** with attribution, capture date/time and approximate heading when known. Never implies it was captured at the requested date and time unless it was. Disabled in v0.1: no provider contract exists. |
+| **E. Simulation**                 | Terrain + map geometry + physically grounded lighting                                                                            | Used whenever real imagery is unavailable, labelled **Simulated Lighting** or **Estimated Preview** depending on how much geometry is real.                                                                                       |
 
 Operating rules that follow from this:
 
@@ -79,7 +79,7 @@ The long-term interaction (plan §44):
 > chooses a lens, and scrubs through days, months and seasons. The terrain stays fixed; the sun
 > moves exactly as astronomy dictates; weather changes by forecast or explicitly labelled scenario.
 > Licensed real imagery appears beside the simulation as evidence. Then they drag the desired sun
-> position into the frame and ask: *"When does this happen?"*
+> position into the frame and ask: _"When does this happen?"_
 
 Four directions get us there, in roughly this order:
 
@@ -92,10 +92,10 @@ Four directions get us there, in roughly this order:
    coordinate lookup, capture metadata, attribution, and side-by-side real vs simulated views.
    Blocked until commercial rights are documented.
 3. **High-fidelity reconstruction** (Phase 8). Commercial 3D tiles, photogrammetry, Gaussian
-   splats, physically based atmosphere, and *controlled* generative enhancement that cannot alter
+   splats, physically based atmosphere, and _controlled_ generative enhancement that cannot alter
    geometry or light direction.
 4. **Native mobile** (Phase 9). Only after the PWA proves demand: native install, offline project
    cache, compass, device orientation, AR sun alignment, field mode.
 
-At every release the question is: *does this make it faster or more trustworthy for a photographer
-to know what the light will look like before arriving?* If not, it is probably not a priority.
+At every release the question is: _does this make it faster or more trustworthy for a photographer
+to know what the light will look like before arriving?_ If not, it is probably not a priority.

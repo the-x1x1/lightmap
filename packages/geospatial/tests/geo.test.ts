@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { bearingDegrees, clampBounds, compassLabel, gridKey, haversineMeters, isValidLatLon, normalizeDegrees, normalizeLongitude } from '../src/geo.ts';
+import {
+  bearingDegrees,
+  clampBounds,
+  compassLabel,
+  gridKey,
+  haversineMeters,
+  isValidLatLon,
+  normalizeDegrees,
+  normalizeLongitude,
+} from '../src/geo.ts';
 
 describe('geo helpers (ported from WorldView world-model/geo.ts)', () => {
   it('normalises longitudes into [-180, 180]', () => {
@@ -20,7 +29,10 @@ describe('geo helpers (ported from WorldView world-model/geo.ts)', () => {
   });
 
   it('measures Kailua → Honolulu at roughly 18 km', () => {
-    const d = haversineMeters({ latitude: 21.397, longitude: -157.727 }, { latitude: 21.3069, longitude: -157.8583 });
+    const d = haversineMeters(
+      { latitude: 21.397, longitude: -157.727 },
+      { latitude: 21.3069, longitude: -157.8583 },
+    );
     expect(d).toBeGreaterThan(16_000);
     expect(d).toBeLessThan(18_500);
   });
@@ -43,7 +55,12 @@ describe('geo helpers (ported from WorldView world-model/geo.ts)', () => {
   });
 
   it('clamps bounds to the globe', () => {
-    expect(clampBounds({ west: -181, south: -91, east: 181, north: 91 })).toEqual({ west: -180, south: -90, east: 180, north: 90 });
+    expect(clampBounds({ west: -181, south: -91, east: 181, north: 91 })).toEqual({
+      west: -180,
+      south: -90,
+      east: 180,
+      north: 90,
+    });
   });
 
   it('quantises cache grid keys so nearby pins share a cell', () => {

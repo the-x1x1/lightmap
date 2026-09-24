@@ -21,15 +21,56 @@ export interface QualityRung {
 
 /** Best first. Every step down must be cheaper in at least one dimension and dearer in none. */
 export const QUALITY_LADDER: readonly QualityRung[] = Object.freeze([
-  { label: 'Ultra', shadowMapSize: 4096, softShadows: true, terrainScreenSpaceError: 1.5, resolutionScale: 1, shadows: true },
-  { label: 'High', shadowMapSize: 2048, softShadows: true, terrainScreenSpaceError: 2, resolutionScale: 1, shadows: true },
-  { label: 'Balanced', shadowMapSize: 2048, softShadows: false, terrainScreenSpaceError: 3, resolutionScale: 1, shadows: true },
-  { label: 'Battery', shadowMapSize: 1024, softShadows: false, terrainScreenSpaceError: 4, resolutionScale: 0.85, shadows: true },
-  { label: 'Minimal', shadowMapSize: 1024, softShadows: false, terrainScreenSpaceError: 6, resolutionScale: 0.7, shadows: false },
+  {
+    label: 'Ultra',
+    shadowMapSize: 4096,
+    softShadows: true,
+    terrainScreenSpaceError: 1.5,
+    resolutionScale: 1,
+    shadows: true,
+  },
+  {
+    label: 'High',
+    shadowMapSize: 2048,
+    softShadows: true,
+    terrainScreenSpaceError: 2,
+    resolutionScale: 1,
+    shadows: true,
+  },
+  {
+    label: 'Balanced',
+    shadowMapSize: 2048,
+    softShadows: false,
+    terrainScreenSpaceError: 3,
+    resolutionScale: 1,
+    shadows: true,
+  },
+  {
+    label: 'Battery',
+    shadowMapSize: 1024,
+    softShadows: false,
+    terrainScreenSpaceError: 4,
+    resolutionScale: 0.85,
+    shadows: true,
+  },
+  {
+    label: 'Minimal',
+    shadowMapSize: 1024,
+    softShadows: false,
+    terrainScreenSpaceError: 6,
+    resolutionScale: 0.7,
+    shadows: false,
+  },
 ]);
 
 function cost(r: QualityRung): number[] {
-  return [r.shadowMapSize, r.softShadows ? 1 : 0, -r.terrainScreenSpaceError, r.resolutionScale, r.shadows ? 1 : 0];
+  return [
+    r.shadowMapSize,
+    r.softShadows ? 1 : 0,
+    -r.terrainScreenSpaceError,
+    r.resolutionScale,
+    r.shadows ? 1 : 0,
+  ];
 }
 
 /** True when no rung is more expensive than the rung above it in any dimension. */
@@ -89,7 +130,8 @@ export class QualityGovernor {
     if (this.ladder.length === 0) throw new TypeError('QualityGovernor needs at least one rung');
     this.floorFps = options.floorFps ?? 24;
     this.targetFps = options.targetFps ?? 50;
-    if (this.targetFps <= this.floorFps) throw new TypeError('targetFps must leave a dead band above floorFps');
+    if (this.targetFps <= this.floorFps)
+      throw new TypeError('targetFps must leave a dead band above floorFps');
     this.slowSamples = Math.max(1, options.slowSamples ?? 2);
     this.fastSamples = Math.max(1, options.fastSamples ?? 6);
     this.climbPenalty = Math.max(0, options.climbPenalty ?? 4);
@@ -98,7 +140,10 @@ export class QualityGovernor {
     this.ceiling = clampRung(options.ceilingRung ?? 0, this.ladder.length);
     // Start one below the best: a capable machine gets near-full quality at once and earns the
     // top rung; a weak one has a shorter fall.
-    this.rung = clampRung(options.initialRung ?? Math.max(this.ceiling, Math.min(1, this.ladder.length - 1)), this.ladder.length);
+    this.rung = clampRung(
+      options.initialRung ?? Math.max(this.ceiling, Math.min(1, this.ladder.length - 1)),
+      this.ladder.length,
+    );
   }
 
   get rungIndex(): number {
@@ -120,7 +165,10 @@ export class QualityGovernor {
 
   private climbThreshold(): number {
     if (this.rung <= this.ceiling) return Number.POSITIVE_INFINITY;
-    const penalty = Math.min(this.maxClimbPenalty, this.failures[this.rung - 1]! * this.climbPenalty);
+    const penalty = Math.min(
+      this.maxClimbPenalty,
+      this.failures[this.rung - 1]! * this.climbPenalty,
+    );
     return this.fastSamples + penalty;
   }
 

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { loadMigrations, migrate, validateMigrationSet, type MigrationFile, type SqlExecutor } from '../src/migrate.ts';
+import {
+  loadMigrations,
+  migrate,
+  validateMigrationSet,
+  type MigrationFile,
+  type SqlExecutor,
+} from '../src/migrate.ts';
 import { isUlid, ulid } from '../src/ids.ts';
 
 /** In-memory executor that records statements and remembers applied migrations. */
@@ -7,11 +13,15 @@ function fakeDb() {
   const applied = new Map<string, string>();
   const statements: string[] = [];
   const exec: SqlExecutor = {
-    unsafe: async (s) => { statements.push(s); },
+    unsafe: async (s) => {
+      statements.push(s);
+    },
     query: async <T>(s: string, params: unknown[] = []) => {
       statements.push(s);
-      if (s.startsWith('SELECT name, checksum')) return [...applied].map(([name, checksum]) => ({ name, checksum })) as T[];
-      if (s.startsWith('INSERT INTO schema_migrations')) applied.set(params[0] as string, params[1] as string);
+      if (s.startsWith('SELECT name, checksum'))
+        return [...applied].map(([name, checksum]) => ({ name, checksum })) as T[];
+      if (s.startsWith('INSERT INTO schema_migrations'))
+        applied.set(params[0] as string, params[1] as string);
       return [] as T[];
     },
     begin: async (fn) => fn(exec),
@@ -36,8 +46,13 @@ describe('migration runner', () => {
     const second = await migrate(exec, files);
     expect(second.applied).toHaveLength(0);
     expect(second.skipped).toHaveLength(2);
-    expect(statements.some((s) => s.includes('CREATE TABLE IF NOT EXISTS schema_migrations'))).toBe(true);
-    const tampered: MigrationFile[] = [{ ...files[0]!, sql: files[0]!.sql + '\n-- edited', checksum: 'nope' }, files[1]!];
+    expect(statements.some((s) => s.includes('CREATE TABLE IF NOT EXISTS schema_migrations'))).toBe(
+      true,
+    );
+    const tampered: MigrationFile[] = [
+      { ...files[0]!, sql: files[0]!.sql + '\n-- edited', checksum: 'nope' },
+      files[1]!,
+    ];
     await expect(migrate(exec, tampered)).rejects.toThrow('modified after being applied');
   });
 

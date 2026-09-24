@@ -60,10 +60,16 @@ export function deriveConfidence(input: ConfidenceInput): ConfidenceState {
     terrain,
     sceneDetail,
     notes: {
-      astronomy: astronomy === 'HIGH' ? 'Sun and moon positions computed from ephemeris (±0.01° sun, ±0.3° moon)' : 'Waiting for a valid location and time zone',
+      astronomy:
+        astronomy === 'HIGH'
+          ? 'Sun and moon positions computed from ephemeris (±0.01° sun, ±0.3° moon)'
+          : 'Waiting for a valid location and time zone',
       environment: envNote,
       weather: weatherNote,
-      imagery: imagery === 'REAL_REFERENCE' ? 'A licensed photograph near this point is shown as evidence' : 'No licensed real photograph available — simulation only',
+      imagery:
+        imagery === 'REAL_REFERENCE'
+          ? 'A licensed photograph near this point is shown as evidence'
+          : 'No licensed real photograph available — simulation only',
     },
   };
 }
@@ -71,7 +77,8 @@ export function deriveConfidence(input: ConfidenceInput): ConfidenceState {
 /** The three-level source label (plan §2). */
 export function deriveSourceMode(confidence: ConfidenceState): SourceMode {
   if (confidence.imagery === 'REAL_REFERENCE') return 'REAL_REFERENCE';
-  if (confidence.terrain === 'HIGH' && confidence.sceneDetail !== 'LOW') return 'SIMULATED_LIGHTING';
+  if (confidence.terrain === 'HIGH' && confidence.sceneDetail !== 'LOW')
+    return 'SIMULATED_LIGHTING';
   return 'ESTIMATED_PREVIEW';
 }
 
@@ -82,7 +89,10 @@ export const SOURCE_MODE_LABEL: Record<SourceMode, string> = {
 };
 
 export const SOURCE_MODE_DESCRIPTION: Record<SourceMode, string> = {
-  REAL_REFERENCE: 'A licensed photograph exists near this point. It shows the place, not necessarily this date or time.',
-  SIMULATED_LIGHTING: 'Scene geometry is real terrain and map data; light and atmosphere are simulated for this date, time and weather state.',
-  ESTIMATED_PREVIEW: 'Imagery or geometry is incomplete here. Light direction is exact; the scene itself is an approximation.',
+  REAL_REFERENCE:
+    'A licensed photograph exists near this point. It shows the place, not necessarily this date or time.',
+  SIMULATED_LIGHTING:
+    'Scene geometry is real terrain and map data; light and atmosphere are simulated for this date, time and weather state.',
+  ESTIMATED_PREVIEW:
+    'Imagery or geometry is incomplete here. Light direction is exact; the scene itself is an approximation.',
 };

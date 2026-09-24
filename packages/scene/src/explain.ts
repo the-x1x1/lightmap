@@ -18,22 +18,52 @@ export interface ExplanationLine {
 export function explainScene(s: SceneState): ExplanationLine[] {
   const lines: ExplanationLine[] = [];
   const el = s.solar.elevationDegrees;
-  lines.push({ label: 'Sun', value: el < -0.833 ? `${Math.abs(el).toFixed(0)}° below the horizon (${s.solar.phase.replace('-', ' ')})` : `${el.toFixed(0)}° elevation, ${s.solar.phase.replace('-', ' ')}`, basis: 'astronomy' });
-  lines.push({ label: 'Light direction', value: `from the ${compassLabel(s.solar.azimuthDegrees)} (${Math.round(s.solar.azimuthDegrees)}°)`, basis: 'astronomy' });
+  lines.push({
+    label: 'Sun',
+    value:
+      el < -0.833
+        ? `${Math.abs(el).toFixed(0)}° below the horizon (${s.solar.phase.replace('-', ' ')})`
+        : `${el.toFixed(0)}° elevation, ${s.solar.phase.replace('-', ' ')}`,
+    basis: 'astronomy',
+  });
+  lines.push({
+    label: 'Light direction',
+    value: `from the ${compassLabel(s.solar.azimuthDegrees)} (${Math.round(s.solar.azimuthDegrees)}°)`,
+    basis: 'astronomy',
+  });
   if (el > -0.833) {
-    lines.push({ label: 'Shadows fall', value: `toward the ${compassLabel((s.solar.azimuthDegrees + 180) % 360)}, ${shadowLengthText(el)}`, basis: 'astronomy' });
-    lines.push({ label: 'Colour', value: `${Math.round(s.atmosphere.colorTemperatureK)} K — ${warmthText(s.atmosphere.warmth)}`, basis: 'astronomy' });
+    lines.push({
+      label: 'Shadows fall',
+      value: `toward the ${compassLabel((s.solar.azimuthDegrees + 180) % 360)}, ${shadowLengthText(el)}`,
+      basis: 'astronomy',
+    });
+    lines.push({
+      label: 'Colour',
+      value: `${Math.round(s.atmosphere.colorTemperatureK)} K — ${warmthText(s.atmosphere.warmth)}`,
+      basis: 'astronomy',
+    });
   }
   const geo = lightingGeometry(s.camera, s.solar.azimuthDegrees, el);
   lines.push({ label: 'Relative to camera', value: geo.replace('-', ' '), basis: 'camera' });
   const scenarioLabel = scenarioById(s.atmosphere.scenario).label;
   lines.push({
     label: s.atmosphere.mode === 'SCENARIO' ? 'Weather scenario' : 'Weather',
-    value: s.atmosphere.mode === 'SCENARIO' ? `${scenarioLabel} (scenario, not a forecast)` : `${scenarioLabel} — ${s.atmosphere.summary}`,
+    value:
+      s.atmosphere.mode === 'SCENARIO'
+        ? `${scenarioLabel} (scenario, not a forecast)`
+        : `${scenarioLabel} — ${s.atmosphere.summary}`,
     basis: 'weather',
   });
-  lines.push({ label: 'Direct light reaching the ground', value: `${Math.round(s.atmosphere.parameters.sunTransmittance * 100)} %`, basis: 'weather' });
-  lines.push({ label: 'Scene source', value: `${SOURCE_MODE_LABEL[s.sourceMode]} — ${s.confidence.notes.environment.toLowerCase()}`, basis: 'environment' });
+  lines.push({
+    label: 'Direct light reaching the ground',
+    value: `${Math.round(s.atmosphere.parameters.sunTransmittance * 100)} %`,
+    basis: 'weather',
+  });
+  lines.push({
+    label: 'Scene source',
+    value: `${SOURCE_MODE_LABEL[s.sourceMode]} — ${s.confidence.notes.environment.toLowerCase()}`,
+    basis: 'environment',
+  });
   lines.push({
     label: 'Confidence',
     value: `astronomy ${s.confidence.astronomy.toLowerCase()}, environment ${s.confidence.environment.toLowerCase()}, weather ${s.confidence.weather === 'SCENARIO' ? 'scenario-only' : s.confidence.weather.toLowerCase()}`,

@@ -72,7 +72,14 @@ export function lunarEquatorial(T: number): LunarEquatorial {
   const z = Math.sin(eps) * Math.cos(b) * Math.sin(l) + Math.cos(eps) * Math.sin(b);
   const ra = wrap360(Math.atan2(y, x) * RAD);
   const dec = Math.asin(Math.max(-1, Math.min(1, z))) * RAD;
-  return { rightAscensionDeg: ra, declinationDeg: dec, eclipticLongitudeDeg: lambda, eclipticLatitudeDeg: beta, parallaxDeg: parallax, distanceKm };
+  return {
+    rightAscensionDeg: ra,
+    declinationDeg: dec,
+    eclipticLongitudeDeg: lambda,
+    eclipticLatitudeDeg: beta,
+    parallaxDeg: parallax,
+    distanceKm,
+  };
 }
 
 export type MoonPhaseName =
@@ -138,7 +145,10 @@ export function moonPosition(date: Date, latitudeDeg: number, longitudeDeg: numb
   const elongation = wrap360(moon.eclipticLongitudeDeg - sun.eclipticLongitudeDeg);
   const psi = Math.acos(Math.cos(moon.eclipticLatitudeDeg * DEG) * Math.cos(elongation * DEG)); // geocentric elongation
   const sunDistKm = sun.distanceAu * 149_597_870.7;
-  const phaseAngle = Math.atan2(sunDistKm * Math.sin(psi), moon.distanceKm - sunDistKm * Math.cos(psi));
+  const phaseAngle = Math.atan2(
+    sunDistKm * Math.sin(psi),
+    moon.distanceKm - sunDistKm * Math.cos(psi),
+  );
   const k = (1 + Math.cos(phaseAngle)) / 2;
 
   return {
@@ -157,10 +167,16 @@ export function moonPosition(date: Date, latitudeDeg: number, longitudeDeg: numb
 }
 
 /** Moonrise / moonset within [start, end) using the topocentric upper-limb threshold (+0.125° ≈ refraction − semidiameter − parallax handled above). */
-export function moonRiseSet(start: Date, end: Date, latitudeDeg: number, longitudeDeg: number): { moonrise: Date | null; moonset: Date | null; alwaysUp: boolean; alwaysDown: boolean } {
+export function moonRiseSet(
+  start: Date,
+  end: Date,
+  latitudeDeg: number,
+  longitudeDeg: number,
+): { moonrise: Date | null; moonset: Date | null; alwaysUp: boolean; alwaysDown: boolean } {
   const threshold = 0.125; // Meeus 15.1: h0 = 0.7275π − 0°34′, ≈ +0.125° for topocentric altitude after our parallax step
   const step = 10 * 60_000;
-  const f = (t: number) => moonPosition(new Date(t), latitudeDeg, longitudeDeg).topocentricElevationDeg - threshold;
+  const f = (t: number) =>
+    moonPosition(new Date(t), latitudeDeg, longitudeDeg).topocentricElevationDeg - threshold;
   let moonrise: Date | null = null;
   let moonset: Date | null = null;
   let anyUp = false;
@@ -186,7 +202,7 @@ function bisect(f: (t: number) => number, a: number, b: number): number {
   for (let i = 0; i < 40 && b - a > 1000; i++) {
     const m = (a + b) / 2;
     const fm = f(m);
-    if ((fa < 0) === (fm < 0)) {
+    if (fa < 0 === fm < 0) {
       a = m;
       fa = fm;
     } else b = m;

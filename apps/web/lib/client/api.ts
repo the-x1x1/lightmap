@@ -14,7 +14,14 @@ export class ApiRequestError extends Error {
 }
 
 export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, { ...init, headers: { Accept: 'application/json', ...(init?.body ? { 'Content-Type': 'application/json' } : {}), ...(init?.headers ?? {}) } });
+  const res = await fetch(url, {
+    ...init,
+    headers: {
+      Accept: 'application/json',
+      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(init?.headers ?? {}),
+    },
+  });
   if (!res.ok) {
     let body: ApiError['error'] = { code: 'http_error', message: `Request failed (${res.status})` };
     try {
@@ -30,7 +37,9 @@ export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> 
 
 export const api = {
   get: <T>(url: string) => fetchJson<T>(url),
-  post: <T>(url: string, body: unknown) => fetchJson<T>(url, { method: 'POST', body: JSON.stringify(body) }),
-  patch: <T>(url: string, body: unknown) => fetchJson<T>(url, { method: 'PATCH', body: JSON.stringify(body) }),
+  post: <T>(url: string, body: unknown) =>
+    fetchJson<T>(url, { method: 'POST', body: JSON.stringify(body) }),
+  patch: <T>(url: string, body: unknown) =>
+    fetchJson<T>(url, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: <T>(url: string) => fetchJson<T>(url, { method: 'DELETE' }),
 };

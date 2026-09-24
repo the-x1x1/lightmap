@@ -21,11 +21,23 @@ export async function POST(req: Request) {
     const ctx = await requireUser();
     const db = requireDb();
     const repo = projectsRepo(db);
-    const decision = can(ctx.entitlements, 'saved_projects', { projectCount: await repo.count(ctx.user.id) });
+    const decision = can(ctx.entitlements, 'saved_projects', {
+      projectCount: await repo.count(ctx.user.id),
+    });
     if (!decision.allowed) throw forbidByEntitlement(decision);
     const body = await readJson(req, (b) => {
       const o = v.obj(b);
-      return { name: v.string(o['name'], 'name', { min: 1, max: 120 })!, description: v.string(o['description'], 'description', { optional: true, nullable: true, max: 2000 }) ?? null, shootDate: v.isoDate(o['shootDate'], 'shootDate', { optional: true, nullable: true }) ?? null };
+      return {
+        name: v.string(o['name'], 'name', { min: 1, max: 120 })!,
+        description:
+          v.string(o['description'], 'description', {
+            optional: true,
+            nullable: true,
+            max: 2000,
+          }) ?? null,
+        shootDate:
+          v.isoDate(o['shootDate'], 'shootDate', { optional: true, nullable: true }) ?? null,
+      };
     });
     const project = await repo.create(ctx.user.id, body);
     await auditRepo(db).record('project.created', ctx.user.id, { projectId: project.id });

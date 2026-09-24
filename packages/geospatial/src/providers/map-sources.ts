@@ -8,7 +8,13 @@
  * that needs a credential is unavailable until the credential exists.
  */
 import type { GeoPoint } from '../geo.ts';
-import type { BasemapDescriptor, MapTileProvider, ProviderMeta, TerrainDescriptor, TerrainProvider } from './types.ts';
+import type {
+  BasemapDescriptor,
+  MapTileProvider,
+  ProviderMeta,
+  TerrainDescriptor,
+  TerrainProvider,
+} from './types.ts';
 
 // ---------------------------------------------------------------------------------------------
 // Terrain
@@ -145,8 +151,20 @@ export class NaturalEarthBasemap implements MapTileProvider {
 export class XyzBasemap implements MapTileProvider {
   readonly meta: ProviderMeta;
   readonly detailLevel: 'regional' | 'street';
-  private readonly opts: { url: string; attribution: string; maxZoom: number; name?: string; termsUrl?: string };
-  constructor(opts: { url: string; attribution: string; maxZoom: number; name?: string; termsUrl?: string }) {
+  private readonly opts: {
+    url: string;
+    attribution: string;
+    maxZoom: number;
+    name?: string;
+    termsUrl?: string;
+  };
+  constructor(opts: {
+    url: string;
+    attribution: string;
+    maxZoom: number;
+    name?: string;
+    termsUrl?: string;
+  }) {
     this.opts = opts;
     this.meta = {
       id: 'xyz-imagery',
@@ -161,7 +179,12 @@ export class XyzBasemap implements MapTileProvider {
     this.detailLevel = opts.maxZoom >= 16 ? 'street' : 'regional';
   }
   descriptor(): BasemapDescriptor {
-    return { kind: 'xyz', url: this.opts.url, maxZoom: this.opts.maxZoom, attribution: this.opts.attribution };
+    return {
+      kind: 'xyz',
+      url: this.opts.url,
+      maxZoom: this.opts.maxZoom,
+      attribution: this.opts.attribution,
+    };
   }
 }
 

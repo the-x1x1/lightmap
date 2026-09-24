@@ -18,7 +18,7 @@ must never grant access by accident.
    past_due keeps it for a 7-day grace after period end; canceled keeps it to period end; paused,
    unpaid, incomplete and incomplete_expired are free.
 2. **One authorization question.** `can(snapshot, key, context)` returns `{ allowed, reason,
-   upgradeTo }`. The UI shows the reason on the paywall; API routes call the same function before
+upgradeTo }`. The UI shows the reason on the paywall; API routes call the same function before
    every write. Limits (date window, project and viewpoint counts, quality ceiling) are context
    arguments, not UI constants.
 3. **The server owns the snapshot.** The client receives it from

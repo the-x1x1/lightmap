@@ -25,29 +25,74 @@ export interface HorizonDecision {
   weatherConfidence: 'HIGH' | 'MEDIUM' | 'LOW' | 'SCENARIO';
 }
 
-export function decideWeatherMode(selected: Date, now: Date, caps: WeatherCapabilities | null): HorizonDecision {
+export function decideWeatherMode(
+  selected: Date,
+  now: Date,
+  caps: WeatherCapabilities | null,
+): HorizonDecision {
   const leadHours = (selected.getTime() - now.getTime()) / 3_600_000;
   const days = Math.round(Math.abs(leadHours) / 24);
   if (!caps) {
-    return { mode: 'SCENARIO', leadHours, reason: 'No weather provider configured — choose a scenario', fetchWorthwhile: false, weatherConfidence: 'SCENARIO' };
+    return {
+      mode: 'SCENARIO',
+      leadHours,
+      reason: 'No weather provider configured — choose a scenario',
+      fetchWorthwhile: false,
+      weatherConfidence: 'SCENARIO',
+    };
   }
   if (leadHours < 0) {
     if (-leadHours <= caps.historicalDays * 24) {
-      return { mode: 'RECENT_PAST', leadHours, reason: 'Recent conditions from the provider archive', fetchWorthwhile: true, weatherConfidence: 'HIGH' };
+      return {
+        mode: 'RECENT_PAST',
+        leadHours,
+        reason: 'Recent conditions from the provider archive',
+        fetchWorthwhile: true,
+        weatherConfidence: 'HIGH',
+      };
     }
-    return { mode: 'PAST', leadHours, reason: `Historical weather for ${days} days ago is not loaded — showing a scenario`, fetchWorthwhile: false, weatherConfidence: 'SCENARIO' };
+    return {
+      mode: 'PAST',
+      leadHours,
+      reason: `Historical weather for ${days} days ago is not loaded — showing a scenario`,
+      fetchWorthwhile: false,
+      weatherConfidence: 'SCENARIO',
+    };
   }
   if (leadHours <= caps.reliableHorizonHours) {
     const conf = leadHours <= 48 ? 'HIGH' : 'MEDIUM';
-    return { mode: 'FORECAST', leadHours, reason: leadHours <= 48 ? 'Forecast' : `Forecast, ${days} days ahead`, fetchWorthwhile: true, weatherConfidence: conf };
+    return {
+      mode: 'FORECAST',
+      leadHours,
+      reason: leadHours <= 48 ? 'Forecast' : `Forecast, ${days} days ahead`,
+      fetchWorthwhile: true,
+      weatherConfidence: conf,
+    };
   }
   if (leadHours <= caps.maxHorizonHours) {
-    return { mode: 'EXTENDED_FORECAST', leadHours, reason: `Extended forecast, ${days} days ahead — low confidence`, fetchWorthwhile: true, weatherConfidence: 'LOW' };
+    return {
+      mode: 'EXTENDED_FORECAST',
+      leadHours,
+      reason: `Extended forecast, ${days} days ahead — low confidence`,
+      fetchWorthwhile: true,
+      weatherConfidence: 'LOW',
+    };
   }
-  return { mode: 'SCENARIO', leadHours, reason: `Forecast unavailable this far ahead (${days} days) — compare scenarios`, fetchWorthwhile: false, weatherConfidence: 'SCENARIO' };
+  return {
+    mode: 'SCENARIO',
+    leadHours,
+    reason: `Forecast unavailable this far ahead (${days} days) — compare scenarios`,
+    fetchWorthwhile: false,
+    weatherConfidence: 'SCENARIO',
+  };
 }
 
 /** A day's worth of frames is fetched once per (grid cell, civil day, provider); this is that key. */
-export function forecastCacheKey(providerId: string, gridKey: string, dayIso: string, providerVersion = 1): string {
+export function forecastCacheKey(
+  providerId: string,
+  gridKey: string,
+  dayIso: string,
+  providerVersion = 1,
+): string {
   return `weather:${providerId}:v${providerVersion}:${gridKey}:${dayIso}`;
 }

@@ -9,29 +9,29 @@ Guiding rule (plan §15): no `if (plan === 'pro')` anywhere in the UI or API. Ev
 
 ## 1. Entitlement keys
 
-| Key | Meaning |
-|---|---|
-| `map_access` | Use the map, timeline and scenarios |
-| `future_date_planning` | Plan beyond the free date window |
-| `saved_projects` | Create projects (subject to limits) |
-| `saved_viewpoints` | Save viewpoints (subject to limits) |
-| `forecast_detail` | Hourly forecast detail and scenario comparison |
-| `high_quality_preview` | Request render quality above the plan ceiling |
-| `export_preview` | Planning-card export |
-| `moon_planning` | Moon position, phase and rise/set planning |
-| `advanced_camera_tools` | Lens presets, heading and pitch controls |
+| Key                     | Meaning                                        |
+| ----------------------- | ---------------------------------------------- |
+| `map_access`            | Use the map, timeline and scenarios            |
+| `future_date_planning`  | Plan beyond the free date window               |
+| `saved_projects`        | Create projects (subject to limits)            |
+| `saved_viewpoints`      | Save viewpoints (subject to limits)            |
+| `forecast_detail`       | Hourly forecast detail and scenario comparison |
+| `high_quality_preview`  | Request render quality above the plan ceiling  |
+| `export_preview`        | Planning-card export                           |
+| `moon_planning`         | Moon position, phase and rise/set planning     |
+| `advanced_camera_tools` | Lens presets, heading and pitch controls       |
 
 ## 2. Plans and limits
 
-| | `free` | `pro` (Photographer Pro) | `studio` |
-|---|---|---|---|
-| Entitlements | map_access, saved_projects, saved_viewpoints, moon_planning | all nine | all nine |
-| `futureDateWindowDays` | 14 | unlimited | unlimited |
-| `pastDateWindowDays` | 7 | unlimited | unlimited |
-| `maxProjects` | 1 | unlimited | unlimited |
-| `maxViewpointsPerProject` | 3 | 200 | 500 |
-| `maxViewpointsTotal` | 3 | 5,000 | 50,000 |
-| `maxPreviewQuality` | 1 | 3 | 3 |
+|                           | `free`                                                      | `pro` (Photographer Pro) | `studio`  |
+| ------------------------- | ----------------------------------------------------------- | ------------------------ | --------- |
+| Entitlements              | map_access, saved_projects, saved_viewpoints, moon_planning | all nine                 | all nine  |
+| `futureDateWindowDays`    | 14                                                          | unlimited                | unlimited |
+| `pastDateWindowDays`      | 7                                                           | unlimited                | unlimited |
+| `maxProjects`             | 1                                                           | unlimited                | unlimited |
+| `maxViewpointsPerProject` | 3                                                           | 200                      | 500       |
+| `maxViewpointsTotal`      | 3                                                           | 5,000                    | 50,000    |
+| `maxPreviewQuality`       | 1                                                           | 3                        | 3         |
 
 Studio is a plan definition only: it has no Stripe price and no team features yet (plan §15 "later").
 
@@ -50,13 +50,13 @@ Studio is a plan definition only: it has no Stripe price and no team features ye
 `deriveEntitlements(subscription, now)` produces the snapshot. `plan` is what the user bought;
 `effectivePlan` is what applies after status rules.
 
-| Stripe status | Effective plan | Notes |
-|---|---|---|
-| `active`, `trialing` | the plan | If `cancelAtPeriodEnd`, `accessEndsAt = periodEnd` |
-| `past_due` | the plan for **7 days** after `periodEnd` (`PAST_DUE_GRACE_DAYS`), then free | `grace: true`; UI shows a fix-payment nudge but keeps access |
-| `canceled` | the plan until `periodEnd`, then free | Access continues to the end of the paid period |
-| `paused`, `unpaid`, `incomplete`, `incomplete_expired` | free | |
-| no record | free, `status: 'none'` | |
+| Stripe status                                          | Effective plan                                                               | Notes                                                        |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `active`, `trialing`                                   | the plan                                                                     | If `cancelAtPeriodEnd`, `accessEndsAt = periodEnd`           |
+| `past_due`                                             | the plan for **7 days** after `periodEnd` (`PAST_DUE_GRACE_DAYS`), then free | `grace: true`; UI shows a fix-payment nudge but keeps access |
+| `canceled`                                             | the plan until `periodEnd`, then free                                        | Access continues to the end of the paid period               |
+| `paused`, `unpaid`, `incomplete`, `incomplete_expired` | free                                                                         |                                                              |
+| no record                                              | free, `status: 'none'`                                                       |                                                              |
 
 The snapshot also carries `entitlements[]`, `limits`, `accessEndsAt` and `computedAt`.
 
@@ -124,12 +124,12 @@ with card `4242 4242 4242 4242`.
 
 ## 7. Environment variables
 
-| Variable | Purpose |
-|---|---|
-| `STRIPE_SECRET_KEY` | Server-side API key. **A `sk_test_` key is refused in production** by env validation. |
-| `STRIPE_WEBHOOK_SECRET` | Signing secret for the webhook endpoint (from the Dashboard or `stripe listen`). |
-| `STRIPE_PRICE_PRO_MONTHLY` | Price id mapped to `pro`. |
-| `STRIPE_PRICE_PRO_YEARLY` | Price id mapped to `pro`. |
+| Variable                   | Purpose                                                                               |
+| -------------------------- | ------------------------------------------------------------------------------------- |
+| `STRIPE_SECRET_KEY`        | Server-side API key. **A `sk_test_` key is refused in production** by env validation. |
+| `STRIPE_WEBHOOK_SECRET`    | Signing secret for the webhook endpoint (from the Dashboard or `stripe listen`).      |
+| `STRIPE_PRICE_PRO_MONTHLY` | Price id mapped to `pro`.                                                             |
+| `STRIPE_PRICE_PRO_YEARLY`  | Price id mapped to `pro`.                                                             |
 
 When any of these is missing the billing routes return a clear "billing not configured" error and
 nothing else in the app changes: free-plan behaviour applies.

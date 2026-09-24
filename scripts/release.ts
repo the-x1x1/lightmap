@@ -15,7 +15,10 @@ if (sh('git status --porcelain')) {
   console.error('working tree is not clean');
   process.exit(1);
 }
-const manifests = ['package.json', ...sh('git ls-files apps/*/package.json packages/*/package.json').split('\n')];
+const manifests = [
+  'package.json',
+  ...sh('git ls-files apps/*/package.json packages/*/package.json').split('\n'),
+];
 for (const m of manifests) {
   const j = JSON.parse(readFileSync(m, 'utf8')) as { version?: string };
   j.version = version;
@@ -27,10 +30,16 @@ try {
 } catch {
   /* first release */
 }
-const log = sh(`git log ${lastTag ? `${lastTag}..HEAD` : ''} --pretty=format:'- %s (%h)' --no-merges`);
+const log = sh(
+  `git log ${lastTag ? `${lastTag}..HEAD` : ''} --pretty=format:'- %s (%h)' --no-merges`,
+);
 const date = new Date().toISOString().slice(0, 10);
 const entry = `## v${version} — ${date}\n\n${log || '- Initial release'}\n\n`;
-const existing = existsSync('CHANGELOG.md') ? readFileSync('CHANGELOG.md', 'utf8').replace(/^# Changelog\n\n/, '') : '';
+const existing = existsSync('CHANGELOG.md')
+  ? readFileSync('CHANGELOG.md', 'utf8').replace(/^# Changelog\n\n/, '')
+  : '';
 writeFileSync('CHANGELOG.md', `# Changelog\n\n${entry}${existing}`);
-sh(`git add -A && git commit -q -m "release: v${version}" && git tag -a v${version} -m "LightMap v${version}"`);
+sh(
+  `git add -A && git commit -q -m "release: v${version}" && git tag -a v${version} -m "LightMap v${version}"`,
+);
 console.log(`tagged v${version}. Push with: git push --follow-tags`);

@@ -32,4 +32,7 @@ for (const [from, to] of pairs) {
   cpSync(from, to, { recursive: true });
   console.log(`[cesium-assets] copied ${from} → ${to}`);
 }
-writeFileSync(join(target, 'VERSION'), `${JSON.parse(String(require('node:fs').readFileSync(join(enginePkg, 'package.json')))).version}\n`);
+writeFileSync(
+  join(target, 'VERSION'),
+  `${JSON.parse(String(require('node:fs').readFileSync(join(enginePkg, 'package.json')))).version}\n`,
+);

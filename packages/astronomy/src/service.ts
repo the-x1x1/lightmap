@@ -6,10 +6,22 @@
  * Everything runs client-side in well under a millisecond, so the timeline can call
  * `getSolarState` on every scrub tick (plan §27: astronomical update < 16 ms).
  */
-import { computeDayEvents, lightPhase, twilightBand, type DayEvents, type LightPhase } from './events.ts';
+import {
+  computeDayEvents,
+  lightPhase,
+  twilightBand,
+  type DayEvents,
+  type LightPhase,
+} from './events.ts';
 import { moonPosition, moonRiseSet, type MoonPhaseName } from './lunar.ts';
 import { sunPosition } from './solar.ts';
-import { localDayBounds, utcToWallClock, wallClockToUtc, type CivilTime, type WallClock } from './time.ts';
+import {
+  localDayBounds,
+  utcToWallClock,
+  wallClockToUtc,
+  type CivilTime,
+  type WallClock,
+} from './time.ts';
 
 export interface SolarInput {
   latitude: number;
@@ -76,9 +88,27 @@ export interface AstronomyService {
   getDayEvents(input: DayEventInput): DayEvents;
 }
 
-export const LUNAR_ACCURACY_NOTE = 'Moon position ±0.3°, illumination ±2 %, rise/set ±3 min (Astronomical Almanac low-precision series).';
+export const LUNAR_ACCURACY_NOTE =
+  'Moon position ±0.3°, illumination ±2 %, rise/set ±3 min (Astronomical Almanac low-precision series).';
 
-const COMPASS16 = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+const COMPASS16 = [
+  'N',
+  'NNE',
+  'NE',
+  'ENE',
+  'E',
+  'ESE',
+  'SE',
+  'SSE',
+  'S',
+  'SSW',
+  'SW',
+  'WSW',
+  'W',
+  'WNW',
+  'NW',
+  'NNW',
+];
 
 export function compassFromAzimuth(az: number): string {
   const idx = Math.round((((az % 360) + 360) % 360) / 22.5) % 16;
@@ -90,7 +120,7 @@ export class MeeusAstronomyService implements AstronomyService {
     const p = sunPosition(input.timestampUtc, input.latitude, input.longitude);
     const local = utcToWallClock(input.timestampUtc, input.timeZone);
     // Local apparent solar time: hour angle 0 ⇒ 12 h.
-    const solarTime = ((p.hourAngleDeg / 15 + 12) % 24 + 24) % 24;
+    const solarTime = (((p.hourAngleDeg / 15 + 12) % 24) + 24) % 24;
     const daylightFactor = Math.max(0, Math.min(1, (p.elevationDeg + 6) / 30));
     return {
       azimuthDegrees: p.azimuthDeg,
@@ -140,7 +170,11 @@ export class MeeusAstronomyService implements AstronomyService {
 }
 
 /** Convenience: the UTC instant for a wall-clock selection at the location. */
-export function localSelectionToUtc(date: Pick<CivilTime, 'year' | 'month' | 'day'>, minutesSinceMidnight: number, timeZone: string): Date {
+export function localSelectionToUtc(
+  date: Pick<CivilTime, 'year' | 'month' | 'day'>,
+  minutesSinceMidnight: number,
+  timeZone: string,
+): Date {
   const start = wallClockToUtc({ ...date, hour: 0, minute: 0, second: 0 }, timeZone);
   return new Date(start.getTime() + minutesSinceMidnight * 60_000);
 }

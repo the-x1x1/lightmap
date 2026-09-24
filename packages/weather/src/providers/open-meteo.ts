@@ -10,7 +10,12 @@
  * "extended, low confidence" (docs/WEATHER_AND_FORECAST_MODEL.md). Archive: recent past via
  * `past_days` up to 92 days.
  */
-import type { WeatherCapabilities, WeatherFrame, WeatherProvider, WeatherSeries } from '../model.ts';
+import type {
+  WeatherCapabilities,
+  WeatherFrame,
+  WeatherProvider,
+  WeatherSeries,
+} from '../model.ts';
 
 export const OPEN_METEO_CAPABILITIES: WeatherCapabilities = {
   providerId: 'open-meteo',
@@ -69,16 +74,28 @@ export class OpenMeteoProvider implements WeatherProvider {
 
   constructor(opts: OpenMeteoOptions = {}) {
     this.apiKey = opts.apiKey;
-    this.baseUrl = (opts.baseUrl ?? (opts.apiKey ? 'https://customer-api.open-meteo.com' : 'https://api.open-meteo.com')).replace(/\/$/, '');
+    this.baseUrl = (
+      opts.baseUrl ??
+      (opts.apiKey ? 'https://customer-api.open-meteo.com' : 'https://api.open-meteo.com')
+    ).replace(/\/$/, '');
     this.fetchImpl = opts.fetchImpl ?? fetch;
     this.now = opts.now ?? (() => new Date());
   }
 
   getCapabilities(): WeatherCapabilities {
-    return { ...OPEN_METEO_CAPABILITIES, commercialReview: this.apiKey ? 'approved' : 'conditional' };
+    return {
+      ...OPEN_METEO_CAPABILITIES,
+      commercialReview: this.apiKey ? 'approved' : 'conditional',
+    };
   }
 
-  async getForecast(lat: number, lng: number, from: Date, to: Date, opts?: { signal?: AbortSignal }): Promise<WeatherSeries> {
+  async getForecast(
+    lat: number,
+    lng: number,
+    from: Date,
+    to: Date,
+    opts?: { signal?: AbortSignal },
+  ): Promise<WeatherSeries> {
     const url = new URL(`${this.baseUrl}/v1/forecast`);
     url.searchParams.set('latitude', lat.toFixed(4));
     url.searchParams.set('longitude', lng.toFixed(4));
@@ -92,12 +109,23 @@ export class OpenMeteoProvider implements WeatherProvider {
     return this.request(url, lat, lng, opts?.signal);
   }
 
-  async getHistorical(lat: number, lng: number, from: Date, to: Date, opts?: { signal?: AbortSignal }): Promise<WeatherSeries> {
+  async getHistorical(
+    lat: number,
+    lng: number,
+    from: Date,
+    to: Date,
+    opts?: { signal?: AbortSignal },
+  ): Promise<WeatherSeries> {
     // The forecast endpoint serves the recent past (up to 92 days) with the same schema.
     return this.getForecast(lat, lng, from, to, opts);
   }
 
-  private async request(url: URL, lat: number, lng: number, signal?: AbortSignal): Promise<WeatherSeries> {
+  private async request(
+    url: URL,
+    lat: number,
+    lng: number,
+    signal?: AbortSignal,
+  ): Promise<WeatherSeries> {
     const init: RequestInit = { headers: { Accept: 'application/json' } };
     if (signal !== undefined) init.signal = signal;
     const res = await this.fetchImpl(url, init);
@@ -119,7 +147,13 @@ function num(v: number | string | null | undefined): number | null {
 }
 
 /** Vendor → normalised frames. Exported for tests and for replaying recorded fixtures. */
-export function normalizeOpenMeteo(body: OpenMeteoResponse, lat: number, lng: number, fetchedAt: Date, caps: WeatherCapabilities): WeatherSeries {
+export function normalizeOpenMeteo(
+  body: OpenMeteoResponse,
+  lat: number,
+  lng: number,
+  fetchedAt: Date,
+  caps: WeatherCapabilities,
+): WeatherSeries {
   const h = body.hourly ?? {};
   const times = (h.time ?? []) as string[];
   const frames: WeatherFrame[] = [];

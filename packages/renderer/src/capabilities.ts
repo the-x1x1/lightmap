@@ -25,7 +25,9 @@ export interface RendererCapabilities {
 }
 
 export interface CapabilityProbeEnvironment {
-  createCanvas?: () => { getContext(kind: 'webgl2' | 'webgl'): WebGLRenderingContext | WebGL2RenderingContext | null } | null;
+  createCanvas?: () => {
+    getContext(kind: 'webgl2' | 'webgl'): WebGLRenderingContext | WebGL2RenderingContext | null;
+  } | null;
   hardwareConcurrency?: number;
   deviceMemoryGb?: number;
   matchMedia?: (q: string) => { matches: boolean } | null;
@@ -33,7 +35,9 @@ export interface CapabilityProbeEnvironment {
 }
 
 /** Probe once with a throwaway canvas; the context is released afterwards. */
-export function detectCapabilities(env: CapabilityProbeEnvironment = defaultEnvironment()): RendererCapabilities {
+export function detectCapabilities(
+  env: CapabilityProbeEnvironment = defaultEnvironment(),
+): RendererCapabilities {
   let webgl2 = false;
   let gpu: string | undefined;
   let maxTextureSize: number | undefined;
@@ -42,7 +46,9 @@ export function detectCapabilities(env: CapabilityProbeEnvironment = defaultEnvi
     const gl = (canvas?.getContext('webgl2') ?? null) as WebGL2RenderingContext | null;
     if (gl) {
       webgl2 = true;
-      const ext = gl.getExtension('WEBGL_debug_renderer_info') as { UNMASKED_RENDERER_WEBGL: number } | null;
+      const ext = gl.getExtension('WEBGL_debug_renderer_info') as {
+        UNMASKED_RENDERER_WEBGL: number;
+      } | null;
       const value = gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER) as unknown;
       if (typeof value === 'string' && value.trim()) gpu = value.trim().slice(0, 256);
       const mts = gl.getParameter(gl.MAX_TEXTURE_SIZE) as unknown;
@@ -54,16 +60,30 @@ export function detectCapabilities(env: CapabilityProbeEnvironment = defaultEnvi
   }
   const cores = env.hardwareConcurrency;
   const mem = env.deviceMemoryGb;
-  const lowPower = (typeof cores === 'number' && cores <= 4) || (typeof mem === 'number' && mem <= 4) || /Mali-4|Adreno \(TM\) [3-5]|PowerVR|SwiftShader|llvmpipe/i.test(gpu ?? '');
+  const lowPower =
+    (typeof cores === 'number' && cores <= 4) ||
+    (typeof mem === 'number' && mem <= 4) ||
+    /Mali-4|Adreno \(TM\) [3-5]|PowerVR|SwiftShader|llvmpipe/i.test(gpu ?? '');
   const reducedMotion = env.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
   const touch = env.matchMedia?.('(pointer: coarse)')?.matches ?? false;
-  return { webgl2, lowPower, gpu, maxTextureSize, reducedMotion, touch, devicePixelRatio: env.devicePixelRatio ?? 1 };
+  return {
+    webgl2,
+    lowPower,
+    gpu,
+    maxTextureSize,
+    reducedMotion,
+    touch,
+    devicePixelRatio: env.devicePixelRatio ?? 1,
+  };
 }
 
 export type RenderMode = '3D' | 'OVERLAY';
 
 /** The globe needs WebGL2; everything else degrades within the globe via the quality ladder. */
-export function resolveRenderMode(caps: RendererCapabilities, requested: RenderMode | 'AUTO' = 'AUTO'): RenderMode {
+export function resolveRenderMode(
+  caps: RendererCapabilities,
+  requested: RenderMode | 'AUTO' = 'AUTO',
+): RenderMode {
   if (requested !== 'AUTO') return requested === '3D' && !caps.webgl2 ? 'OVERLAY' : requested;
   return caps.webgl2 ? '3D' : 'OVERLAY';
 }

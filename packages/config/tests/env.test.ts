@@ -33,22 +33,38 @@ describe('parseEnv', () => {
   });
 
   it('requires a token for ion providers and attribution for xyz imagery', () => {
-    const r = parseEnv({ TERRAIN_PROVIDER: 'cesium-ion', IMAGERY_PROVIDER: 'xyz', IMAGERY_XYZ_URL: 'https://t/{z}/{x}/{y}.png' });
+    const r = parseEnv({
+      TERRAIN_PROVIDER: 'cesium-ion',
+      IMAGERY_PROVIDER: 'xyz',
+      IMAGERY_XYZ_URL: 'https://t/{z}/{x}/{y}.png',
+    });
     const keys = r.issues.map((i) => i.key);
     expect(keys).toContain('CESIUM_ION_TOKEN');
     expect(keys).toContain('IMAGERY_XYZ_ATTRIBUTION');
   });
 
   it('flags test-mode Stripe keys in production', () => {
-    const r = parseEnv({ NODE_ENV: 'production', STRIPE_SECRET_KEY: 'sk_test_123', STRIPE_WEBHOOK_SECRET: 'whsec' });
-    expect(r.issues.some((i) => i.key === 'STRIPE_SECRET_KEY' && i.severity === 'error')).toBe(true);
+    const r = parseEnv({
+      NODE_ENV: 'production',
+      STRIPE_SECRET_KEY: 'sk_test_123',
+      STRIPE_WEBHOOK_SECRET: 'whsec',
+    });
+    expect(r.issues.some((i) => i.key === 'STRIPE_SECRET_KEY' && i.severity === 'error')).toBe(
+      true,
+    );
   });
 
   it('reports fixture mode when any live provider is missing', () => {
     const caps = envCapabilities(parseEnv({}).env);
     expect(caps.fixtureMode).toBe(true); // natural-earth imagery is coarse ⇒ limited mode
     expect(caps.referenceImagery).toBe(false);
-    const live = envCapabilities(parseEnv({ IMAGERY_PROVIDER: 'xyz', IMAGERY_XYZ_URL: 'https://t', IMAGERY_XYZ_ATTRIBUTION: 'x' }).env);
+    const live = envCapabilities(
+      parseEnv({
+        IMAGERY_PROVIDER: 'xyz',
+        IMAGERY_XYZ_URL: 'https://t',
+        IMAGERY_XYZ_ATTRIBUTION: 'x',
+      }).env,
+    );
     expect(live.fixtureMode).toBe(false);
   });
 });

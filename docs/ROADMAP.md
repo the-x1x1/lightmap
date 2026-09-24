@@ -4,18 +4,18 @@ Phases follow the master plan (§25). Status as of v0.1.0. A phase is "delivered
 items exist, are tested and are documented; "plumbing" means the code paths work end to end in test
 mode but production configuration is still outstanding.
 
-| Phase | Goal | Status |
-|---|---|---|
-| 0 | Foundation | **Delivered in v0.1.0** |
-| 1 | Lighting MVP | **Delivered in v0.1.0** |
-| 2 | Weather | **Delivered in v0.1.0** |
-| 3 | Accounts, projects, billing | **Delivered as plumbing in v0.1.0**; production configuration outstanding |
-| 4 | Visual quality | Future |
-| 5 | Real references | Future — blocked on licensing |
-| 6 | Advanced camera planning / reverse planning | Future |
-| 7 | Long-range climatology | Future |
-| 8 | High-fidelity environment reconstruction | Future |
-| 9 | Native mobile | Future — only after PWA demand is proven |
+| Phase | Goal                                        | Status                                                                    |
+| ----- | ------------------------------------------- | ------------------------------------------------------------------------- |
+| 0     | Foundation                                  | **Delivered in v0.1.0**                                                   |
+| 1     | Lighting MVP                                | **Delivered in v0.1.0**                                                   |
+| 2     | Weather                                     | **Delivered in v0.1.0**                                                   |
+| 3     | Accounts, projects, billing                 | **Delivered as plumbing in v0.1.0**; production configuration outstanding |
+| 4     | Visual quality                              | Future                                                                    |
+| 5     | Real references                             | Future — blocked on licensing                                             |
+| 6     | Advanced camera planning / reverse planning | Future                                                                    |
+| 7     | Long-range climatology                      | Future                                                                    |
+| 8     | High-fidelity environment reconstruction    | Future                                                                    |
+| 9     | Native mobile                               | Future — only after PWA demand is proven                                  |
 
 ## Phase 0 — Foundation (delivered)
 

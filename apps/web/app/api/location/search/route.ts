@@ -17,7 +17,16 @@ export async function GET(req: Request) {
     const coords = parseCoordinates(q);
     const meta = s.geo.geocoder.meta;
     if (coords) {
-      const body: LocationSearchResponse = { results: [{ label: `${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`, point: coords, sourceId: 'coordinates' }], provider: { id: 'coordinates', isFixture: false, attribution: '' } };
+      const body: LocationSearchResponse = {
+        results: [
+          {
+            label: `${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`,
+            point: coords,
+            sourceId: 'coordinates',
+          },
+        ],
+        provider: { id: 'coordinates', isFixture: false, attribution: '' },
+      };
       return json(body);
     }
     const ctx = await requestContext();
@@ -29,9 +38,13 @@ export async function GET(req: Request) {
     if (!results) {
       await chargeBudget(key, 'geocoder', ctx.planForBudget);
       results = await s.geo.geocoder.search(q, { limit: 6 });
-      if (cache && meta.cache.allowed) await cache.set('geocode', norm, results, meta.cache.maxAgeSeconds);
+      if (cache && meta.cache.allowed)
+        await cache.set('geocode', norm, results, meta.cache.maxAgeSeconds);
     }
-    const body: LocationSearchResponse = { results, provider: { id: meta.id, isFixture: meta.isFixture, attribution: meta.attribution } };
+    const body: LocationSearchResponse = {
+      results,
+      provider: { id: meta.id, isFixture: meta.isFixture, attribution: meta.attribution },
+    };
     return json(body);
   } catch (e) {
     return errorResponse(e);

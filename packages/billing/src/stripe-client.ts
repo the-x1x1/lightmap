@@ -33,7 +33,9 @@ export class StripeBillingProvider implements BillingProvider {
 
   constructor(env: Pick<Env, 'STRIPE_SECRET_KEY' | 'STRIPE_WEBHOOK_SECRET'>) {
     this.configured = Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET);
-    this.stripe = env.STRIPE_SECRET_KEY ? new Stripe(env.STRIPE_SECRET_KEY, { appInfo: { name: brand.name, version: '0.1.0' } }) : null;
+    this.stripe = env.STRIPE_SECRET_KEY
+      ? new Stripe(env.STRIPE_SECRET_KEY, { appInfo: { name: brand.name, version: '0.1.0' } })
+      : null;
     this.webhookSecret = env.STRIPE_WEBHOOK_SECRET;
   }
 
@@ -42,7 +44,9 @@ export class StripeBillingProvider implements BillingProvider {
     return this.stripe;
   }
 
-  async createCheckoutSession(req: CheckoutRequest): Promise<{ url: string; customerId: string | null }> {
+  async createCheckoutSession(
+    req: CheckoutRequest,
+  ): Promise<{ url: string; customerId: string | null }> {
     const stripe = this.client();
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
@@ -56,12 +60,16 @@ export class StripeBillingProvider implements BillingProvider {
       ...(req.customerId ? { customer: req.customerId } : { customer_email: req.email }),
     });
     if (!session.url) throw new Error('Stripe did not return a checkout URL');
-    const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id ?? null;
+    const customerId =
+      typeof session.customer === 'string' ? session.customer : (session.customer?.id ?? null);
     return { url: session.url, customerId };
   }
 
   async createPortalSession(customerId: string, returnUrl: string): Promise<{ url: string }> {
-    const session = await this.client().billingPortal.sessions.create({ customer: customerId, return_url: returnUrl });
+    const session = await this.client().billingPortal.sessions.create({
+      customer: customerId,
+      return_url: returnUrl,
+    });
     return { url: session.url };
   }
 
@@ -98,6 +106,10 @@ export class UnconfiguredBillingProvider implements BillingProvider {
   }
 }
 
-export function createBillingProvider(env: Pick<Env, 'STRIPE_SECRET_KEY' | 'STRIPE_WEBHOOK_SECRET'>): BillingProvider {
-  return env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET ? new StripeBillingProvider(env) : new UnconfiguredBillingProvider();
+export function createBillingProvider(
+  env: Pick<Env, 'STRIPE_SECRET_KEY' | 'STRIPE_WEBHOOK_SECRET'>,
+): BillingProvider {
+  return env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET
+    ? new StripeBillingProvider(env)
+    : new UnconfiguredBillingProvider();
 }

@@ -10,8 +10,20 @@ const services = getServices();
 
 const disabled = {
   handlers: {
-    GET: async () => new Response(JSON.stringify({ error: { code: 'auth_disabled', message: 'Accounts need a database (DATABASE_URL).' } }), { status: 503, headers: { 'content-type': 'application/json' } }),
-    POST: async () => new Response(JSON.stringify({ error: { code: 'auth_disabled', message: 'Accounts need a database (DATABASE_URL).' } }), { status: 503, headers: { 'content-type': 'application/json' } }),
+    GET: async () =>
+      new Response(
+        JSON.stringify({
+          error: { code: 'auth_disabled', message: 'Accounts need a database (DATABASE_URL).' },
+        }),
+        { status: 503, headers: { 'content-type': 'application/json' } },
+      ),
+    POST: async () =>
+      new Response(
+        JSON.stringify({
+          error: { code: 'auth_disabled', message: 'Accounts need a database (DATABASE_URL).' },
+        }),
+        { status: 503, headers: { 'content-type': 'application/json' } },
+      ),
   },
   auth: async () => null,
   signIn: async () => {
@@ -22,9 +34,20 @@ const disabled = {
   },
 };
 
-const nextAuth = services.db && services.env.AUTH_SECRET ? NextAuth(buildAuthConfig({ env: services.env, db: services.db.db, log: (level, message, meta) => services.log[level](message, meta) })) : null;
+const nextAuth =
+  services.db && services.env.AUTH_SECRET
+    ? NextAuth(
+        buildAuthConfig({
+          env: services.env,
+          db: services.db.db,
+          log: (level, message, meta) => services.log[level](message, meta),
+        }),
+      )
+    : null;
 
 export const handlers = nextAuth?.handlers ?? disabled.handlers;
-export const auth: () => Promise<{ user?: { id?: string; email?: string | null; name?: string | null; image?: string | null } } | null> = nextAuth ? (nextAuth.auth as unknown as typeof auth) : disabled.auth;
+export const auth: () => Promise<{
+  user?: { id?: string; email?: string | null; name?: string | null; image?: string | null };
+} | null> = nextAuth ? (nextAuth.auth as unknown as typeof auth) : disabled.auth;
 export const signIn = nextAuth?.signIn ?? disabled.signIn;
 export const signOut = nextAuth?.signOut ?? disabled.signOut;

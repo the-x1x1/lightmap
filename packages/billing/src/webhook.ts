@@ -17,7 +17,13 @@ export interface StripeSubscriptionLike {
   /** Stripe ≥ 2025 moved period fields onto items; both are read. */
   current_period_start?: number;
   current_period_end?: number;
-  items?: { data?: Array<{ price?: { id?: string }; current_period_start?: number; current_period_end?: number }> };
+  items?: {
+    data?: Array<{
+      price?: { id?: string };
+      current_period_start?: number;
+      current_period_end?: number;
+    }>;
+  };
   metadata?: Record<string, string>;
 }
 
@@ -65,7 +71,13 @@ export interface SubscriptionUpsert {
 
 export interface BillingStore {
   /** Returns false when this event id was already recorded (idempotent replay). */
-  recordEvent(e: { providerEventId: string; type: string; userId: string | null; payload: unknown; outcome: string }): Promise<boolean>;
+  recordEvent(e: {
+    providerEventId: string;
+    type: string;
+    userId: string | null;
+    payload: unknown;
+    outcome: string;
+  }): Promise<boolean>;
   wasProcessed(providerEventId: string): Promise<boolean>;
   userIdForCustomer(customerId: string): Promise<string | null>;
   upsertSubscription(s: SubscriptionUpsert): Promise<void>;
@@ -83,8 +95,13 @@ export interface WebhookOutcome {
 }
 
 /** Stripe price id → plan, from env. Studio has no price yet (Phase 3+). */
-export function priceMapFromEnv(env: { STRIPE_PRICE_PRO_MONTHLY?: string | undefined; STRIPE_PRICE_PRO_YEARLY?: string | undefined }): Partial<Record<PlanKey, string[]>> {
-  const pro = [env.STRIPE_PRICE_PRO_MONTHLY, env.STRIPE_PRICE_PRO_YEARLY].filter((v): v is string => typeof v === 'string' && v.length > 0);
+export function priceMapFromEnv(env: {
+  STRIPE_PRICE_PRO_MONTHLY?: string | undefined;
+  STRIPE_PRICE_PRO_YEARLY?: string | undefined;
+}): Partial<Record<PlanKey, string[]>> {
+  const pro = [env.STRIPE_PRICE_PRO_MONTHLY, env.STRIPE_PRICE_PRO_YEARLY].filter(
+    (v): v is string => typeof v === 'string' && v.length > 0,
+  );
   return pro.length > 0 ? { pro } : {};
 }
 
@@ -101,10 +118,21 @@ export const HANDLED_EVENT_TYPES = [
   'charge.refunded',
 ] as const;
 
-const STATUS_VALUES: readonly SubscriptionStatus[] = ['trialing', 'active', 'past_due', 'canceled', 'unpaid', 'incomplete', 'incomplete_expired', 'paused'];
+const STATUS_VALUES: readonly SubscriptionStatus[] = [
+  'trialing',
+  'active',
+  'past_due',
+  'canceled',
+  'unpaid',
+  'incomplete',
+  'incomplete_expired',
+  'paused',
+];
 
 export function normalizeStatus(s: string): SubscriptionStatus {
-  return (STATUS_VALUES as readonly string[]).includes(s) ? (s as SubscriptionStatus) : 'incomplete';
+  return (STATUS_VALUES as readonly string[]).includes(s)
+    ? (s as SubscriptionStatus)
+    : 'incomplete';
 }
 
 function idOf(v: string | { id: string } | null | undefined): string | null {
@@ -120,9 +148,14 @@ function periodOf(sub: StripeSubscriptionLike): { start: Date | null; end: Date 
 }
 
 /** Subscription object → our record (needs a user id resolved by the caller). */
-export function subscriptionToRecord(sub: StripeSubscriptionLike, userId: string, priceMap: Partial<Record<PlanKey, string[]>>): SubscriptionUpsert {
+export function subscriptionToRecord(
+  sub: StripeSubscriptionLike,
+  userId: string,
+  priceMap: Partial<Record<PlanKey, string[]>>,
+): SubscriptionUpsert {
   const priceId = sub.items?.data?.[0]?.price?.id ?? null;
-  const plan = planForPrice(priceId, priceMap) ?? (sub.metadata?.['planKey'] as PlanKey | undefined) ?? null;
+  const plan =
+    planForPrice(priceId, priceMap) ?? (sub.metadata?.['planKey'] as PlanKey | undefined) ?? null;
   const { start, end } = periodOf(sub);
   return {
     userId,
@@ -151,11 +184,21 @@ export interface WebhookDeps {
  * Process one verified event. Idempotent: the event id is recorded first with ON CONFLICT DO
  * NOTHING; a replay returns 'duplicate' without touching the subscription.
  */
-export async function processWebhookEvent(event: StripeEventLike, deps: WebhookDeps): Promise<WebhookOutcome> {
+export async function processWebhookEvent(
+  event: StripeEventLike,
+  deps: WebhookDeps,
+): Promise<WebhookOutcome> {
   const { store } = deps;
-  if (await store.wasProcessed(event.id)) return { eventId: event.id, type: event.type, outcome: 'duplicate', userId: null };
+  if (await store.wasProcessed(event.id))
+    return { eventId: event.id, type: event.type, outcome: 'duplicate', userId: null };
   if (!(HANDLED_EVENT_TYPES as readonly string[]).includes(event.type)) {
-    await store.recordEvent({ providerEventId: event.id, type: event.type, userId: null, payload: event.data.object, outcome: 'ignored' });
+    await store.recordEvent({
+      providerEventId: event.id,
+      type: event.type,
+      userId: null,
+      payload: event.data.object,
+      outcome: 'ignored',
+    });
     return { eventId: event.id, type: event.type, outcome: 'ignored', userId: null };
   }
 
@@ -184,7 +227,8 @@ export async function processWebhookEvent(event: StripeEventLike, deps: WebhookD
       sub = event.data.object as StripeSubscriptionLike;
       customerId = idOf(sub.customer);
       if (event.type === 'customer.subscription.deleted') sub = { ...sub, status: 'canceled' };
-      if (event.type === 'customer.subscription.trial_will_end') detail = 'trial ending — notify user';
+      if (event.type === 'customer.subscription.trial_will_end')
+        detail = 'trial ending — notify user';
       break;
     }
     case 'invoice.payment_failed':
@@ -193,7 +237,10 @@ export async function processWebhookEvent(event: StripeEventLike, deps: WebhookD
       customerId = idOf(inv.customer);
       const subId = idOf(inv.subscription) ?? idOf(inv.parent?.subscription_details?.subscription);
       if (subId) sub = await deps.fetchSubscription(subId);
-      detail = event.type === 'invoice.payment_failed' ? 'payment failed — subscription status re-read from Stripe' : 'payment succeeded';
+      detail =
+        event.type === 'invoice.payment_failed'
+          ? 'payment failed — subscription status re-read from Stripe'
+          : 'payment succeeded';
       break;
     }
     case 'charge.refunded': {
@@ -203,19 +250,53 @@ export async function processWebhookEvent(event: StripeEventLike, deps: WebhookD
       // if the operator cancels. Record for audit only.
       userId = customerId ? await store.userIdForCustomer(customerId) : null;
       await store.audit('billing.charge_refunded', userId, { chargeId: charge.id, customerId });
-      await store.recordEvent({ providerEventId: event.id, type: event.type, userId, payload: event.data.object, outcome: 'processed' });
-      return { eventId: event.id, type: event.type, outcome: 'processed', userId, detail: 'refund recorded' };
+      await store.recordEvent({
+        providerEventId: event.id,
+        type: event.type,
+        userId,
+        payload: event.data.object,
+        outcome: 'processed',
+      });
+      return {
+        eventId: event.id,
+        type: event.type,
+        outcome: 'processed',
+        userId,
+        detail: 'refund recorded',
+      };
     }
   }
 
   userId ??= customerId ? await store.userIdForCustomer(customerId) : null;
   if (!userId) {
-    await store.audit('billing.unmapped_event', null, { eventId: event.id, type: event.type, customerId });
-    await store.recordEvent({ providerEventId: event.id, type: event.type, userId: null, payload: event.data.object, outcome: 'unmapped' });
-    return { eventId: event.id, type: event.type, outcome: 'unmapped', userId: null, detail: 'no user for customer' };
+    await store.audit('billing.unmapped_event', null, {
+      eventId: event.id,
+      type: event.type,
+      customerId,
+    });
+    await store.recordEvent({
+      providerEventId: event.id,
+      type: event.type,
+      userId: null,
+      payload: event.data.object,
+      outcome: 'unmapped',
+    });
+    return {
+      eventId: event.id,
+      type: event.type,
+      outcome: 'unmapped',
+      userId: null,
+      detail: 'no user for customer',
+    };
   }
 
-  const fresh = await store.recordEvent({ providerEventId: event.id, type: event.type, userId, payload: event.data.object, outcome: 'processed' });
+  const fresh = await store.recordEvent({
+    providerEventId: event.id,
+    type: event.type,
+    userId,
+    payload: event.data.object,
+    outcome: 'processed',
+  });
   if (!fresh) return { eventId: event.id, type: event.type, outcome: 'duplicate', userId };
 
   if (sub) {
@@ -224,6 +305,16 @@ export async function processWebhookEvent(event: StripeEventLike, deps: WebhookD
     // Checkout without a subscription object yet (subscription.created follows). Nothing to write.
     detail = 'checkout completed; awaiting subscription event';
   }
-  await store.audit(`billing.${event.type}`, userId, { eventId: event.id, subscriptionId: sub?.id ?? null, status: sub?.status ?? null });
-  return { eventId: event.id, type: event.type, outcome: 'processed', userId, ...(detail ? { detail } : {}) };
+  await store.audit(`billing.${event.type}`, userId, {
+    eventId: event.id,
+    subscriptionId: sub?.id ?? null,
+    status: sub?.status ?? null,
+  });
+  return {
+    eventId: event.id,
+    type: event.type,
+    outcome: 'processed',
+    userId,
+    ...(detail ? { detail } : {}),
+  };
 }

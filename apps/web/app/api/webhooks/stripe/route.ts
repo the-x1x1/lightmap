@@ -10,7 +10,8 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(req: Request) {
   const s = getServices();
-  if (!s.billing.configured || !s.db) return new Response('billing not configured', { status: 503 });
+  if (!s.billing.configured || !s.db)
+    return new Response('billing not configured', { status: 503 });
   const signature = req.headers.get('stripe-signature');
   if (!signature) return new Response('missing signature', { status: 400 });
   const raw = await req.text();
@@ -29,7 +30,11 @@ export async function POST(req: Request) {
       fetchSubscription: (id) => s.billing.fetchSubscription(id),
       linkCustomer: (userId, customerId) => store.linkCustomer(userId, customerId),
     });
-    s.log.info('stripe event', { type: outcome.type, outcome: outcome.outcome, eventId: outcome.eventId });
+    s.log.info('stripe event', {
+      type: outcome.type,
+      outcome: outcome.outcome,
+      eventId: outcome.eventId,
+    });
     return Response.json({ received: true, outcome: outcome.outcome });
   } catch (error) {
     s.errors.capture(error, { eventId: event.id, type: event.type });

@@ -22,10 +22,22 @@ export const SESSION_MAX_AGE_SECONDS = 30 * 24 * 3600;
 export const SESSION_UPDATE_AGE_SECONDS = 24 * 3600;
 
 /** Magic-link email body. Plain text on purpose: fewer spam signals, nothing to render. */
-export function magicLinkEmail(opts: { productName: string; url: string; host: string; expiresMinutes: number }): { subject: string; text: string } {
+export function magicLinkEmail(opts: {
+  productName: string;
+  url: string;
+  host: string;
+  expiresMinutes: number;
+}): { subject: string; text: string } {
   return {
     subject: `Sign in to ${opts.productName}`,
-    text: [`Sign in to ${opts.productName} on ${opts.host}:`, '', opts.url, '', `This link expires in ${opts.expiresMinutes} minutes and can be used once.`, `If you did not request it, you can ignore this email.`].join('\n'),
+    text: [
+      `Sign in to ${opts.productName} on ${opts.host}:`,
+      '',
+      opts.url,
+      '',
+      `This link expires in ${opts.expiresMinutes} minutes and can be used once.`,
+      `If you did not request it, you can ignore this email.`,
+    ].join('\n'),
   };
 }
 

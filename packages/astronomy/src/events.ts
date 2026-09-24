@@ -87,7 +87,13 @@ function sampleDay(start: Date, end: Date, lat: number, lon: number): Sample[] {
 }
 
 /** Bisection for elevation(t) = threshold between two bracketing times. */
-function refineCrossing(t0: number, t1: number, threshold: number, lat: number, lon: number): number {
+function refineCrossing(
+  t0: number,
+  t1: number,
+  threshold: number,
+  lat: number,
+  lon: number,
+): number {
   let a = t0;
   let b = t1;
   let fa = sunPosition(new Date(a), lat, lon).elevationDeg - threshold;
@@ -105,20 +111,33 @@ function refineCrossing(t0: number, t1: number, threshold: number, lat: number, 
 }
 
 /** First crossing of `threshold` in the given direction: 'up' (elev rising through) or 'down'. */
-function findCrossing(samples: Sample[], threshold: number, direction: 'up' | 'down', lat: number, lon: number): Date | null {
+function findCrossing(
+  samples: Sample[],
+  threshold: number,
+  direction: 'up' | 'down',
+  lat: number,
+  lon: number,
+): Date | null {
   for (let i = 1; i < samples.length; i++) {
     const a = samples[i - 1]!;
     const b = samples[i]!;
     const aBelow = a.elev < threshold;
     const bBelow = b.elev < threshold;
-    if (direction === 'up' && aBelow && !bBelow) return new Date(refineCrossing(a.t, b.t, threshold, lat, lon));
-    if (direction === 'down' && !aBelow && bBelow) return new Date(refineCrossing(a.t, b.t, threshold, lat, lon));
+    if (direction === 'up' && aBelow && !bBelow)
+      return new Date(refineCrossing(a.t, b.t, threshold, lat, lon));
+    if (direction === 'down' && !aBelow && bBelow)
+      return new Date(refineCrossing(a.t, b.t, threshold, lat, lon));
   }
   return null;
 }
 
 /** Hour angle passes through 0 (upper transit) or ±180 (lower transit). */
-function findTransit(samples: Sample[], kind: 'upper' | 'lower', lat: number, lon: number): Date | null {
+function findTransit(
+  samples: Sample[],
+  kind: 'upper' | 'lower',
+  lat: number,
+  lon: number,
+): Date | null {
   const target = (h: number) => (kind === 'upper' ? h : h >= 0 ? h - 180 : h + 180);
   for (let i = 1; i < samples.length; i++) {
     const a = target(samples[i - 1]!.hourAngle);
@@ -181,9 +200,12 @@ export function computeDayEvents(input: DayEventInput): DayEvents {
     if (maxElevationDeg < THRESHOLDS.nautical) notes.push('No nautical twilight');
     if (maxElevationDeg < THRESHOLDS.astronomical) notes.push('Continuous astronomical night');
   }
-  if (polar === 'midnight-sun' && minElevationDeg > THRESHOLDS.goldenHigh) notes.push('No golden hour: the Sun never drops below 6°');
-  if (polar === 'normal' && minElevationDeg > THRESHOLDS.civil) notes.push('No true night: civil twilight persists through the night');
-  else if (polar === 'normal' && minElevationDeg > THRESHOLDS.astronomical) notes.push('No astronomical darkness tonight');
+  if (polar === 'midnight-sun' && minElevationDeg > THRESHOLDS.goldenHigh)
+    notes.push('No golden hour: the Sun never drops below 6°');
+  if (polar === 'normal' && minElevationDeg > THRESHOLDS.civil)
+    notes.push('No true night: civil twilight persists through the night');
+  else if (polar === 'normal' && minElevationDeg > THRESHOLDS.astronomical)
+    notes.push('No astronomical darkness tonight');
 
   let daylightMinutes: number;
   if (polar === 'midnight-sun') daylightMinutes = (end.getTime() - start.getTime()) / 60_000;
@@ -244,7 +266,9 @@ export function lightPhase(elevationDeg: number): LightPhase {
 }
 
 /** Twilight band as the plan names them (§10), for the UI and the colour-temperature curve. */
-export function twilightBand(elevationDeg: number): 'day' | 'civil' | 'nautical' | 'astronomical' | 'night' {
+export function twilightBand(
+  elevationDeg: number,
+): 'day' | 'civil' | 'nautical' | 'astronomical' | 'night' {
   if (elevationDeg >= THRESHOLDS.horizon) return 'day';
   if (elevationDeg >= THRESHOLDS.civil) return 'civil';
   if (elevationDeg >= THRESHOLDS.nautical) return 'nautical';

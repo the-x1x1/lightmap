@@ -35,7 +35,8 @@ export function altitudeToZoom(altitudeM: number, latitude = 0, viewportPx = 102
 export function altitudeForBounds(bounds: GeoBounds, minAltitudeM = 500): number {
   const latSpanM = Math.abs(bounds.north - bounds.south) * 111_320;
   const midLat = (bounds.north + bounds.south) / 2;
-  const lonSpan = bounds.west <= bounds.east ? bounds.east - bounds.west : 360 - bounds.west + bounds.east;
+  const lonSpan =
+    bounds.west <= bounds.east ? bounds.east - bounds.west : 360 - bounds.west + bounds.east;
   const lonSpanM = lonSpan * 111_320 * Math.cos(midLat * DEG);
   const halfSpan = Math.max(latSpanM, lonSpanM) / 2;
   return Math.max(minAltitudeM, (halfSpan / HALF_FOV_TAN) * 1.15);

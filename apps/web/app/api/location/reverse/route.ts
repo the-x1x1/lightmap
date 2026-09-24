@@ -29,7 +29,12 @@ export async function GET(req: Request) {
       s.geo.terrain.sampleElevation(point).catch(() => null),
     ]);
     const meta = s.geo.geocoder.meta;
-    const body: ReverseResponse = { place, timeZone: timeZone ?? 'Etc/UTC', elevationM, provider: { id: meta.id, isFixture: meta.isFixture, attribution: meta.attribution } };
+    const body: ReverseResponse = {
+      place,
+      timeZone: timeZone ?? 'Etc/UTC',
+      elevationM,
+      provider: { id: meta.id, isFixture: meta.isFixture, attribution: meta.attribution },
+    };
     if (cache) await cache.set('reverse', cacheKey, body, 60 * 60 * 24 * 30);
     return json(body);
   } catch (e) {

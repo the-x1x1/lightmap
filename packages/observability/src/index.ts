@@ -29,7 +29,14 @@ export function redact(meta: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(meta)) {
     if (REDACT_KEYS.test(k)) out[k] = '[redacted]';
-    else if (v && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date) && !(v instanceof Error)) out[k] = redact(v as Record<string, unknown>);
+    else if (
+      v &&
+      typeof v === 'object' &&
+      !Array.isArray(v) &&
+      !(v instanceof Date) &&
+      !(v instanceof Error)
+    )
+      out[k] = redact(v as Record<string, unknown>);
     else if (v instanceof Error) out[k] = { name: v.name, message: v.message };
     else out[k] = v;
   }
@@ -43,7 +50,15 @@ export function createLogger(opts: LoggerOptions = {}): Logger {
   const bindings = opts.bindings ?? {};
   const emit = (lvl: LogLevel, message: string, meta?: Record<string, unknown>) => {
     if (LEVELS[lvl] < level) return;
-    write(JSON.stringify({ time: now(), level: lvl, message, ...redact(bindings), ...(meta ? redact(meta) : {}) }));
+    write(
+      JSON.stringify({
+        time: now(),
+        level: lvl,
+        message,
+        ...redact(bindings),
+        ...(meta ? redact(meta) : {}),
+      }),
+    );
   };
   return {
     debug: (m, meta) => emit('debug', m, meta),
@@ -60,7 +75,9 @@ export interface ErrorReporter {
 
 /** Default reporter: logs. Replace with a Sentry-backed implementation when SENTRY_DSN is set (docs/ARCHITECTURE.md). */
 export function loggingErrorReporter(log: Logger): ErrorReporter {
-  return { capture: (error, context) => log.error('unhandled error', { error, ...(context ?? {}) }) };
+  return {
+    capture: (error, context) => log.error('unhandled error', { error, ...(context ?? {}) }),
+  };
 }
 
 export type AnalyticsEvent =
@@ -81,14 +98,20 @@ export interface AnalyticsSink {
  * Coordinates are quantised to ~1° (≈ 110 km) before they may appear in analytics (plan §31).
  * Nothing finer ever leaves the app.
  */
-export function quantizeForAnalytics(lat: number, lng: number): { latBucket: number; lngBucket: number } {
+export function quantizeForAnalytics(
+  lat: number,
+  lng: number,
+): { latBucket: number; lngBucket: number } {
   return { latBucket: Math.round(lat), lngBucket: Math.round(lng) };
 }
 
-const FORBIDDEN_PROPS = /^(lat|latitude|lng|lon|longitude|notes|description|email|name|label|query)$/i;
+const FORBIDDEN_PROPS =
+  /^(lat|latitude|lng|lon|longitude|notes|description|email|name|label|query)$/i;
 
 /** Drop any property that looks like precise location or freeform text, whatever the caller passed. */
-export function sanitizeAnalyticsProps(props: Record<string, unknown>): Record<string, string | number | boolean> {
+export function sanitizeAnalyticsProps(
+  props: Record<string, unknown>,
+): Record<string, string | number | boolean> {
   const out: Record<string, string | number | boolean> = {};
   for (const [k, v] of Object.entries(props)) {
     if (FORBIDDEN_PROPS.test(k)) continue;
@@ -103,14 +126,26 @@ export function noopAnalytics(): AnalyticsSink {
 }
 
 export function loggingAnalytics(log: Logger): AnalyticsSink {
-  return { track: (event, props) => log.info(`analytics ${event}`, props ? sanitizeAnalyticsProps(props) : {}) };
+  return {
+    track: (event, props) =>
+      log.info(`analytics ${event}`, props ? sanitizeAnalyticsProps(props) : {}),
+  };
 }
 
 /** Request budgeting metrics (plan §19): names shared by the API and the cost model. */
-export const BUDGET_RESOURCES = ['weather', 'geocoder', 'imagery', 'terrain_bytes', 'preview'] as const;
+export const BUDGET_RESOURCES = [
+  'weather',
+  'geocoder',
+  'imagery',
+  'terrain_bytes',
+  'preview',
+] as const;
 export type BudgetResource = (typeof BUDGET_RESOURCES)[number];
 
-export const DAILY_BUDGET_LIMITS: Record<BudgetResource, { anonymous: number; free: number; pro: number }> = {
+export const DAILY_BUDGET_LIMITS: Record<
+  BudgetResource,
+  { anonymous: number; free: number; pro: number }
+> = {
   weather: { anonymous: 40, free: 150, pro: 600 },
   geocoder: { anonymous: 30, free: 100, pro: 400 },
   imagery: { anonymous: 0, free: 0, pro: 0 },

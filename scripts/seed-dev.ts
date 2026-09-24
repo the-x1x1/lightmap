@@ -20,17 +20,43 @@ const handle = createDb(url, { max: 1 });
 const { db } = handle;
 try {
   const email = 'dev@lightmap.local';
-  const [user] = await db.insert(schema.users).values({ id: ulid(), email, emailVerified: new Date(), displayName: 'Dev' }).onConflictDoNothing().returning();
+  const [user] = await db
+    .insert(schema.users)
+    .values({ id: ulid(), email, emailVerified: new Date(), displayName: 'Dev' })
+    .onConflictDoNothing()
+    .returning();
   const u = user ?? (await db.query.users.findFirst({ where: (t, { eq }) => eq(t.email, email) }));
   if (!u) throw new Error('could not create dev user');
   await db.insert(schema.profiles).values({ userId: u.id }).onConflictDoNothing();
-  const [project] = await db.insert(schema.projects).values({ id: ulid(), userId: u.id, name: 'Dev locations', description: 'Seeded fixtures — not real shoots' }).returning();
+  const [project] = await db
+    .insert(schema.projects)
+    .values({
+      id: ulid(),
+      userId: u.id,
+      name: 'Dev locations',
+      description: 'Seeded fixtures — not real shoots',
+    })
+    .returning();
   for (const loc of DEV_LOCATIONS) {
     const now = utcToWallClock(new Date(), loc.timezone);
     const utc = localSelectionToUtc(now, 12 * 60, loc.timezone);
     await db.insert(schema.viewpoints).values({
-      id: ulid(), projectId: project!.id, userId: u.id, label: loc.label, latitude: loc.point.latitude, longitude: loc.point.longitude, elevationM: loc.point.elevationM ?? null, timezone: loc.timezone,
-      headingDeg: 90, pitchDeg: 0, fieldOfViewDeg: 73.7, focalLengthEquivalentMm: 24, selectedDatetimeUtc: utc, weatherMode: 'SCENARIO', weatherScenario: 'clear', previewSourceType: 'ESTIMATED_PREVIEW',
+      id: ulid(),
+      projectId: project!.id,
+      userId: u.id,
+      label: loc.label,
+      latitude: loc.point.latitude,
+      longitude: loc.point.longitude,
+      elevationM: loc.point.elevationM ?? null,
+      timezone: loc.timezone,
+      headingDeg: 90,
+      pitchDeg: 0,
+      fieldOfViewDeg: 73.7,
+      focalLengthEquivalentMm: 24,
+      selectedDatetimeUtc: utc,
+      weatherMode: 'SCENARIO',
+      weatherScenario: 'clear',
+      previewSourceType: 'ESTIMATED_PREVIEW',
     });
   }
   console.log(`seeded ${DEV_LOCATIONS.length} viewpoints for ${email} (sign in with Dev sign-in)`);

@@ -8,7 +8,14 @@ export interface PanelProps extends HTMLAttributes<HTMLDivElement> {
 
 export function Panel({ raised, className, children, ...rest }: PanelProps) {
   return (
-    <div className={cx('rounded-[var(--lm-radius)] border border-[var(--lm-panel-border)] shadow-[var(--lm-shadow)]', raised ? 'bg-[var(--lm-panel-raised)]' : 'bg-[var(--lm-panel)]', className)} {...rest}>
+    <div
+      className={cx(
+        'rounded-[var(--lm-radius)] border border-[var(--lm-panel-border)] shadow-[var(--lm-shadow)]',
+        raised ? 'bg-[var(--lm-panel-raised)]' : 'bg-[var(--lm-panel)]',
+        className,
+      )}
+      {...rest}
+    >
       {children}
     </div>
   );

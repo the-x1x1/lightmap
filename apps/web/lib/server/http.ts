@@ -22,32 +22,60 @@ export function json<T>(body: T, init?: ResponseInit): NextResponse {
 
 export function errorResponse(error: unknown): NextResponse {
   const { log } = getServices();
-  if (error instanceof HttpError) return NextResponse.json({ error: { code: error.code, message: error.message, ...error.extra } }, { status: error.status });
-  if (error instanceof NotFoundError) return NextResponse.json({ error: { code: 'not_found', message: 'Not found' } }, { status: 404 });
+  if (error instanceof HttpError)
+    return NextResponse.json(
+      { error: { code: error.code, message: error.message, ...error.extra } },
+      { status: error.status },
+    );
+  if (error instanceof NotFoundError)
+    return NextResponse.json(
+      { error: { code: 'not_found', message: 'Not found' } },
+      { status: 404 },
+    );
   log.error('unhandled api error', { error });
-  return NextResponse.json({ error: { code: 'internal', message: 'Something went wrong on our side. Your selection is unchanged.' } }, { status: 500 });
+  return NextResponse.json(
+    {
+      error: {
+        code: 'internal',
+        message: 'Something went wrong on our side. Your selection is unchanged.',
+      },
+    },
+    { status: 500 },
+  );
 }
 
 export function forbidByEntitlement(d: EntitlementDecision): HttpError {
-  return new HttpError(403, `entitlement_${d.key}`, d.reason ?? 'Not available on your plan', d.upgradeTo ? { upgradeTo: d.upgradeTo } : {});
+  return new HttpError(
+    403,
+    `entitlement_${d.key}`,
+    d.reason ?? 'Not available on your plan',
+    d.upgradeTo ? { upgradeTo: d.upgradeTo } : {},
+  );
 }
 
 /** Parse and validate a query number within bounds. */
 export function num(params: URLSearchParams, key: string, min: number, max: number): number {
   const raw = params.get(key);
   const v = raw === null ? Number.NaN : Number(raw);
-  if (!Number.isFinite(v) || v < min || v > max) throw new HttpError(400, 'bad_request', `${key} must be a number between ${min} and ${max}`);
+  if (!Number.isFinite(v) || v < min || v > max)
+    throw new HttpError(400, 'bad_request', `${key} must be a number between ${min} and ${max}`);
   return v;
 }
 
-export function str(params: URLSearchParams, key: string, opts: { maxLength?: number; required?: boolean; pattern?: RegExp } = {}): string | null {
+export function str(
+  params: URLSearchParams,
+  key: string,
+  opts: { maxLength?: number; required?: boolean; pattern?: RegExp } = {},
+): string | null {
   const v = params.get(key);
   if (v === null || v.length === 0) {
     if (opts.required) throw new HttpError(400, 'bad_request', `${key} is required`);
     return null;
   }
-  if (v.length > (opts.maxLength ?? 200)) throw new HttpError(400, 'bad_request', `${key} is too long`);
-  if (opts.pattern && !opts.pattern.test(v)) throw new HttpError(400, 'bad_request', `${key} is malformed`);
+  if (v.length > (opts.maxLength ?? 200))
+    throw new HttpError(400, 'bad_request', `${key} is too long`);
+  if (opts.pattern && !opts.pattern.test(v))
+    throw new HttpError(400, 'bad_request', `${key} is malformed`);
   return v;
 }
 
@@ -71,7 +99,11 @@ export const v = {
     if (!x || typeof x !== 'object' || Array.isArray(x)) throw new Error('expected an object');
     return x as Record<string, unknown>;
   },
-  string(x: unknown, name: string, opts: { min?: number; max?: number; optional?: boolean; nullable?: boolean } = {}): string | null | undefined {
+  string(
+    x: unknown,
+    name: string,
+    opts: { min?: number; max?: number; optional?: boolean; nullable?: boolean } = {},
+  ): string | null | undefined {
     if (x === undefined && opts.optional) return undefined;
     if (x === null && opts.nullable) return null;
     if (typeof x !== 'string') throw new Error(`${name} must be a string`);
@@ -80,26 +112,45 @@ export const v = {
     if (t.length > (opts.max ?? 500)) throw new Error(`${name} is too long`);
     return t;
   },
-  number(x: unknown, name: string, min: number, max: number, opts: { optional?: boolean; nullable?: boolean } = {}): number | null | undefined {
+  number(
+    x: unknown,
+    name: string,
+    min: number,
+    max: number,
+    opts: { optional?: boolean; nullable?: boolean } = {},
+  ): number | null | undefined {
     if (x === undefined && opts.optional) return undefined;
     if (x === null && opts.nullable) return null;
-    if (typeof x !== 'number' || !Number.isFinite(x) || x < min || x > max) throw new Error(`${name} must be a number between ${min} and ${max}`);
+    if (typeof x !== 'number' || !Number.isFinite(x) || x < min || x > max)
+      throw new Error(`${name} must be a number between ${min} and ${max}`);
     return x;
   },
-  oneOf<T extends string>(x: unknown, name: string, allowed: readonly T[], opts: { optional?: boolean; nullable?: boolean } = {}): T | null | undefined {
+  oneOf<T extends string>(
+    x: unknown,
+    name: string,
+    allowed: readonly T[],
+    opts: { optional?: boolean; nullable?: boolean } = {},
+  ): T | null | undefined {
     if (x === undefined && opts.optional) return undefined;
     if (x === null && opts.nullable) return null;
-    if (typeof x !== 'string' || !(allowed as readonly string[]).includes(x)) throw new Error(`${name} must be one of ${allowed.join(', ')}`);
+    if (typeof x !== 'string' || !(allowed as readonly string[]).includes(x))
+      throw new Error(`${name} must be one of ${allowed.join(', ')}`);
     return x as T;
   },
-  isoDate(x: unknown, name: string, opts: { optional?: boolean; nullable?: boolean } = {}): string | null | undefined {
+  isoDate(
+    x: unknown,
+    name: string,
+    opts: { optional?: boolean; nullable?: boolean } = {},
+  ): string | null | undefined {
     const s = v.string(x, name, { ...opts, max: 10 });
     if (s === null || s === undefined) return s;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(s) || Number.isNaN(Date.parse(`${s}T00:00:00Z`))) throw new Error(`${name} must be YYYY-MM-DD`);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s) || Number.isNaN(Date.parse(`${s}T00:00:00Z`)))
+      throw new Error(`${name} must be YYYY-MM-DD`);
     return s;
   },
   instant(x: unknown, name: string): Date {
-    if (typeof x !== 'string' || Number.isNaN(Date.parse(x))) throw new Error(`${name} must be an ISO instant`);
+    if (typeof x !== 'string' || Number.isNaN(Date.parse(x)))
+      throw new Error(`${name} must be an ISO instant`);
     return new Date(x);
   },
 };

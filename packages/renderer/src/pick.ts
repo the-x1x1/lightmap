@@ -31,7 +31,10 @@ export interface PickSurfaceLike {
 
 const RAD = 180 / Math.PI;
 
-export function pickSurface(scene: PickSurfaceLike, windowPosition: { x: number; y: number }): (GeoPoint & { viaTerrain: boolean }) | null {
+export function pickSurface(
+  scene: PickSurfaceLike,
+  windowPosition: { x: number; y: number },
+): (GeoPoint & { viaTerrain: boolean }) | null {
   let cartesian: Cartesian3Like | undefined;
   let viaTerrain = false;
   if (scene.pickPositionSupported) {
@@ -42,7 +45,11 @@ export function pickSurface(scene: PickSurfaceLike, windowPosition: { x: number;
   if (!cartesian) return null;
   const carto = scene.toCartographic(cartesian);
   if (!carto) return null;
-  const point: GeoPoint & { viaTerrain: boolean } = { latitude: carto.latitude * RAD, longitude: carto.longitude * RAD, viaTerrain };
+  const point: GeoPoint & { viaTerrain: boolean } = {
+    latitude: carto.latitude * RAD,
+    longitude: carto.longitude * RAD,
+    viaTerrain,
+  };
   if (viaTerrain && Number.isFinite(carto.height)) point.elevationM = carto.height;
   return point;
 }

@@ -59,11 +59,11 @@ coordinates.
 
 ## 6. Server caches hold no identity
 
-| Cache | Key | Contents |
-|---|---|---|
-| Weather | provider, version, **0.05° grid cell**, civil day | Hourly frames for the cell |
-| Geocode (forward) | normalised query string | Place candidates |
-| Reverse geocode | **0.01° grid cell** | Place label |
+| Cache             | Key                                               | Contents                   |
+| ----------------- | ------------------------------------------------- | -------------------------- |
+| Weather           | provider, version, **0.05° grid cell**, civil day | Hourly frames for the cell |
+| Geocode (forward) | normalised query string                           | Place candidates           |
+| Reverse geocode   | **0.01° grid cell**                               | Place label                |
 
 All three live in `provider_cache` with an expiry and no user, session or device column. A cached
 entry cannot be tied back to who requested it.
@@ -97,29 +97,29 @@ tested.
 
 ## 9. Data retention
 
-| Data | Retention | Notes |
-|---|---|---|
-| Planner state (anonymous) | Browser only; cleared on reload unless saved | Never on the server |
-| Projects, viewpoints, thumbnails | Until deleted by the user or account erasure | |
-| Sessions | Auth.js session expiry; deleted on logout and account erasure | |
-| Verification tokens (magic links) | Until used or expired (Auth.js default) | |
-| Subscriptions | Life of the account; erased with it | |
-| Subscription events (webhook payloads) | Kept for idempotency and dispute resolution; `user_id` nulled by erasure is **not** automatic — payloads contain Stripe ids, not names or coordinates | Review before launch |
-| Audit events | Kept indefinitely without PII | |
-| Provider cache | TTL: 60 min forecast, 6 h recent past, geocode per provider `cache.maxAgeSeconds` | Purged by `purgeExpired()` |
-| Usage counters | Per UTC day; older rows may be deleted after 90 days | Hashed keys only |
-| Server logs | Per hosting platform retention; redacted at write time | |
+| Data                                   | Retention                                                                                                                                             | Notes                      |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| Planner state (anonymous)              | Browser only; cleared on reload unless saved                                                                                                          | Never on the server        |
+| Projects, viewpoints, thumbnails       | Until deleted by the user or account erasure                                                                                                          |                            |
+| Sessions                               | Auth.js session expiry; deleted on logout and account erasure                                                                                         |                            |
+| Verification tokens (magic links)      | Until used or expired (Auth.js default)                                                                                                               |                            |
+| Subscriptions                          | Life of the account; erased with it                                                                                                                   |                            |
+| Subscription events (webhook payloads) | Kept for idempotency and dispute resolution; `user_id` nulled by erasure is **not** automatic — payloads contain Stripe ids, not names or coordinates | Review before launch       |
+| Audit events                           | Kept indefinitely without PII                                                                                                                         |                            |
+| Provider cache                         | TTL: 60 min forecast, 6 h recent past, geocode per provider `cache.maxAgeSeconds`                                                                     | Purged by `purgeExpired()` |
+| Usage counters                         | Per UTC day; older rows may be deleted after 90 days                                                                                                  | Hashed keys only           |
+| Server logs                            | Per hosting platform retention; redacted at write time                                                                                                |                            |
 
 ## 10. What is sent to third parties
 
-| Recipient | What | What is not sent |
-|---|---|---|
-| Weather provider (Open-Meteo) | Coordinates **rounded to the 0.05° grid cell**, date range, requested fields; from the server, not the browser | User id, session, IP of the user (the server's IP is used), exact pin |
-| Geocoder (Nominatim in development; a commercial geocoder in production) | The search query string; reverse lookups use the 0.01° cell | Any identity |
-| Terrain and basemap tile hosts | Tile requests from the browser (standard for any web map); the browser's IP is visible to the CDN | No coordinates beyond the tiles being viewed |
-| Stripe | Email address, user id as `client_reference_id`, payment details entered on Stripe's hosted pages | Locations, projects, notes |
-| Email provider (magic links) | Email address, sign-in link | Anything else |
-| Error monitoring (when `SENTRY_DSN` is set) | Error messages and stack traces, redacted context | Coordinates, freeform text |
+| Recipient                                                                | What                                                                                                           | What is not sent                                                      |
+| ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Weather provider (Open-Meteo)                                            | Coordinates **rounded to the 0.05° grid cell**, date range, requested fields; from the server, not the browser | User id, session, IP of the user (the server's IP is used), exact pin |
+| Geocoder (Nominatim in development; a commercial geocoder in production) | The search query string; reverse lookups use the 0.01° cell                                                    | Any identity                                                          |
+| Terrain and basemap tile hosts                                           | Tile requests from the browser (standard for any web map); the browser's IP is visible to the CDN              | No coordinates beyond the tiles being viewed                          |
+| Stripe                                                                   | Email address, user id as `client_reference_id`, payment details entered on Stripe's hosted pages              | Locations, projects, notes                                            |
+| Email provider (magic links)                                             | Email address, sign-in link                                                                                    | Anything else                                                         |
+| Error monitoring (when `SENTRY_DSN` is set)                              | Error messages and stack traces, redacted context                                                              | Coordinates, freeform text                                            |
 
 **No imagery uploads exist.** There is no path by which a user photo reaches LightMap or any third
 party.

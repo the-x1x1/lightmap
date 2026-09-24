@@ -14,17 +14,17 @@ documented algorithm, and forbids pasting source from websites.
 ## Decision
 
 1. **Implement the algorithms ourselves from published references**, in `packages/astronomy`:
-   - Sun: Jean Meeus, *Astronomical Algorithms* (2nd ed.), ch. 25 low-accuracy solar coordinates with
+   - Sun: Jean Meeus, _Astronomical Algorithms_ (2nd ed.), ch. 25 low-accuracy solar coordinates with
      nutation/aberration for apparent longitude, ch. 22 mean obliquity, ch. 12 sidereal time,
      ch. 13 equatorial → horizontal; equation of time from ch. 28. Same family of formulae as NOAA's
      Solar Calculator. Refraction is reported separately as `apparentElevationDegrees`.
-   - Moon: *The Astronomical Almanac* section D low-precision geocentric lunar formulae, with the
+   - Moon: _The Astronomical Almanac_ section D low-precision geocentric lunar formulae, with the
      topocentric parallax correction (matters for moonrise), illuminated fraction per Meeus ch. 48.
    - Events: rise/set/twilight crossings by iterative root finding on the same position functions;
      golden and blue hour windows defined on elevation bands; polar day/night handled explicitly.
    - Time: IANA zone conversion via `Intl.DateTimeFormat` (no tz database shipped), DST and
      date-line safe.
-   Every constant is a published one; nothing was copied from a website or a library.
+     Every constant is a published one; nothing was copied from a website or a library.
 2. **Validated against the US Naval Observatory** (`tests/fixtures/usno-golden.json`): event times
    within ±1 min (±2 min above 66° latitude), sun direction within 0.02° (angular separation),
    moon illumination within 3 %. Stated accuracy: **sun ≈ 0.01°, moon ≈ 0.3°** (rise/set ±3 min,

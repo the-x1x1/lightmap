@@ -29,16 +29,29 @@ export default tseslint.config(
     },
     rules: {
       '@typescript-eslint/consistent-type-imports': ['error', { fixStyle: 'inline-type-imports' }],
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
       '@typescript-eslint/no-floating-promises': 'error',
-      '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: { attributes: false } }],
+      '@typescript-eslint/no-misused-promises': [
+        'error',
+        { checksVoidReturn: { attributes: false } },
+      ],
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
-      '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true, allowBoolean: true }],
+      '@typescript-eslint/restrict-template-expressions': [
+        'error',
+        { allowNumber: true, allowBoolean: true },
+      ],
       'no-restricted-imports': [
         'error',
         {
           patterns: [
-            { group: ['@worldview/*'], message: 'LightMap has no runtime dependency on WorldView (docs/WORLDVIEW_REUSE_AUDIT.md).' },
+            {
+              group: ['@worldview/*'],
+              message:
+                'LightMap has no runtime dependency on WorldView (docs/WORLDVIEW_REUSE_AUDIT.md).',
+            },
             { group: ['cesium'], message: 'Import @cesium/engine, not cesium (ADR-0002).' },
           ],
         },
@@ -57,15 +70,28 @@ export default tseslint.config(
           patterns: [
             { group: ['@worldview/*'], message: 'No WorldView runtime dependency.' },
             { group: ['cesium'], message: 'Import @cesium/engine, not cesium (ADR-0002).' },
-            { group: ['stripe', 'postgres', 'drizzle-orm', 'drizzle-orm/*'], message: 'Server-only SDKs belong in packages/*, not in the web app UI.' },
+            {
+              group: ['stripe', 'postgres', 'drizzle-orm', 'drizzle-orm/*'],
+              message: 'Server-only SDKs belong in packages/*, not in the web app UI.',
+            },
           ],
         },
       ],
     },
   },
   {
-    files: ['apps/web/app/api/**/*.ts', 'apps/web/lib/server/**/*.ts', 'apps/web/auth.ts', 'apps/web/middleware.ts'],
-    rules: { 'no-restricted-imports': ['error', { patterns: [{ group: ['@worldview/*'] }, { group: ['cesium'] }] }] },
+    files: [
+      'apps/web/app/api/**/*.ts',
+      'apps/web/lib/server/**/*.ts',
+      'apps/web/auth.ts',
+      'apps/web/middleware.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: [{ group: ['@worldview/*'] }, { group: ['cesium'] }] },
+      ],
+    },
   },
   {
     files: ['**/*.{js,mjs,cjs}', 'scripts/**/*.ts'],

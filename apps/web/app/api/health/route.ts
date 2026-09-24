@@ -14,5 +14,13 @@ export async function GET() {
       database = 'error';
     }
   }
-  return json({ ok: database !== 'error', version: '0.1.0', database, fixtureMode: s.capabilities.fixtureMode }, { status: database === 'error' ? 503 : 200 });
+  return json(
+    {
+      ok: database !== 'error',
+      version: '0.1.0',
+      database,
+      fixtureMode: s.capabilities.fixtureMode,
+    },
+    { status: database === 'error' ? 503 : 200 },
+  );
 }

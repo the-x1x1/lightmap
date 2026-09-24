@@ -13,49 +13,93 @@ describe('deriveEntitlements', () => {
     expect(s.limits.futureDateWindowDays).toBe(14);
   });
   it('active pro → pro; cancel-at-period-end keeps access until then', () => {
-    const s = deriveEntitlements({ planKey: 'pro', status: 'active', periodEnd: future, cancelAtPeriodEnd: true }, now);
+    const s = deriveEntitlements(
+      { planKey: 'pro', status: 'active', periodEnd: future, cancelAtPeriodEnd: true },
+      now,
+    );
     expect(s.effectivePlan).toBe('pro');
     expect(s.accessEndsAt).toBe(future);
-    const ended = deriveEntitlements({ planKey: 'pro', status: 'canceled', periodEnd: past, cancelAtPeriodEnd: true }, now);
+    const ended = deriveEntitlements(
+      { planKey: 'pro', status: 'canceled', periodEnd: past, cancelAtPeriodEnd: true },
+      now,
+    );
     expect(ended.effectivePlan).toBe('free');
-    const stillCancelling = deriveEntitlements({ planKey: 'pro', status: 'canceled', periodEnd: future, cancelAtPeriodEnd: true }, now);
+    const stillCancelling = deriveEntitlements(
+      { planKey: 'pro', status: 'canceled', periodEnd: future, cancelAtPeriodEnd: true },
+      now,
+    );
     expect(stillCancelling.effectivePlan).toBe('pro');
   });
   it('past_due keeps access for the grace window, then drops to free', () => {
-    const inGrace = deriveEntitlements({ planKey: 'pro', status: 'past_due', periodEnd: '2026-05-28T00:00:00Z', cancelAtPeriodEnd: false }, now);
+    const inGrace = deriveEntitlements(
+      {
+        planKey: 'pro',
+        status: 'past_due',
+        periodEnd: '2026-05-28T00:00:00Z',
+        cancelAtPeriodEnd: false,
+      },
+      now,
+    );
     expect(inGrace.effectivePlan).toBe('pro');
     expect(inGrace.grace).toBe(true);
-    const graceOver = deriveEntitlements({ planKey: 'pro', status: 'past_due', periodEnd: new Date(now.getTime() - (PAST_DUE_GRACE_DAYS + 1) * 86_400_000).toISOString(), cancelAtPeriodEnd: false }, now);
+    const graceOver = deriveEntitlements(
+      {
+        planKey: 'pro',
+        status: 'past_due',
+        periodEnd: new Date(now.getTime() - (PAST_DUE_GRACE_DAYS + 1) * 86_400_000).toISOString(),
+        cancelAtPeriodEnd: false,
+      },
+      now,
+    );
     expect(graceOver.effectivePlan).toBe('free');
   });
   it('unpaid / incomplete / paused → free, but the plan key is remembered', () => {
     for (const status of ['unpaid', 'incomplete', 'incomplete_expired', 'paused'] as const) {
-      const s = deriveEntitlements({ planKey: 'pro', status, periodEnd: future, cancelAtPeriodEnd: false }, now);
+      const s = deriveEntitlements(
+        { planKey: 'pro', status, periodEnd: future, cancelAtPeriodEnd: false },
+        now,
+      );
       expect(s.effectivePlan).toBe('free');
       expect(s.plan).toBe('pro');
     }
   });
   it('trialing counts as active', () => {
-    expect(deriveEntitlements({ planKey: 'pro', status: 'trialing', periodEnd: future, cancelAtPeriodEnd: false }, now).entitlements).toContain('export_preview');
+    expect(
+      deriveEntitlements(
+        { planKey: 'pro', status: 'trialing', periodEnd: future, cancelAtPeriodEnd: false },
+        now,
+      ).entitlements,
+    ).toContain('export_preview');
   });
 });
 
 describe('can()', () => {
   const free = deriveEntitlements(null, now);
-  const pro = deriveEntitlements({ planKey: 'pro', status: 'active', periodEnd: future, cancelAtPeriodEnd: false }, now);
+  const pro = deriveEntitlements(
+    { planKey: 'pro', status: 'active', periodEnd: future, cancelAtPeriodEnd: false },
+    now,
+  );
   it('free users plan inside the 14-day window, and are told why beyond it', () => {
-    expect(can(free, 'future_date_planning', { today: '2026-05-01', targetDate: '2026-05-10' }).allowed).toBe(true);
+    expect(
+      can(free, 'future_date_planning', { today: '2026-05-01', targetDate: '2026-05-10' }).allowed,
+    ).toBe(true);
     const d = can(free, 'future_date_planning', { today: '2026-05-01', targetDate: '2026-05-31' });
     expect(d.allowed).toBe(false);
     expect(d.reason).toContain('14 days');
     expect(d.upgradeTo).toBe('pro');
-    expect(can(free, 'future_date_planning', { today: '2026-05-01', targetDate: '2026-04-01' }).allowed).toBe(false);
-    expect(can(pro, 'future_date_planning', { today: '2026-05-01', targetDate: '2031-05-31' }).allowed).toBe(true);
+    expect(
+      can(free, 'future_date_planning', { today: '2026-05-01', targetDate: '2026-04-01' }).allowed,
+    ).toBe(false);
+    expect(
+      can(pro, 'future_date_planning', { today: '2026-05-01', targetDate: '2031-05-31' }).allowed,
+    ).toBe(true);
   });
   it('enforces save limits with counts', () => {
     expect(can(free, 'saved_projects', { projectCount: 0 }).allowed).toBe(true);
     expect(can(free, 'saved_projects', { projectCount: 1 }).allowed).toBe(false);
-    expect(can(free, 'saved_viewpoints', { viewpointCountInProject: 3, viewpointCountTotal: 3 }).allowed).toBe(false);
+    expect(
+      can(free, 'saved_viewpoints', { viewpointCountInProject: 3, viewpointCountTotal: 3 }).allowed,
+    ).toBe(false);
     expect(can(pro, 'saved_projects', { projectCount: 999 }).allowed).toBe(true);
     expect(can(pro, 'saved_viewpoints', { viewpointCountInProject: 200 }).allowed).toBe(false);
   });

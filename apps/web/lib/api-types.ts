@@ -49,7 +49,13 @@ export interface EntitlementsResponse {
   signedIn: boolean;
   user: { id: string; email: string; displayName: string | null } | null;
   entitlements: EntitlementSnapshot;
-  subscription: { status: string; planKey: string; periodEnd: string | null; cancelAtPeriodEnd: boolean; hasCustomer: boolean } | null;
+  subscription: {
+    status: string;
+    planKey: string;
+    periodEnd: string | null;
+    cancelAtPeriodEnd: boolean;
+    hasCustomer: boolean;
+  } | null;
 }
 
 export interface ProjectDto {

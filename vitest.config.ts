@@ -4,9 +4,20 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     projects: [
-      { test: { name: 'packages', include: ['packages/*/tests/**/*.test.ts'], exclude: ['**/tests/integration/**'], environment: 'node' } },
+      {
+        test: {
+          name: 'packages',
+          include: ['packages/*/tests/**/*.test.ts'],
+          exclude: ['**/tests/integration/**'],
+          environment: 'node',
+        },
+      },
       'apps/web/vitest.config.ts',
     ],
-    coverage: { provider: 'v8', reporter: ['text-summary', 'lcov'], include: ['packages/*/src/**', 'apps/web/features/**', 'apps/web/lib/**'] },
+    coverage: {
+      provider: 'v8',
+      reporter: ['text-summary', 'lcov'],
+      include: ['packages/*/src/**', 'apps/web/features/**', 'apps/web/lib/**'],
+    },
   },
 });

@@ -104,6 +104,14 @@ export interface ImageryReference {
 
 export interface ImageryProvider {
   readonly meta: ProviderMeta;
-  availabilityNear(point: GeoPoint, radiusM: number, opts?: { signal?: AbortSignal }): Promise<number>;
-  getReferences(point: GeoPoint, radiusM: number, opts?: { limit?: number; signal?: AbortSignal }): Promise<ImageryReference[]>;
+  availabilityNear(
+    point: GeoPoint,
+    radiusM: number,
+    opts?: { signal?: AbortSignal },
+  ): Promise<number>;
+  getReferences(
+    point: GeoPoint,
+    radiusM: number,
+    opts?: { limit?: number; signal?: AbortSignal },
+  ): Promise<ImageryReference[]>;
 }

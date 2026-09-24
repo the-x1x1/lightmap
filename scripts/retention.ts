@@ -3,7 +3,12 @@
  * purge expired provider cache rows. Run daily (cron / scheduled function). Idempotent.
  */
 import { createDb } from '../packages/database/src/client.ts';
-import { auditRepo, cacheRepo, retentionRepo, usersRepo } from '../packages/database/src/repositories.ts';
+import {
+  auditRepo,
+  cacheRepo,
+  retentionRepo,
+  usersRepo,
+} from '../packages/database/src/repositories.ts';
 
 const url = process.env['DATABASE_URL'];
 if (!url) {
@@ -20,11 +25,16 @@ try {
       continue;
     }
     await usersRepo(handle.db).erase(u.id);
-    await auditRepo(handle.db).record('account.erased', null, { userIdHash: u.id.slice(0, 8), requestedAt: u.requestedAt.toISOString() });
+    await auditRepo(handle.db).record('account.erased', null, {
+      userIdHash: u.id.slice(0, 8),
+      requestedAt: u.requestedAt.toISOString(),
+    });
     console.log(`erased user ${u.id}`);
   }
   const purged = dryRun ? 0 : await cacheRepo(handle.db).purgeExpired();
-  console.log(`retention: ${due.length} account(s) due, ${purged} cache rows purged${dryRun ? ' (dry run)' : ''}`);
+  console.log(
+    `retention: ${due.length} account(s) due, ${purged} cache rows purged${dryRun ? ' (dry run)' : ''}`,
+  );
 } finally {
   await handle.close();
 }

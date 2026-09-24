@@ -4,7 +4,12 @@
  * inputs always give the same frames. `isFixture: true` makes the UI show the development banner;
  * env validation refuses it in production.
  */
-import type { WeatherCapabilities, WeatherFrame, WeatherProvider, WeatherSeries } from '../model.ts';
+import type {
+  WeatherCapabilities,
+  WeatherFrame,
+  WeatherProvider,
+  WeatherSeries,
+} from '../model.ts';
 
 export const FIXTURE_CAPABILITIES: WeatherCapabilities = {
   providerId: 'fixture',
@@ -50,8 +55,11 @@ export class FixtureWeatherProvider implements WeatherProvider {
   async getForecast(lat: number, lng: number, from: Date, to: Date): Promise<WeatherSeries> {
     const frames: WeatherFrame[] = [];
     const start = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate()));
-    const end = new Date(Date.UTC(to.getUTCFullYear(), to.getUTCMonth(), to.getUTCDate()) + 86_400_000);
-    for (let t = start.getTime(); t < end.getTime(); t += 3_600_000) frames.push(this.frameAt(new Date(t), lat, lng));
+    const end = new Date(
+      Date.UTC(to.getUTCFullYear(), to.getUTCMonth(), to.getUTCDate()) + 86_400_000,
+    );
+    for (let t = start.getTime(); t < end.getTime(); t += 3_600_000)
+      frames.push(this.frameAt(new Date(t), lat, lng));
     return {
       providerId: 'fixture',
       latitude: lat,

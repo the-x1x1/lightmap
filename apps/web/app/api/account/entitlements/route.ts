@@ -10,10 +10,18 @@ export async function GET() {
     const ctx = await requestContext();
     const body: EntitlementsResponse = {
       signedIn: ctx.user !== null,
-      user: ctx.user ? { id: ctx.user.id, email: ctx.user.email, displayName: ctx.user.displayName } : null,
+      user: ctx.user
+        ? { id: ctx.user.id, email: ctx.user.email, displayName: ctx.user.displayName }
+        : null,
       entitlements: ctx.entitlements,
       subscription: ctx.subscription
-        ? { status: ctx.subscription.status, planKey: ctx.subscription.planKey, periodEnd: ctx.subscription.periodEnd?.toISOString() ?? null, cancelAtPeriodEnd: ctx.subscription.cancelAtPeriodEnd, hasCustomer: Boolean(ctx.subscription.providerCustomerId) }
+        ? {
+            status: ctx.subscription.status,
+            planKey: ctx.subscription.planKey,
+            periodEnd: ctx.subscription.periodEnd?.toISOString() ?? null,
+            cancelAtPeriodEnd: ctx.subscription.cancelAtPeriodEnd,
+            hasCustomer: Boolean(ctx.subscription.providerCustomerId),
+          }
         : null,
     };
     return json(body, { headers: { 'Cache-Control': 'private, no-store' } });

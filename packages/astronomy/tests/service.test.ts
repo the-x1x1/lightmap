@@ -7,8 +7,15 @@ const svc = new MeeusAstronomyService();
 const kailua = { latitude: 21.397, longitude: -157.727, timeZone: 'Pacific/Honolulu' };
 
 describe('MeeusAstronomyService', () => {
-  it('Kailua, 31 May 2026 12:30 HST: sun almost overhead, slightly north (the plan\'s acceptance case)', () => {
-    const s = svc.getSolarState({ ...kailua, timestampUtc: localSelectionToUtc({ year: 2026, month: 5, day: 31 }, 12 * 60 + 30, kailua.timeZone) });
+  it("Kailua, 31 May 2026 12:30 HST: sun almost overhead, slightly north (the plan's acceptance case)", () => {
+    const s = svc.getSolarState({
+      ...kailua,
+      timestampUtc: localSelectionToUtc(
+        { year: 2026, month: 5, day: 31 },
+        12 * 60 + 30,
+        kailua.timeZone,
+      ),
+    });
     expect(s.elevationDegrees).toBeGreaterThan(89);
     expect(s.isAboveHorizon).toBe(true);
     expect(s.phase).toBe('day');
@@ -21,22 +28,43 @@ describe('MeeusAstronomyService', () => {
 
   it('runs fast enough for per-frame timeline scrubbing (< 16 ms for 200 calls)', () => {
     const t0 = performance.now();
-    for (let i = 0; i < 200; i++) svc.getSolarState({ ...kailua, timestampUtc: new Date(Date.UTC(2026, 4, 31, 0, i * 7)) });
+    for (let i = 0; i < 200; i++)
+      svc.getSolarState({ ...kailua, timestampUtc: new Date(Date.UTC(2026, 4, 31, 0, i * 7)) });
     expect(performance.now() - t0).toBeLessThan(200);
   });
 
   it('day events for Kailua carry the golden and blue hour windows in order', () => {
     const ev = svc.getDayEvents({ ...kailua, date: { year: 2026, month: 5, day: 31 } });
-    const order = [ev.astronomicalDawn, ev.nauticalDawn, ev.dawn, ev.goldenHourMorningStart, ev.sunrise, ev.goldenHourMorningEnd, ev.solarNoon, ev.goldenHourEveningStart, ev.sunset, ev.goldenHourEveningEnd, ev.civilDusk, ev.nauticalDusk, ev.astronomicalDusk];
+    const order = [
+      ev.astronomicalDawn,
+      ev.nauticalDawn,
+      ev.dawn,
+      ev.goldenHourMorningStart,
+      ev.sunrise,
+      ev.goldenHourMorningEnd,
+      ev.solarNoon,
+      ev.goldenHourEveningStart,
+      ev.sunset,
+      ev.goldenHourEveningEnd,
+      ev.civilDusk,
+      ev.nauticalDusk,
+      ev.astronomicalDusk,
+    ];
     for (const d of order) expect(d).not.toBeNull();
-    for (let i = 1; i < order.length; i++) expect(order[i]!.getTime()).toBeGreaterThan(order[i - 1]!.getTime());
+    for (let i = 1; i < order.length; i++)
+      expect(order[i]!.getTime()).toBeGreaterThan(order[i - 1]!.getTime());
     expect(ev.polar).toBe('normal');
     expect(ev.daylightMinutes).toBeGreaterThan(13 * 60);
     expect(ev.daylightMinutes).toBeLessThan(13.5 * 60);
   });
 
   it('polar night in Tromsø has no sunrise but has civil twilight and a below-horizon noon', () => {
-    const ev = svc.getDayEvents({ latitude: 69.6492, longitude: 18.9553, timeZone: 'Europe/Oslo', date: { year: 2026, month: 12, day: 21 } });
+    const ev = svc.getDayEvents({
+      latitude: 69.6492,
+      longitude: 18.9553,
+      timeZone: 'Europe/Oslo',
+      date: { year: 2026, month: 12, day: 21 },
+    });
     expect(ev.polar).toBe('polar-night');
     expect(ev.sunrise).toBeNull();
     expect(ev.dawn).not.toBeNull();
@@ -47,7 +75,12 @@ describe('MeeusAstronomyService', () => {
   });
 
   it('midnight sun in Tromsø has no sunset and 24 h of daylight', () => {
-    const ev = svc.getDayEvents({ latitude: 69.6492, longitude: 18.9553, timeZone: 'Europe/Oslo', date: { year: 2026, month: 6, day: 21 } });
+    const ev = svc.getDayEvents({
+      latitude: 69.6492,
+      longitude: 18.9553,
+      timeZone: 'Europe/Oslo',
+      date: { year: 2026, month: 6, day: 21 },
+    });
     expect(ev.polar).toBe('midnight-sun');
     expect(ev.sunset).toBeNull();
     expect(ev.daylightMinutes).toBe(1440);

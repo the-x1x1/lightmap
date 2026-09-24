@@ -11,7 +11,10 @@ export async function GET() {
   const body: CapabilitiesResponse = {
     providers: publicDescriptors(s.geo),
     weather: s.weather.getCapabilities(),
-    fixtureMode: s.capabilities.fixtureMode || s.weather.getCapabilities().isFixture || s.geo.geocoder.meta.isFixture,
+    fixtureMode:
+      s.capabilities.fixtureMode ||
+      s.weather.getCapabilities().isFixture ||
+      s.geo.geocoder.meta.isFixture,
     devBanner: s.env.LIGHTMAP_SHOW_DEV_BANNER,
     flags: { ...s.flags },
     billingConfigured: s.billing.configured,

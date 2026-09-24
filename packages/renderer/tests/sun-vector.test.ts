@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { angleBetweenDeg, azElFromEcefToward, ecefToEnu, enuToEcef, enuTowardSun, shadowOnGround, sunLightDirectionEcef } from '../src/sun-vector.ts';
+import {
+  angleBetweenDeg,
+  azElFromEcefToward,
+  ecefToEnu,
+  enuToEcef,
+  enuTowardSun,
+  shadowOnGround,
+  sunLightDirectionEcef,
+} from '../src/sun-vector.ts';
 
 describe('azimuth/elevation → renderer world vector (plan §10)', () => {
   it('ENU basis: east is +x, north +y, up +z', () => {

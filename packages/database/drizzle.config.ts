@@ -9,5 +9,7 @@ export default {
   schema: './src/schema.ts',
   out: './migrations/drizzle',
   dialect: 'postgresql',
-  dbCredentials: { url: process.env['DATABASE_URL'] ?? 'postgres://lightmap:lightmap@localhost:5432/lightmap' },
+  dbCredentials: {
+    url: process.env['DATABASE_URL'] ?? 'postgres://lightmap:lightmap@localhost:5432/lightmap',
+  },
 } satisfies Config;

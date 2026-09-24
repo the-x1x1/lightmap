@@ -5,7 +5,8 @@
  */
 import { isValidLatLon, normalizeLongitude, type GeoPoint } from './geo.ts';
 
-const DMS = /(-?\d+(?:\.\d+)?)\s*[°º:\s]\s*(\d+(?:\.\d+)?)?\s*['′:\s]?\s*(\d+(?:\.\d+)?)?\s*["″]?\s*([NSEW])?/i;
+const DMS =
+  /(-?\d+(?:\.\d+)?)\s*[°º:\s]\s*(\d+(?:\.\d+)?)?\s*['′:\s]?\s*(\d+(?:\.\d+)?)?\s*["″]?\s*([NSEW])?/i;
 
 function dmsToDecimal(m: RegExpMatchArray): number | null {
   const deg = Number(m[1]);
@@ -45,14 +46,18 @@ export function parseCoordinates(input: string): GeoPoint | null {
   }
 
   // DMS pair.
-  const parts = text.split(/[,;]|\s{2,}|(?<=[NSns])\s+(?=[-\d])/).map((s) => s.trim()).filter(Boolean);
+  const parts = text
+    .split(/[,;]|\s{2,}|(?<=[NSns])\s+(?=[-\d])/)
+    .map((s) => s.trim())
+    .filter(Boolean);
   if (parts.length === 2) {
     const a = DMS.exec(parts[0] ?? '');
     const b = DMS.exec(parts[1] ?? '');
     if (a && b) {
       const lat = dmsToDecimal(a);
       const lon = dmsToDecimal(b);
-      if (lat !== null && lon !== null && isValidLatLon(lat, lon)) return { latitude: lat, longitude: lon };
+      if (lat !== null && lon !== null && isValidLatLon(lat, lon))
+        return { latitude: lat, longitude: lon };
     }
   }
   return null;

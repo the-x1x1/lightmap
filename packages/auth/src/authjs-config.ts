@@ -17,7 +17,12 @@ import Nodemailer from 'next-auth/providers/nodemailer';
 import { createTransport } from 'nodemailer';
 import { brand, type Env } from '@lightmap/config';
 import { schema, ulid, type Db } from '@lightmap/database';
-import { SESSION_MAX_AGE_SECONDS, SESSION_UPDATE_AGE_SECONDS, magicLinkEmail, normalizeEmail } from './account.ts';
+import {
+  SESSION_MAX_AGE_SECONDS,
+  SESSION_UPDATE_AGE_SECONDS,
+  magicLinkEmail,
+  normalizeEmail,
+} from './account.ts';
 
 export interface AuthConfigDeps {
   env: Env;
@@ -43,13 +48,24 @@ export function buildAuthConfig({ env, db, log }: AuthConfigDeps): NextAuthConfi
           return;
         }
         const transport = createTransport(provider.server);
-        await transport.sendMail({ to: identifier, from: provider.from, subject: mail.subject, text: mail.text });
+        await transport.sendMail({
+          to: identifier,
+          from: provider.from,
+          subject: mail.subject,
+          text: mail.text,
+        });
       },
     }),
   );
 
   if (env.AUTH_GOOGLE_ID && env.AUTH_GOOGLE_SECRET) {
-    providers.push(Google({ clientId: env.AUTH_GOOGLE_ID, clientSecret: env.AUTH_GOOGLE_SECRET, allowDangerousEmailAccountLinking: false }));
+    providers.push(
+      Google({
+        clientId: env.AUTH_GOOGLE_ID,
+        clientSecret: env.AUTH_GOOGLE_SECRET,
+        allowDangerousEmailAccountLinking: false,
+      }),
+    );
   }
 
   const devLogin = env.AUTH_DEV_LOGIN && !isProd;
@@ -63,10 +79,25 @@ export function buildAuthConfig({ env, db, log }: AuthConfigDeps): NextAuthConfi
           const email = normalizeEmail(String(credentials?.['email'] ?? ''));
           if (!email) return null;
           // Find or create the user directly; Credentials providers bypass the adapter.
-          const existing = await db.query.users.findFirst({ where: (u, { eq }) => eq(u.email, email) });
-          if (existing) return { id: existing.id, email: existing.email, name: existing.displayName, image: existing.image };
+          const existing = await db.query.users.findFirst({
+            where: (u, { eq }) => eq(u.email, email),
+          });
+          if (existing)
+            return {
+              id: existing.id,
+              email: existing.email,
+              name: existing.displayName,
+              image: existing.image,
+            };
           const id = ulid();
-          await db.insert(schema.users).values({ id, email, emailVerified: new Date(), displayName: email.split('@')[0] ?? null });
+          await db
+            .insert(schema.users)
+            .values({
+              id,
+              email,
+              emailVerified: new Date(),
+              displayName: email.split('@')[0] ?? null,
+            });
           log('warn', `[dev] created user ${email} via dev sign-in`);
           return { id, email, name: email.split('@')[0] ?? null, image: null };
         },
@@ -83,11 +114,19 @@ export function buildAuthConfig({ env, db, log }: AuthConfigDeps): NextAuthConfi
     }),
     providers,
     // Credentials providers require JWT sessions in Auth.js; database sessions for everything else.
-    session: { strategy: devLogin ? 'jwt' : 'database', maxAge: SESSION_MAX_AGE_SECONDS, updateAge: SESSION_UPDATE_AGE_SECONDS },
+    session: {
+      strategy: devLogin ? 'jwt' : 'database',
+      maxAge: SESSION_MAX_AGE_SECONDS,
+      updateAge: SESSION_UPDATE_AGE_SECONDS,
+    },
     secret: env.AUTH_SECRET,
     trustHost: true,
     useSecureCookies: isProd,
-    pages: { signIn: '/account/sign-in', verifyRequest: '/account/check-email', error: '/account/error' },
+    pages: {
+      signIn: '/account/sign-in',
+      verifyRequest: '/account/check-email',
+      error: '/account/error',
+    },
     callbacks: {
       async jwt({ token, user }) {
         if (user?.id) token['uid'] = user.id;
@@ -101,11 +140,16 @@ export function buildAuthConfig({ env, db, log }: AuthConfigDeps): NextAuthConfi
     },
     events: {
       async createUser({ user }) {
-        if (user.id) await db.insert(schema.profiles).values({ userId: user.id }).onConflictDoNothing();
+        if (user.id)
+          await db.insert(schema.profiles).values({ userId: user.id }).onConflictDoNothing();
       },
       // Signing in cancels a pending deletion request (docs/PRIVACY.md: 14-day reversible window).
       async signIn({ user }) {
-        if (user?.id) await db.update(schema.users).set({ deletionRequestedAt: null, updatedAt: new Date() }).where(eq(schema.users.id, user.id));
+        if (user?.id)
+          await db
+            .update(schema.users)
+            .set({ deletionRequestedAt: null, updatedAt: new Date() })
+            .where(eq(schema.users.id, user.id));
       },
     },
     logger: {

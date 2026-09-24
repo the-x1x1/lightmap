@@ -87,7 +87,9 @@ export class NominatimGeocoder implements GeocodingProvider {
     const wait = this.lastRequestAt + 1000 - this.now();
     if (wait > 0) await this.sleep(wait);
     this.lastRequestAt = this.now();
-    const init: RequestInit = { headers: { 'User-Agent': this.userAgent, Accept: 'application/json' } };
+    const init: RequestInit = {
+      headers: { 'User-Agent': this.userAgent, Accept: 'application/json' },
+    };
     if (signal !== undefined) init.signal = signal;
     const res = await this.fetchImpl(url, init);
     if (!res.ok) throw new Error(`Nominatim ${res.status}`);
@@ -104,7 +106,8 @@ function toPlace(r: NominatimResult): Place | null {
   if (r.place_id !== undefined) place.sourceId = `nominatim:${r.place_id}`;
   if (r.boundingbox && r.boundingbox.length === 4) {
     const [s, n, w, e] = r.boundingbox.map(Number);
-    if ([s, n, w, e].every(Number.isFinite)) place.bounds = { south: s!, north: n!, west: w!, east: e! };
+    if ([s, n, w, e].every(Number.isFinite))
+      place.bounds = { south: s!, north: n!, west: w!, east: e! };
   }
   return place;
 }

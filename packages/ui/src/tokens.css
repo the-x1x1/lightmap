@@ -20,6 +20,13 @@
   color-scheme: dark;
 }
 @media (prefers-reduced-motion: reduce) {
-  :root { --lm-motion: 0ms; }
-  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  :root {
+    --lm-motion: 0ms;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
 }

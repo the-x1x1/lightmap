@@ -86,7 +86,7 @@ Two rules make this trustworthy:
 `packages/renderer` splits into pure math and a thin Cesium layer:
 
 - `sun-vector.ts` — azimuth/elevation → ENU → ECEF. `DirectionalLight.direction` is the direction
-  light *travels*, so it is the negation of "toward the Sun". Unit tested at the equator, the pole,
+  light _travels_, so it is the negation of "toward the Sun". Unit tested at the equator, the pole,
   and by round trip.
 - `lighting.ts` — SceneState → intensities, tints, shadow darkness, atmosphere shifts, fog density,
   grade uniforms and a CSS sky gradient. Direct light fades in from −0.833° and is multiplied by
@@ -111,7 +111,7 @@ own ephemeris is read back in the dev perf panel as a consistency check (Δ typi
 
 ## Time
 
-All selections are wall-clock times *at the location*. `packages/astronomy/src/time.ts` converts
+All selections are wall-clock times _at the location_. `packages/astronomy/src/time.ts` converts
 with `Intl` and a documented DST policy (gap → shift forward, overlap → earlier instant), so
 "12:30" means 12:30 at Kailua whichever zone the user's device is in. The civil day is bounded by
 local midnights, so day events belong to the calendar date the photographer means — including
@@ -122,20 +122,20 @@ local midnights, so day events belong to the calendar date the photographer mean
 Next.js route handlers under `apps/web/app/api`. `lib/server/services.ts` builds one container per
 process from the validated env: providers, weather, billing, db, logger. Routes:
 
-| Route | Purpose | Cache / limits |
-|---|---|---|
-| `GET /api/scene/capabilities` | Credential-free provider descriptors, weather capabilities, flags, auth methods | 5 min private |
-| `GET /api/location/search?q=` | Place search (coordinates parsed locally first) | burst 30/min, daily geocoder budget, cache by normalised query |
-| `GET /api/location/reverse?lat&lng` | Label + IANA zone + elevation | cache by 0.01° cell, 30 days |
-| `GET /api/solar/day?lat&lng&date&tz` | Day events (also computed client-side) | public 1 day |
-| `GET /api/weather?lat&lng&date&tz` | One civil day of hourly frames for the 0.05° cell | 422 outside horizon; burst 30/min; daily budget; cache TTL = provider update interval |
-| `GET/POST /api/projects`, `GET/PATCH/DELETE /api/projects/:id` | Projects | ownership in WHERE |
-| `POST /api/projects/:id/viewpoints`, `GET/PATCH/DELETE /api/viewpoints/:id` | Viewpoints + latest snapshot | entitlement checks |
-| `GET /api/account/entitlements` | Server-derived plan snapshot | no-store |
-| `POST /api/account/delete` | Deletion request (14-day window) | |
-| `POST /api/billing/checkout`, `POST /api/billing/portal` | Stripe sessions | |
-| `POST /api/webhooks/stripe` | Signature-verified, idempotent | |
-| `GET /api/health` | Liveness + db check | |
+| Route                                                                       | Purpose                                                                         | Cache / limits                                                                        |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `GET /api/scene/capabilities`                                               | Credential-free provider descriptors, weather capabilities, flags, auth methods | 5 min private                                                                         |
+| `GET /api/location/search?q=`                                               | Place search (coordinates parsed locally first)                                 | burst 30/min, daily geocoder budget, cache by normalised query                        |
+| `GET /api/location/reverse?lat&lng`                                         | Label + IANA zone + elevation                                                   | cache by 0.01° cell, 30 days                                                          |
+| `GET /api/solar/day?lat&lng&date&tz`                                        | Day events (also computed client-side)                                          | public 1 day                                                                          |
+| `GET /api/weather?lat&lng&date&tz`                                          | One civil day of hourly frames for the 0.05° cell                               | 422 outside horizon; burst 30/min; daily budget; cache TTL = provider update interval |
+| `GET/POST /api/projects`, `GET/PATCH/DELETE /api/projects/:id`              | Projects                                                                        | ownership in WHERE                                                                    |
+| `POST /api/projects/:id/viewpoints`, `GET/PATCH/DELETE /api/viewpoints/:id` | Viewpoints + latest snapshot                                                    | entitlement checks                                                                    |
+| `GET /api/account/entitlements`                                             | Server-derived plan snapshot                                                    | no-store                                                                              |
+| `POST /api/account/delete`                                                  | Deletion request (14-day window)                                                |                                                                                       |
+| `POST /api/billing/checkout`, `POST /api/billing/portal`                    | Stripe sessions                                                                 |                                                                                       |
+| `POST /api/webhooks/stripe`                                                 | Signature-verified, idempotent                                                  |                                                                                       |
+| `GET /api/health`                                                           | Liveness + db check                                                             |                                                                                       |
 
 Without `DATABASE_URL` the app still runs: exploration, astronomy and forecasts work; accounts,
 projects and billing report themselves unavailable.

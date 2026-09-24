@@ -20,6 +20,9 @@ export const featureFlags = {
 
 export type FeatureFlag = keyof typeof featureFlags;
 
-export function isEnabled(flag: FeatureFlag, overrides?: Partial<Record<FeatureFlag, boolean>>): boolean {
+export function isEnabled(
+  flag: FeatureFlag,
+  overrides?: Partial<Record<FeatureFlag, boolean>>,
+): boolean {
   return overrides?.[flag] ?? featureFlags[flag];
 }
