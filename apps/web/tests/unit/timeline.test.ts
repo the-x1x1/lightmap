@@ -22,14 +22,21 @@ describe('timeline markers', () => {
     expect(g.startsWith('linear-gradient(90deg, #0c1230 0%')).toBe(true);
     expect(g.endsWith('#0c1230 100%)')).toBe(true);
   });
-  it('handles polar days without markers', () => {
+  it('handles polar days: no rise/set/twilight markers under the midnight sun', () => {
     const tromso = computeDayEvents({
       latitude: 69.6492,
       longitude: 18.9553,
       timeZone: 'Europe/Oslo',
       date: { year: 2026, month: 6, day: 21 },
     });
-    expect(dayMarkers(tromso).map((x) => x.key)).toEqual(['noon']);
+    const keys = dayMarkers(tromso).map((x) => x.key);
+    // The sun never sets, so there is no dawn, sunrise, sunset or dusk …
+    for (const k of ['dawn', 'sunrise', 'sunset', 'dusk']) expect(keys).not.toContain(k);
+    expect(keys).toContain('noon');
+    // … but at midnight it dips to ≈ 3°, below the 6° golden-hour limit, so the golden spell
+    // around midnight is real and is marked.
+    expect(keys).toContain('goldenStart');
+    expect(keys).toContain('goldenEnd');
     expect(dayGradient(tromso)).toContain('#6aa7e6');
   });
 });
