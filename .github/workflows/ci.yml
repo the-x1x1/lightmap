@@ -10,7 +10,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PNPM_VERSION: 10
   NODE_VERSION: 22
 
 jobs:
@@ -20,9 +19,9 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+      # pnpm version comes from package.json "packageManager"; passing `version` too makes
+      # pnpm/action-setup fail with "Multiple versions of pnpm specified".
       - uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -80,9 +79,9 @@ jobs:
       NEXT_TELEMETRY_DISABLED: 1
     steps:
       - uses: actions/checkout@v4
+      # pnpm version comes from package.json "packageManager"; passing `version` too makes
+      # pnpm/action-setup fail with "Multiple versions of pnpm specified".
       - uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
