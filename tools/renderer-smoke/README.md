@@ -4,11 +4,12 @@ Runs LightMap's real renderer code (`packages/renderer`: `SceneController`, `Ces
 the grade post-process shader) inside headless Chromium against a bundled CesiumJS build, with no
 network: ellipsoid terrain and the bundled Natural Earth II basemap.
 
-It applies seven scenes for Kailua Beach on 31 May 2026 — noon clear, noon overcast, golden hour
+It applies nine scenes for Kailua Beach on 31 May 2026 — noon clear, noon overcast, golden hour
 (18:45, viewpoint), blue hour (19:30), partly cloudy afternoon, moonlit night (23:00, full moon),
-storm — and screenshots each. Any runtime exception, shader compile error or missing screenshot
-fails the run. `docs/media/renderer-smoke-2026-09-24b.png` is the contact sheet from the run that
-validated v0.1 (SwiftShader software GL, so colours are exact but performance is not).
+storm, and two forecast-frame scenes at 19:18 (Sun ≈ −2.4°) with only a cirrus deck and only a
+stratus deck — and screenshots each. Any runtime exception, shader compile error or missing screenshot
+fails the run. `docs/media/renderer-smoke-2026-09-24c.png` is the contact sheet from the run that
+validated the layered cloud decks (SwiftShader software GL, so colours are exact but performance is not).
 
 ```sh
 pnpm install

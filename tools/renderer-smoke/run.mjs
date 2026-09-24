@@ -1,7 +1,8 @@
 /**
  * Renderer smoke test: loads the real SceneController + CesiumSceneHost + grade shader in headless
  * Chromium against a bundled Cesium build, applies seven scenes (noon clear/overcast, golden hour,
- * blue hour, partly cloudy, moonlit night, storm) and screenshots each. Fails on any runtime or
+ * blue hour, partly cloudy, moonlit night, storm, cirrus and stratus decks after sunset from a
+ * forecast frame) and screenshots each. Fails on any runtime or
  * shader error. Usage (after `pnpm install`):
  *
  *   node --experimental-strip-types ../../node_modules/typescript/bin/tsc -p tsconfig.emit.json
@@ -67,4 +68,4 @@ console.log(
 );
 await browser.close();
 server.kill();
-process.exit(smoke.errors.length === 0 && Object.keys(shots).length >= 7 ? 0 : 1);
+process.exit(smoke.errors.length === 0 && Object.keys(shots).length >= 9 ? 0 : 1);

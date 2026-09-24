@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_COLOR_TEMPERATURE_CURVE,
   SCENARIOS,
+  cloudLayersFromFrame,
   colorTemperatureKelvin,
   isScenarioId,
   kelvinToRgb,
@@ -94,6 +95,70 @@ describe('scenarios are deterministic and visibly distinct', () => {
 
     // Exactly at an anchor reproduces the anchor.
     expect(parametersForForecast({ cloudCoverTotal: 95 }).contrast).toBeCloseTo(over.contrast, 6);
+  });
+});
+
+describe('cloud layers', () => {
+  it('every scenario carries a representative low/mid/high split that grows with cover', () => {
+    for (const s of SCENARIOS) {
+      const l = s.parameters.cloudLayers;
+      expect(s.parameters.layersObserved).toBe(false);
+      for (const v of [l.low, l.mid, l.high]) expect(v >= 0 && v <= 1).toBe(true);
+    }
+    expect(scenarioById('clear').parameters.cloudLayers.low).toBe(0);
+    expect(scenarioById('overcast').parameters.cloudLayers.low).toBeGreaterThan(0.6);
+    expect(scenarioById('storm').parameters.cloudLayers.low).toBe(1);
+  });
+  it("uses the provider's layers when the frame has them and says so", () => {
+    const p = parametersForForecast({
+      cloudCoverTotal: 60,
+      cloudCoverLow: 10,
+      cloudCoverMid: 0,
+      cloudCoverHigh: 60,
+    });
+    expect(p.layersObserved).toBe(true);
+    expect(p.cloudLayers).toEqual({ low: 0.1, mid: 0, high: 0.6 });
+    expect(cloudLayersFromFrame({ cloudCoverLow: null, cloudCoverMid: null })).toBeNull();
+    expect(cloudLayersFromFrame({ cloudCoverLow: 40 })).toEqual({ low: 0.4, mid: 0, high: 0 });
+  });
+  it('interpolates the scenario split when the frame has no layers', () => {
+    const p = parametersForForecast({ cloudCoverTotal: 75 });
+    expect(p.layersObserved).toBe(false);
+    const partly = scenarioById('partly-cloudy').parameters.cloudLayers;
+    const over = scenarioById('overcast').parameters.cloudLayers;
+    expect(p.cloudLayers.low).toBeGreaterThan(partly.low);
+    expect(p.cloudLayers.low).toBeLessThan(over.low);
+  });
+  it('a thin high veil keeps more direct light than the same total of low cloud', () => {
+    const cirrus = parametersForForecast({
+      cloudCoverTotal: 70,
+      cloudCoverLow: 0,
+      cloudCoverMid: 5,
+      cloudCoverHigh: 70,
+    });
+    const stratus = parametersForForecast({
+      cloudCoverTotal: 70,
+      cloudCoverLow: 70,
+      cloudCoverMid: 0,
+      cloudCoverHigh: 0,
+    });
+    expect(cirrus.sunTransmittance).toBeGreaterThan(stratus.sunTransmittance + 0.25);
+    expect(cirrus.sunTransmittance).toBeLessThan(1);
+    expect(stratus.cloudDensity).toBeGreaterThan(cirrus.cloudDensity);
+  });
+  it('rain pushes an unobserved split toward the storm deck but leaves observed layers alone', () => {
+    const rainy = parametersForForecast({ cloudCoverTotal: 80, precipitationAmount: 3 });
+    expect(rainy.cloudLayers.low).toBeGreaterThan(
+      scenarioById('overcast').parameters.cloudLayers.low - 0.1,
+    );
+    const observed = parametersForForecast({
+      cloudCoverTotal: 80,
+      cloudCoverLow: 20,
+      cloudCoverMid: 70,
+      cloudCoverHigh: 0,
+      precipitationAmount: 3,
+    });
+    expect(observed.cloudLayers).toEqual({ low: 0.2, mid: 0.7, high: 0 });
   });
 });
 

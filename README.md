@@ -7,11 +7,13 @@ on real terrain. Scrub the day like a game timeline. Save the viewpoint to a sho
 
 > "LightMap" is a working name. Rename in `packages/config/src/brand.ts`.
 
-![Renderer smoke contact sheet: noon clear, noon overcast, golden hour, blue hour, partly cloudy, moonlit night, storm](docs/media/renderer-smoke-2026-09-24b.png)
+![Renderer smoke contact sheet: noon clear, noon overcast, golden hour, blue hour, partly cloudy, moonlit night, storm, cirrus after sunset, stratus after sunset](docs/media/renderer-smoke-2026-09-24c.png)
 
-_Seven scenes from the headless renderer smoke test (`tools/renderer-smoke`): noon clear, noon
-overcast, golden hour, blue hour, partly cloudy, moonlit night, storm — Kailua Beach, 31 May 2026,
-flat ellipsoid terrain, software GL. App screenshots follow the first deployed build._
+_Nine scenes from the headless renderer smoke test (`tools/renderer-smoke`): noon clear, noon
+overcast, golden hour, blue hour, partly cloudy, moonlit night, storm, and the same minute after
+sunset with a cirrus deck (still sunlit) and a stratus deck (in shadow) from a forecast frame —
+Kailua Beach, 31 May 2026, flat ellipsoid terrain, software GL. App screenshots follow the first
+deployed build._
 
 ## What it does (v0.1)
 

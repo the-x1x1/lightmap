@@ -104,6 +104,14 @@ aerial perspective; `saturation`/`contrast` are grade multipliers around 1.0. Th
 physically motivated but deliberately simple; they are tuned for an _obvious_ visual difference
 between Clear, Partly Cloudy and Overcast (plan §10), not for radiometric accuracy.
 
+`cloudLayers` (low / mid / high cover, 0–1) is the representative split per scenario — Clear
+0 / 0 / 0.05, Mostly Clear 0.15 / 0.05 / 0.15, Partly Cloudy 0.4 / 0.2 / 0.25, Overcast
+0.75 / 0.8 / 0.4, Storm 1 / 1 / 0.6 — and `layersObserved` is false. For a forecast frame whose
+provider reports `cloud_cover_low/mid/high` the layers are the frame's own and `layersObserved` is
+true; the renderer draws each band as its own deck and lights it by height
+(`RENDERING_ACCURACY.md` §Weather scenarios). A frame that is mostly thin high cloud keeps 55–85 %
+of the direct beam regardless of its total cover.
+
 ## 6. Provider: Open-Meteo
 
 - Adapter: `OpenMeteoProvider` (`api.open-meteo.com`, or `customer-api.open-meteo.com` with an API

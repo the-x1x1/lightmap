@@ -9,6 +9,8 @@
  *   diffuseFraction    — how much of the light is sky light (soft, directionless)
  *   skyLuminance       — relative brightness of the sky dome
  *   cloudOpacity/Density — how much cloud is drawn, and how thick each cloud reads
+ *   cloudLayers        — low / mid / high cover fractions: the forecast's own layers when the
+ *                        provider reports them, otherwise the scenario's representative split
  *   haze               — aerial perspective / visibility loss
  *   saturation/contrast — grading multipliers around 1.0
  */
@@ -36,6 +38,21 @@ export interface AtmosphereParameters {
   precipitation: number;
   /** Cloud cover fraction 0–1 that the parameters were derived from. */
   cloudCover: number;
+  /**
+   * Cover fraction 0–1 per altitude band. Low cloud (stratus, cumulus; below ~2 km) has dark
+   * bases and blocks the sun; mid cloud (alto-) is a grey-white sheet the sun shows through as a
+   * disc; high cloud (cirrus; above ~6 km) is a thin veil that stays sunlit after sunset. From the
+   * forecast frame when the provider reports layers (`layersObserved`), else the scenario's split.
+   */
+  cloudLayers: CloudLayers;
+  /** True when `cloudLayers` came from the provider rather than the scenario's representative split. */
+  layersObserved: boolean;
+}
+
+export interface CloudLayers {
+  low: number;
+  mid: number;
+  high: number;
 }
 
 export interface WeatherScenario {
@@ -59,6 +76,7 @@ const P = (
   saturation: number,
   contrast: number,
   precipitation: number,
+  cloudLayers: CloudLayers,
 ): AtmosphereParameters => ({
   cloudCover,
   cloudOpacity,
@@ -70,7 +88,10 @@ const P = (
   saturation,
   contrast,
   precipitation,
+  cloudLayers,
+  layersObserved: false,
 });
+const L = (low: number, mid: number, high: number): CloudLayers => ({ low, mid, high });
 
 export const SCENARIOS: readonly WeatherScenario[] = Object.freeze([
   {
@@ -78,35 +99,35 @@ export const SCENARIOS: readonly WeatherScenario[] = Object.freeze([
     label: 'Clear',
     hint: 'Hard light, deep shadows, saturated sky',
     cloudCoverPercent: 5,
-    parameters: P(0.05, 0.05, 0.2, 1.0, 0.15, 1.0, 0.1, 1.0, 1.0, 0),
+    parameters: P(0.05, 0.05, 0.2, 1.0, 0.15, 1.0, 0.1, 1.0, 1.0, 0, L(0, 0, 0.05)),
   },
   {
     id: 'mostly-clear',
     label: 'Mostly Clear',
     hint: 'Scattered cloud, occasional softening',
     cloudCoverPercent: 25,
-    parameters: P(0.25, 0.3, 0.35, 0.92, 0.25, 1.0, 0.15, 0.98, 0.97, 0),
+    parameters: P(0.25, 0.3, 0.35, 0.92, 0.25, 1.0, 0.15, 0.98, 0.97, 0, L(0.15, 0.05, 0.15)),
   },
   {
     id: 'partly-cloudy',
     label: 'Partly Cloudy',
     hint: 'Broken cloud, light comes and goes',
     cloudCoverPercent: 55,
-    parameters: P(0.55, 0.6, 0.5, 0.7, 0.45, 1.05, 0.25, 0.95, 0.9, 0),
+    parameters: P(0.55, 0.6, 0.5, 0.7, 0.45, 1.05, 0.25, 0.95, 0.9, 0, L(0.4, 0.2, 0.25)),
   },
   {
     id: 'overcast',
     label: 'Overcast',
     hint: 'Soft, even light, no visible sun or shadows',
     cloudCoverPercent: 95,
-    parameters: P(0.95, 0.95, 0.85, 0.2, 0.9, 0.85, 0.45, 0.85, 0.75, 0),
+    parameters: P(0.95, 0.95, 0.85, 0.2, 0.9, 0.85, 0.45, 0.85, 0.75, 0, L(0.75, 0.8, 0.4)),
   },
   {
     id: 'storm',
     label: 'Rain / Storm',
     hint: 'Dark sky, flat light, wet surfaces',
     cloudCoverPercent: 100,
-    parameters: P(1.0, 1.0, 1.0, 0.08, 0.97, 0.55, 0.7, 0.7, 0.65, 1),
+    parameters: P(1.0, 1.0, 1.0, 0.08, 0.97, 0.55, 0.7, 0.7, 0.65, 1, L(1.0, 1.0, 0.6)),
   },
 ]);
 
@@ -142,6 +163,29 @@ export function scenarioForConditions(
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
+type NumericParameter = Exclude<keyof AtmosphereParameters, 'cloudLayers' | 'layersObserved'>;
+
+/**
+ * Layer cover fractions from a frame's per-band percentages, or null when the provider reports
+ * none of them. A missing band with the others present is treated as 0 (Open-Meteo reports all
+ * three or none). The bands are not required to sum to the total: they overlap in the sky.
+ */
+export function cloudLayersFromFrame(frame: {
+  cloudCoverLow?: number | null;
+  cloudCoverMid?: number | null;
+  cloudCoverHigh?: number | null;
+}): CloudLayers | null {
+  const bands = [frame.cloudCoverLow, frame.cloudCoverMid, frame.cloudCoverHigh];
+  if (bands.every((b) => b === null || b === undefined || !Number.isFinite(b))) return null;
+  const pct = (v: number | null | undefined) =>
+    v === null || v === undefined || !Number.isFinite(v) ? 0 : clamp01(v / 100);
+  return {
+    low: pct(frame.cloudCoverLow),
+    mid: pct(frame.cloudCoverMid),
+    high: pct(frame.cloudCoverHigh),
+  };
+}
+
 /**
  * Continuous parameters from a forecast frame, so a forecast renders with its actual cloud amount
  * rather than snapping to the nearest scenario. Piecewise-linear interpolation through the
@@ -150,6 +194,8 @@ const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 export function parametersForForecast(frame: {
   cloudCoverTotal: number;
   cloudCoverLow?: number | null;
+  cloudCoverMid?: number | null;
+  cloudCoverHigh?: number | null;
   visibility?: number | null;
   precipitationAmount?: number | null;
   precipitationProbability?: number | null;
@@ -169,7 +215,10 @@ export function parametersForForecast(frame: {
     }
   }
   const f = hi.x === lo.x ? 0 : clamp01((cover - lo.x) / (hi.x - lo.x));
-  const mix = (k: keyof AtmosphereParameters) => lo.p[k] + (hi.p[k] - lo.p[k]) * f;
+  const mix = (k: NumericParameter) => lo.p[k] + (hi.p[k] - lo.p[k]) * f;
+  const mixLayer = (k: keyof CloudLayers) =>
+    lo.p.cloudLayers[k] + (hi.p.cloudLayers[k] - lo.p.cloudLayers[k]) * f;
+  const observed = cloudLayersFromFrame(frame);
   const out: AtmosphereParameters = {
     cloudCover: cover,
     cloudOpacity: mix('cloudOpacity'),
@@ -181,12 +230,21 @@ export function parametersForForecast(frame: {
     saturation: mix('saturation'),
     contrast: mix('contrast'),
     precipitation: 0,
+    cloudLayers: observed ?? { low: mixLayer('low'), mid: mixLayer('mid'), high: mixLayer('high') },
+    layersObserved: observed !== null,
   };
   // Low cloud blocks the sun more than the same amount of high cloud.
   if (frame.cloudCoverLow !== null && frame.cloudCoverLow !== undefined) {
     const low = clamp01(frame.cloudCoverLow / 100);
     out.sunTransmittance = clamp01(out.sunTransmittance * (1 - 0.5 * low));
     out.cloudDensity = clamp01(out.cloudDensity + 0.3 * low);
+  }
+  // A sky that is mostly thin high cloud keeps more direct light (and softer shadows) than the
+  // total cover alone suggests: a cirrus veil still passes roughly 55–85 % of the direct beam.
+  if (observed && observed.high > 0.3 && observed.low + observed.mid < 0.3) {
+    const veil = clamp01((observed.high - 0.3) / 0.7);
+    out.sunTransmittance = clamp01(Math.max(out.sunTransmittance, 0.55 + 0.3 * (1 - veil)));
+    out.diffuseFraction = clamp01(Math.max(out.diffuseFraction, 0.3 + 0.2 * veil));
   }
   // Visibility → haze. 40 km+ is crisp; 5 km is noticeably hazy; < 1 km is fog.
   if (
@@ -224,6 +282,13 @@ export function parametersForForecast(frame: {
       out[k] = out[k] + (storm[k] - out[k]) * w;
     }
     out.precipitation = w;
+    if (!observed) {
+      out.cloudLayers = {
+        low: out.cloudLayers.low + (storm.cloudLayers.low - out.cloudLayers.low) * w,
+        mid: out.cloudLayers.mid + (storm.cloudLayers.mid - out.cloudLayers.mid) * w,
+        high: out.cloudLayers.high + (storm.cloudLayers.high - out.cloudLayers.high) * w,
+      };
+    }
   }
   return out;
 }

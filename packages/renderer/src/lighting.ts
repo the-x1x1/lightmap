@@ -49,6 +49,10 @@ export interface LightingParameters {
     cloudCoverage: number;
     cloudDensity: number;
     cloudOpacity: number;
+    /** Per-band cover 0–1 (see `AtmosphereParameters.cloudLayers`); drawn as three decks. */
+    cloudLow: number;
+    cloudMid: number;
+    cloudHigh: number;
     skyLuminance: number;
     nightFactor: number;
     precipitation: number;
@@ -184,6 +188,9 @@ export function lightingFromScene(s: SceneState): LightingParameters {
       cloudCoverage: p.cloudCover,
       cloudDensity: p.cloudDensity,
       cloudOpacity: p.cloudOpacity,
+      cloudLow: clamp01(p.cloudLayers.low),
+      cloudMid: clamp01(p.cloudLayers.mid),
+      cloudHigh: clamp01(p.cloudLayers.high),
       skyLuminance: p.skyLuminance,
       nightFactor,
       precipitation: p.precipitation,

@@ -207,6 +207,68 @@
         await new Promise((r) => {
           window.__takeShot = r;
         });
+        // Layered decks from a forecast frame (not a scenario): the same minute after sunset with
+        // only cirrus (stays sunlit, pink) and with only a low stratus deck (in shadow, dark).
+        const frameAt = (hour, layers) => ({
+          timestamp: localSelectionToUtc(
+            { year: 2026, month: 5, day: 31 },
+            hour * 60,
+            kailua.timeZone,
+          ).toISOString(),
+          cloudCoverTotal: Math.max(layers.low, layers.mid, layers.high),
+          cloudCoverLow: layers.low,
+          cloudCoverMid: layers.mid,
+          cloudCoverHigh: layers.high,
+          precipitationProbability: 0,
+          precipitationAmount: 0,
+          humidity: 60,
+          visibility: 40000,
+          windSpeed: 3,
+          windDirection: 90,
+          weatherCode: 2,
+        });
+        const forecastScene = (hour, layers, camera) =>
+          buildSceneState({
+            location: kailua,
+            utc: localSelectionToUtc({ year: 2026, month: 5, day: 31 }, hour * 60, kailua.timeZone),
+            now: new Date('2026-05-30T00:00:00Z'),
+            camera,
+            environment: env,
+            scenario: 'clear',
+            forceScenario: false,
+            weather: {
+              capabilities: OPEN_METEO_CAPABILITIES,
+              frames: [frameAt(19, layers), frameAt(20, layers)],
+              providerFailed: false,
+            },
+            render: DEFAULT_RENDER_SETTINGS,
+            includeLunar: true,
+            realReference: false,
+          });
+        const westCam = { ...defaultCamera(kailua.point, 265), mode: 'viewpoint', pitchDeg: 8 };
+        const cirrus = forecastScene(19.3, { low: 0, mid: 0, high: 80 }, westCam);
+        controller.apply(cirrus);
+        window.__smoke.lighting.cirrus = lightingFromScene(cirrus);
+        log(
+          'applied cirrus sunset (forecast frame) ' +
+            cirrus.atmosphere.mode +
+            ' el=' +
+            cirrus.solar.elevationDegrees.toFixed(2),
+        );
+        await wait(1500);
+        window.__smoke.shot = 'cirrus-sunset';
+        await new Promise((r) => {
+          window.__takeShot = r;
+        });
+        const stratus = forecastScene(19.3, { low: 80, mid: 0, high: 0 }, westCam);
+        controller.apply(stratus);
+        window.__smoke.lighting.stratus = lightingFromScene(stratus);
+        log('applied stratus sunset (forecast frame) ' + stratus.atmosphere.mode);
+        await wait(1500);
+        window.__smoke.shot = 'stratus-sunset';
+        await new Promise((r) => {
+          window.__takeShot = r;
+        });
         const thumb = await host.captureThumbnail(320);
         window.__smoke.thumbnail = thumb
           ? thumb.slice(0, 40) + '… (' + thumb.length + ' chars)'
