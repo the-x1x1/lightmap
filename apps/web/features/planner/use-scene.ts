@@ -29,6 +29,10 @@ export interface SceneBundle {
     error: string | null;
     providerFailed: boolean;
     capabilities: WeatherCapabilities | null;
+    /** The day's fetched frames (empty in scenario mode). */
+    frames: readonly WeatherFrame[];
+    /** How the frames were obtained; null when nothing was fetched. */
+    mode: WeatherResponse['mode'] | null;
   };
   capabilities: CapabilitiesResponse | null;
   environment: EnvironmentState;
@@ -165,6 +169,8 @@ export function useScene(
       error: weatherQuery.error ? String(weatherQuery.error) : null,
       providerFailed,
       capabilities: weatherCaps,
+      frames,
+      mode: weatherQuery.data?.mode ?? null,
     },
     capabilities: caps.data ?? null,
     environment,

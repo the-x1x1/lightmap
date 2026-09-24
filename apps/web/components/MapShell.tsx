@@ -23,6 +23,7 @@ import { CameraControls } from './CameraControls';
 import { AstronomyDetails } from './AstronomyDetails';
 import { LightFinder } from './LightFinder';
 import { ClimatologyPanel } from './ClimatologyPanel';
+import { HourlyOutlook } from './HourlyOutlook';
 import { WeatherDetails } from './WeatherDetails';
 import { ProjectDrawer } from './ProjectDrawer';
 import { AccountMenu, AccountPanel } from './AccountMenu';
@@ -250,6 +251,22 @@ export function MapShell() {
                   timeZone={location?.timeZone ?? 'UTC'}
                   phase={scene?.solar.phase}
                 />
+                {scene ? (
+                  <HourlyOutlook
+                    scene={scene}
+                    frames={weather.frames}
+                    mode={weather.mode}
+                    decision={
+                      account.snapshot
+                        ? account.can('forecast_detail')
+                        : {
+                            allowed: false,
+                            key: 'forecast_detail',
+                            reason: 'Sign in with Pro for hour-by-hour forecast detail.',
+                          }
+                    }
+                  />
+                ) : null}
                 {scene ? (
                   <>
                     <WeatherScenarioPicker scene={scene} weatherLoading={weather.loading} />

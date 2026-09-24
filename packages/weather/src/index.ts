@@ -25,3 +25,4 @@ export {
   FIXTURE_CLIMATOLOGY_CAPABILITIES,
 } from './providers/fixture-climatology.ts';
 export { createClimatologyProvider } from './registry.ts';
+export * from './outlook.ts';
