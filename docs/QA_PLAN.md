@@ -44,12 +44,12 @@ the E2E suite with the fixture providers.
 - **Migrations against Postgres**: the real migration set is applied to an empty database, then
   re-applied as a no-op. `0002_postgis_optional.sql` checks `pg_available_extensions` so the
   suite passes with and without PostGIS.
-- **Repositories**: CI invokes `pnpm --filter @lightmap/database test:integration`, intended to
-  exercise `projectsRepo`, `viewpointsRepo`, `subscriptionsRepo`, `cacheRepo` and `usageRepo`
-  against the live database (owner scoping, cascade on user erase, cache TTL, counter upsert).
-  **Gap:** that script is not yet defined in `packages/database/package.json`; the repository
-  paths are currently covered indirectly by the E2E flow. Adding the script and tests is the first
-  QA task after v0.1.0.
+- **Repositories**: CI invokes `pnpm --filter @lightmap/database test:integration`
+  (`packages/database/tests/integration/repositories.int.test.ts`), which applies the migrations
+  and exercises `projectsRepo`, `viewpointsRepo`, `subscriptionsRepo`, `cacheRepo`, `usageRepo` and
+  `retentionRepo` against the live database: owner scoping (a second user cannot read, update or
+  delete), cascade on project and user erase, newest-snapshot-only, webhook idempotency, cache TTL,
+  counter upsert, deletion-request due dates. Skipped automatically when `DATABASE_URL` is unset.
 - Subscription → entitlement is covered by the webhook unit tests plus the E2E dev-sign-in flow
   reading `/api/account/entitlements`.
 

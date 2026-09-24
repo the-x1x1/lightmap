@@ -78,13 +78,14 @@ hex characters (`clientKey()` in `apps/web/lib/server/rate-limit.ts`). Raw IPs a
 
 1. **Request**: `POST /api/account/delete` sets `users.deletion_requested_at` and writes an audit
    row `account.deletion_requested`. Sign-in remains possible.
-2. **14-day window**: the intent is that signing in again during the window cancels the request so
-   accidental deletions are reversible. The cancel path is **not yet implemented** (no code clears
-   `deletion_requested_at`); until it is, a request is cancelled by support, and the retention job
-   must not be enabled in production without it.
-3. **Hard delete**: after 14 days the account is erased with `usersRepo.erase()`, a `DELETE FROM
-   users` that cascades to `accounts`, `sessions`, `profiles`, `projects`, `viewpoints`,
-   `preview_snapshots` and `subscriptions`.
+2. **14-day window**: signing in again during the window cancels the request (the Auth.js `signIn`
+   event clears `deletion_requested_at`, `packages/auth/src/authjs-config.ts`), so accidental
+   deletions are reversible.
+3. **Hard delete**: the retention job (`pnpm retention`, `scripts/retention.ts`, run daily) erases
+   accounts whose request is older than 14 days with `usersRepo.erase()`, a `DELETE FROM users`
+   that cascades to `accounts`, `sessions`, `profiles`, `projects`, `viewpoints`,
+   `preview_snapshots` and `subscriptions`, and purges expired `provider_cache` rows. `--dry-run`
+   lists what would be erased.
 4. **Audit rows are kept without PII**: `audit_events.user_id` is a bare ULID with no foreign key,
    and audit metadata never contains email, names, notes or coordinates.
 5. Stripe retains its own customer and invoice records under its terms; the operator should cancel
