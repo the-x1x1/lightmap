@@ -1,5 +1,5 @@
 import { json } from '@/lib/server/http';
-import { getServices } from '@/lib/server/services';
+import { APP_VERSION, getServices } from '@/lib/server/services';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +17,7 @@ export async function GET() {
   return json(
     {
       ok: database !== 'error',
-      version: '0.1.0',
+      version: APP_VERSION,
       database,
       fixtureMode: s.capabilities.fixtureMode,
     },

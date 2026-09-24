@@ -81,16 +81,17 @@ production) or with a magic link printed to the server log when `EMAIL_SERVER` i
 All keys are documented in [`.env.example`](.env.example) and validated by `packages/config/src/env.ts`.
 The important ones:
 
-| Key                                                                                                 | Purpose                                                                            |
-| --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `DATABASE_URL`                                                                                      | PostgreSQL. Unset ⇒ no accounts/projects/billing (exploration still works).        |
-| `AUTH_SECRET`, `AUTH_URL`, `EMAIL_SERVER`, `EMAIL_FROM`, `AUTH_GOOGLE_*`, `AUTH_DEV_LOGIN`          | Auth.js.                                                                           |
-| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_YEARLY` | Billing (test mode keys locally).                                                  |
-| `WEATHER_PROVIDER` (`open-meteo` \| `fixture`), `OPEN_METEO_API_KEY`                                | Weather. Commercial use of Open-Meteo needs a paid key.                            |
-| `GEOCODER_PROVIDER` (`nominatim` \| `fixture`), `GEOCODER_USER_AGENT`                               | Place search. Nominatim is development-only.                                       |
-| `TERRAIN_PROVIDER` (`reearth` \| `cesium-ion` \| `ellipsoid`), `CESIUM_ION_TOKEN`                   | Terrain.                                                                           |
-| `IMAGERY_PROVIDER` (`natural-earth` \| `cesium-ion` \| `xyz`), `IMAGERY_XYZ_*`                      | Basemap imagery; attribution is mandatory.                                         |
-| `LIGHTMAP_SHOW_DEV_BANNER`                                                                          | Shows the "development mode" banner whenever a fixture/limited provider is active. |
+| Key                                                                                                 | Purpose                                                                              |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `DATABASE_URL`                                                                                      | PostgreSQL. Unset ⇒ no accounts/projects/billing (exploration still works).          |
+| `AUTH_SECRET`, `AUTH_URL`, `EMAIL_SERVER`, `EMAIL_FROM`, `AUTH_GOOGLE_*`, `AUTH_DEV_LOGIN`          | Auth.js.                                                                             |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_YEARLY` | Billing (test mode keys locally).                                                    |
+| `WEATHER_PROVIDER` (`open-meteo` \| `fixture`), `OPEN_METEO_API_KEY`                                | Weather. Commercial use of Open-Meteo needs a paid key.                              |
+| `GEOCODER_PROVIDER` (`nominatim` \| `fixture`), `GEOCODER_USER_AGENT`                               | Place search. Nominatim is development-only.                                         |
+| `TERRAIN_PROVIDER` (`reearth` \| `cesium-ion` \| `ellipsoid`), `CESIUM_ION_TOKEN`                   | Terrain.                                                                             |
+| `IMAGERY_PROVIDER` (`natural-earth` \| `cesium-ion` \| `xyz`), `IMAGERY_XYZ_*`                      | Basemap imagery; attribution is mandatory.                                           |
+| `LIGHTMAP_SHOW_DEV_BANNER`                                                                          | Shows the "development mode" banner whenever a fixture/limited provider is active.   |
+| `SENTRY_DSN`                                                                                        | Error reports to any Sentry-compatible ingest (built-in envelope transport, no SDK). |
 
 ## Commands
 
@@ -144,18 +145,18 @@ daily account-erasure / cache-purge job once the production database secret exis
 
 ## Documentation
 
-|                                                                                                                                         |                                                        |
-| --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| [NORTH_STAR](docs/NORTH_STAR.md)                                                                                                        | The thesis, what it is and is not, five-year direction |
-| [PRODUCT_SPEC](docs/PRODUCT_SPEC.md)                                                                                                    | Canonical behaviour                                    |
-| [ARCHITECTURE](docs/ARCHITECTURE.md)                                                                                                    | Packages, data flow pin → renderer, API                |
-| [RENDERING_ACCURACY](docs/RENDERING_ACCURACY.md)                                                                                        | What each label can and cannot claim                   |
-| [WEATHER_AND_FORECAST_MODEL](docs/WEATHER_AND_FORECAST_MODEL.md)                                                                        | Forecast vs scenario vs climatology                    |
-| [DATA_SOURCES_AND_LICENSING](docs/DATA_SOURCES_AND_LICENSING.md)                                                                        | Every source, licence, cost, replacement               |
-| [BILLING_AND_ENTITLEMENTS](docs/BILLING_AND_ENTITLEMENTS.md) · [PRIVACY](docs/PRIVACY.md) · [SECURITY_MODEL](docs/SECURITY_MODEL.md)    | Commercial and trust                                   |
-| [ROADMAP](docs/ROADMAP.md) · [RELEASE_PROCESS](docs/RELEASE_PROCESS.md) · [QA_PLAN](docs/QA_PLAN.md) · [COST_MODEL](docs/COST_MODEL.md) | Operating the product                                  |
-| [WORLDVIEW_REUSE_AUDIT](docs/WORLDVIEW_REUSE_AUDIT.md)                                                                                  | What was (and was not) reused from WorldView           |
-| [ADR/](docs/ADR)                                                                                                                        | Architecture decisions                                 |
+|                                                                                                                                                                        |                                                        |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| [NORTH_STAR](docs/NORTH_STAR.md)                                                                                                                                       | The thesis, what it is and is not, five-year direction |
+| [PRODUCT_SPEC](docs/PRODUCT_SPEC.md)                                                                                                                                   | Canonical behaviour                                    |
+| [ARCHITECTURE](docs/ARCHITECTURE.md)                                                                                                                                   | Packages, data flow pin → renderer, API                |
+| [RENDERING_ACCURACY](docs/RENDERING_ACCURACY.md)                                                                                                                       | What each label can and cannot claim                   |
+| [WEATHER_AND_FORECAST_MODEL](docs/WEATHER_AND_FORECAST_MODEL.md)                                                                                                       | Forecast vs scenario vs climatology                    |
+| [DATA_SOURCES_AND_LICENSING](docs/DATA_SOURCES_AND_LICENSING.md)                                                                                                       | Every source, licence, cost, replacement               |
+| [BILLING_AND_ENTITLEMENTS](docs/BILLING_AND_ENTITLEMENTS.md) · [PRIVACY](docs/PRIVACY.md) · [SECURITY_MODEL](docs/SECURITY_MODEL.md)                                   | Commercial and trust                                   |
+| [ROADMAP](docs/ROADMAP.md) · [RELEASE_PROCESS](docs/RELEASE_PROCESS.md) · [QA_PLAN](docs/QA_PLAN.md) · [COST_MODEL](docs/COST_MODEL.md) · [RUNBOOKS](docs/RUNBOOKS.md) | Operating the product                                  |
+| [WORLDVIEW_REUSE_AUDIT](docs/WORLDVIEW_REUSE_AUDIT.md)                                                                                                                 | What was (and was not) reused from WorldView           |
+| [ADR/](docs/ADR)                                                                                                                                                       | Architecture decisions                                 |
 
 ## Known limitations (v0.1)
 
