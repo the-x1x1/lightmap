@@ -47,5 +47,16 @@
     "typescript": "^5.9.0",
     "typescript-eslint": "^8.35.0",
     "vitest": "^3.2.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "postcss@<8.5.18": "^8.5.18",
+      "@auth/core@<0.41.3": "0.41.3"
+    },
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "next-auth>nodemailer": "9"
+      }
+    }
   }
 }
