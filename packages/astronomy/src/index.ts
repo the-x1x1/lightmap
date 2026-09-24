@@ -41,3 +41,13 @@ export {
   type LunarState,
   type DayEventInput,
 } from './service.ts';
+export {
+  findDirectionMatches,
+  elevationAtAzimuthByDay,
+  wrapDelta,
+  type CelestialBody,
+  type DirectionTarget,
+  type DirectionMatch,
+  type SolverInput,
+  type SolverResult,
+} from './solver.ts';

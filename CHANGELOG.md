@@ -4,6 +4,14 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Light finder (reverse planning, plan §26)**: `findDirectionMatches()` finds every instant in a
+  date range when the sun or moon sits at a target azimuth (and optionally elevation) from a
+  viewpoint; panel in the planner with frame-centre / current / manual targets, moon illumination
+  floor, tolerances, and jump-to-instant results. New `reverse_planning` entitlement (Free: inside
+  the date window; Pro: any range).
+- Build verified against the installed dependency set: typecheck, type-aware lint (zero findings),
+  licence gate (482 packages, two recorded exceptions), notices regenerated; db scripts read `.env`;
+  Docker Compose for local PostGIS; release workflow tolerates a missing production host.
 - Initial build of LightMap v0.1: monorepo, WorldView reuse audit, astronomy (USNO-validated),
   weather (Open-Meteo + scenarios + horizon), SceneState + confidence, Cesium renderer with
   grade shader and quality governor, web app (map shell, timeline, scenarios, preview, camera,
