@@ -52,6 +52,8 @@ const DEG = Math.PI / 180;
 /** Frames in a one-second window below which the scene is judged idle, not slow. */
 export const MIN_FRAMES_FOR_SAMPLE = 12;
 
+const HIDDEN_RUN_POOL = 6;
+
 export class CesiumSceneHost implements SceneHost {
   private readonly C: CesiumModule;
   private readonly widget: Cesium.CesiumWidget;
@@ -68,6 +70,7 @@ export class CesiumSceneHost implements SceneHost {
   private frameWindowStart = 0;
   private lastFps = 0;
   private overlayEntities: Cesium.Entity[] = [];
+  private hiddenRunEntities: Cesium.Entity[] = [];
   private baseLayer: Cesium.ImageryLayer | null = null;
   private fallbackLayer: Cesium.ImageryLayer | null = null;
   private terrainReady: Promise<void> = Promise.resolve();
@@ -313,6 +316,7 @@ export class CesiumSceneHost implements SceneHost {
     const ents = this.widget.entities;
     if (!o.visible || !o.pin) {
       for (const e of this.overlayEntities) e.show = false;
+      for (const e of this.hiddenRunEntities) e.show = false;
       return;
     }
     const pin = o.pin;
@@ -371,6 +375,23 @@ export class CesiumSceneHost implements SceneHost {
           },
         }),
       ];
+      // Runs of the sun path that lie behind the terrain horizon: dark dashes drawn over the
+      // gold path. A small pool; a day rarely has more than a few hidden spells.
+      for (let i = 0; i < HIDDEN_RUN_POOL; i++)
+        this.hiddenRunEntities.push(
+          ents.add({
+            show: false,
+            polyline: {
+              width: 5,
+              material: new C.PolylineDashMaterialProperty({
+                color: C.Color.fromCssColorString('#0b0b0d').withAlpha(0.75),
+                gapColor: C.Color.TRANSPARENT,
+                dashLength: 10,
+              }),
+              arcType: C.ArcType.NONE,
+            },
+          }),
+        );
     }
     const [pinE, pathE, sunE, rayE, shadowE] = this.overlayEntities as [
       Cesium.Entity,
@@ -387,6 +408,32 @@ export class CesiumSceneHost implements SceneHost {
       );
       pathE.show = true;
     } else pathE.show = false;
+    // Hidden runs: consecutive points marked behindTerrain, extended by one point on each side so
+    // the dashes meet the gold path where the sun clears the ridge.
+    const runs: Array<Cesium.Cartesian3[]> = [];
+    let run: Cesium.Cartesian3[] | null = null;
+    o.sunPath.forEach((s, i) => {
+      if (s.behindTerrain) {
+        if (!run) {
+          run = [];
+          const prev = o.sunPath[i - 1];
+          if (prev) run.push(local(prev.azimuthDeg, prev.elevationDeg, o.radiusM));
+        }
+        run.push(local(s.azimuthDeg, s.elevationDeg, o.radiusM));
+      } else if (run) {
+        run.push(local(s.azimuthDeg, s.elevationDeg, o.radiusM));
+        runs.push(run);
+        run = null;
+      }
+    });
+    if (run) runs.push(run);
+    this.hiddenRunEntities.forEach((e, i) => {
+      const r = runs[i];
+      if (r && r.length > 1 && o.visible) {
+        e.polyline!.positions = new C.ConstantProperty(r);
+        e.show = true;
+      } else e.show = false;
+    });
     if (o.sun) {
       const sunPos = local(o.sun.azimuthDeg, o.sun.elevationDeg, o.radiusM);
       sunE.position = new C.ConstantPositionProperty(sunPos);

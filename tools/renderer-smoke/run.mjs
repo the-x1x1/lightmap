@@ -95,4 +95,16 @@ if (
       `in-shadow ${inShadow.toFixed(2)} vs sun-side ${sunSide.toFixed(2)}, beyond ${beyond.toFixed(2)} → ${shadowOk ? 'ok' : 'FAIL'}`,
   );
 } else console.log('shadow probe: missing or a probe point was off-screen → FAIL');
-process.exit(smoke.errors.length === 0 && Object.keys(shots).length >= 10 && shadowOk ? 0 : 1);
+// Terrain horizon: at 07:00 the sun must be behind the synthetic eastern ridge, and first light
+// over it must come after astronomical sunrise.
+const terrain = smoke.terrain;
+const terrainOk =
+  !!terrain &&
+  terrain.sunAboveTerrain === false &&
+  terrain.differs === true &&
+  terrain.firstLight !== null &&
+  new Date(terrain.firstLight).getTime() > new Date(terrain.sunrise).getTime() + 30 * 60_000;
+console.log(`terrain horizon: ${terrainOk ? 'ok' : 'FAIL'} ${JSON.stringify(terrain)}`);
+process.exit(
+  smoke.errors.length === 0 && Object.keys(shots).length >= 11 && shadowOk && terrainOk ? 0 : 1,
+);

@@ -4,6 +4,9 @@ import {
   DEFAULT_RENDER_SETTINGS,
   buildSceneState,
   defaultCamera,
+  horizonProfileFromSamples,
+  horizonRingDistances,
+  horizonSamplePoints,
   type EnvironmentState,
   type SceneInputs,
   type SceneState,
@@ -165,6 +168,32 @@ describe('SceneController', () => {
     expect(o.sun.elevationDeg).toBeGreaterThan(89);
     expect(o.shadowAzimuthDeg).toBeCloseTo((s.solar.azimuthDegrees + 180) % 360, 6);
     expect(sunPathForDay(s).every((p) => p.elevationDeg > -1)).toBe(true);
+    expect(sunPathForDay(s).some((p) => p.behindTerrain !== undefined)).toBe(false);
+    // With a terrain horizon (a 600 m ridge on the ~2 km ring across the east), the morning part
+    // of the path is marked behind terrain and the path is recomputed when the profile arrives.
+    const ring = horizonRingDistances().reduce((b, d) =>
+      Math.abs(d - 2000) < Math.abs(b - 2000) ? d : b,
+    );
+    const profile = horizonProfileFromSamples(
+      kailua.point,
+      2,
+      1.6,
+      horizonSamplePoints(kailua.point).map((p) => ({
+        azimuthDeg: p.azimuthDeg,
+        distanceM: p.distanceM,
+        heightM: p.azimuthDeg >= 30 && p.azimuthDeg <= 150 && p.distanceM === ring ? 600 : 0,
+      })),
+      { providerId: 'test-dem', resolutionM: 30 },
+    );
+    const withTerrain = scene({ horizonProfile: profile });
+    const path = sunPathForDay(withTerrain);
+    const hidden = path.filter((p) => p.behindTerrain === true);
+    expect(hidden.length).toBeGreaterThan(3);
+    expect(hidden.every((p) => p.azimuthDeg > 30 && p.azimuthDeg < 150)).toBe(true);
+    expect(path.filter((p) => p.behindTerrain === false).length).toBeGreaterThan(hidden.length);
+    c.apply(withTerrain);
+    const o2 = calls['setOverlay']!.at(-1)![0] as { sunPath: Array<{ behindTerrain?: boolean }> };
+    expect(o2.sunPath.some((p) => p.behindTerrain === true)).toBe(true);
   });
 
   it('shadow toggling follows direct light; provider swaps are diffed and refresh ground height', async () => {

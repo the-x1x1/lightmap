@@ -4,7 +4,12 @@
  * size, provider swaps) are debounced and diffed (plan §4 "debounce expensive visual refresh").
  */
 import { sunPosition } from '@lightmap/astronomy';
-import type { CameraState, SceneState } from '@lightmap/scene';
+import {
+  aboveTerrain,
+  type CameraState,
+  type HorizonProfile,
+  type SceneState,
+} from '@lightmap/scene';
 import type { BasemapDescriptor, TerrainDescriptor } from '@lightmap/geospatial';
 import { lightingFromScene, type LightingParameters } from '../lighting.ts';
 import { enuTowardSun, enuToEcef } from '../sun-vector.ts';
@@ -254,9 +259,15 @@ export class SceneController {
 
   private applyOverlay(scene: SceneState): void {
     const dayKey = `${scene.dayEvents.date}|${scene.location.point.latitude}|${scene.location.point.longitude}`;
+    const profile = scene.terrainHorizon?.profile ?? null;
     let sunPath: HostOverlay['sunPath'] = this.cachedSunPath ?? [];
-    if (dayKey !== this.lastDayKey || this.cachedSunPath === null) {
+    if (
+      dayKey !== this.lastDayKey ||
+      profile !== this.lastPathProfile ||
+      this.cachedSunPath === null
+    ) {
       this.lastDayKey = dayKey;
+      this.lastPathProfile = profile;
       sunPath = sunPathForDay(scene);
       this.cachedSunPath = sunPath;
     }
@@ -275,6 +286,7 @@ export class SceneController {
     this.host.setOverlay(overlay);
   }
   private cachedSunPath: HostOverlay['sunPath'] | null = null;
+  private lastPathProfile: HorizonProfile | null = null;
 
   private scheduleExpensive(fn: () => void): void {
     if (this.pendingExpensive !== null) this.clearTimeoutImpl(this.pendingExpensive);
@@ -311,16 +323,17 @@ export class SceneController {
 }
 
 /** Sun positions through the civil day, every 10 minutes while above the horizon. */
-export function sunPathForDay(
-  scene: SceneState,
-  stepMinutes = 10,
-): Array<{ azimuthDeg: number; elevationDeg: number }> {
-  const out: Array<{ azimuthDeg: number; elevationDeg: number }> = [];
+export function sunPathForDay(scene: SceneState, stepMinutes = 10): HostOverlay['sunPath'] {
+  const out: HostOverlay['sunPath'] = [];
   const start = scene.dayEvents.dayStart.getTime();
   const end = scene.dayEvents.dayEnd.getTime();
+  const profile = scene.terrainHorizon?.profile ?? null;
   for (let t = start; t <= end; t += stepMinutes * 60_000) {
     const s = sunAt(new Date(t), scene);
-    if (s.elevationDeg > -1) out.push(s);
+    if (s.elevationDeg > -1)
+      out.push(
+        profile ? { ...s, behindTerrain: !aboveTerrain(profile, s.azimuthDeg, s.elevationDeg) } : s,
+      );
   }
   return out;
 }
