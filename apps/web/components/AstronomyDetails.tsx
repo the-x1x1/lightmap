@@ -93,7 +93,14 @@ export function AstronomyDetails({ scene }: { scene: SceneState }) {
               label="Phase"
               value={`${scene.lunar.phaseName} · ${Math.round(scene.lunar.illuminatedFraction * 100)} %`}
             />
-            <Row label="Elevation" value={`${scene.lunar.elevationDegrees.toFixed(1)}°`} />
+            <Row
+              label="Elevation"
+              value={`${scene.lunar.elevationDegrees.toFixed(1)}°${
+                scene.terrainHorizon?.moonAboveTerrain === false && scene.lunar.isAboveHorizon
+                  ? ' · behind terrain'
+                  : ''
+              }`}
+            />
             <Row
               label="Azimuth"
               value={`${scene.lunar.azimuthDegrees.toFixed(0)}° ${compassLabel(scene.lunar.azimuthDegrees)}`}

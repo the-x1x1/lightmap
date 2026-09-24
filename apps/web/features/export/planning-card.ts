@@ -108,6 +108,17 @@ export function buildPlanningCard(
     value: `${c.mode === 'viewpoint' ? 'Viewpoint' : 'Map'} · ${Math.round(c.headingDeg)}° ${compassLabel(c.headingDeg)} · pitch ${c.pitchDeg.toFixed(0)}° · ${c.focalLengthMm ? `${c.focalLengthMm} mm` : `${c.fovDeg.toFixed(0)}° FOV`}`,
   });
   if (ev.polar !== 'normal') facts.push({ label: 'Note', value: ev.polar.replace('-', ' ') });
+  const th = scene.terrainHorizon;
+  if (th?.sunEvents.differsFromAstronomical)
+    facts.push({
+      label: 'Over the terrain',
+      value: `first light ${t(th.sunEvents.firstLight)} · last light ${t(th.sunEvents.lastLight)} (terrain only; trees and buildings not modelled)`,
+    });
+  if (th && scene.solar.isAboveHorizon && !th.sunAboveTerrain)
+    facts.push({
+      label: 'Right now',
+      value: `sun behind the terrain (ridge ${th.horizonAtSunDeg.toFixed(1)}°, sun ${scene.solar.elevationDegrees.toFixed(1)}°)`,
+    });
 
   const confidence = [
     { label: 'Astronomy', level: scene.confidence.astronomy },
