@@ -6,7 +6,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { brand, isEnabled } from '@lightmap/config';
-import { civilDateString, utcToWallClock } from '@lightmap/astronomy';
+import { addCivilDays, civilDateString, parseCivilDate, utcToWallClock } from '@lightmap/astronomy';
 import { DEFAULT_RENDER_SETTINGS } from '@lightmap/scene';
 import { usePlannerStore } from '@/features/planner/store';
 import { useScene } from '@/features/planner/use-scene';
@@ -22,6 +22,7 @@ import { ConfidencePanel } from './ConfidencePanel';
 import { CameraControls } from './CameraControls';
 import { AstronomyDetails } from './AstronomyDetails';
 import { LightFinder } from './LightFinder';
+import { NextOccurrence } from './NextOccurrence';
 import { ClimatologyPanel } from './ClimatologyPanel';
 import { HourlyOutlook } from './HourlyOutlook';
 import { WeatherDetails } from './WeatherDetails';
@@ -76,6 +77,10 @@ export function MapShell() {
       new Date(),
       location?.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
     ),
+  );
+  // Last civil date a Free plan may plan for; the recurrence chip clips its search to it.
+  const freeWindowEnd = civilDateString(
+    addCivilDays(parseCivilDate(today)!, account.snapshot?.limits.futureDateWindowDays ?? 14),
   );
   const dateDecision = account.snapshot
     ? account.can('future_date_planning', { targetDate: date, today })
@@ -255,6 +260,14 @@ export function MapShell() {
                   timeZone={location?.timeZone ?? 'UTC'}
                   phase={scene?.solar.phase}
                 />
+                {scene && isEnabled('reversePlanning') ? (
+                  <NextOccurrence
+                    scene={scene}
+                    allowed={finderDecision.allowed}
+                    windowEnd={freeWindowEnd}
+                    planLoading={planLoading}
+                  />
+                ) : null}
                 {scene && !planLoading ? (
                   <HourlyOutlook
                     scene={scene}

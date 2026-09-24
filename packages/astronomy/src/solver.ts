@@ -258,3 +258,40 @@ export function elevationAtAzimuthByDay(
     trend: a.trend,
   }));
 }
+
+export interface RecurrenceSummary<T extends { date: string }> {
+  /**
+   * Last civil date (inclusive) of the unbroken run of matching days that starts at `from`, or
+   * null when `from` itself has no match — the light the photographer is looking at ends with the
+   * current day. Near a solstice the run lasts weeks (declination is nearly stationary); near an
+   * equinox it is a day or two.
+   */
+  runEnds: string | null;
+  /** First match after that run — "when this light comes back" — or null when none is in range. */
+  next: T | null;
+  /** Distinct matching civil days in the range. */
+  matchingDays: number;
+}
+
+/**
+ * Turn a chronologically sorted match list into the two facts a photographer wants about "this
+ * light": how long it lasts (the run of consecutive matching days from `from`) and when it comes
+ * back after that (the first match after the run). Works on `DirectionMatch` and on serialized
+ * matches alike: only `date` is read.
+ */
+export function summarizeRecurrence<T extends { date: string }>(
+  matches: readonly T[],
+  from: Pick<CivilTime, 'year' | 'month' | 'day'>,
+): RecurrenceSummary<T> {
+  const days = new Set(matches.map((m) => m.date));
+  let runEnds: string | null = null;
+  let day = { year: from.year, month: from.month, day: from.day };
+  // Bounded by the number of matching days, so a malformed input cannot loop forever.
+  for (let i = 0; i <= days.size && days.has(civilDateString(day)); i++) {
+    runEnds = civilDateString(day);
+    day = addCivilDays(day, 1);
+  }
+  const floor = runEnds ?? civilDateString(addCivilDays(from, -1));
+  const next = matches.find((m) => m.date > floor) ?? null;
+  return { runEnds, next, matchingDays: days.size };
+}

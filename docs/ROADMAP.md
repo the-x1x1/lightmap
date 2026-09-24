@@ -4,18 +4,18 @@ Phases follow the master plan (§25). Status as of v0.1.0. A phase is "delivered
 items exist, are tested and are documented; "plumbing" means the code paths work end to end in test
 mode but production configuration is still outstanding.
 
-| Phase | Goal                                        | Status                                                                    |
-| ----- | ------------------------------------------- | ------------------------------------------------------------------------- |
-| 0     | Foundation                                  | **Delivered in v0.1.0**                                                   |
-| 1     | Lighting MVP                                | **Delivered in v0.1.0**                                                   |
-| 2     | Weather                                     | **Delivered in v0.1.0**                                                   |
-| 3     | Accounts, projects, billing                 | **Delivered as plumbing in v0.1.0**; production configuration outstanding |
-| 4     | Visual quality                              | Started: preview export delivered (unreleased)                            |
-| 5     | Real references                             | Future — blocked on licensing                                             |
-| 6     | Advanced camera planning / reverse planning | **Solver + Light finder delivered (unreleased)**; drag-in-frame UI future |
-| 7     | Long-range climatology                      | **Delivered (unreleased)** — Open-Meteo/ERA5, Pro entitlement             |
-| 8     | High-fidelity environment reconstruction    | Future                                                                    |
-| 9     | Native mobile                               | Future — PWA installable baseline shipped; demand measured first          |
+| Phase | Goal                                        | Status                                                                                      |
+| ----- | ------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| 0     | Foundation                                  | **Delivered in v0.1.0**                                                                     |
+| 1     | Lighting MVP                                | **Delivered in v0.1.0**                                                                     |
+| 2     | Weather                                     | **Delivered in v0.1.0**                                                                     |
+| 3     | Accounts, projects, billing                 | **Delivered as plumbing in v0.1.0**; production configuration outstanding                   |
+| 4     | Visual quality                              | Started: preview export delivered (unreleased)                                              |
+| 5     | Real references                             | Future — blocked on licensing                                                               |
+| 6     | Advanced camera planning / reverse planning | **Solver, Light finder, point-in-view, variants, "this light" chip delivered (unreleased)** |
+| 7     | Long-range climatology                      | **Delivered (unreleased)** — Open-Meteo/ERA5, Pro entitlement                               |
+| 8     | High-fidelity environment reconstruction    | Future                                                                                      |
+| 9     | Native mobile                               | Future — PWA installable baseline shipped; demand measured first                            |
 
 ## Phase 0 — Foundation (delivered)
 
@@ -105,7 +105,11 @@ Also delivered: **sensor formats** ("Your camera": sensor preset + the lens numb
 
 Also delivered: the ring is draggable / keyboard-nudgeable.
 
-Next: a "next occurrence" chip on the timeline; DOF and horizon levelling remain future.
+Also delivered: the **"this light" chip** under the timeline — how long the current sun
+position lasts and when it comes back, one click to jump there (`summarizeRecurrence()`,
+`PRODUCT_SPEC.md` §8a).
+
+Next: DOF and horizon levelling remain future.
 
 ## Phase 7 — Long-range climatology (delivered, unreleased)
 

@@ -224,10 +224,24 @@ No lens optical simulation (distortion, depth of field) in v1.
 (· % lit)`; selecting a row moves the planner to that instant so the preview shows it.
 - **Honesty**: results are geometry only — terrain occlusion, clouds and near-horizon refraction
   are not part of the search; the note under the list says so and points to the preview.
+- **"This light" chip** under the timeline (`NextOccurrence`): whenever the sun is above civil
+  twilight, the planner shows how long the light being looked at lasts and when it comes back —
+  "Like this until Sat 21 Mar · Back Tue 22 Sep (in 186 days) 17:47". The target is the sun's
+  current bearing and height (±1.5° / ±0.75°); the solver scans the next 400 days (the sun returns
+  to any reachable declination within a year) and `summarizeRecurrence()` splits the matches into
+  the unbroken run of days from tomorrow (weeks near a solstice, a day or two near an equinox)
+  and the first match after it. The chip is a button: one click moves the planner to the return
+  instant. Debounced 350 ms behind the scrubber; runs in the same worker. Free plans search only
+  inside their date window and see "Beyond your date window · Pro" (which opens the compact
+  paywall) when the answer lies outside it; a run that reaches the window's end reads "until at
+  least …". Sun only — the moon's phase makes "the same light" a different question.
 
 Tests: equinox sunrise due east, solstice-noon elevation `90 − φ + δ`, Tromsø midnight sun at
 `φ + δ − 90`, sunset-azimuth round trip against `computeDayEvents`, "sun on a ridge" windows,
-tropical multi-crossing ordering, moon illumination filter (`packages/astronomy/tests/solver.test.ts`).
+tropical multi-crossing ordering, moon illumination filter, recurrence summary at an equinox
+(returns at the mirror date six months on) and a solstice (lasts weeks, returns next year)
+(`packages/astronomy/tests/solver.test.ts`); chip wording incl. UTC+14 calendar days and the
+location's civil date for the return (`apps/web/tests/unit/recurrence-text.test.ts`).
 
 ## 9. Projects and saved viewpoints (plan §4, §17)
 

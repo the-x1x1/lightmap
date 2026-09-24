@@ -2,8 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { computeDayEvents } from '../src/events.ts';
 import { moonPosition } from '../src/lunar.ts';
 import { sunPosition } from '../src/solar.ts';
-import { elevationAtAzimuthByDay, findDirectionMatches, wrapDelta } from '../src/solver.ts';
-import { utcToWallClock } from '../src/time.ts';
+import {
+  elevationAtAzimuthByDay,
+  findDirectionMatches,
+  summarizeRecurrence,
+  wrapDelta,
+} from '../src/solver.ts';
+import { addCivilDays, utcToWallClock, wallClockToUtc } from '../src/time.ts';
 
 const KAILUA = { latitude: 21.397, longitude: -157.727, timeZone: 'Pacific/Honolulu' };
 const LONDON = { latitude: 51.5074, longitude: -0.1278, timeZone: 'Europe/London' };
@@ -229,5 +234,66 @@ describe('reverse planning solver', () => {
       target: { azimuthDegrees: 250, elevationDegrees: 10 },
     });
     expect(performance.now() - t0).toBeLessThan(2000);
+  });
+});
+
+describe('summarizeRecurrence — "how long does this light last, and when is it back?"', () => {
+  const PARIS = { latitude: 48.8566, longitude: 2.3522, timeZone: 'Europe/Paris' };
+  /** The Sun's direction at a local wall time, then every match of that direction from the next day. */
+  function recurrence(date: { year: number; month: number; day: number }, hour: number) {
+    const at = wallClockToUtc({ ...date, hour, minute: 0 }, PARIS.timeZone);
+    const s = sunPosition(at, PARIS.latitude, PARIS.longitude);
+    const from = addCivilDays(date, 1);
+    const r = findDirectionMatches({
+      ...PARIS,
+      from,
+      to: addCivilDays(date, 400),
+      target: {
+        azimuthDegrees: s.azimuthDeg,
+        elevationDegrees: s.elevationDeg,
+        azimuthToleranceDegrees: 1.5,
+        elevationToleranceDegrees: 0.75,
+      },
+      minElevationDegrees: -7,
+      maxDays: 401,
+    });
+    return { s, summary: summarizeRecurrence(r.matches, from) };
+  }
+
+  it('near the equinox the light lasts a day or two and returns at the mirror date six months on', () => {
+    const { summary } = recurrence({ year: 2026, month: 3, day: 20 }, 15);
+    // Declination moves ≈ 0.39°/day here, so tomorrow is still within ±0.75° but the day after is not.
+    expect(summary.runEnds === '2026-03-21' || summary.runEnds === '2026-03-22').toBe(true);
+    expect(summary.next).not.toBeNull();
+    // Mirror around the June solstice: the same declination recurs around 22–23 September.
+    expect(summary.next!.date >= '2026-09-19' && summary.next!.date <= '2026-09-26').toBe(true);
+    // Same hour angle ⇒ same local solar time, within the equation-of-time drift (~15 min).
+    const w = utcToWallClock(summary.next!.timestampUtc, PARIS.timeZone);
+    expect(Math.abs(w.hour * 60 + w.minute - (15 * 60 + 60))).toBeLessThan(40); // +60: CEST vs CET
+  });
+
+  it('near the solstice the light lasts weeks and only returns next year', () => {
+    const { summary } = recurrence({ year: 2026, month: 6, day: 21 }, 15);
+    expect(summary.runEnds).not.toBeNull();
+    // ±0.75° of declination around the solstice spans roughly ±2 weeks.
+    expect(summary.runEnds! >= '2026-06-30' && summary.runEnds! <= '2026-07-20').toBe(true);
+    expect(summary.next).not.toBeNull();
+    expect(summary.next!.date >= '2027-05-25' && summary.next!.date <= '2027-06-20').toBe(true);
+  });
+
+  it('is well defined on empty input and does not read anything but `date`', () => {
+    const s = summarizeRecurrence([], { year: 2026, month: 1, day: 1 });
+    expect(s).toEqual({ runEnds: null, next: null, matchingDays: 0 });
+    const t = summarizeRecurrence(
+      [{ date: '2026-01-01' }, { date: '2026-01-02' }, { date: '2026-01-09' }],
+      { year: 2026, month: 1, day: 1 },
+    );
+    expect(t.runEnds).toBe('2026-01-02');
+    expect(t.next?.date).toBe('2026-01-09');
+    expect(t.matchingDays).toBe(3);
+    // When `from` itself does not match, the "run" is empty and the next match is the first one.
+    const u = summarizeRecurrence([{ date: '2026-01-09' }], { year: 2026, month: 1, day: 1 });
+    expect(u.runEnds).toBeNull();
+    expect(u.next?.date).toBe('2026-01-09');
   });
 });
