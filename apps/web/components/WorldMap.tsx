@@ -23,7 +23,8 @@ export interface RendererInfo {
   getStats: () => HostStats | null;
   error: string | null;
   capabilities: RendererCapabilities | null;
-  capture: () => Promise<string | null>;
+  /** JPEG data URL of the current frame, downscaled to `maxWidth` (default 320 for thumbnails). */
+  capture: (maxWidth?: number) => Promise<string | null>;
 }
 
 export interface WorldMapProps {
@@ -129,7 +130,7 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
       getStats: () => (host ? host.stats() : null),
       error: renderer.error,
       capabilities: renderer.capabilities,
-      capture: () => (host ? host.captureThumbnail(320) : Promise.resolve(null)),
+      capture: (maxWidth = 320) => (host ? host.captureThumbnail(maxWidth) : Promise.resolve(null)),
     });
   }, [
     renderer.mode,

@@ -10,7 +10,7 @@ mode but production configuration is still outstanding.
 | 1     | Lighting MVP                                | **Delivered in v0.1.0**                                                   |
 | 2     | Weather                                     | **Delivered in v0.1.0**                                                   |
 | 3     | Accounts, projects, billing                 | **Delivered as plumbing in v0.1.0**; production configuration outstanding |
-| 4     | Visual quality                              | Future                                                                    |
+| 4     | Visual quality                              | Started: preview export delivered (unreleased)                            |
 | 5     | Real references                             | Future — blocked on licensing                                             |
 | 6     | Advanced camera planning / reverse planning | **Solver + Light finder delivered (unreleased)**; drag-in-frame UI future |
 | 7     | Long-range climatology                      | Future                                                                    |
@@ -68,12 +68,13 @@ Outstanding before commercial beta (plan §43):
 - privacy policy and terms text; accessibility and mobile usability passes; backups verified;
   incident runbooks.
 
-## Phase 4 — Visual quality (future, 2+ releases)
+## Phase 4 — Visual quality (started, 2+ releases)
 
-Improved terrain texture; detailed buildings where licensed; atmospheric scattering; water shader;
-layered clouds; shadow quality; horizon haze; preview export (planning card); better device
-performance adaptation. Everything stays grounded: geometry and light direction are never altered
-for looks.
+Delivered (unreleased): **preview export** — the planning card (`PRODUCT_SPEC.md` §5).
+
+Remaining: improved terrain texture; detailed buildings where licensed; atmospheric scattering;
+water shader; layered clouds; shadow quality; horizon haze; better device performance adaptation.
+Everything stays grounded: geometry and light direction are never altered for looks.
 
 ## Phase 5 — Real references (future, requires licensing work)
 

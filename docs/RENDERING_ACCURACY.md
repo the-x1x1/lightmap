@@ -84,6 +84,14 @@ and imagery from the `MapTileProvider`. With the default bundled Natural Earth I
 is coarse and the label drops to Estimated Preview. **Claim:** ridgelines and horizon shape relative
 to the Sun. **Caveat:** DEM resolution (≈30 m globally, better in some regions); no buildings.
 
+## Exports carry the same labels
+
+The planning-card export (`apps/web/features/export/planning-card.ts`) is built from the same
+`SceneState` as the screen. It always includes the source label, the weather mode (a scenario is
+printed as "Scenario (not a forecast)"), the confidence dimensions, provider attribution and the
+generation timestamp. A card can therefore never claim more than the screen did, and a card made
+from fixture data says so.
+
 ## What is never done
 
 - No text-to-image generation as the scene source (plan §6).
