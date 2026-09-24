@@ -1,0 +1,27 @@
+{
+  "name": "@lightmap/billing",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Stripe billing: checkout/portal session creation and idempotent webhook processing into subscription records.",
+  "license": "SEE LICENSE IN ../../LICENSE",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./stripe": "./src/stripe-client.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@lightmap/config": "workspace:*",
+    "@lightmap/database": "workspace:*",
+    "@lightmap/entitlements": "workspace:*",
+    "stripe": "^18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}

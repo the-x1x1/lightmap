@@ -1,0 +1,5 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "composite": false, "types": ["node"], "jsx": "preserve" },
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
+}
