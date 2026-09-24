@@ -186,6 +186,13 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): st
   return lines;
 }
 
+function ellipsize(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
+  if (ctx.measureText(text).width <= maxWidth) return text;
+  let t = text;
+  while (t.length > 1 && ctx.measureText(`${t}…`).width > maxWidth) t = t.slice(0, -1);
+  return `${t.trimEnd()}…`;
+}
+
 async function loadImage(dataUrl: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -227,6 +234,23 @@ export async function renderPlanningCardPng(
   const attrLines = model.attribution.flatMap((a) => wrap(mctx, a, W - PAD * 2));
   mctx.font = font(24);
   const weatherLines = wrap(mctx, model.weatherLine, W - PAD * 2);
+  // Confidence chips wrap when the five labels exceed the width; measure the rows the same way
+  // the draw loop lays them out so the height budget is exact.
+  mctx.font = font(18, 600);
+  let chipRows = 1;
+  {
+    let x = PAD;
+    for (const c of model.confidence) {
+      const w = mctx.measureText(`${c.label}: ${c.level}`).width + 28;
+      if (x + w > W - PAD) {
+        chipRows++;
+        x = PAD;
+      }
+      x += w + 12;
+    }
+  }
+  mctx.font = font(44, 700);
+  const title = ellipsize(mctx, model.title, W - PAD * 2);
 
   const H =
     imageH +
@@ -238,7 +262,9 @@ export async function renderPlanningCardPng(
     24 +
     factsH +
     24 +
-    70 + // confidence chips
+    36 +
+    (chipRows - 1) * 44 +
+    34 + // confidence chips
     noteLines.length * 30 +
     24 +
     attrLines.length * 26 +
@@ -284,7 +310,7 @@ export async function renderPlanningCardPng(
   let y = imageH + PAD;
   ctx.fillStyle = brand.colors.text;
   ctx.font = font(44, 700);
-  ctx.fillText(model.title, PAD, y);
+  ctx.fillText(title, PAD, y);
   y += 56;
   ctx.fillStyle = brand.colors.textMuted;
   ctx.font = font(22);

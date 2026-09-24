@@ -57,6 +57,12 @@ export interface SolverInput {
 export interface DirectionMatch {
   /** Civil date at the location. */
   date: string;
+  /**
+   * How the instant was found: the body crossing the target azimuth ('azimuth'), or — when a
+   * target elevation is given — the body crossing that elevation while inside the azimuth band
+   * ('elevation'). Both kinds are exact instants; the tolerances decide which count as matches.
+   */
+  via: 'azimuth' | 'elevation';
   timestampUtc: Date;
   body: CelestialBody;
   azimuthDegrees: number;
@@ -103,22 +109,14 @@ function positionOf(body: CelestialBody, t: number, lat: number, lon: number) {
   return { azimuth: s.azimuthDeg, elevation: s.elevationDeg, illuminated: null };
 }
 
-/** Bisection on the wrapped azimuth difference between two instants that bracket a crossing. */
-function refineAzimuthCrossing(
-  body: CelestialBody,
-  a: number,
-  b: number,
-  fa: number,
-  target: number,
-  lat: number,
-  lon: number,
-): number {
+/** Bisection on a signed function between two instants that bracket a sign change. */
+function refineCrossing(f: (t: number) => number, a: number, b: number, fa: number): number {
   let lo = a;
   let hi = b;
   let flo = fa;
   for (let i = 0; i < 40 && hi - lo > 500; i++) {
     const m = (lo + hi) / 2;
-    const fm = wrapDelta(positionOf(body, m, lat, lon).azimuth - target);
+    const fm = f(m);
     if ((flo < 0 && fm < 0) || (flo >= 0 && fm >= 0)) {
       lo = m;
       flo = fm;
@@ -159,6 +157,36 @@ export function findDirectionMatches(input: SolverInput): SolverResult {
   let day = { year: input.from.year, month: input.from.month, day: input.from.day };
   let scanned = 0;
   let truncated = false;
+  const azOf = (t: number) => wrapDelta(positionOf(body, t, lat, lon).azimuth - targetAz);
+  const elOf = (t: number) => positionOf(body, t, lat, lon).elevation - (elTarget ?? 0);
+
+  const record = (dayKey: string, tc: number, via: DirectionMatch['via']) => {
+    const p = positionOf(body, tc, lat, lon);
+    if (p.elevation < minEl || (p.illuminated ?? 1) < minIllum) return;
+    // The two detectors can find the same instant (body crossing the bearing exactly at the
+    // target elevation); keep one.
+    const dup = alignments.find(
+      (a) => a.date === dayKey && Math.abs(a.timestampUtc.getTime() - tc) < 2 * 60_000,
+    );
+    if (dup) return;
+    const after = positionOf(body, tc + 60_000, lat, lon).elevation;
+    const elErr = elTarget === undefined ? null : p.elevation - elTarget;
+    const within =
+      Math.abs(wrapDelta(p.azimuth - targetAz)) <= azTol &&
+      (elErr === null || Math.abs(elErr) <= elTol);
+    alignments.push({
+      date: dayKey,
+      via,
+      timestampUtc: new Date(tc),
+      body,
+      azimuthDegrees: p.azimuth,
+      elevationDegrees: p.elevation,
+      elevationErrorDegrees: elErr,
+      withinTolerance: within,
+      illuminatedFraction: p.illuminated,
+      trend: after >= p.elevation ? 'rising' : 'setting',
+    });
+  };
 
   while (civilCompare(day, input.to) <= 0) {
     if (scanned >= maxDays) {
@@ -166,41 +194,35 @@ export function findDirectionMatches(input: SolverInput): SolverResult {
       break;
     }
     scanned++;
+    const dayKey = civilDateString(day);
     const { start, end } = localDayBounds(day, timeZone);
     const dayStart = start.getTime();
     const dayEnd = end.getTime();
     let prevT = dayStart;
-    let prev = wrapDelta(positionOf(body, prevT, lat, lon).azimuth - targetAz);
+    let prevAz = azOf(prevT);
+    let prevEl = elTarget === undefined ? 0 : elOf(prevT);
     for (let t = prevT + STEP_MS; t <= dayEnd; t += STEP_MS) {
-      const cur = wrapDelta(positionOf(body, t, lat, lon).azimuth - targetAz);
-      // A genuine crossing: sign change with a small step (the ±180° wrap also flips sign, but
-      // with a jump close to 360°).
-      const crosses = (prev < 0 && cur >= 0) || (prev >= 0 && cur < 0);
-      if (crosses && Math.abs(cur - prev) < 90) {
-        const tc = refineAzimuthCrossing(body, prevT, t, prev, targetAz, lat, lon);
-        const p = positionOf(body, tc, lat, lon);
-        if (p.elevation >= minEl && (p.illuminated ?? 1) >= minIllum) {
-          const after = positionOf(body, tc + 60_000, lat, lon).elevation;
-          const elErr = elTarget === undefined ? null : p.elevation - elTarget;
-          const within =
-            Math.abs(wrapDelta(p.azimuth - targetAz)) <= azTol &&
-            (elErr === null || Math.abs(elErr) <= elTol);
-          alignments.push({
-            date: civilDateString(day),
-            timestampUtc: new Date(tc),
-            body,
-            azimuthDegrees: p.azimuth,
-            elevationDegrees: p.elevation,
-            elevationErrorDegrees: elErr,
-            withinTolerance: within,
-            illuminatedFraction: p.illuminated,
-            trend: after >= p.elevation ? 'rising' : 'setting',
-          });
+      const curAz = azOf(t);
+      // Azimuth crossing: sign change of the wrapped difference. The ±180° wrap also flips sign,
+      // but with a jump of (360° − true swing) > 180°, whereas a true swing — even the near-zenith
+      // sweep in the tropics — is ≤ 180°.
+      const crossesAz = (prevAz < 0 && curAz >= 0) || (prevAz >= 0 && curAz < 0);
+      if (crossesAz && Math.abs(curAz - prevAz) < 180)
+        record(dayKey, refineCrossing(azOf, prevT, t, prevAz), 'azimuth');
+      // Elevation crossing inside the azimuth band: "anywhere between 265° and 275° at −0.8°".
+      if (elTarget !== undefined) {
+        const curEl = elOf(t);
+        const crossesEl = (prevEl < 0 && curEl >= 0) || (prevEl >= 0 && curEl < 0);
+        if (crossesEl) {
+          const tc = refineCrossing(elOf, prevT, t, prevEl);
+          if (Math.abs(azOf(tc)) <= azTol) record(dayKey, tc, 'elevation');
         }
+        prevEl = curEl;
       }
       prevT = t;
-      prev = cur;
+      prevAz = curAz;
     }
+    alignments.sort((a, b) => a.timestampUtc.getTime() - b.timestampUtc.getTime());
     day = addCivilDays(day, 1);
   }
 

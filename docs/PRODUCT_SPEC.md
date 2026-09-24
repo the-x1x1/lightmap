@@ -200,7 +200,11 @@ No lens optical simulation (distortion, depth of field) in v1.
 - **Body**: sun, or moon with a minimum illuminated fraction (default 80 %).
 - **Range**: civil dates at the location, default today → +365 days, capped at 1100 days.
   Free plans search inside their date window; the range is clipped and explained, never refused.
-- **Tolerances**: azimuth ±2°, elevation ±1° by default; adjustable.
+- **Tolerances**: azimuth ±2°, elevation ±1° by default; adjustable. Two detectors feed the
+  result: the body crossing the target bearing (its elevation must be within the elevation
+  tolerance) and, when an elevation is set, the body crossing that elevation (its bearing must be
+  within the azimuth tolerance) — so "anywhere within ±5° of west at −0.8°" widens the answer as
+  expected; duplicates within two minutes are merged.
 - **Method**: `findDirectionMatches()` in `@lightmap/astronomy` samples the body's azimuth every
   10 minutes per civil day, detects crossings of the target bearing (ignoring the ±180° wrap) and
   refines each by bisection to ~1 s; elevation, phase and rising/setting trend are evaluated at the

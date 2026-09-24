@@ -80,7 +80,18 @@ describe('summarizeClimatology', () => {
     const a = climatologyCacheKey('p', 21.41, -157.72, 5, { from: 2015, to: 2024 });
     const b = climatologyCacheKey('p', 21.38, -157.68, 5, { from: 2015, to: 2024 });
     expect(a).toBe(b);
-    expect(a).toBe('p:21.5,-157.5:m5:2015-2024:h6-20');
+    expect(a).toBe('p:21.5,-157.5:m5:2015-2024:h6-20:UTC');
+    expect(
+      climatologyCacheKey(
+        'p',
+        21.41,
+        -157.72,
+        5,
+        { from: 2015, to: 2024 },
+        undefined,
+        'Pacific/Honolulu',
+      ),
+    ).not.toBe(a);
   });
 });
 
