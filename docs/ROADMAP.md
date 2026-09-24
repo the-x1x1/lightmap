@@ -98,8 +98,11 @@ Also delivered: **point in the view** — click the spot in the viewpoint previe
 moon should be (`directionFromFrame()`, the inverse of `frameCoordinates()`, round-trip tested);
 a ring marks the pick and follows the camera.
 
-Next: drag the ring to refine the target, saved shot variants per viewpoint, sensor formats, and a
-"next occurrence" chip on the timeline.
+Also delivered: **shot variants** per viewpoint (migration 0003, one level, cascade, counted
+toward limits; `PRODUCT_SPEC.md` §9).
+
+Next: drag the ring to refine the target, sensor formats, and a "next occurrence" chip on the
+timeline.
 
 ## Phase 7 — Long-range climatology (delivered, unreleased)
 

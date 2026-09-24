@@ -98,6 +98,8 @@ export interface ViewpointDto {
   weatherMode: WeatherMode;
   weatherScenario: string | null;
   previewSourceType: 'REAL_REFERENCE' | 'SIMULATED_LIGHTING' | 'ESTIMATED_PREVIEW';
+  /** Set when this is a shot variant (same place/camera, another time) of the named viewpoint. */
+  parentViewpointId: string | null;
   createdAt: string;
   updatedAt: string;
   thumbnailDataUrl?: string | null;

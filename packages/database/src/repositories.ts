@@ -184,7 +184,25 @@ export function viewpointsRepo(db: Db) {
         .where(and(eq(projects.id, projectId), eq(projects.userId, userId)))
         .limit(1);
       if (!owner) throw new NotFoundError('project not found');
-      const row: NewViewpoint = { ...input, id: ulid(), userId, projectId };
+      // A variant's parent must be the caller's own viewpoint in the same project, and itself a
+      // top-level viewpoint (one level only: a variant of a variant is a variant of the parent).
+      let parentViewpointId: string | null = input.parentViewpointId ?? null;
+      if (parentViewpointId) {
+        const [parent] = await db
+          .select({ id: viewpoints.id, parent: viewpoints.parentViewpointId })
+          .from(viewpoints)
+          .where(
+            and(
+              eq(viewpoints.id, parentViewpointId),
+              eq(viewpoints.userId, userId),
+              eq(viewpoints.projectId, projectId),
+            ),
+          )
+          .limit(1);
+        if (!parent) throw new NotFoundError('parent viewpoint not found');
+        parentViewpointId = parent.parent ?? parent.id;
+      }
+      const row: NewViewpoint = { ...input, parentViewpointId, id: ulid(), userId, projectId };
       const [v] = await db.insert(viewpoints).values(row).returning();
       if (snapshot) await this.saveSnapshot(v!.id, snapshot);
       await db.update(projects).set({ updatedAt: new Date() }).where(eq(projects.id, projectId));

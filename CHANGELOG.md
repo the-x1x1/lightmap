@@ -4,6 +4,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Shot variants**: save the same viewpoint at other times/scenarios under one card
+  (migration `0003_viewpoint_variants`, `parentViewpointId`, cascade, one level, counted toward
+  limits); integration test.
 - **Light finder: point in the view** — click where the sun/moon should be in the viewpoint
   preview; the finder searches for that direction (`directionFromFrame`, tested); a ring marks it.
 - **Light finder (reverse planning, plan §26)**: `findDirectionMatches()` finds every instant in a

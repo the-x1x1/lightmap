@@ -1,7 +1,7 @@
 import 'server-only';
 import { isValidTimeZone } from '@lightmap/astronomy';
 import { isScenarioId } from '@lightmap/weather';
-import type { ViewpointInput, SnapshotInput } from '@lightmap/database';
+import { isUlid, type ViewpointInput, type SnapshotInput } from '@lightmap/database';
 import { v } from './http.ts';
 
 const WEATHER_MODES = ['FORECAST', 'EXTENDED_FORECAST', 'SCENARIO', 'RECENT_PAST', 'PAST'] as const;
@@ -54,6 +54,18 @@ export function parseViewpoint(
   }
   const st = v.oneOf(o['previewSourceType'], 'previewSourceType', SOURCE_TYPES, { optional: opt });
   if (st !== undefined && st !== null) input.previewSourceType = st;
+  // Shot variant (create only): the repository verifies the parent belongs to the same project.
+  if (
+    mode === 'create' &&
+    o['parentViewpointId'] !== undefined &&
+    o['parentViewpointId'] !== null
+  ) {
+    const parent = v.string(o['parentViewpointId'], 'parentViewpointId', { min: 26, max: 26 });
+    if (parent) {
+      if (!isUlid(parent)) throw new Error('parentViewpointId must be a viewpoint id');
+      input.parentViewpointId = parent;
+    }
+  }
 
   let snapshot: SnapshotInput | undefined;
   if (o['snapshot'] !== undefined && o['snapshot'] !== null) {

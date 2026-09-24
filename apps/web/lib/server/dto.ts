@@ -33,6 +33,7 @@ export function viewpointDto(
     weatherMode: v.weatherMode,
     weatherScenario: v.weatherScenario,
     previewSourceType: v.previewSourceType,
+    parentViewpointId: v.parentViewpointId ?? null,
     createdAt: v.createdAt.toISOString(),
     updatedAt: v.updatedAt.toISOString(),
     thumbnailDataUrl: v.snapshot?.thumbnailDataUrl ?? null,

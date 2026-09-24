@@ -7,15 +7,31 @@ import { PreviewSourceBadge } from './PreviewSourceBadge';
 
 export function SavedViewpointCard({
   viewpoint,
+  variants = [],
   onOpen,
   onDelete,
+  onOpenVariant,
+  onDeleteVariant,
+  onSaveVariant,
+  saveVariantBusy,
 }: {
   viewpoint: ViewpointDto;
+  /** Shot variants of this viewpoint (same place and camera, other times). */
+  variants?: ViewpointDto[];
   onOpen: () => void;
   onDelete: () => void;
+  onOpenVariant?: (v: ViewpointDto) => void;
+  onDeleteVariant?: (v: ViewpointDto) => void;
+  /** Present when the planner currently sits at this viewpoint, so "now" can be saved as a variant. */
+  onSaveVariant?: () => void;
+  saveVariantBusy?: boolean;
 }) {
   const utc = new Date(viewpoint.selectedDatetimeUtc);
   const w = utcToWallClock(utc, viewpoint.timezone);
+  const stamp = (d: Date, tz: string) => {
+    const x = utcToWallClock(d, tz);
+    return `${x.year}-${String(x.month).padStart(2, '0')}-${String(x.day).padStart(2, '0')} ${formatWallTime(d, tz)}`;
+  };
   return (
     <article
       className="flex gap-3 rounded-[var(--lm-radius-sm)] border border-[var(--lm-panel-border)] bg-white/3 p-2.5"
@@ -64,7 +80,52 @@ export function SavedViewpointCard({
           >
             Delete
           </Button>
+          {onSaveVariant ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onSaveVariant}
+              disabled={saveVariantBusy}
+              title="Save the planner's current date, time and scenario as another take of this spot"
+              data-testid="viewpoint-save-variant"
+            >
+              {saveVariantBusy ? 'Saving…' : '+ Variant'}
+            </Button>
+          ) : null}
         </div>
+        {variants.length > 0 ? (
+          <ul className="mt-2 space-y-1 border-t border-white/5 pt-1.5" aria-label="Shot variants">
+            {variants.map((v) => (
+              <li key={v.id} className="flex items-center justify-between gap-2 text-xs">
+                <span className="font-mono tabular-nums text-[var(--lm-text-muted)]">
+                  {stamp(new Date(v.selectedDatetimeUtc), v.timezone)}
+                  {v.weatherMode === 'SCENARIO' && v.weatherScenario
+                    ? ` · ${v.weatherScenario}`
+                    : ''}
+                </span>
+                <span className="flex shrink-0 gap-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => onOpenVariant?.(v)}
+                    aria-label={`Open variant ${stamp(new Date(v.selectedDatetimeUtc), v.timezone)} of ${viewpoint.label}`}
+                    data-testid="variant-open"
+                  >
+                    Open
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => onDeleteVariant?.(v)}
+                    aria-label={`Delete variant ${stamp(new Date(v.selectedDatetimeUtc), v.timezone)} of ${viewpoint.label}`}
+                  >
+                    Delete
+                  </Button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </div>
     </article>
   );

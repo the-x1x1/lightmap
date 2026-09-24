@@ -15,6 +15,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 
 const timestamps = {
@@ -134,11 +135,16 @@ export const viewpoints = pgTable(
     previewSourceType: text('preview_source_type', {
       enum: ['REAL_REFERENCE', 'SIMULATED_LIGHTING', 'ESTIMATED_PREVIEW'],
     }).notNull(),
+    /** Shot variant of another viewpoint in the same project (same place/camera, other time). */
+    parentViewpointId: text('parent_viewpoint_id').references((): AnyPgColumn => viewpoints.id, {
+      onDelete: 'cascade',
+    }),
     ...timestamps,
   },
   (t) => [
     index('viewpoints_project_idx').on(t.projectId),
     index('viewpoints_user_idx').on(t.userId),
+    index('viewpoints_parent_idx').on(t.parentViewpointId),
   ],
 );
 

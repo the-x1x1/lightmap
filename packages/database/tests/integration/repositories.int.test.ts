@@ -92,10 +92,33 @@ run('repositories (integration)', () => {
     >`select count(*)::text as n from preview_snapshots where viewpoint_id = ${v.id}`;
     expect(Number(counted[0]?.n)).toBe(1); // only the newest snapshot is kept
     await expect(vps.get(bob, v.id)).rejects.toBeInstanceOf(NotFoundError);
+    // Shot variants: same place, another time; one level deep; cascade on parent delete.
+    const variant = await vps.create(alice, p.id, {
+      ...input,
+      selectedDatetimeUtc: new Date('2026-05-31T05:00:00Z'),
+      parentViewpointId: v.id,
+    });
+    expect(variant.parentViewpointId).toBe(v.id);
+    const grandchild = await vps.create(alice, p.id, {
+      ...input,
+      selectedDatetimeUtc: new Date('2026-06-01T05:00:00Z'),
+      parentViewpointId: variant.id,
+    });
+    expect(grandchild.parentViewpointId).toBe(v.id); // re-parented to the top-level viewpoint
+    await expect(
+      vps.create(alice, p.id, { ...input, parentViewpointId: 'NOPE00000000000000000000000' }),
+    ).rejects.toBeInstanceOf(NotFoundError);
+    expect(await vps.countInProject(alice, p.id)).toBe(3); // variants count toward limits
+    await vps.remove(alice, v.id);
+    await expect(vps.get(alice, variant.id)).rejects.toBeInstanceOf(NotFoundError); // cascade
+    const full0 = await projects.get(alice, p.id);
+    expect(full0.viewpoints).toHaveLength(0);
+    const v2 = await vps.create(alice, p.id, input);
     const full = await projects.get(alice, p.id);
     expect(full.viewpoints).toHaveLength(1);
+    expect(full.viewpoints[0]!.id).toBe(v2.id);
     await projects.remove(alice, p.id);
-    await expect(vps.get(alice, v.id)).rejects.toBeInstanceOf(NotFoundError); // cascade
+    await expect(vps.get(alice, v2.id)).rejects.toBeInstanceOf(NotFoundError); // cascade
   });
 
   it('subscription events are idempotent and upserts replace by user', async () => {
