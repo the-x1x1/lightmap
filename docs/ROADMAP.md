@@ -15,7 +15,7 @@ mode but production configuration is still outstanding.
 | 6     | Advanced camera planning / reverse planning | **Solver + Light finder delivered (unreleased)**; drag-in-frame UI future |
 | 7     | Long-range climatology                      | **Delivered (unreleased)** — Open-Meteo/ERA5, Pro entitlement             |
 | 8     | High-fidelity environment reconstruction    | Future                                                                    |
-| 9     | Native mobile                               | Future — only after PWA demand is proven                                  |
+| 9     | Native mobile                               | Future — PWA installable baseline shipped; demand measured first          |
 
 ## Phase 0 — Foundation (delivered)
 
@@ -116,8 +116,12 @@ direction or erase uncertainty labels.
 
 ## Phase 9 — Native mobile (future)
 
-Capacitor or React Native wrapper only after PWA usage proves demand: native install, offline
-project cache, compass, device orientation, AR sun alignment, field mode.
+The PWA baseline exists (unreleased): a complete manifest (`id`, scope, 192/512 PNG icons plus a
+maskable variant, `display_override`), an apple-touch-icon, `start_url=/?source=pwa` so installed
+launches can be counted. No service worker yet — the app needs the network for terrain and weather;
+an offline project cache is the first Phase 9 deliverable. Capacitor or React Native wrapper only
+after PWA usage proves demand: native install, offline project cache, compass, device orientation,
+AR sun alignment, field mode.
 
 ## Not on the roadmap (plan §37)
 
