@@ -153,6 +153,8 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
     oy: number;
     id: number;
     moved: boolean;
+    /** Pixels the pointer may wander before a press stops being a tap (fingers wobble more). */
+    slop: number;
   } | null>(null);
   const onPointerDown = (e: React.PointerEvent) => {
     if (camera.mode !== 'viewpoint') return;
@@ -163,6 +165,7 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
       oy: e.clientY,
       id: e.pointerId,
       moved: false,
+      slop: e.pointerType === 'touch' ? 10 : 3,
     };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
@@ -187,7 +190,7 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
       y: e.clientY,
       moved:
         drag.current.moved ||
-        Math.hypot(e.clientX - drag.current.ox, e.clientY - drag.current.oy) > 3,
+        Math.hypot(e.clientX - drag.current.ox, e.clientY - drag.current.oy) > drag.current.slop,
     };
     const degPerPx = camera.fovDeg / Math.max(320, container.current?.clientWidth ?? 800);
     rotateCamera(dx * degPerPx, -dy * degPerPx);

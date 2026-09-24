@@ -23,6 +23,7 @@ import { CameraControls } from './CameraControls';
 import { AstronomyDetails } from './AstronomyDetails';
 import { LightFinder } from './LightFinder';
 import { NextOccurrence } from './NextOccurrence';
+import { SheetPeek } from './SheetPeek';
 import { ClimatologyPanel } from './ClimatologyPanel';
 import { HourlyOutlook } from './HourlyOutlook';
 import { WeatherDetails } from './WeatherDetails';
@@ -52,6 +53,11 @@ export function MapShell() {
   const expandButtonRef = useRef<HTMLButtonElement>(null);
   const prevPanel = useRef(panel);
   const prevExpanded = useRef(previewExpanded);
+  // Sheet handle: a tap toggles; a vertical swipe of 30 px+ opens or closes regardless of state.
+  const handleSwipe = useRef<{ id: number; y0: number } | null>(null);
+  // Pointer gestures settle the sheet in pointerup; the click that follows a mouse/touch press
+  // must not toggle it back. Keyboard activation (Enter/Space) arrives as a click alone.
+  const handleSettledByPointer = useRef(false);
   const [desktop, setDesktop] = useState(false);
   const account = useAccount();
   const [rendererInfo, setRendererInfo] = useState<RendererInfo>({
@@ -146,7 +152,7 @@ export function MapShell() {
         )}
       >
         {/* Top bar first in the DOM so Tab reaches search before the map. */}
-        <header className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center gap-2 p-3 pt-6 lg:pt-3">
+        <header className="lm-safe-top pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center gap-2 p-3 lg:pt-3">
           <h1 className="sr-only">{brand.name}</h1>
           <a
             href="/"
@@ -185,7 +191,7 @@ export function MapShell() {
           className={cx(
             'lm-sheet-in absolute inset-x-0 bottom-0 z-30 flex max-h-[62dvh] flex-col rounded-t-2xl border-t border-[var(--lm-panel-border)] bg-[var(--lm-panel)]/95 shadow-[var(--lm-shadow)] backdrop-blur',
             'lg:inset-y-0 lg:left-auto lg:right-0 lg:max-h-none lg:w-[420px] lg:rounded-none lg:border-l lg:border-t-0',
-            !sheetOpen && 'max-h-[88px] lg:max-h-none',
+            !sheetOpen && 'lm-sheet-collapsed lg:max-h-none',
           )}
           id="planning-panel"
           aria-label="Planning panel"
@@ -193,14 +199,41 @@ export function MapShell() {
         >
           <button
             type="button"
-            className="mx-auto mt-2 h-6 w-full max-w-[120px] lg:hidden"
+            className="mx-auto mt-1 h-7 w-full max-w-[160px] touch-none lg:hidden"
             aria-label={sheetOpen ? 'Collapse panel' : 'Expand panel'}
             aria-expanded={sheetOpen}
             aria-controls="planning-panel-body"
-            onClick={() => setSheetOpen(!sheetOpen)}
+            onPointerDown={(e) => {
+              handleSwipe.current = { id: e.pointerId, y0: e.clientY };
+              e.currentTarget.setPointerCapture(e.pointerId);
+            }}
+            onPointerUp={(e) => {
+              const s = handleSwipe.current;
+              handleSwipe.current = null;
+              if (!s || s.id !== e.pointerId) return;
+              const dy = e.clientY - s.y0;
+              if (dy < -30) setSheetOpen(true);
+              else if (dy > 30) setSheetOpen(false);
+              else setSheetOpen(!sheetOpen);
+              handleSettledByPointer.current = true;
+            }}
+            onPointerCancel={() => {
+              handleSwipe.current = null;
+            }}
+            onClick={() => {
+              if (handleSettledByPointer.current) {
+                handleSettledByPointer.current = false;
+                return;
+              }
+              setSheetOpen(!sheetOpen);
+            }}
+            data-testid="sheet-handle"
           >
             <span className="mx-auto block h-1.5 w-10 rounded-full bg-white/30" />
           </button>
+          {!sheetOpen && !desktop ? (
+            <SheetPeek scene={scene} onOpen={() => setSheetOpen(true)} />
+          ) : null}
           {/* `inert` while collapsed on phones: the clipped tabs and body must not take focus. */}
           <nav
             className="flex gap-1 px-3 pt-1 lg:pt-4"
@@ -214,7 +247,7 @@ export function MapShell() {
                 onClick={() => setPanel(p)}
                 aria-pressed={panel === p}
                 className={cx(
-                  'h-9 rounded-full px-3 text-sm capitalize',
+                  'h-10 rounded-full px-3 text-sm capitalize lg:h-9',
                   panel === p
                     ? 'bg-white/12 text-[var(--lm-text)]'
                     : 'text-[var(--lm-text-muted)] hover:text-[var(--lm-text)]',
@@ -229,7 +262,7 @@ export function MapShell() {
             id="planning-panel-body"
             ref={panelBodyRef}
             tabIndex={-1}
-            className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-3 outline-none lg:pb-4"
+            className="lm-safe-bottom min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-3 outline-none lg:pb-4"
             data-testid="panel-body"
             inert={!sheetOpen && !desktop ? true : undefined}
           >

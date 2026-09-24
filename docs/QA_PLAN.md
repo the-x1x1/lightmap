@@ -75,6 +75,7 @@ Run against a built app with `WEATHER_PROVIDER=fixture`, `GEOCODER_PROVIDER=fixt
 5. **Account flow**: dev sign-in → create project → save viewpoint → reload → open project →
    reopen viewpoint → location, time, camera and scenario are restored.
 6. **Mobile sheet**: on the mobile profile the bottom sheet collapses and the map remains usable;
+   collapsed, the glance line shows time · phase · sun · basis and opens the sheet when tapped;
    the timeline thumb is reachable.
 
 Failures upload `playwright-report` as an artifact.
@@ -108,13 +109,19 @@ start`).
       per place-day.
 - [ ] Clear → Overcast → Storm visibly differ; shadows vanish in Overcast.
 - [ ] Rotate camera in viewpoint mode; sun-in-frame indicator behaves.
+- [ ] On a phone (real iPhone and Android, portrait): focusing the search box, a date field or
+      the lens box does **not** zoom the page; the sheet's bottom padding clears the home
+      indicator and the top bar clears the notch in the installed (standalone) app; swiping the
+      handle up/down opens/closes the sheet; a tap on the collapsed glance line opens it; a tap
+      in the viewpoint view (finder pick mode) places the ring even with a little finger wobble;
+      the finder ring can be dragged with a finger.
 - [ ] Light finder: "Centre of frame" with a westward camera at −0.8° finds sunsets on the right
       dates (compare one with the timeline); "Point in the view" places a ring where clicked and
       the ring follows a drag; jumping to a result moves the timeline; a Free account is clipped
       to its window with the paywall reason; the search does not freeze the timeline (worker).
 - [ ] "This light" chip under the timeline: on a March afternoon it reads "Like this until
       <a day or two ahead> · Back <late September> (in ~186 days) <a time close to the current
-          one>"; clicking "Back …" jumps date and time and the sun sits at the same place in the
+              one>"; clicking "Back …" jumps date and time and the sun sits at the same place in the
       frame; at night the chip is absent; while scrubbing it dims and settles within a second;
       signed out / Free it reads "Beyond your date window · Pro" and opens the compact paywall.
 - [ ] Export card (Pro): PNG downloads; it shows the source badge, the forecast/scenario line, the
