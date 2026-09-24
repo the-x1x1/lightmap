@@ -36,7 +36,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test:unit -- --coverage
       - run: node --experimental-strip-types scripts/check-attribution.ts
-      - run: pnpm licenses
+      - run: pnpm licenses:check
       - run: pnpm secrets:scan
       - name: Migration set is valid
         run: node --experimental-strip-types -e "import('./packages/database/src/migrate.ts').then(async (m) => { const p = m.validateMigrationSet(await m.loadMigrations()); if (p.length) { console.error(p); process.exit(1); } console.log('migrations ok'); })"

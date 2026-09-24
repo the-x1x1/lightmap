@@ -124,11 +124,12 @@ start`).
       dates (compare one with the timeline); "Point in the view" places a ring where clicked and
       the ring follows a drag; jumping to a result moves the timeline; a Free account is clipped
       to its window with the paywall reason; the search does not freeze the timeline (worker).
-- [ ] "This light" chip under the timeline: on a March afternoon it reads "Like this until
-      <a day or two ahead> · Back <late September> (in ~186 days) <a time close to the current
-                          one>"; clicking "Back …" jumps date and time and the sun sits at the same place in the
-      frame; at night the chip is absent; while scrubbing it dims and settles within a second;
-      signed out / Free it reads "Beyond your date window · Pro" and opens the compact paywall.
+- [ ] "This light" chip under the timeline: on a March afternoon it reads "Like this until"
+      a day or two ahead, then "Back" with a late-September date (in about 186 days) and a time
+      close to the current one; clicking "Back …" jumps date and time and the sun sits at the same
+      place in the frame; at night the chip is absent; while scrubbing it dims and settles within
+      a second; signed out / Free it reads "Beyond your date window · Pro" and opens the compact
+      paywall.
 - [ ] Export card (Pro): PNG downloads; it shows the source badge, the forecast/scenario line, the
       five confidence chips and attribution; text is not clipped for a long place name.
 - [ ] Hour by hour (Pro) appears only when a forecast exists; bars match the timeline's scenario

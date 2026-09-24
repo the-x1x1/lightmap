@@ -13,12 +13,13 @@
  * Output: shot-*.png and result.json in this directory; docs/media/renderer-smoke-*.png is a contact
  * sheet from one run. This is a manual/CI-optional gate because it needs a GPU or SwiftShader.
  */
+import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 
 const server = spawn('python3', ['-m', 'http.server', '8765', '--bind', '127.0.0.1'], {
-  cwd: new URL('./www', import.meta.url).pathname,
+  cwd: fileURLToPath(new URL('./www', import.meta.url)),
   stdio: 'ignore',
 });
 await new Promise((r) => setTimeout(r, 800));

@@ -27,7 +27,7 @@ In order, each must pass:
 6. `pnpm test:unit -- --coverage` (Vitest; coverage uploaded as an artifact)
 7. `scripts/check-attribution.ts` — every registered data source has attribution text and a review
    state
-8. `pnpm licenses` — every dependency licence is on `scripts/license-allowlist.json`; unknown or
+8. `pnpm licenses:check` — every dependency licence is on `scripts/license-allowlist.json`; unknown or
    blocked → fail
 9. `pnpm secrets:scan` — committed key patterns → fail
 10. Migration validity — `validateMigrationSet(loadMigrations())` reports no disordered, duplicate,
