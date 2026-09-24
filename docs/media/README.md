@@ -1,1 +1,1 @@
-Screenshots for README are captured from the first deployed build (see docs/QA_PLAN.md release smoke checklist).
+`renderer-smoke-*.png` are contact sheets from `tools/renderer-smoke` (headless Chromium, software GL); the `b` sheet follows the twilight/haze pass. App screenshots for the README are captured from the first deployed build (see docs/QA_PLAN.md release smoke checklist).

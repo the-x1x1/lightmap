@@ -153,6 +153,8 @@ export class CesiumSceneHost implements SceneHost {
       u_skyLuminance: 1,
       u_nightFactor: 0,
       u_precipitation: 0,
+      u_horizonHaze: 0.1,
+      u_sunElevation: 45,
       u_time: 0,
       u_sunScreen: new C.Cartesian2(-1, -1),
       u_sunVisible: 0,
@@ -242,6 +244,8 @@ export class CesiumSceneHost implements SceneHost {
     g['u_skyLuminance'] = u.u_skyLuminance;
     g['u_nightFactor'] = u.u_nightFactor;
     g['u_precipitation'] = u.u_precipitation;
+    g['u_horizonHaze'] = u.u_horizonHaze;
+    g['u_sunElevation'] = u.u_sunElevation;
     g['u_time'] = u.u_time;
     (g['u_sunScreen'] as Cesium.Cartesian2).x = u.u_sunScreen[0];
     (g['u_sunScreen'] as Cesium.Cartesian2).y = u.u_sunScreen[1];

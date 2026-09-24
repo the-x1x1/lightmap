@@ -76,6 +76,21 @@ describe('lightingFromScene', () => {
     expect(storm.grade.precipitation).toBe(1);
   });
 
+  it('aerial perspective grows toward the horizon at low sun and the shader gets the elevation', () => {
+    const noon = lightingFromScene(scene(12.5, 'clear'));
+    const golden = lightingFromScene(scene(18.75, 'clear'));
+    const overcastGolden = lightingFromScene(scene(18.75, 'overcast'));
+    expect(golden.grade.horizonHaze).toBeGreaterThan(noon.grade.horizonHaze + 0.15);
+    expect(golden.grade.horizonHaze).toBeLessThanOrEqual(1);
+    // Cloud cover already flattens the scene; the low-sun term is halved under a full deck.
+    expect(overcastGolden.grade.horizonHaze - overcastGolden.grade.haze).toBeLessThan(
+      golden.grade.horizonHaze - golden.grade.haze,
+    );
+    expect(golden.grade.sunElevation).toBeGreaterThan(2);
+    expect(golden.grade.sunElevation).toBeLessThan(7);
+    expect(noon.atmosphere.brightnessShift).toBeLessThan(golden.atmosphere.brightnessShift);
+  });
+
   it('golden hour is warm and dimmer; blue hour has no direct light and is cool', () => {
     const golden = lightingFromScene(scene(18.75, 'clear')); // sunset 19:09 → ~+4°
     expect(golden.sunColor[0]).toBeGreaterThan(golden.sunColor[2] + 0.2);
@@ -98,7 +113,7 @@ describe('lightingFromScene', () => {
     const trueEl = azElFromEcefToward(neg(blue.sunDirectionEcef), 21.397, -157.727).elevationDeg;
     const litEl = azElFromEcefToward(neg(blue.lightDirectionEcef), 21.397, -157.727).elevationDeg;
     expect(trueEl).toBeLessThan(-4);
-    expect(litEl).toBeCloseTo(-1.5, 6);
+    expect(litEl).toBeCloseTo(-0.6, 6);
     expect(lightingFromScene(scene(12.5)).lightDirectionEcef).toEqual(
       lightingFromScene(scene(12.5)).sunDirectionEcef,
     );

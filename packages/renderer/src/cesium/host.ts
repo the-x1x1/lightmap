@@ -40,6 +40,8 @@ export interface HostGradeUniforms {
   u_skyLuminance: number;
   u_nightFactor: number;
   u_precipitation: number;
+  u_horizonHaze: number;
+  u_sunElevation: number;
   u_time: number;
   u_sunScreen: [number, number];
   u_sunVisible: number;
