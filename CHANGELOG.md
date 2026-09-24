@@ -4,6 +4,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Light finder: point in the view** — click where the sun/moon should be in the viewpoint
+  preview; the finder searches for that direction (`directionFromFrame`, tested); a ring marks it.
 - **Light finder (reverse planning, plan §26)**: `findDirectionMatches()` finds every instant in a
   date range when the sun or moon sits at a target azimuth (and optionally elevation) from a
   viewpoint; panel in the planner with frame-centre / current / manual targets, moon illumination

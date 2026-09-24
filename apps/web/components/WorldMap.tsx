@@ -4,6 +4,7 @@
  * Click/tap sets the pin; in viewpoint mode drag rotates the camera (heading/pitch).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { directionFromFrame, frameCoordinates } from '@lightmap/scene';
 import { usePlannerStore } from '@/features/planner/store';
 import { useApplyScene, useRenderer } from '@/features/map/use-renderer';
 import { api } from '@/lib/client/api';
@@ -41,6 +42,9 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
   const location = usePlannerStore((s) => s.location);
   const camera = usePlannerStore((s) => s.camera);
   const rotateCamera = usePlannerStore((s) => s.rotateCamera);
+  const finderPicking = usePlannerStore((s) => s.finderPicking);
+  const finderTarget = usePlannerStore((s) => s.finderTarget);
+  const setFinderTarget = usePlannerStore((s) => s.setFinderTarget);
   const setQualityFromGovernor = useRef<
     (q: {
       shadowMapSize: 1024 | 2048 | 4096;
@@ -141,23 +145,40 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
     onRendererInfo,
   ]);
 
-  // Drag-to-look in viewpoint mode.
-  const drag = useRef<{ x: number; y: number; id: number } | null>(null);
+  // Drag-to-look in viewpoint mode; a click (no drag) while the finder is picking sets its target.
+  const drag = useRef<{ x: number; y: number; id: number; moved: boolean } | null>(null);
   const onPointerDown = (e: React.PointerEvent) => {
     if (camera.mode !== 'viewpoint') return;
-    drag.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+    drag.current = { x: e.clientX, y: e.clientY, id: e.pointerId, moved: false };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+  const pickInFrame = (e: React.PointerEvent) => {
+    const el = container.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    if (rect.width < 2 || rect.height < 2) return;
+    const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = 1 - ((e.clientY - rect.top) / rect.height) * 2;
+    setFinderTarget(directionFromFrame(camera, x, y, rect.width / rect.height));
   };
   const onPointerMove = (e: React.PointerEvent) => {
     if (!drag.current || drag.current.id !== e.pointerId) return;
     const dx = e.clientX - drag.current.x;
     const dy = e.clientY - drag.current.y;
-    drag.current = { ...drag.current, x: e.clientX, y: e.clientY };
+    drag.current = {
+      ...drag.current,
+      x: e.clientX,
+      y: e.clientY,
+      moved: drag.current.moved || Math.abs(dx) + Math.abs(dy) > 3,
+    };
     const degPerPx = camera.fovDeg / Math.max(320, container.current?.clientWidth ?? 800);
     rotateCamera(dx * degPerPx, -dy * degPerPx);
   };
   const onPointerUp = (e: React.PointerEvent) => {
-    if (drag.current?.id === e.pointerId) drag.current = null;
+    if (drag.current?.id !== e.pointerId) return;
+    const wasClick = !drag.current.moved;
+    drag.current = null;
+    if (wasClick && finderPicking && camera.mode === 'viewpoint') pickInFrame(e);
   };
   const onWheel = (e: React.WheelEvent) => {
     if (camera.mode !== 'viewpoint') return;
@@ -223,6 +244,18 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
         </div>
       ) : null}
       {scene ? <SunDirectionOverlay scene={scene} compact={!overlayMode} /> : null}
+      {finderPicking && camera.mode === 'viewpoint' ? (
+        <p
+          role="status"
+          className="pointer-events-none absolute left-1/2 top-16 z-10 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1.5 text-xs text-[var(--lm-text)] lg:top-20"
+          data-testid="finder-pick-hint"
+        >
+          Click where the sun (or moon) should be in this view.
+        </p>
+      ) : null}
+      {finderTarget && camera.mode === 'viewpoint' && !overlayMode ? (
+        <FinderReticle target={finderTarget} camera={camera} container={container} />
+      ) : null}
       {renderer.mode === 'loading' ? (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-[var(--lm-chrome)]/60">
           <span className="rounded-full bg-black/60 px-3 py-1.5 text-xs text-[var(--lm-text-muted)]">
@@ -253,6 +286,32 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
         className="pointer-events-none absolute bottom-1 right-1 text-[10px] text-white/50"
         aria-hidden
       />
+    </div>
+  );
+}
+
+/** Marks the picked "sun here" direction in the viewpoint frame; re-projects as the camera moves. */
+function FinderReticle({
+  target,
+  camera,
+  container,
+}: {
+  target: { azimuthDeg: number; elevationDeg: number };
+  camera: { headingDeg: number; pitchDeg: number; fovDeg: number };
+  container: React.RefObject<HTMLDivElement | null>;
+}) {
+  const el = container.current;
+  const aspect = el && el.clientHeight > 0 ? el.clientWidth / el.clientHeight : 16 / 9;
+  const f = frameCoordinates(camera, target.azimuthDeg, target.elevationDeg, aspect);
+  if (!f || Math.abs(f.x) > 1 || Math.abs(f.y) > 1) return null;
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute z-10 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--lm-sun)] shadow-[0_0_0_2px_rgba(0,0,0,0.5)]"
+      style={{ left: `${((f.x + 1) / 2) * 100}%`, top: `${((1 - f.y) / 2) * 100}%` }}
+      data-testid="finder-reticle"
+    >
+      <span className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--lm-sun)]" />
     </div>
   );
 }

@@ -94,9 +94,12 @@ panel — target from the centre of the viewpoint frame, the body's current posi
 sun or moon with an illumination floor; date range clipped to the plan window for Free; results jump
 the planner to the instant (`PRODUCT_SPEC.md` §8a). Entitlement `reverse_planning`.
 
-Next: drag the sun/moon marker directly in the preview frame to set the target (plan §26), saved
-shot variants per viewpoint, sensor formats, and a "next occurrence" chip on the timeline.
-`frameCoordinates()` is already the inverse of what the drag needs.
+Also delivered: **point in the view** — click the spot in the viewpoint preview where the sun or
+moon should be (`directionFromFrame()`, the inverse of `frameCoordinates()`, round-trip tested);
+a ring marks the pick and follows the camera.
+
+Next: drag the ring to refine the target, saved shot variants per viewpoint, sensor formats, and a
+"next occurrence" chip on the timeline.
 
 ## Phase 7 — Long-range climatology (delivered, unreleased)
 

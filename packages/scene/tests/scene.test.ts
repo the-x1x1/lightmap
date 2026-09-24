@@ -9,6 +9,7 @@ import { DEFAULT_RENDER_SETTINGS, buildSceneState, type SceneInputs } from '../s
 import { deriveConfidence, deriveSourceMode } from '../src/confidence.ts';
 import {
   defaultCamera,
+  directionFromFrame,
   focalLengthForFov,
   frameCoordinates,
   horizontalFovDeg,
@@ -317,5 +318,41 @@ describe('explanation', () => {
     expect(lines.find((l) => l.label === 'Weather scenario')?.value).toContain('not a forecast');
     expect(lines.find((l) => l.label === 'Confidence')?.value).toContain('scenario-only');
     expect(lines.find((l) => l.label === 'Scene source')?.value).toContain('Simulated Lighting');
+  });
+});
+
+describe('directionFromFrame', () => {
+  it('inverts frameCoordinates across headings, pitches and lenses', () => {
+    const cases = [
+      { headingDeg: 250, pitchDeg: 5, fovDeg: horizontalFovDeg(24) },
+      { headingDeg: 10, pitchDeg: -20, fovDeg: horizontalFovDeg(85) },
+      { headingDeg: 359, pitchDeg: 40, fovDeg: horizontalFovDeg(16) },
+    ];
+    for (const cam of cases) {
+      for (const [az, el] of [
+        [cam.headingDeg, cam.pitchDeg],
+        [cam.headingDeg + 12, cam.pitchDeg + 8],
+        [cam.headingDeg - 30, cam.pitchDeg - 5],
+      ] as const) {
+        const f = frameCoordinates(cam, az, el, 16 / 9);
+        expect(f).not.toBeNull();
+        if (Math.abs(f!.x) > 1 || Math.abs(f!.y) > 1) continue; // outside the frame for this lens
+        const back = directionFromFrame(cam, f!.x, f!.y, 16 / 9);
+        expect(back.elevationDeg).toBeCloseTo(el, 6);
+        const dAz = ((back.azimuthDeg - ((az % 360) + 360)) % 360) % 360;
+        expect(Math.min(Math.abs(dAz), 360 - Math.abs(dAz))).toBeLessThan(1e-6);
+      }
+    }
+  });
+
+  it('the frame centre is the camera direction; the top edge is above it', () => {
+    const cam = { headingDeg: 90, pitchDeg: 10, fovDeg: 60 };
+    const centre = directionFromFrame(cam, 0, 0);
+    expect(centre.azimuthDeg).toBeCloseTo(90, 9);
+    expect(centre.elevationDeg).toBeCloseTo(10, 9);
+    const top = directionFromFrame(cam, 0, 1);
+    expect(top.elevationDeg).toBeGreaterThan(10);
+    const right = directionFromFrame(cam, 1, 0);
+    expect(right.azimuthDeg).toBeGreaterThan(90);
   });
 });
