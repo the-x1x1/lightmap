@@ -32,9 +32,13 @@ export interface AuthConfigDeps {
 
 export function buildAuthConfig({ env, db, log }: AuthConfigDeps): NextAuthConfig {
   const isProd = env.NODE_ENV === 'production';
-  const providers: NextAuthConfig['providers'] = [];
+  type Provider = NextAuthConfig['providers'][number];
+  const providers: Provider[] = [];
 
   providers.push(
+    // Auth.js's own NodemailerConfig is not assignable to its Provider union under
+    // exactOptionalPropertyTypes (EmailConfig.server is typed `NodemailerConfig["server"]`, which
+    // includes `undefined`). The assertion only bridges that inconsistency in their .d.ts.
     Nodemailer({
       server: env.EMAIL_SERVER ?? { host: 'localhost', port: 25 },
       from: env.EMAIL_FROM,
@@ -55,7 +59,7 @@ export function buildAuthConfig({ env, db, log }: AuthConfigDeps): NextAuthConfi
           text: mail.text,
         });
       },
-    }),
+    }) as Provider,
   );
 
   if (env.AUTH_GOOGLE_ID && env.AUTH_GOOGLE_SECRET) {
@@ -117,7 +121,8 @@ export function buildAuthConfig({ env, db, log }: AuthConfigDeps): NextAuthConfi
       maxAge: SESSION_MAX_AGE_SECONDS,
       updateAge: SESSION_UPDATE_AGE_SECONDS,
     },
-    secret: env.AUTH_SECRET,
+    // Auth.js falls back to the AUTH_SECRET env var itself; only pass it when validated env has it.
+    ...(env.AUTH_SECRET ? { secret: env.AUTH_SECRET } : {}),
     trustHost: true,
     useSecureCookies: isProd,
     pages: {
