@@ -33,14 +33,12 @@ describe('planner store', () => {
     expect(usePlannerStore.getState().camera.fovDeg).toBeCloseTo(39.6, 1);
   });
   it('restores a saved viewpoint into date/time/camera/scenario', () => {
-    usePlannerStore
-      .getState()
-      .restore({
-        location: kailua,
-        utc: new Date('2026-05-31T22:30:00Z'),
-        camera: { ...usePlannerStore.getState().camera, headingDeg: 270, mode: 'viewpoint' },
-        scenario: 'overcast',
-      });
+    usePlannerStore.getState().restore({
+      location: kailua,
+      utc: new Date('2026-05-31T22:30:00Z'),
+      camera: { ...usePlannerStore.getState().camera, headingDeg: 270, mode: 'viewpoint' },
+      scenario: 'overcast',
+    });
     const st = usePlannerStore.getState();
     expect(st.date).toBe('2026-05-31');
     expect(st.minutes).toBe(750);

@@ -21,9 +21,9 @@ see `docs/DATA_SOURCES_AND_LICENSING.md` for the data side and the review status
 
 ## Algorithms
 
-- Solar position: Jean Meeus, *Astronomical Algorithms*, 2nd ed. (Willmann-Bell, 1998), chapters
+- Solar position: Jean Meeus, _Astronomical Algorithms_, 2nd ed. (Willmann-Bell, 1998), chapters
   12, 13, 22, 25, 28. Implemented from the published equations; no code copied.
-- Moon position: low-precision formulae from *The Astronomical Almanac* (US Naval Observatory / HM
+- Moon position: low-precision formulae from _The Astronomical Almanac_ (US Naval Observatory / HM
   Nautical Almanac Office), section D. Illuminated fraction: Meeus ch. 48.
 - Refraction: Sæmundsson's formula (Meeus 16.4).
 - Blackbody tint: Tanner Helland's published approximation of the Planckian locus.

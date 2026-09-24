@@ -1,6 +1,28 @@
 {
   "$comment": "Permissive SPDX ids accepted without review (plan §14.5). Anything else fails CI unless listed under exceptions with a reason.",
-  "permissive": ["MIT", "MIT-0", "ISC", "BSD-2-Clause", "BSD-3-Clause", "Apache-2.0", "0BSD", "Unlicense", "CC0-1.0", "BlueOak-1.0.0", "Python-2.0", "Zlib", "WTFPL", "MPL-2.0", "CC-BY-4.0", "CC-BY-3.0", "Artistic-2.0", "BSD-2-Clause-Patent", "UPL-1.0", "PSF-2.0", "W3C-20150513"],
+  "permissive": [
+    "MIT",
+    "MIT-0",
+    "ISC",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "Apache-2.0",
+    "0BSD",
+    "Unlicense",
+    "CC0-1.0",
+    "BlueOak-1.0.0",
+    "Python-2.0",
+    "Zlib",
+    "WTFPL",
+    "MPL-2.0",
+    "CC-BY-4.0",
+    "CC-BY-3.0",
+    "Artistic-2.0",
+    "BSD-2-Clause-Patent",
+    "UPL-1.0",
+    "PSF-2.0",
+    "W3C-20150513"
+  ],
   "exceptions": {
     "geo-tz": {
       "license": "MIT",
