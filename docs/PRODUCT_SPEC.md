@@ -188,6 +188,11 @@ focal-length preset, and mode.
   24 mm → 73.7°, 35 mm → 54.4°, 50 mm → 39.6°, 85 mm → 23.9°, 135 mm → 15.2°. A free FOV
   (5°–120°) clears the preset.
 
+- **Sensor format** (Pro): "Your camera" lets the photographer pick a sensor (full frame, APS-C,
+  APS-C Canon, Micro Four Thirds, 1-inch, 44×33 medium format) and type the focal length printed on
+  their lens; the frame takes the matching horizontal FOV and the full-frame equivalent is shown.
+  Saved viewpoints keep storing FOV and the equivalent, so they are sensor-independent.
+
 No lens optical simulation (distortion, depth of field) in v1.
 
 ### 8a. Light finder — reverse planning (plan §26)

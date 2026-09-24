@@ -101,8 +101,9 @@ a ring marks the pick and follows the camera.
 Also delivered: **shot variants** per viewpoint (migration 0003, one level, cascade, counted
 toward limits; `PRODUCT_SPEC.md` §9).
 
-Next: drag the ring to refine the target, sensor formats, and a "next occurrence" chip on the
-timeline.
+Also delivered: **sensor formats** ("Your camera": sensor preset + the lens number as printed).
+
+Next: drag the ring to refine the target and a "next occurrence" chip on the timeline.
 
 ## Phase 7 — Long-range climatology (delivered, unreleased)
 

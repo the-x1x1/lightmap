@@ -9,6 +9,7 @@ import { create } from 'zustand';
 import { localSelectionToUtc, parseCivilDate, utcToWallClock } from '@lightmap/astronomy';
 import {
   defaultCamera,
+  equivalentFocalLengthMm,
   horizontalFovDeg,
   normalizeHeading,
   clampPitch,
@@ -36,6 +37,8 @@ export interface PlannerState {
   showPerfPanel: boolean;
   /** Set once from device capabilities. */
   reducedMotion: boolean;
+  /** Sensor width the photographer's own lens numbers refer to (full frame = 36). Not persisted per viewpoint: saved viewpoints store FOV and the full-frame equivalent. */
+  sensorWidthMm: number;
   /** Light finder: a direction picked in the viewpoint frame (plan §26 "I want the sun here"). */
   finderTarget: { azimuthDeg: number; elevationDeg: number } | null;
   /** The next click in the viewpoint view sets `finderTarget`. */
@@ -56,6 +59,9 @@ export interface PlannerActions {
   setPitch: (pitchDeg: number) => void;
   setFocalLength: (mm: number) => void;
   setFov: (fovDeg: number) => void;
+  setSensorWidth: (mm: number) => void;
+  /** A lens on the chosen sensor ("my 16 mm"), converted to FOV and full-frame equivalent. */
+  setActualFocalLength: (mm: number) => void;
   setPanel: (panel: PlannerState['panel']) => void;
   setSheetOpen: (v: boolean) => void;
   setPreviewExpanded: (v: boolean) => void;
@@ -94,6 +100,7 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
   camera: defaultCamera({ latitude: 0, longitude: 0 }),
   panel: 'plan',
   sheetOpen: true,
+  sensorWidthMm: 36,
   finderTarget: null,
   finderPicking: false,
   previewExpanded: false,
@@ -155,6 +162,14 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
     set({
       camera: { ...get().camera, fovDeg: Math.max(5, Math.min(120, fov)), focalLengthMm: null },
     });
+  },
+  setSensorWidth(mm) {
+    set({ sensorWidthMm: Math.max(4, Math.min(60, mm)) });
+  },
+  setActualFocalLength(mm) {
+    const eq = equivalentFocalLengthMm(mm, get().sensorWidthMm);
+    const fov = Math.max(5, Math.min(120, horizontalFovDeg(eq)));
+    set({ camera: { ...get().camera, fovDeg: fov, focalLengthMm: Math.round(eq * 10) / 10 } });
   },
   setPanel(panel) {
     set({ panel, sheetOpen: true });
