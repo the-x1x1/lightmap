@@ -119,10 +119,23 @@ export function ProjectDrawer({
     setError(null);
     try {
       const thumb = await captureThumbnail();
-      // A variant keeps the parent's label; its own identity is the time and scenario.
+      // A variant is the parent's place and camera at another time/scenario (PRODUCT_SPEC §9):
+      // take place/camera from the parent, time/weather/snapshot from the planner.
+      const now = viewpointPayload(scene, parent.label, thumb);
       await m.saveViewpoint.mutateAsync({
-        projectId: selectedId,
-        body: { ...viewpointPayload(scene, parent.label, thumb), parentViewpointId: parent.id },
+        projectId: parent.projectId,
+        body: {
+          ...now,
+          latitude: parent.latitude,
+          longitude: parent.longitude,
+          elevationM: parent.elevationM,
+          timezone: parent.timezone,
+          headingDeg: parent.headingDeg,
+          pitchDeg: parent.pitchDeg,
+          fieldOfViewDeg: parent.fieldOfViewDeg,
+          focalLengthEquivalentMm: parent.focalLengthEquivalentMm,
+          parentViewpointId: parent.id,
+        },
       });
       setStatus(`Saved a variant of “${parent.label}” at ${scene.localTime.time}.`);
       void project.refetch();
@@ -132,10 +145,18 @@ export function ProjectDrawer({
   }
 
   function remove(v: ViewpointDto) {
+    const n = variantsOf.get(v.id)?.length ?? 0;
+    if (n > 0 && !confirm(`Delete “${v.label}” and its ${n} variant${n === 1 ? '' : 's'}?`)) return;
     void m.removeViewpoint
       .mutateAsync(v.id)
       .then(() => {
-        setStatus(v.parentViewpointId ? 'Variant deleted.' : `Deleted “${v.label}”.`);
+        setStatus(
+          v.parentViewpointId
+            ? 'Variant deleted.'
+            : n > 0
+              ? `Deleted “${v.label}” and ${n} variant${n === 1 ? '' : 's'}.`
+              : `Deleted “${v.label}”.`,
+        );
         focusHeading('lm-viewpoints-h');
         return project.refetch();
       })

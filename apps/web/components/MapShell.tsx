@@ -324,6 +324,7 @@ export function MapShell() {
                             key={`${scene.location.point.latitude},${scene.location.point.longitude}`}
                             scene={scene}
                             planLoading={planLoading}
+                            canPickInView={rendererInfo.mode === '3D'}
                             allowed={finderDecision.allowed}
                             reason={finderDecision.allowed ? null : (finderDecision.reason ?? null)}
                             windowDays={{

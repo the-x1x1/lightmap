@@ -146,10 +146,24 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
   ]);
 
   // Drag-to-look in viewpoint mode; a click (no drag) while the finder is picking sets its target.
-  const drag = useRef<{ x: number; y: number; id: number; moved: boolean } | null>(null);
+  const drag = useRef<{
+    x: number;
+    y: number;
+    ox: number;
+    oy: number;
+    id: number;
+    moved: boolean;
+  } | null>(null);
   const onPointerDown = (e: React.PointerEvent) => {
     if (camera.mode !== 'viewpoint') return;
-    drag.current = { x: e.clientX, y: e.clientY, id: e.pointerId, moved: false };
+    drag.current = {
+      x: e.clientX,
+      y: e.clientY,
+      ox: e.clientX,
+      oy: e.clientY,
+      id: e.pointerId,
+      moved: false,
+    };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
   const pickInFrame = (e: React.PointerEvent) => {
@@ -165,11 +179,15 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
     if (!drag.current || drag.current.id !== e.pointerId) return;
     const dx = e.clientX - drag.current.x;
     const dy = e.clientY - drag.current.y;
+    // "Moved" is measured from the pointer-down origin, so a slow trackpad/touch drag (1–2 px per
+    // event) still counts as a drag, never as a click.
     drag.current = {
       ...drag.current,
       x: e.clientX,
       y: e.clientY,
-      moved: drag.current.moved || Math.abs(dx) + Math.abs(dy) > 3,
+      moved:
+        drag.current.moved ||
+        Math.hypot(e.clientX - drag.current.ox, e.clientY - drag.current.oy) > 3,
     };
     const degPerPx = camera.fovDeg / Math.max(320, container.current?.clientWidth ?? 800);
     rotateCamera(dx * degPerPx, -dy * degPerPx);
@@ -179,6 +197,9 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
     const wasClick = !drag.current.moved;
     drag.current = null;
     if (wasClick && finderPicking && camera.mode === 'viewpoint') pickInFrame(e);
+  };
+  const onPointerCancel = (e: React.PointerEvent) => {
+    if (drag.current?.id === e.pointerId) drag.current = null; // a cancelled gesture never picks
   };
   const onWheel = (e: React.WheelEvent) => {
     if (camera.mode !== 'viewpoint') return;
@@ -228,7 +249,7 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
+        onPointerCancel={onPointerCancel}
         onWheel={onWheel}
         onKeyDown={onKeyDown}
       />
@@ -315,14 +336,16 @@ function FinderReticle({
   const aspect = el && el.clientHeight > 0 ? el.clientWidth / el.clientHeight : 16 / 9;
   const f = frameCoordinates(camera, target.azimuthDeg, target.elevationDeg, aspect);
   const dragging = useRef<number | null>(null);
-  if (!f || Math.abs(f.x) > 1 || Math.abs(f.y) > 1) return null;
+  if (!f || Math.abs(f.x) > 1.001 || Math.abs(f.y) > 1.001) return null;
   const fromEvent = (e: React.PointerEvent) => {
     const host = container.current;
     if (!host) return null;
     const rect = host.getBoundingClientRect();
     if (rect.width < 2 || rect.height < 2) return null;
-    const x = Math.max(-1, Math.min(1, ((e.clientX - rect.left) / rect.width) * 2 - 1));
-    const y = Math.max(-1, Math.min(1, 1 - ((e.clientY - rect.top) / rect.height) * 2));
+    // Stay just inside the frame so the round trip through frameCoordinates cannot unmount the
+    // ring (and drop pointer capture) mid-drag.
+    const x = Math.max(-0.995, Math.min(0.995, ((e.clientX - rect.left) / rect.width) * 2 - 1));
+    const y = Math.max(-0.995, Math.min(0.995, 1 - ((e.clientY - rect.top) / rect.height) * 2));
     return directionFromFrame(camera, x, y, rect.width / rect.height);
   };
   return (

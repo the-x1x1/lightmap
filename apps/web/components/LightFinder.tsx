@@ -36,6 +36,8 @@ export interface LightFinderProps {
   moonAllowed: boolean;
   /** Entitlements still loading: searching is deferred so a Pro user is never clipped by mistake. */
   planLoading?: boolean;
+  /** False when the 3D view is unavailable (overlay mode): nothing can be picked in it. */
+  canPickInView?: boolean;
 }
 
 const MAX_RESULTS = 80;
@@ -51,6 +53,7 @@ export function LightFinder({
   windowDays,
   moonAllowed,
   planLoading = false,
+  canPickInView = true,
 }: LightFinderProps) {
   const setDate = usePlannerStore((s) => s.setDate);
   const setMinutes = usePlannerStore((s) => s.setMinutes);
@@ -58,6 +61,7 @@ export function LightFinder({
   const finderTarget = usePlannerStore((s) => s.finderTarget);
   const finderPicking = usePlannerStore((s) => s.finderPicking);
   const setFinderPicking = usePlannerStore((s) => s.setFinderPicking);
+  const setFinderTarget = usePlannerStore((s) => s.setFinderTarget);
   const tz = scene.location.timeZone;
   const today = todayAt(tz);
   const ids = useId();
@@ -149,6 +153,7 @@ export function LightFinder({
       });
       setResult({ res, clipped, ms });
     } catch (e) {
+      if (e instanceof Error && e.message === 'superseded') return; // a newer search replaced it
       setError(e instanceof Error ? e.message : 'Search failed.');
     }
   }
@@ -203,12 +208,27 @@ export function LightFinder({
           value={mode}
           onChange={(m) => {
             setMode(m);
-            if (m === 'pick' && !finderTarget) setFinderPicking(true);
-            else if (m !== 'pick' && finderPicking) setFinderPicking(false);
+            if (m === 'pick') {
+              if (!finderTarget) setFinderPicking(true);
+            } else {
+              // The ring belongs to pick mode; leaving it must not leave a stale target behind.
+              if (finderPicking) setFinderPicking(false);
+              if (finderTarget) setFinderTarget(null);
+            }
           }}
           className="text-xs"
           options={[
-            { value: 'pick', label: 'Point in the view', testId: 'finder-mode-pick' },
+            {
+              value: 'pick',
+              label: 'Point in the view',
+              testId: 'finder-mode-pick',
+              ...(canPickInView
+                ? {}
+                : {
+                    locked: true,
+                    lockedReason: 'Needs the 3D view; this device shows the light overlay only.',
+                  }),
+            },
             { value: 'frame', label: 'Centre of frame', testId: 'finder-mode-frame' },
             { value: 'current', label: 'Where it is now', testId: 'finder-mode-current' },
             { value: 'manual', label: 'Type a bearing', testId: 'finder-mode-manual' },
@@ -371,10 +391,16 @@ export function LightFinder({
         variant="primary"
         className="w-full"
         onClick={run}
-        disabled={planLoading || solver.busy}
+        disabled={planLoading || solver.busy || (mode === 'pick' && !finderTarget)}
         data-testid="finder-run"
       >
-        {planLoading ? 'Checking your plan…' : solver.busy ? 'Searching…' : 'Find dates'}
+        {planLoading
+          ? 'Checking your plan…'
+          : solver.busy
+            ? 'Searching…'
+            : mode === 'pick' && !finderTarget
+              ? 'Pick a point first'
+              : 'Find dates'}
       </Button>
 
       {error ? (

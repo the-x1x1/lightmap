@@ -214,9 +214,33 @@ export function viewpointsRepo(db: Db) {
       patch: Partial<ViewpointInput>,
       snapshot?: SnapshotInput,
     ): Promise<Viewpoint> {
+      // A variant shares its parent's place and camera by definition: only its time, weather,
+      // label and source may change (the parent itself may move freely).
+      const [existing] = await db
+        .select({ parent: viewpoints.parentViewpointId })
+        .from(viewpoints)
+        .where(and(eq(viewpoints.id, id), eq(viewpoints.userId, userId)))
+        .limit(1);
+      if (!existing) throw new NotFoundError('viewpoint not found');
+      const { parentViewpointId: _ignored, ...rest } = patch;
+      const allowed: Partial<ViewpointInput> = existing.parent
+        ? {
+            ...(rest.label !== undefined ? { label: rest.label } : {}),
+            ...(rest.selectedDatetimeUtc !== undefined
+              ? { selectedDatetimeUtc: rest.selectedDatetimeUtc }
+              : {}),
+            ...(rest.weatherMode !== undefined ? { weatherMode: rest.weatherMode } : {}),
+            ...(rest.weatherScenario !== undefined
+              ? { weatherScenario: rest.weatherScenario }
+              : {}),
+            ...(rest.previewSourceType !== undefined
+              ? { previewSourceType: rest.previewSourceType }
+              : {}),
+          }
+        : rest;
       const [v] = await db
         .update(viewpoints)
-        .set({ ...patch, updatedAt: new Date() })
+        .set({ ...allowed, updatedAt: new Date() })
         .where(and(eq(viewpoints.id, id), eq(viewpoints.userId, userId)))
         .returning();
       if (!v) throw new NotFoundError('viewpoint not found');
@@ -431,9 +455,10 @@ export function usageRepo(db: Db) {
         .select({
           day: usageCounters.day,
           resource: usageCounters.resource,
-          total: sql<number>`sum(${usageCounters.count})::int`,
-          keys: sql<number>`count(distinct ${usageCounters.userKey})::int`,
-          top: sql<number>`max(${usageCounters.count})::int`,
+          // sum(integer) is bigint; keep it as text/float on the wire and Number() it (byte counters).
+          total: sql<string>`sum(${usageCounters.count})::float8`,
+          keys: sql<string>`count(distinct ${usageCounters.userKey})::float8`,
+          top: sql<string>`max(${usageCounters.count})::float8`,
         })
         .from(usageCounters)
         .where(and(gte(usageCounters.day, fromDay), lte(usageCounters.day, toDay)))

@@ -1,7 +1,12 @@
 'use client';
 /** Viewpoint camera (plan §5): map/viewpoint toggle, heading dial, pitch, lens presets, sensor format. */
 import { useState } from 'react';
-import { FOCAL_LENGTH_PRESETS_MM, SENSOR_PRESETS, actualFocalLengthMm } from '@lightmap/scene';
+import {
+  FOCAL_LENGTH_PRESETS_MM,
+  SENSOR_PRESETS,
+  actualFocalLengthMm,
+  equivalentFocalLengthMm,
+} from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
 import { usePlannerStore } from '@/features/planner/store';
 import { Button, cx, useRovingRadio } from '@lightmap/ui';
@@ -19,7 +24,20 @@ export function CameraControls({ advancedAllowed }: { advancedAllowed: boolean }
   const setActualFocalLength = usePlannerStore((s) => s.setActualFocalLength);
   const isVp = camera.mode === 'viewpoint';
   const sensor = SENSOR_PRESETS.find((x) => Math.abs(x.widthMm - sensorWidthMm) < 0.05);
-  const [lensText, setLensText] = useState('');
+  // The lens box is "controlled while typing": it shows the typed text only while it still maps
+  // to the camera's current focal length; presets, the wheel or a restored viewpoint make it
+  // fall back to the derived value, so it never contradicts the frame.
+  const [lensText, setLensText] = useState<string | null>(null);
+  const derivedLens = camera.focalLengthMm
+    ? actualFocalLengthMm(camera.focalLengthMm, sensorWidthMm).toFixed(
+        actualFocalLengthMm(camera.focalLengthMm, sensorWidthMm) < 10 ? 1 : 0,
+      )
+    : '';
+  const typedMatches =
+    lensText !== null &&
+    camera.focalLengthMm !== null &&
+    Math.abs(equivalentFocalLengthMm(Number(lensText), sensorWidthMm) - camera.focalLengthMm) < 0.6;
+  const lensValue = typedMatches ? lensText : derivedLens;
   const modeKeys = useRovingRadio(MODES.length, MODES.indexOf(camera.mode), (i) => {
     const m = MODES[i];
     if (m) setCameraMode(m);
@@ -177,7 +195,14 @@ export function CameraControls({ advancedAllowed }: { advancedAllowed: boolean }
                 value={sensor?.id ?? 'custom'}
                 onChange={(e) => {
                   const p = SENSOR_PRESETS.find((x) => x.id === e.target.value);
-                  if (p) setSensorWidth(p.widthMm);
+                  if (!p) return;
+                  setSensorWidth(p.widthMm);
+                  // Keep the lens the photographer typed: the same glass on the new sensor.
+                  const mm = Number(lensValue);
+                  if (Number.isFinite(mm) && mm >= 1 && mm <= 2000) {
+                    usePlannerStore.getState().setActualFocalLength(mm);
+                    setLensText(lensValue);
+                  }
                 }}
                 data-testid="sensor-select"
               >
@@ -198,12 +223,8 @@ export function CameraControls({ advancedAllowed }: { advancedAllowed: boolean }
                 max={2000}
                 step={1}
                 className="lm-input mt-1 w-full"
-                value={lensText}
-                placeholder={
-                  camera.focalLengthMm
-                    ? actualFocalLengthMm(camera.focalLengthMm, sensorWidthMm).toFixed(0)
-                    : ''
-                }
+                value={lensValue}
+                placeholder="mm"
                 onChange={(e) => {
                   setLensText(e.target.value);
                   const mm = Number(e.target.value);
