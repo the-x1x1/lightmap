@@ -64,7 +64,8 @@ Outstanding before commercial beta (plan §43):
 - commercial geocoder contract (Nominatim is development-only);
 - terrain/imagery licensing sign-off and complete attribution UI review;
 - error monitoring DSN, cost telemetry dashboards;
-- scheduled retention job and the sign-in-cancels-deletion path (`PRIVACY.md` §8);
+- ~~scheduled retention job~~ (`retention.yml`, needs the production `DATABASE_URL` secret); the
+  sign-in-cancels-deletion path exists;
 - privacy policy and terms text; accessibility and mobile usability passes; backups verified;
   incident runbooks.
 
