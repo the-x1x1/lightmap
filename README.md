@@ -155,6 +155,9 @@ integration tests and Playwright E2E. `security.yml` adds `pnpm audit` and CodeQ
 - **Sky is a model, not a spectral simulation**; clouds are procedural coverage, not forecast shapes.
 - **Moon accuracy is ±0.3°** (sun is ±0.01°); adequate for framing, not for eclipses.
 - **Real-reference imagery is disabled** until a licensed provider contract exists.
+- **Night sky**: Cesium's Moon mesh is hidden (it is lit by Cesium's own Sun and renders black at
+  night); a moonlit atmosphere halo marks the Moon's position and lights the scene instead. Stars
+  are faint under software GL.
 - **Open-Meteo and Nominatim are development-tier** until commercial arrangements are made.
 - **Legal pages are placeholders**; `docs/PRIVACY.md` is the engineering behaviour they will describe.
 - Not yet run: Playwright E2E on a deployed environment (CI wiring is in place).
