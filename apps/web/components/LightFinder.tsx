@@ -11,18 +11,17 @@ import { useId, useMemo, useState } from 'react';
 import {
   addCivilDays,
   civilDateString,
-  findDirectionMatches,
   formatWallTime,
   parseCivilDate,
   utcToWallClock,
   type CelestialBody,
-  type DirectionMatch,
-  type SolverResult,
 } from '@lightmap/astronomy';
 import type { SceneState } from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
 import { Button, RadioGroup } from '@lightmap/ui';
 import { usePlannerStore } from '@/features/planner/store';
+import { useSolver } from '@/features/finder/use-solver';
+import type { SerializedMatch, SolverResultDto } from '@/features/finder/solver-types';
 import { Paywall } from './Paywall';
 
 type TargetMode = 'pick' | 'frame' | 'current' | 'manual';
@@ -76,9 +75,12 @@ export function LightFinder({
     const t = parseCivilDate(today)!;
     return civilDateString(addCivilDays(t, 365));
   });
-  const [result, setResult] = useState<{ res: SolverResult; clipped: boolean; ms: number } | null>(
-    null,
-  );
+  const solver = useSolver();
+  const [result, setResult] = useState<{
+    res: SolverResultDto;
+    clipped: boolean;
+    ms: number;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const bodyState = body === 'moon' ? scene.lunar : scene.solar;
@@ -94,6 +96,10 @@ export function LightFinder({
   }, [mode, finderTarget, camera.headingDeg, camera.pitchDeg, bodyState, manualAz, manualEl]);
 
   function run() {
+    void search();
+  }
+
+  async function search() {
     setError(null);
     const f = parseCivilDate(from);
     const t = parseCivilDate(to);
@@ -124,8 +130,7 @@ export function LightFinder({
       return;
     }
     try {
-      const t0 = performance.now();
-      const res = findDirectionMatches({
+      const { result: res, ms } = await solver.run({
         latitude: scene.location.point.latitude,
         longitude: scene.location.point.longitude,
         timeZone: tz,
@@ -142,14 +147,14 @@ export function LightFinder({
         ...(body === 'moon' ? { minIlluminatedFraction: minIllum / 100 } : {}),
         maxDays: 1100,
       });
-      setResult({ res, clipped, ms: performance.now() - t0 });
+      setResult({ res, clipped, ms });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Search failed.');
     }
   }
 
-  function jumpTo(m: DirectionMatch) {
-    const w = utcToWallClock(m.timestampUtc, tz);
+  function jumpTo(m: SerializedMatch) {
+    const w = utcToWallClock(new Date(m.timestampUtc), tz);
     setDate(civilDateString(w));
     setMinutes(w.hour * 60 + w.minute);
   }
@@ -366,10 +371,10 @@ export function LightFinder({
         variant="primary"
         className="w-full"
         onClick={run}
-        disabled={planLoading}
+        disabled={planLoading || solver.busy}
         data-testid="finder-run"
       >
-        {planLoading ? 'Checking your plan…' : 'Find dates'}
+        {planLoading ? 'Checking your plan…' : solver.busy ? 'Searching…' : 'Find dates'}
       </Button>
 
       {error ? (
@@ -410,7 +415,7 @@ export function LightFinder({
           ) : (
             <ol className="max-h-64 space-y-1 overflow-y-auto pr-1 text-sm">
               {shown.map((m) => (
-                <li key={m.timestampUtc.toISOString()}>
+                <li key={m.timestampUtc}>
                   <button
                     type="button"
                     onClick={() => jumpTo(m)}
@@ -418,7 +423,7 @@ export function LightFinder({
                   >
                     <span className="sr-only">Jump to </span>
                     <span className="font-mono tabular-nums">
-                      {m.date} {formatWallTime(m.timestampUtc, tz)}
+                      {m.date} {formatWallTime(new Date(m.timestampUtc), tz)}
                     </span>
                     <span className="text-xs text-[var(--lm-text-muted)]">
                       {m.elevationDegrees.toFixed(1)}° {m.trend}
