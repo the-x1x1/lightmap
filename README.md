@@ -101,7 +101,7 @@ The important ones:
 | `pnpm test:unit`                                                                                                           | Vitest across packages and the web app                        |
 | `pnpm --filter @lightmap/database test:integration`                                                                        | Repository tests against `DATABASE_URL`                       |
 | `pnpm test:e2e`                                                                                                            | Playwright (fixture providers, dev sign-in; needs a database) |
-| `pnpm db:migrate` · `pnpm db:seed` · `pnpm retention -- --dry-run`                                                         | Database                                                      |
+| `pnpm db:migrate` · `pnpm db:seed` · `pnpm retention -- --dry-run` · `pnpm usage:report -- --days 14`                      | Database / operations                                         |
 | `pnpm licenses` (`--write-notices`) · `pnpm secrets:scan` · `node --experimental-strip-types scripts/check-attribution.ts` | Compliance gates                                              |
 | `pnpm release <version>`                                                                                                   | Bump, changelog, tag                                          |
 

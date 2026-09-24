@@ -3,7 +3,7 @@
  * able to access another user's project by changing an ID"). Ownership is a WHERE clause here,
  * not a check the API route might forget.
  */
-import { and, asc, count, desc, eq, inArray, isNull, lt, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, inArray, isNull, lt, lte, sql } from 'drizzle-orm';
 import type { Db } from './client.ts';
 import { ulid } from './ids.ts';
 import {
@@ -415,6 +415,37 @@ export function usageRepo(db: Db) {
         })
         .returning({ count: usageCounters.count });
       return r?.count ?? by;
+    },
+    /**
+     * Daily totals per resource over a date range (inclusive, YYYY-MM-DD UTC): total count, distinct
+     * keys (users + anonymous devices), and the busiest key's share — the numbers COST_MODEL.md
+     * budgets are checked against. Aggregates only; no user keys are returned.
+     */
+    async dailyTotals(
+      fromDay: string,
+      toDay: string,
+    ): Promise<
+      Array<{ day: string; resource: string; total: number; keys: number; topShare: number }>
+    > {
+      const rows = await db
+        .select({
+          day: usageCounters.day,
+          resource: usageCounters.resource,
+          total: sql<number>`sum(${usageCounters.count})::int`,
+          keys: sql<number>`count(distinct ${usageCounters.userKey})::int`,
+          top: sql<number>`max(${usageCounters.count})::int`,
+        })
+        .from(usageCounters)
+        .where(and(gte(usageCounters.day, fromDay), lte(usageCounters.day, toDay)))
+        .groupBy(usageCounters.day, usageCounters.resource)
+        .orderBy(usageCounters.day, usageCounters.resource);
+      return rows.map((r) => ({
+        day: r.day,
+        resource: r.resource,
+        total: Number(r.total),
+        keys: Number(r.keys),
+        topShare: Number(r.total) > 0 ? Number(r.top) / Number(r.total) : 0,
+      }));
     },
   };
 }
