@@ -12,11 +12,6 @@ import { lightingFromScene } from '@lightmap/renderer';
 import { useState, type Ref } from 'react';
 import type { EntitlementDecision } from '@lightmap/entitlements';
 import { usePlannerStore } from '@/features/planner/store';
-import {
-  buildPlanningCard,
-  downloadBlob,
-  renderPlanningCardPng,
-} from '@/features/export/planning-card';
 import { Button } from '@lightmap/ui';
 import { PreviewSourceBadge } from './PreviewSourceBadge';
 import { ForecastBadge } from './ForecastBadge';
@@ -56,6 +51,9 @@ export function PreviewViewport({
     }
     setExportState('busy');
     try {
+      // Loaded on demand: the card renderer is not part of the first-load bundle (plan §27).
+      const { buildPlanningCard, downloadBlob, renderPlanningCardPng } =
+        await import('@/features/export/planning-card');
       const image = capture ? await capture(1280) : null;
       const model = buildPlanningCard(scene, {
         generatedAt: new Date(),

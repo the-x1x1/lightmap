@@ -14,12 +14,12 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@auth/drizzle-adapter": "^1.9.0",
+    "@auth/drizzle-adapter": "^1.11.3",
     "@lightmap/config": "workspace:*",
     "@lightmap/database": "workspace:*",
-    "drizzle-orm": "^0.44.0",
-    "next-auth": "5.0.0-beta.29",
-    "nodemailer": "^7.0.0"
+    "drizzle-orm": "^0.45.3",
+    "next-auth": "5.0.0-beta.32",
+    "nodemailer": "^9.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",

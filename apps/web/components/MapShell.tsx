@@ -5,6 +5,7 @@
  * Location → Date → Time → Conditions → Preview → Save.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { brand, isEnabled } from '@lightmap/config';
 import { addCivilDays, civilDateString, parseCivilDate, utcToWallClock } from '@lightmap/astronomy';
 import { DEFAULT_RENDER_SETTINGS } from '@lightmap/scene';
@@ -21,22 +22,29 @@ import { WeatherScenarioPicker } from './WeatherScenarioPicker';
 import { PreviewViewport } from './PreviewViewport';
 import { ConfidencePanel } from './ConfidencePanel';
 import { CameraControls } from './CameraControls';
-import { AstronomyDetails } from './AstronomyDetails';
-import { LightFinder } from './LightFinder';
 import { NextOccurrence } from './NextOccurrence';
 import { SheetPeek } from './SheetPeek';
-import { ClimatologyPanel } from './ClimatologyPanel';
-import { HourlyOutlook } from './HourlyOutlook';
-import { WeatherDetails } from './WeatherDetails';
-import { ProjectDrawer } from './ProjectDrawer';
 import { AccountMenu, AccountPanel } from './AccountMenu';
 import { DevBanner } from './DevBanner';
-import { PerfPanel } from './PerfPanel';
 import { OfflineState } from './states/OfflineState';
 import { EmptyState } from './states/EmptyState';
 import { ErrorState } from './states/ErrorState';
 import { Paywall } from './Paywall';
 import { AttributionFooter } from './AttributionFooter';
+
+// Below-the-fold panels load as separate chunks so the first paint stays inside the bundle
+// budget (scripts/check-bundle.ts, plan §27). Each renders nothing while its chunk loads.
+const AstronomyDetails = dynamic(() =>
+  import('./AstronomyDetails').then((m) => m.AstronomyDetails),
+);
+const LightFinder = dynamic(() => import('./LightFinder').then((m) => m.LightFinder));
+const ClimatologyPanel = dynamic(() =>
+  import('./ClimatologyPanel').then((m) => m.ClimatologyPanel),
+);
+const HourlyOutlook = dynamic(() => import('./HourlyOutlook').then((m) => m.HourlyOutlook));
+const WeatherDetails = dynamic(() => import('./WeatherDetails').then((m) => m.WeatherDetails));
+const ProjectDrawer = dynamic(() => import('./ProjectDrawer').then((m) => m.ProjectDrawer));
+const PerfPanel = dynamic(() => import('./PerfPanel').then((m) => m.PerfPanel));
 
 export function MapShell() {
   const panel = usePlannerStore((s) => s.panel);
