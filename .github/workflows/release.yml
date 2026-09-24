@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    name: Build · migrate · deploy · smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck && pnpm test:unit && pnpm licenses
+      - run: pnpm build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+          NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL }}
+      - name: Database migration (forward-only; see docs/RELEASE_PROCESS.md for rollback)
+        run: pnpm db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - name: Deploy
+        run: |
+          echo "Deploy step is host-specific and intentionally not coupled to app code (plan §13)."
+          echo "Wire one of: vercel deploy --prod · fly deploy · render deploy hook. See docs/RELEASE_PROCESS.md."
+      - name: Smoke test
+        run: |
+          curl -fsS "${{ vars.NEXT_PUBLIC_APP_URL }}/api/health" | tee health.json
+          node -e "const h=require('./health.json'); if(!h.ok) process.exit(1)"
+      - name: GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
