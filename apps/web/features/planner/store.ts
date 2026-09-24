@@ -10,6 +10,7 @@ import { localSelectionToUtc, parseCivilDate, utcToWallClock } from '@lightmap/a
 import {
   defaultCamera,
   equivalentFocalLengthMm,
+  focalLengthForFov,
   horizontalFovDeg,
   normalizeHeading,
   clampPitch,
@@ -167,9 +168,17 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
     set({ sensorWidthMm: Math.max(4, Math.min(60, mm)) });
   },
   setActualFocalLength(mm) {
+    // Clamp the FOV first and derive the equivalent from the clamped value, so a saved viewpoint
+    // restored from `focalLengthMm` reproduces the same (capped) frustum.
     const eq = equivalentFocalLengthMm(mm, get().sensorWidthMm);
     const fov = Math.max(5, Math.min(120, horizontalFovDeg(eq)));
-    set({ camera: { ...get().camera, fovDeg: fov, focalLengthMm: Math.round(eq * 10) / 10 } });
+    set({
+      camera: {
+        ...get().camera,
+        fovDeg: fov,
+        focalLengthMm: Math.round(focalLengthForFov(fov) * 10) / 10,
+      },
+    });
   },
   setPanel(panel) {
     set({ panel, sheetOpen: true });

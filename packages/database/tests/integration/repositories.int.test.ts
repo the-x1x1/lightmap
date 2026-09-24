@@ -105,6 +105,15 @@ run('repositories (integration)', () => {
       parentViewpointId: variant.id,
     });
     expect(grandchild.parentViewpointId).toBe(v.id); // re-parented to the top-level viewpoint
+    // A variant keeps its parent's place and camera: those fields are ignored on update.
+    const moved = await vps.update(alice, variant.id, {
+      headingDeg: 180,
+      latitude: 0,
+      label: 'Evening take',
+    });
+    expect(moved.headingDeg).toBe(input.headingDeg);
+    expect(moved.latitude).toBe(input.latitude);
+    expect(moved.label).toBe('Evening take');
     await expect(
       vps.create(alice, p.id, { ...input, parentViewpointId: 'NOPE00000000000000000000000' }),
     ).rejects.toBeInstanceOf(NotFoundError);

@@ -72,6 +72,8 @@ export function useSolver() {
     setBusy(true);
     const t0 = performance.now();
     const res = await new Promise<SolverResponse>((resolve) => {
+      // A newer request supersedes an in-flight one: settle the old promise so its caller returns.
+      pending.current?.resolve({ id: pending.current.id, ok: false, error: 'superseded' });
       pending.current = { id, resolve };
       const req: SolverRequest = { id, input };
       w.postMessage(req);
