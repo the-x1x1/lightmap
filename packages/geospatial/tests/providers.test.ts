@@ -13,6 +13,9 @@ import {
   publicDescriptors,
 } from '../src/providers/registry.ts';
 
+const urlOf = (u: string | URL | Request): string =>
+  typeof u === 'string' ? u : u instanceof URL ? u.href : u.url;
+
 describe('fixture providers', () => {
   it('finds Kailua and resolves its time zone', async () => {
     const g = new FixtureGeocoder();
@@ -38,7 +41,7 @@ describe('Nominatim adapter', () => {
     const slept: number[] = [];
     const calls: string[] = [];
     const fetchImpl = (async (url: string | URL | Request, init?: RequestInit) => {
-      calls.push(String(url));
+      calls.push(urlOf(url));
       expect((init?.headers as Record<string, string>)['User-Agent']).toContain('LightMap');
       return new Response(
         JSON.stringify([

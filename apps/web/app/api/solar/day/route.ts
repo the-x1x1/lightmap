@@ -19,8 +19,10 @@ export async function GET(req: Request) {
       throw new HttpError(400, 'bad_request', 'tz must be an IANA time zone');
     const ev = astronomy.getDayEvents({ latitude: lat, longitude: lng, date, timeZone: tz });
     const events: Record<string, string | null> = {};
-    for (const [k, v] of Object.entries(ev))
-      if (v instanceof Date || v === null) events[k] = v ? v.toISOString() : null;
+    for (const [k, v] of Object.entries(ev) as Array<[string, unknown]>) {
+      if (v instanceof Date) events[k] = v.toISOString();
+      else if (v === null) events[k] = null;
+    }
     const body: SolarDayResponse = {
       date: ev.date,
       timeZone: ev.timeZone,

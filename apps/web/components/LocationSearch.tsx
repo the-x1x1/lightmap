@@ -49,33 +49,35 @@ export function LocationSearch({
       setError(null);
       return;
     }
-    const t = setTimeout(async () => {
-      abort.current?.abort();
-      const ac = new AbortController();
-      abort.current = ac;
-      setBusy(true);
-      setError(null);
-      try {
-        const r = await api.get<LocationSearchResponse>(
-          `/api/location/search?q=${encodeURIComponent(q)}`,
-        );
-        if (ac.signal.aborted) return;
-        setResults(r.results);
-        setAttribution(r.provider.attribution);
-        setOpen(true);
-        setActive(r.results.length > 0 ? 0 : -1);
-      } catch (e) {
-        if (ac.signal.aborted) return;
-        setResults([]);
-        setError(
-          e instanceof ApiRequestError && e.code === 'rate_limited'
-            ? 'Searching too fast — try again in a moment, or paste coordinates.'
-            : 'Place search is unavailable right now. Paste coordinates (e.g. 21.397, -157.727) to continue.',
-        );
-        setOpen(true);
-      } finally {
-        if (!ac.signal.aborted) setBusy(false);
-      }
+    const t = setTimeout(() => {
+      void (async () => {
+        abort.current?.abort();
+        const ac = new AbortController();
+        abort.current = ac;
+        setBusy(true);
+        setError(null);
+        try {
+          const r = await api.get<LocationSearchResponse>(
+            `/api/location/search?q=${encodeURIComponent(q)}`,
+          );
+          if (ac.signal.aborted) return;
+          setResults(r.results);
+          setAttribution(r.provider.attribution);
+          setOpen(true);
+          setActive(r.results.length > 0 ? 0 : -1);
+        } catch (e) {
+          if (ac.signal.aborted) return;
+          setResults([]);
+          setError(
+            e instanceof ApiRequestError && e.code === 'rate_limited'
+              ? 'Searching too fast — try again in a moment, or paste coordinates.'
+              : 'Place search is unavailable right now. Paste coordinates (e.g. 21.397, -157.727) to continue.',
+          );
+          setOpen(true);
+        } finally {
+          if (!ac.signal.aborted) setBusy(false);
+        }
+      })();
     }, 450);
     return () => clearTimeout(t);
   }, [query]);
@@ -150,7 +152,7 @@ export function LocationSearch({
                 setActive((a) => Math.max(0, a - 1));
               } else if (e.key === 'Enter' && active >= 0 && results[active]) {
                 e.preventDefault();
-                void choose(results[active]!);
+                void choose(results[active]);
               } else if (e.key === 'Escape') setOpen(false);
             }}
             placeholder="Search a place or paste coordinates"

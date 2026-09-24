@@ -37,31 +37,31 @@ export interface PlannerState {
 }
 
 export interface PlannerActions {
-  setLocation(loc: LocationState, opts?: { keepCamera?: boolean }): void;
-  clearLocation(): void;
-  setDate(date: string): void;
-  setMinutes(minutes: number): void;
-  setNow(timeZone?: string): void;
-  setScenario(id: WeatherScenarioId, force?: boolean): void;
-  setForceScenario(force: boolean): void;
-  setCameraMode(mode: CameraState['mode']): void;
-  rotateCamera(deltaHeadingDeg: number, deltaPitchDeg: number): void;
-  setHeading(headingDeg: number): void;
-  setPitch(pitchDeg: number): void;
-  setFocalLength(mm: number): void;
-  setFov(fovDeg: number): void;
-  setPanel(panel: PlannerState['panel']): void;
-  setPreviewExpanded(v: boolean): void;
-  setQualityCeiling(q: 0 | 1 | 2 | 3): void;
-  togglePerfPanel(): void;
-  setReducedMotion(v: boolean): void;
+  setLocation: (loc: LocationState, opts?: { keepCamera?: boolean }) => void;
+  clearLocation: () => void;
+  setDate: (date: string) => void;
+  setMinutes: (minutes: number) => void;
+  setNow: (timeZone?: string) => void;
+  setScenario: (id: WeatherScenarioId, force?: boolean) => void;
+  setForceScenario: (force: boolean) => void;
+  setCameraMode: (mode: CameraState['mode']) => void;
+  rotateCamera: (deltaHeadingDeg: number, deltaPitchDeg: number) => void;
+  setHeading: (headingDeg: number) => void;
+  setPitch: (pitchDeg: number) => void;
+  setFocalLength: (mm: number) => void;
+  setFov: (fovDeg: number) => void;
+  setPanel: (panel: PlannerState['panel']) => void;
+  setPreviewExpanded: (v: boolean) => void;
+  setQualityCeiling: (q: 0 | 1 | 2 | 3) => void;
+  togglePerfPanel: () => void;
+  setReducedMotion: (v: boolean) => void;
   /** Restore a saved viewpoint. */
-  restore(v: {
+  restore: (v: {
     location: LocationState;
     utc: Date;
     camera: CameraState;
     scenario: WeatherScenarioId | null;
-  }): void;
+  }) => void;
 }
 
 export type PlannerStore = PlannerState & PlannerActions;

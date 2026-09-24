@@ -63,7 +63,7 @@ export function Paywall({ reason, compact }: { reason?: string; compact?: boolea
       ) : null}
       {checkout.isError ? (
         <p className="mt-2 text-xs text-[color:#ffb3b3]" role="alert">
-          {String((checkout.error as Error).message)}
+          {checkout.error.message}
         </p>
       ) : null}
     </div>

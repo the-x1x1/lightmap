@@ -9,6 +9,9 @@ import {
 } from '../src/providers/open-meteo.ts';
 import { createWeatherProvider } from '../src/registry.ts';
 
+const urlOf = (u: string | URL | Request): string =>
+  typeof u === 'string' ? u : u instanceof URL ? u.href : u.url;
+
 const sample = {
   latitude: 21.4,
   longitude: -157.75,
@@ -70,7 +73,7 @@ describe('Open-Meteo normalisation', () => {
   it('requests the right fields with the customer endpoint when a key exists', async () => {
     const seen: string[] = [];
     const fetchImpl = (async (url: string | URL | Request) => {
-      seen.push(String(url));
+      seen.push(urlOf(url));
       return new Response(JSON.stringify(sample), { status: 200 });
     }) as typeof fetch;
     const p = new OpenMeteoProvider({ apiKey: 'k', fetchImpl });

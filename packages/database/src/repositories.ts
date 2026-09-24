@@ -363,10 +363,10 @@ export function cacheRepo(db: Db) {
       const expiresAt = new Date(now.getTime() + ttlSeconds * 1000);
       await db
         .insert(providerCache)
-        .values({ namespace, cacheKey: key, payload: payload as never, expiresAt })
+        .values({ namespace, cacheKey: key, payload, expiresAt })
         .onConflictDoUpdate({
           target: [providerCache.namespace, providerCache.cacheKey],
-          set: { payload: payload as never, expiresAt, createdAt: now },
+          set: { payload, expiresAt, createdAt: now },
         });
     },
     async purgeExpired(now: Date = new Date()): Promise<number> {

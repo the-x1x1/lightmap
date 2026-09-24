@@ -55,7 +55,7 @@ export interface SolarState {
   daylightFactor: number;
 }
 
-export interface LunarInput extends SolarInput {}
+export type LunarInput = SolarInput;
 
 export interface LunarState {
   azimuthDegrees: number;
