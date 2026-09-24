@@ -1,6 +1,6 @@
 'use client';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { signIn, signOut } from 'next-auth/react';
 import { useAccount, useDeleteAccount } from '@/features/account/use-account';
 import { useCapabilities } from '@/features/planner/use-scene';
@@ -13,6 +13,13 @@ export function AccountMenu() {
   const account = useAccount();
   const setPanel = usePlannerStore((s) => s.setPanel);
   const initial = account.user?.email?.[0]?.toUpperCase() ?? '?';
+  // When an item opens a panel, keep focus moving into that panel (MapShell focuses the panel
+  // body on change) instead of Radix returning it to the trigger.
+  const movedFocus = useRef(false);
+  const openPanel = (p: 'account' | 'projects') => {
+    movedFocus.current = true;
+    setPanel(p);
+  };
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
@@ -44,22 +51,28 @@ export function AccountMenu() {
         <DropdownMenu.Content
           align="end"
           sideOffset={8}
+          onCloseAutoFocus={(e) => {
+            if (movedFocus.current) {
+              e.preventDefault();
+              movedFocus.current = false;
+            }
+          }}
           className="z-50 min-w-56 rounded-[var(--lm-radius)] border border-[var(--lm-panel-border)] bg-[var(--lm-panel-raised)] p-1.5 text-sm shadow-[var(--lm-shadow)]"
         >
           {account.signedIn ? (
             <>
-              <div className="px-2 py-1.5 text-xs text-[var(--lm-text-muted)]">
+              <DropdownMenu.Label className="px-2 py-1.5 text-xs text-[var(--lm-text-muted)]">
                 {account.user?.email}
-              </div>
-              <Item onSelect={() => setPanel('account')}>Account &amp; plan</Item>
-              <Item onSelect={() => setPanel('projects')}>Projects</Item>
+              </DropdownMenu.Label>
+              <Item onSelect={() => openPanel('account')}>Account &amp; plan</Item>
+              <Item onSelect={() => openPanel('projects')}>Projects</Item>
               <DropdownMenu.Separator className="my-1 h-px bg-white/10" />
               <Item onSelect={() => void signOut({ callbackUrl: '/' })}>Sign out</Item>
             </>
           ) : (
             <>
-              <Item onSelect={() => setPanel('account')}>Sign in</Item>
-              <Item onSelect={() => setPanel('account')}>About Pro</Item>
+              <Item onSelect={() => openPanel('account')}>Sign in</Item>
+              <Item onSelect={() => openPanel('account')}>About Pro</Item>
             </>
           )}
         </DropdownMenu.Content>
@@ -85,6 +98,13 @@ export function SignInPrompt({ reason }: { reason?: string }) {
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
+  if (caps.isLoading && !methods)
+    return (
+      <p className="text-sm text-[var(--lm-text-muted)]" role="status">
+        Checking sign-in options…
+      </p>
+    );
   if (!methods || (!methods.email && !methods.google && !methods.devLogin)) {
     return (
       <p className="text-sm text-[var(--lm-text-muted)]">
@@ -96,23 +116,35 @@ export function SignInPrompt({ reason }: { reason?: string }) {
   return (
     <div className="space-y-3" data-testid="sign-in">
       {reason ? <p className="text-sm text-[var(--lm-text-muted)]">{reason}</p> : null}
-      {sent ? (
-        <p className="text-sm" role="status">
-          Check your email for a sign-in link. It expires in 15 minutes.
+      <p className="text-sm" role="status">
+        {sent ? 'Check your email for a sign-in link. It expires in 15 minutes.' : ''}
+        {busy === 'email' ? 'Sending your sign-in link…' : ''}
+      </p>
+      {failure ? (
+        <p className="text-sm text-[color:#ffb3b3]" role="alert">
+          {failure}
         </p>
       ) : null}
       {methods.email && !sent ? (
         <form
           className="flex flex-col gap-2 sm:flex-row"
-          onSubmit={async (e) => {
+          onSubmit={(e) => {
             e.preventDefault();
             setBusy('email');
-            try {
-              await signIn('nodemailer', { email, redirect: false });
-              setSent(true);
-            } finally {
-              setBusy(null);
-            }
+            setFailure(null);
+            void (async () => {
+              try {
+                // With redirect:false Auth.js resolves with { error } instead of throwing.
+                const r = await signIn('nodemailer', { email, redirect: false });
+                if (r.error)
+                  setFailure('We could not send the link. Check the address and try again.');
+                else setSent(true);
+              } catch {
+                setFailure('We could not reach the sign-in service. Try again in a moment.');
+              } finally {
+                setBusy(null);
+              }
+            })();
           }}
         >
           <input
@@ -126,7 +158,7 @@ export function SignInPrompt({ reason }: { reason?: string }) {
             data-testid="sign-in-email"
           />
           <Button type="submit" variant="primary" disabled={busy !== null}>
-            Email me a link
+            {busy === 'email' ? 'Sending…' : 'Email me a link'}
           </Button>
         </form>
       ) : null}
@@ -140,10 +172,10 @@ export function SignInPrompt({ reason }: { reason?: string }) {
           className={cx(
             'flex gap-2 rounded-[var(--lm-radius-sm)] border border-dashed border-[color:rgba(245,179,66,0.5)] p-2',
           )}
-          onSubmit={async (e) => {
+          onSubmit={(e) => {
             e.preventDefault();
             setBusy('dev');
-            await signIn('dev-login', { email, callbackUrl: window.location.pathname });
+            void signIn('dev-login', { email, callbackUrl: window.location.pathname });
           }}
         >
           <input
@@ -202,6 +234,11 @@ export function AccountPanel() {
         {del.isSuccess ? (
           <p className="mt-2 text-sm" role="status">
             Deletion requested. Your data will be erased in 14 days.
+          </p>
+        ) : null}
+        {del.isError ? (
+          <p className="mt-2 text-sm text-[color:#ffb3b3]" role="alert">
+            The request did not go through. Nothing was changed; try again or contact support.
           </p>
         ) : null}
       </details>

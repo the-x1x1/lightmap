@@ -131,10 +131,11 @@ test('light finder: sunset due west from Kailua exists and jumps the planner to 
   await expect(results).toContainText(/scanned \d+ days/);
   // The sun sets due west only near the equinoxes; assert the honest outcome either way.
   const text = (await results.textContent()) ?? '';
+  const list = page.getByTestId('finder-results-list');
   if (/\b0 moments\b/.test(text)) {
-    await expect(results).toContainText('Nothing in this range');
+    await expect(list).toContainText('Nothing in this range');
   } else {
-    await results.getByRole('button').first().click();
+    await list.getByRole('button').first().click();
     await expect(page.getByTestId('timeline-time')).toHaveText(/^(17|18|19):\d\d$/);
   }
 });

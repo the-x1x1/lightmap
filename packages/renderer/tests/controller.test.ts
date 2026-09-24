@@ -191,6 +191,19 @@ describe('SceneController', () => {
     expect(calls['destroy']).toHaveLength(1);
   });
 
+  it('reduced motion: the pin move jumps instead of flying (plan §28)', () => {
+    const { host, calls } = fakeHost();
+    const c = new SceneController(host, {
+      setTimeoutImpl: () => 0,
+      clearTimeoutImpl: () => {},
+      aspect: () => 16 / 9,
+    });
+    const base = scene();
+    c.apply({ ...base, render: { ...base.render, reducedMotion: true } });
+    const first = calls['setCamera']![0]![0] as { kind: string; fly: boolean };
+    expect(first).toMatchObject({ kind: 'orbit', fly: false });
+  });
+
   it('does not cut a fly-to short: orbit updates during the flight are deferred until it ends', () => {
     const { host, calls } = fakeHost();
     const timers: Array<{ fn: () => void; ms: number }> = [];

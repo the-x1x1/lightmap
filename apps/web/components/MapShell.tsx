@@ -4,7 +4,7 @@
  * that is a draggable bottom sheet on phones and a side panel on desktop. One primary workflow:
  * Location → Date → Time → Conditions → Preview → Save.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { brand, isEnabled } from '@lightmap/config';
 import { civilDateString, utcToWallClock } from '@lightmap/astronomy';
 import { DEFAULT_RENDER_SETTINGS } from '@lightmap/scene';
@@ -43,6 +43,12 @@ export function MapShell() {
   const togglePerf = usePlannerStore((s) => s.togglePerfPanel);
   const reducedMotion = usePlannerStore((s) => s.reducedMotion);
   const setReducedMotion = usePlannerStore((s) => s.setReducedMotion);
+  const sheetOpen = usePlannerStore((s) => s.sheetOpen);
+  const setSheetOpen = usePlannerStore((s) => s.setSheetOpen);
+  const panelBodyRef = useRef<HTMLDivElement>(null);
+  const expandButtonRef = useRef<HTMLButtonElement>(null);
+  const firstRender = useRef(true);
+  const [desktop, setDesktop] = useState(false);
   const account = useAccount();
   const [rendererInfo, setRendererInfo] = useState<RendererInfo>({
     mode: 'loading',
@@ -52,7 +58,6 @@ export function MapShell() {
     capabilities: null,
     capture: () => Promise.resolve(null),
   });
-  const [sheetOpen, setSheetOpen] = useState(true);
 
   const render = useMemo(() => ({ ...DEFAULT_RENDER_SETTINGS, reducedMotion }), [reducedMotion]);
   const bundle = useScene({
@@ -80,13 +85,37 @@ export function MapShell() {
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     setReducedMotion(mq.matches);
+    const onMotion = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
+    mq.addEventListener('change', onMotion);
+    const wide = window.matchMedia('(min-width: 1024px)');
+    setDesktop(wide.matches);
+    const onWide = (e: MediaQueryListEvent) => setDesktop(e.matches);
+    wide.addEventListener('change', onWide);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === '`' && process.env.NODE_ENV !== 'production' && isEnabled('perfPanel'))
         togglePerf();
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      mq.removeEventListener('change', onMotion);
+      wide.removeEventListener('change', onWide);
+      window.removeEventListener('keydown', onKey);
+    };
   }, [setReducedMotion, togglePerf]);
+
+  // Panel swaps unmount the control that had focus (e.g. "Save to project" → Projects). Move focus
+  // to the panel body so keyboard and screen-reader users are not dropped on <body> (plan §28).
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    panelBodyRef.current?.focus({ preventScroll: true });
+  }, [panel]);
+  // Collapsing the preview restores focus to the control that expands it.
+  useEffect(() => {
+    if (!previewExpanded && !firstRender.current) expandButtonRef.current?.focus();
+  }, [previewExpanded]);
 
   const captureThumbnail = useCallback(() => rendererInfo.capture(), [rendererInfo]);
   const onRendererInfo = useCallback((info: RendererInfo) => setRendererInfo(info), []);
@@ -105,9 +134,9 @@ export function MapShell() {
           !previewExpanded && 'lg:right-[420px]',
         )}
       >
-        <WorldMap scene={scene} capabilities={capabilities} onRendererInfo={onRendererInfo} />
-        {/* Top bar */}
+        {/* Top bar first in the DOM so Tab reaches search before the map. */}
         <header className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center gap-2 p-3 pt-6 lg:pt-3">
+          <h1 className="sr-only">{brand.name}</h1>
           <a
             href="/"
             className="pointer-events-auto flex h-11 items-center gap-2 rounded-full bg-black/55 px-3 text-sm font-semibold backdrop-blur"
@@ -126,6 +155,7 @@ export function MapShell() {
             <AccountMenu />
           </div>
         </header>
+        <WorldMap scene={scene} capabilities={capabilities} onRendererInfo={onRendererInfo} />
         {!location ? (
           <div className="pointer-events-none absolute inset-x-0 bottom-[42%] z-10 flex justify-center px-4 lg:bottom-auto lg:top-1/2 lg:-translate-y-1/2">
             <div className="pointer-events-auto">
@@ -146,6 +176,7 @@ export function MapShell() {
             'lg:inset-y-0 lg:left-auto lg:right-0 lg:max-h-none lg:w-[420px] lg:rounded-none lg:border-l lg:border-t-0',
             !sheetOpen && 'max-h-[88px] lg:max-h-none',
           )}
+          id="planning-panel"
           aria-label="Planning panel"
           data-testid="planning-panel"
         >
@@ -154,19 +185,22 @@ export function MapShell() {
             className="mx-auto mt-2 h-6 w-full max-w-[120px] lg:hidden"
             aria-label={sheetOpen ? 'Collapse panel' : 'Expand panel'}
             aria-expanded={sheetOpen}
-            onClick={() => setSheetOpen((v) => !v)}
+            aria-controls="planning-panel-body"
+            onClick={() => setSheetOpen(!sheetOpen)}
           >
             <span className="mx-auto block h-1.5 w-10 rounded-full bg-white/30" />
           </button>
-          <nav className="flex gap-1 px-3 pt-1 lg:pt-4" aria-label="Panel sections">
+          {/* `inert` while collapsed on phones: the clipped tabs and body must not take focus. */}
+          <nav
+            className="flex gap-1 px-3 pt-1 lg:pt-4"
+            aria-label="Panel sections"
+            inert={!sheetOpen && !desktop ? true : undefined}
+          >
             {(['plan', 'projects', 'account'] as const).map((p) => (
               <button
                 key={p}
                 type="button"
-                onClick={() => {
-                  setPanel(p);
-                  setSheetOpen(true);
-                }}
+                onClick={() => setPanel(p)}
                 aria-pressed={panel === p}
                 className={cx(
                   'h-9 rounded-full px-3 text-sm capitalize',
@@ -181,8 +215,12 @@ export function MapShell() {
             ))}
           </nav>
           <div
-            className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-3 lg:pb-4"
+            id="planning-panel-body"
+            ref={panelBodyRef}
+            tabIndex={-1}
+            className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-3 outline-none lg:pb-4"
             data-testid="panel-body"
+            inert={!sheetOpen && !desktop ? true : undefined}
           >
             {panel === 'plan' ? (
               <div className="space-y-5">
@@ -194,7 +232,7 @@ export function MapShell() {
                     <div className="truncate text-sm" data-testid="location-label">
                       {location.label}
                     </div>
-                    <div className="text-xs text-[var(--lm-text-faint)]">
+                    <div className="text-xs text-[var(--lm-text-muted)]">
                       {location.point.latitude.toFixed(4)}, {location.point.longitude.toFixed(4)} ·{' '}
                       {location.timeZone}
                     </div>
@@ -216,6 +254,7 @@ export function MapShell() {
                     <WeatherScenarioPicker scene={scene} weatherLoading={weather.loading} />
                     {weather.providerFailed ? (
                       <ErrorState
+                        live="status"
                         title="Live forecast unavailable"
                         body="Showing your selected scenario. Astronomy is unaffected."
                       />
@@ -225,9 +264,10 @@ export function MapShell() {
                       rendererMode={rendererInfo.mode}
                       capture={rendererInfo.capture}
                       exportDecision={account.can('export_preview')}
+                      expandButtonRef={expandButtonRef}
                     />
                     {rendererInfo.error && rendererInfo.mode !== 'OVERLAY' ? (
-                      <ErrorState title="Renderer notice" body={rendererInfo.error} />
+                      <ErrorState live="status" title="Renderer notice" body={rendererInfo.error} />
                     ) : null}
                     <CameraControls
                       advancedAllowed={account.can('advanced_camera_tools').allowed}
@@ -296,6 +336,7 @@ export function MapShell() {
         <div className="absolute bottom-4 left-1/2 z-30 -translate-x-1/2">
           <Button
             variant="secondary"
+            autoFocus
             onClick={() => usePlannerStore.getState().setPreviewExpanded(false)}
             data-testid="preview-collapse"
           >

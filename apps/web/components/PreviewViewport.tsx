@@ -9,7 +9,7 @@ import { formatWallTime } from '@lightmap/astronomy';
 import { compassLabel } from '@lightmap/geospatial';
 import { scenarioById } from '@lightmap/weather';
 import { lightingFromScene } from '@lightmap/renderer';
-import { useState } from 'react';
+import { useState, type Ref } from 'react';
 import type { EntitlementDecision } from '@lightmap/entitlements';
 import { usePlannerStore } from '@/features/planner/store';
 import {
@@ -27,6 +27,7 @@ export function PreviewViewport({
   rendererMode,
   capture,
   exportDecision,
+  expandButtonRef,
 }: {
   scene: SceneState;
   rendererMode: '3D' | 'OVERLAY' | 'loading';
@@ -34,13 +35,17 @@ export function PreviewViewport({
   capture?: (maxWidth?: number) => Promise<string | null>;
   /** `export_preview` decision; undefined hides the export control. */
   exportDecision?: EntitlementDecision;
+  /** Lets the shell return focus here after the expanded preview is collapsed. */
+  expandButtonRef?: Ref<HTMLButtonElement>;
 }) {
   const expanded = usePlannerStore((s) => s.previewExpanded);
   const setExpanded = usePlannerStore((s) => s.setPreviewExpanded);
   const light = lightingFromScene(scene);
   const tz = scene.location.timeZone;
   const s = scene.solar;
-  const [exportState, setExportState] = useState<'idle' | 'busy' | 'paywall' | 'error'>('idle');
+  const [exportState, setExportState] = useState<'idle' | 'busy' | 'done' | 'paywall' | 'error'>(
+    'idle',
+  );
 
   async function exportCard() {
     if (!exportDecision) return;
@@ -57,7 +62,7 @@ export function PreviewViewport({
       });
       const blob = await renderPlanningCardPng(model, image);
       downloadBlob(blob, model.fileName);
-      setExportState('idle');
+      setExportState('done');
     } catch {
       setExportState('error');
     }
@@ -78,23 +83,30 @@ export function PreviewViewport({
               variant="ghost"
               onClick={() => void exportCard()}
               disabled={exportState === 'busy'}
-              aria-label="Export planning card (PNG)"
               data-testid="preview-export"
             >
               {exportState === 'busy' ? 'Exporting…' : 'Export card'}
+              <span className="sr-only"> (PNG planning card)</span>
             </Button>
           ) : null}
           <Button
             size="sm"
             variant="ghost"
+            ref={expandButtonRef}
             onClick={() => setExpanded(!expanded)}
-            aria-pressed={expanded}
             data-testid="preview-expand"
           >
             {expanded ? 'Show controls' : 'Expand preview'}
           </Button>
         </span>
       </div>
+      <span className="sr-only" role="status">
+        {exportState === 'busy'
+          ? 'Exporting planning card…'
+          : exportState === 'done'
+            ? 'Planning card downloaded.'
+            : ''}
+      </span>
       {exportState === 'paywall' && exportDecision ? (
         <Paywall compact reason={exportDecision.reason ?? 'Planning-card export is part of Pro.'} />
       ) : null}
@@ -181,7 +193,7 @@ function Stat({
 }) {
   return (
     <div className="rounded-[var(--lm-radius-sm)] bg-white/5 px-2.5 py-2">
-      <div className="text-[10px] uppercase tracking-wide text-[var(--lm-text-faint)]">{label}</div>
+      <div className="text-[10px] uppercase tracking-wide text-[var(--lm-text-muted)]">{label}</div>
       <div className="font-mono text-base tabular-nums" data-testid={testId}>
         {value}
       </div>

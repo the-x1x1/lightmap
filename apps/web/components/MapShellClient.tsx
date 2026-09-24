@@ -12,6 +12,7 @@ export const MapShellClient = dynamic(
     loading: () => (
       <div
         className="flex h-dvh items-center justify-center bg-[var(--lm-chrome)] text-sm text-[var(--lm-text-muted)]"
+        role="status"
         aria-busy
       >
         Loading LightMap…

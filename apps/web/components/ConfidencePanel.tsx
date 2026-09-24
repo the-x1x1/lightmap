@@ -45,22 +45,22 @@ export function ConfidencePanel({ scene }: { scene: SceneState }) {
       </p>
       <dl className="space-y-1 text-sm">
         {rows.map(([label, level, note]) => (
-          <div
-            key={label}
-            className="flex items-start justify-between gap-3 border-b border-white/5 py-1"
-            title={note}
-          >
-            <dt className="text-[var(--lm-text-muted)]">{label}</dt>
-            <dd
-              className="text-right"
-              data-testid={`confidence-${label.toLowerCase().replace(/\s+/g, '-')}`}
-              data-value={level}
-            >
-              <span aria-hidden className="mr-1.5 font-mono text-xs text-[var(--lm-text-faint)]">
-                {LEVEL_GLYPH[level] ?? ''}
-              </span>
-              {LEVEL_TEXT[level] ?? level}
-            </dd>
+          <div key={label} className="border-b border-white/5 py-1">
+            <div className="flex items-start justify-between gap-3">
+              <dt className="text-[var(--lm-text-muted)]">{label}</dt>
+              <dd
+                className="text-right"
+                data-testid={`confidence-${label.toLowerCase().replace(/\s+/g, '-')}`}
+                data-value={level}
+              >
+                <span aria-hidden className="mr-1.5 font-mono text-xs text-[var(--lm-text-faint)]">
+                  {LEVEL_GLYPH[level] ?? ''}
+                </span>
+                {LEVEL_TEXT[level] ?? level}
+              </dd>
+            </div>
+            {/* The reason is content, not a tooltip: touch and keyboard users never see `title`. */}
+            {note ? <dd className="text-xs text-[var(--lm-text-muted)]">{note}</dd> : null}
           </div>
         ))}
       </dl>

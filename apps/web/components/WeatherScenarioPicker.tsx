@@ -6,7 +6,7 @@
 import { SCENARIOS, type WeatherScenarioId } from '@lightmap/weather';
 import type { SceneState } from '@lightmap/scene';
 import { usePlannerStore } from '@/features/planner/store';
-import { cx } from '@lightmap/ui';
+import { cx, useRovingRadio } from '@lightmap/ui';
 import { ForecastBadge } from './ForecastBadge';
 
 const ICONS: Record<WeatherScenarioId, string> = {
@@ -34,6 +34,19 @@ export function WeatherScenarioPicker({
       scene.atmosphere.frame === null &&
       scene.confidence.notes.weather.startsWith('You are comparing'));
   const showingForecast = scene.atmosphere.mode !== 'SCENARIO';
+  const hasForecastItem = forecastAvailable || showingForecast;
+  // Items: [forecast?] + scenarios; one Tab stop, arrow keys move the choice (plan §28).
+  const count = SCENARIOS.length + (hasForecastItem ? 1 : 0);
+  const selectedIndex = showingForecast
+    ? 0
+    : SCENARIOS.findIndex((x) => x.id === scenario) + (hasForecastItem ? 1 : 0);
+  const roving = useRovingRadio(count, selectedIndex, (i) => {
+    if (hasForecastItem && i === 0) setForceScenario(false);
+    else {
+      const sc = SCENARIOS[i - (hasForecastItem ? 1 : 0)];
+      if (sc) setScenario(sc.id, true);
+    }
+  });
 
   return (
     <div data-testid="scenario-picker">
@@ -41,7 +54,9 @@ export function WeatherScenarioPicker({
         <span className="text-xs uppercase tracking-wide text-[var(--lm-text-muted)]">
           {showingForecast ? 'Weather' : 'Weather scenario'}
         </span>
-        <ForecastBadge scene={scene} loading={weatherLoading} />
+        <span role="status">
+          <ForecastBadge scene={scene} loading={weatherLoading} />
+        </span>
       </div>
       <div
         role="radiogroup"
@@ -53,6 +68,7 @@ export function WeatherScenarioPicker({
             type="button"
             role="radio"
             aria-checked={showingForecast}
+            {...roving(0)}
             onClick={() => setForceScenario(false)}
             className={cx(
               'flex h-[44px] shrink-0 items-center gap-1.5 rounded-full px-3 text-sm ring-1 ring-inset',
@@ -65,7 +81,7 @@ export function WeatherScenarioPicker({
             <span aria-hidden>◉</span> Forecast
           </button>
         ) : null}
-        {SCENARIOS.map((s) => {
+        {SCENARIOS.map((s, i) => {
           const selected = !showingForecast && scenario === s.id;
           return (
             <button
@@ -73,6 +89,7 @@ export function WeatherScenarioPicker({
               type="button"
               role="radio"
               aria-checked={selected}
+              {...roving(i + (hasForecastItem ? 1 : 0))}
               title={s.hint}
               onClick={() => setScenario(s.id, true)}
               className={cx(

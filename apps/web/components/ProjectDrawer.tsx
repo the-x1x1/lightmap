@@ -37,11 +37,20 @@ export function ProjectDrawer({
   const [newDate, setNewDate] = useState('');
   const [label, setLabel] = useState('');
   const [error, setError] = useState<{ message: string; upgradeTo?: string } | null>(null);
+  /** Last completed action, announced through one permanent status region (plan §28). */
+  const [status, setStatus] = useState('');
   const restore = usePlannerStore((s) => s.restore);
   const setPanel = usePlannerStore((s) => s.setPanel);
 
+  const focusHeading = (id: string) =>
+    requestAnimationFrame(() => document.getElementById(id)?.focus({ preventScroll: true }));
+
   if (account.isLoading)
-    return <p className="text-sm text-[var(--lm-text-muted)]">Loading account…</p>;
+    return (
+      <p className="text-sm text-[var(--lm-text-muted)]" role="status">
+        Loading account…
+      </p>
+    );
   if (!account.signedIn)
     return (
       <SignInPrompt reason="Sign in to save viewpoints to a project and reopen them on any device." />
@@ -63,6 +72,7 @@ export function ProjectDrawer({
     try {
       const r = await m.create.mutateAsync({ name: newName.trim(), shootDate: newDate || null });
       setSelectedId(r.project.id);
+      setStatus(`Project “${r.project.name}” created and selected.`);
       setNewName('');
       setNewDate('');
     } catch (e) {
@@ -75,11 +85,13 @@ export function ProjectDrawer({
     setError(null);
     try {
       const thumb = await captureThumbnail();
+      const name = label.trim() || scene.location.label;
       await m.saveViewpoint.mutateAsync({
         projectId: selectedId,
-        body: viewpointPayload(scene, label.trim() || scene.location.label, thumb),
+        body: viewpointPayload(scene, name, thumb),
       });
       setLabel('');
+      setStatus(`Saved “${name}” to ${project.data?.project.name ?? 'the project'}.`);
       void project.refetch();
     } catch (e) {
       handle(e);
@@ -112,11 +124,15 @@ export function ProjectDrawer({
       },
       scenario: v.weatherScenario && isScenarioId(v.weatherScenario) ? v.weatherScenario : null,
     });
+    setStatus(`Opened “${v.label}” in the planner.`);
     setPanel('plan');
   }
 
   return (
     <div className="space-y-4" data-testid="project-drawer">
+      <p className="sr-only" role="status" data-testid="projects-status">
+        {status}
+      </p>
       {error ? (
         <ErrorState
           title={error.message}
@@ -126,15 +142,19 @@ export function ProjectDrawer({
       <section aria-labelledby="lm-projects-h">
         <h3
           id="lm-projects-h"
-          className="mb-2 text-xs uppercase tracking-wide text-[var(--lm-text-muted)]"
+          tabIndex={-1}
+          className="mb-2 text-xs uppercase tracking-wide text-[var(--lm-text-muted)] outline-none"
         >
           Projects
         </h3>
         {projects.isLoading ? (
-          <p className="text-sm text-[var(--lm-text-muted)]">Loading…</p>
+          <p className="text-sm text-[var(--lm-text-muted)]" role="status">
+            Loading…
+          </p>
         ) : null}
         {projects.data && projects.data.projects.length === 0 ? (
           <EmptyState
+            headingLevel={4}
             title="No projects yet"
             body="A project is a shoot: give it a name and an optional date, then save viewpoints into it."
           />
@@ -166,14 +186,17 @@ export function ProjectDrawer({
             data-testid="project-name"
             disabled={!projectDecision.allowed}
           />
-          <input
-            type="date"
-            value={newDate}
-            onChange={(e) => setNewDate(e.target.value)}
-            aria-label="Shoot date (optional)"
-            className="h-11 rounded-[var(--lm-radius-sm)] border border-[var(--lm-panel-border)] bg-[var(--lm-panel-raised)] px-3 text-sm focus:outline-none focus-visible:[box-shadow:var(--lm-focus)]"
-            disabled={!projectDecision.allowed}
-          />
+          <label className="flex items-center gap-2 text-xs text-[var(--lm-text-muted)]">
+            <span className="whitespace-nowrap">Shoot date</span>
+            <input
+              type="date"
+              value={newDate}
+              onChange={(e) => setNewDate(e.target.value)}
+              aria-label="Shoot date (optional)"
+              className="h-11 rounded-[var(--lm-radius-sm)] border border-[var(--lm-panel-border)] bg-[var(--lm-panel-raised)] px-3 text-sm text-[var(--lm-text)] focus:outline-none focus-visible:[box-shadow:var(--lm-focus)]"
+              disabled={!projectDecision.allowed}
+            />
+          </label>
           <Button
             type="submit"
             variant="primary"
@@ -193,7 +216,8 @@ export function ProjectDrawer({
           <div className="flex items-center justify-between">
             <h3
               id="lm-viewpoints-h"
-              className="text-xs uppercase tracking-wide text-[var(--lm-text-muted)]"
+              tabIndex={-1}
+              className="text-xs uppercase tracking-wide text-[var(--lm-text-muted)] outline-none"
             >
               Saved viewpoints
             </h3>
@@ -204,7 +228,11 @@ export function ProjectDrawer({
                 if (confirm('Delete this project and its viewpoints?')) {
                   void m.remove
                     .mutateAsync(selectedId)
-                    .then(() => setSelectedId(null))
+                    .then(() => {
+                      setSelectedId(null);
+                      setStatus('Project deleted.');
+                      focusHeading('lm-projects-h');
+                    })
                     .catch(handle);
                 }
               }}
@@ -255,7 +283,11 @@ export function ProjectDrawer({
                 onDelete={() =>
                   void m.removeViewpoint
                     .mutateAsync(v.id)
-                    .then(() => project.refetch())
+                    .then(() => {
+                      setStatus(`Deleted “${v.label}”.`);
+                      focusHeading('lm-viewpoints-h');
+                      return project.refetch();
+                    })
                     .catch(handle)
                 }
               />

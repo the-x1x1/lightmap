@@ -7,7 +7,7 @@
  * solver runs client-side in `@lightmap/astronomy` (a year of Sun alignments is a few ms), so no
  * request leaves the browser. Free plans search inside their date window; Pro searches years.
  */
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import {
   addCivilDays,
   civilDateString,
@@ -21,7 +21,7 @@ import {
 } from '@lightmap/astronomy';
 import type { SceneState } from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
-import { Button, cx } from '@lightmap/ui';
+import { Button, RadioGroup } from '@lightmap/ui';
 import { usePlannerStore } from '@/features/planner/store';
 import { Paywall } from './Paywall';
 
@@ -49,6 +49,7 @@ export function LightFinder({ scene, allowed, reason, windowDays, moonAllowed }:
   const camera = usePlannerStore((s) => s.camera);
   const tz = scene.location.timeZone;
   const today = todayAt(tz);
+  const ids = useId();
 
   const [body, setBody] = useState<CelestialBody>('sun');
   const [mode, setMode] = useState<TargetMode>('frame');
@@ -153,31 +154,22 @@ export function LightFinder({ scene, allowed, reason, windowDays, moonAllowed }:
       {/* Body */}
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs uppercase tracking-wide text-[var(--lm-text-muted)]">Body</span>
-        <div
-          role="radiogroup"
-          aria-label="Celestial body"
-          className="flex rounded-full bg-white/8 p-0.5 ring-1 ring-inset ring-white/10"
-        >
-          {(['sun', 'moon'] as const).map((b) => (
-            <button
-              key={b}
-              type="button"
-              role="radio"
-              aria-checked={body === b}
-              disabled={b === 'moon' && !moonAllowed}
-              onClick={() => setBody(b)}
-              className={cx(
-                'h-9 rounded-full px-3 text-sm capitalize disabled:opacity-40',
-                body === b
-                  ? 'bg-[var(--lm-text)] text-[var(--lm-chrome)]'
-                  : 'text-[var(--lm-text-muted)] hover:text-[var(--lm-text)]',
-              )}
-              data-testid={`finder-body-${b}`}
-            >
-              {b}
-            </button>
-          ))}
-        </div>
+        <RadioGroup<CelestialBody>
+          ariaLabel="Celestial body"
+          value={body}
+          onChange={setBody}
+          options={[
+            { value: 'sun', label: 'Sun', testId: 'finder-body-sun' },
+            {
+              value: 'moon',
+              label: 'Moon',
+              testId: 'finder-body-moon',
+              ...(moonAllowed
+                ? {}
+                : { locked: true, lockedReason: 'Moon planning is part of Pro.' }),
+            },
+          ]}
+        />
       </div>
 
       {/* Target */}
@@ -185,40 +177,28 @@ export function LightFinder({ scene, allowed, reason, windowDays, moonAllowed }:
         <legend className="text-xs uppercase tracking-wide text-[var(--lm-text-muted)]">
           Where should it be?
         </legend>
-        <div className="grid grid-cols-3 gap-1 text-sm">
-          {(
-            [
-              ['frame', 'Centre of frame'],
-              ['current', `Where it is now`],
-              ['manual', 'Type a bearing'],
-            ] as const
-          ).map(([m, label]) => (
-            <button
-              key={m}
-              type="button"
-              aria-pressed={mode === m}
-              onClick={() => setMode(m)}
-              className={cx(
-                'h-9 rounded-[var(--lm-radius)] px-2 text-xs ring-1 ring-inset ring-white/10',
-                mode === m
-                  ? 'bg-white/12'
-                  : 'text-[var(--lm-text-muted)] hover:text-[var(--lm-text)]',
-              )}
-              data-testid={`finder-mode-${m}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <RadioGroup<TargetMode>
+          ariaLabel="Target direction source"
+          variant="grid"
+          columns={3}
+          value={mode}
+          onChange={setMode}
+          className="text-xs"
+          options={[
+            { value: 'frame', label: 'Centre of frame', testId: 'finder-mode-frame' },
+            { value: 'current', label: 'Where it is now', testId: 'finder-mode-current' },
+            { value: 'manual', label: 'Type a bearing', testId: 'finder-mode-manual' },
+          ]}
+        />
         {mode === 'frame' ? (
-          <p className="text-xs text-[var(--lm-text-faint)]">
+          <p className="text-xs text-[var(--lm-text-muted)]">
             Uses the camera heading and pitch ({Math.round(camera.headingDeg)}°{' '}
             {compassLabel(camera.headingDeg)}, {camera.pitchDeg.toFixed(0)}° up). Aim the viewpoint
             camera at the spot first.
           </p>
         ) : null}
         {mode === 'current' && !bodyState ? (
-          <p className="text-xs text-[var(--lm-text-faint)]">Moon data is not available here.</p>
+          <p className="text-xs text-[var(--lm-text-muted)]">Moon data is not available here.</p>
         ) : null}
         <div className="grid grid-cols-2 gap-2">
           <label className="text-xs text-[var(--lm-text-muted)]">
@@ -236,20 +216,20 @@ export function LightFinder({ scene, allowed, reason, windowDays, moonAllowed }:
               data-testid="finder-azimuth"
             />
           </label>
-          <label className="text-xs text-[var(--lm-text-muted)]">
+          <div className="text-xs text-[var(--lm-text-muted)]">
             <span className="flex items-center justify-between">
-              Elevation °
-              <span className="flex items-center gap-1 normal-case">
+              <label htmlFor={`${ids}-el`}>Elevation °</label>
+              <label className="flex items-center gap-1 normal-case">
                 <input
                   type="checkbox"
                   checked={useElevation}
                   onChange={(e) => setUseElevation(e.target.checked)}
-                  aria-label="Match elevation too"
                 />
                 match
-              </span>
+              </label>
             </span>
             <input
+              id={`${ids}-el`}
               type="number"
               inputMode="decimal"
               min={-90}
@@ -262,7 +242,7 @@ export function LightFinder({ scene, allowed, reason, windowDays, moonAllowed }:
               onChange={(e) => setManualEl(e.target.value)}
               data-testid="finder-elevation"
             />
-          </label>
+          </div>
         </div>
       </fieldset>
 
@@ -347,8 +327,8 @@ export function LightFinder({ scene, allowed, reason, windowDays, moonAllowed }:
         </p>
       ) : null}
 
-      {result ? (
-        <div className="space-y-2" data-testid="finder-results">
+      <div role="status" className={result ? 'space-y-2' : 'sr-only'} data-testid="finder-results">
+        {result ? (
           <p className="text-sm">
             <strong>{matches.length}</strong> {matches.length === 1 ? 'moment' : 'moments'} on{' '}
             <strong>{dates}</strong> {dates === 1 ? 'date' : 'dates'}
@@ -358,6 +338,10 @@ export function LightFinder({ scene, allowed, reason, windowDays, moonAllowed }:
               {result.res.truncated ? ' · range capped at 1100 days' : ''}
             </span>
           </p>
+        ) : null}
+      </div>
+      {result ? (
+        <div className="space-y-2" data-testid="finder-results-list">
           {result.clipped ? (
             <Paywall
               compact
@@ -380,8 +364,8 @@ export function LightFinder({ scene, allowed, reason, windowDays, moonAllowed }:
                     type="button"
                     onClick={() => jumpTo(m)}
                     className="flex w-full items-center justify-between gap-2 rounded-[var(--lm-radius)] px-2 py-1.5 text-left ring-1 ring-inset ring-white/10 hover:bg-white/8"
-                    aria-label={`Jump to ${m.date} ${formatWallTime(m.timestampUtc, tz)}`}
                   >
+                    <span className="sr-only">Jump to </span>
                     <span className="font-mono tabular-nums">
                       {m.date} {formatWallTime(m.timestampUtc, tz)}
                     </span>
@@ -395,13 +379,13 @@ export function LightFinder({ scene, allowed, reason, windowDays, moonAllowed }:
                 </li>
               ))}
               {matches.length > MAX_RESULTS ? (
-                <li className="px-2 text-xs text-[var(--lm-text-faint)]">
+                <li className="px-2 text-xs text-[var(--lm-text-muted)]">
                   Showing the first {MAX_RESULTS}; narrow the range or tolerances to see the rest.
                 </li>
               ) : null}
             </ol>
           )}
-          <p className="text-xs text-[var(--lm-text-faint)]">
+          <p className="text-xs text-[var(--lm-text-muted)]">
             Times are local ({tz}). Geometry only: terrain occlusion, clouds and refraction near the
             horizon are not part of this search — use the preview to check the actual scene.
           </p>

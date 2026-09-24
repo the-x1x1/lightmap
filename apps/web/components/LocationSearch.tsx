@@ -45,6 +45,7 @@ export function LocationSearch({
           sourceId: 'coordinates',
         },
       ]);
+      setActive(0);
       setOpen(true);
       setError(null);
       return;
@@ -160,6 +161,7 @@ export function LocationSearch({
             aria-autocomplete="list"
             aria-controls={listId}
             aria-expanded={open}
+            aria-activedescendant={open && active >= 0 ? `${listId}-opt-${active}` : undefined}
             role="combobox"
             autoComplete="off"
             autoFocus={autoFocus}
@@ -168,8 +170,8 @@ export function LocationSearch({
           />
           {busy ? (
             <span
-              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--lm-text-faint)]"
-              aria-live="polite"
+              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--lm-text-muted)]"
+              aria-hidden
             >
               …
             </span>
@@ -197,26 +199,40 @@ export function LocationSearch({
           </svg>
         </Button>
       </div>
+      {/* Always present so screen readers hear state changes (plan §28). */}
+      <span className="sr-only" role="status" data-testid="location-search-status">
+        {busy
+          ? 'Searching…'
+          : open && results.length > 0
+            ? `${results.length} ${results.length === 1 ? 'place' : 'places'} found. Use up and down arrows, Enter to choose.`
+            : open && !error
+              ? 'No places found.'
+              : ''}
+      </span>
       {open ? (
-        <ul
-          id={listId}
-          role="listbox"
+        <div
           className="absolute left-0 right-0 top-full z-30 mt-1 max-h-72 overflow-auto rounded-[var(--lm-radius-sm)] border border-[var(--lm-panel-border)] bg-[var(--lm-panel-raised)] py-1 shadow-[var(--lm-shadow)]"
           data-testid="location-results"
         >
           {error ? (
-            <li className="px-3 py-2 text-sm text-[color:#ffb3b3]" role="alert">
+            <p className="px-3 py-2 text-sm text-[color:#ffb3b3]" role="alert">
               {error}
-            </li>
+            </p>
           ) : null}
-          {results.map((r, i) => (
-            <li key={`${r.sourceId ?? r.label}-${i}`} role="option" aria-selected={i === active}>
-              <button
-                type="button"
+          <ul id={listId} role="listbox" aria-label="Places">
+            {results.map((r, i) => (
+              // Options are the interactive elements themselves (no nested button): the combobox
+              // input keeps focus and announces the active option via aria-activedescendant.
+              <li
+                key={`${r.sourceId ?? r.label}-${i}`}
+                id={`${listId}-opt-${i}`}
+                role="option"
+                aria-selected={i === active}
                 onMouseDown={(e) => e.preventDefault()}
+                onMouseEnter={() => setActive(i)}
                 onClick={() => void choose(r)}
                 className={cx(
-                  'block w-full px-3 py-2 text-left text-sm hover:bg-white/8',
+                  'cursor-pointer px-3 py-2 text-sm hover:bg-white/8',
                   i === active && 'bg-white/8',
                 )}
               >
@@ -224,18 +240,18 @@ export function LocationSearch({
                 <span className="block text-xs text-[var(--lm-text-faint)]">
                   {r.point.latitude.toFixed(4)}, {r.point.longitude.toFixed(4)}
                 </span>
-              </button>
-            </li>
-          ))}
+              </li>
+            ))}
+          </ul>
           {!error && results.length === 0 && !busy ? (
-            <li className="px-3 py-2 text-sm text-[var(--lm-text-muted)]">
+            <p className="px-3 py-2 text-sm text-[var(--lm-text-muted)]">
               No places found. Try a town name, or paste coordinates.
-            </li>
+            </p>
           ) : null}
           {attribution ? (
-            <li className="px-3 pt-1 text-[10px] text-[var(--lm-text-faint)]">{attribution}</li>
+            <p className="px-3 pt-1 text-[10px] text-[var(--lm-text-faint)]">{attribution}</p>
           ) : null}
-        </ul>
+        </div>
       ) : null}
     </div>
   );

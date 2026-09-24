@@ -47,7 +47,13 @@ export function SavedViewpointCard({
         </p>
         <div className="mt-1.5 flex items-center gap-2">
           <PreviewSourceBadge mode={viewpoint.previewSourceType} />
-          <Button size="sm" variant="secondary" onClick={onOpen} data-testid="viewpoint-open">
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={onOpen}
+            aria-label={`Open ${viewpoint.label}`}
+            data-testid="viewpoint-open"
+          >
             Open
           </Button>
           <Button

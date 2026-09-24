@@ -23,6 +23,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className="h-full">
       <body className="h-full antialiased">
+        {/* Skip link (plan §28): the map is a large focusable element before the controls. */}
+        <a
+          href="#planning-panel"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[100] focus:rounded-full focus:bg-[var(--lm-sun)] focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-[#1a1200]"
+        >
+          Skip to planning controls
+        </a>
         <Providers>{children}</Providers>
       </body>
     </html>

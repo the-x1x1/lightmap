@@ -3,7 +3,9 @@
 import { FOCAL_LENGTH_PRESETS_MM } from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
 import { usePlannerStore } from '@/features/planner/store';
-import { Button, cx } from '@lightmap/ui';
+import { Button, cx, useRovingRadio } from '@lightmap/ui';
+
+const MODES = ['map', 'viewpoint'] as const;
 
 export function CameraControls({ advancedAllowed }: { advancedAllowed: boolean }) {
   const camera = usePlannerStore((s) => s.camera);
@@ -12,6 +14,23 @@ export function CameraControls({ advancedAllowed }: { advancedAllowed: boolean }
   const setPitch = usePlannerStore((s) => s.setPitch);
   const setFocalLength = usePlannerStore((s) => s.setFocalLength);
   const isVp = camera.mode === 'viewpoint';
+  const modeKeys = useRovingRadio(MODES.length, MODES.indexOf(camera.mode), (i) => {
+    const m = MODES[i];
+    if (m) setCameraMode(m);
+  });
+  const lensLocked = (mm: number) => !advancedAllowed && mm !== 24 && mm !== 35;
+  const lensKeys = useRovingRadio(
+    FOCAL_LENGTH_PRESETS_MM.length,
+    FOCAL_LENGTH_PRESETS_MM.findIndex((mm) => mm === camera.focalLengthMm),
+    (i) => {
+      const mm = FOCAL_LENGTH_PRESETS_MM[i];
+      if (mm !== undefined && !lensLocked(mm)) setFocalLength(mm);
+    },
+    (i) => {
+      const mm = FOCAL_LENGTH_PRESETS_MM[i];
+      return mm === undefined || lensLocked(mm);
+    },
+  );
   return (
     <div className="space-y-3" data-testid="camera-controls">
       <div className="flex items-center justify-between gap-2">
@@ -21,12 +40,13 @@ export function CameraControls({ advancedAllowed }: { advancedAllowed: boolean }
           aria-label="View mode"
           className="flex rounded-full bg-white/8 p-0.5 ring-1 ring-inset ring-white/10"
         >
-          {(['map', 'viewpoint'] as const).map((m) => (
+          {MODES.map((m, i) => (
             <button
               key={m}
               type="button"
               role="radio"
               aria-checked={camera.mode === m}
+              {...modeKeys(i)}
               onClick={() => setCameraMode(m)}
               className={cx(
                 'h-9 rounded-full px-3 text-sm',
@@ -85,6 +105,7 @@ export function CameraControls({ advancedAllowed }: { advancedAllowed: boolean }
             step={1}
             value={Math.round(camera.pitchDeg)}
             onChange={(e) => setPitch(Number(e.target.value))}
+            aria-valuetext={`${Math.abs(Math.round(camera.pitchDeg))} degrees ${camera.pitchDeg >= 0 ? 'up' : 'down'}`}
           />
         </div>
       ) : null}
@@ -102,8 +123,8 @@ export function CameraControls({ advancedAllowed }: { advancedAllowed: boolean }
           aria-label="Lens"
           className="lm-scrollbar-none flex gap-1.5 overflow-x-auto pb-1"
         >
-          {FOCAL_LENGTH_PRESETS_MM.map((mm) => {
-            const locked = !advancedAllowed && mm !== 24 && mm !== 35;
+          {FOCAL_LENGTH_PRESETS_MM.map((mm, i) => {
+            const locked = lensLocked(mm);
             return (
               <Button
                 key={mm}
@@ -111,8 +132,13 @@ export function CameraControls({ advancedAllowed }: { advancedAllowed: boolean }
                 variant={camera.focalLengthMm === mm ? 'primary' : 'secondary'}
                 role="radio"
                 aria-checked={camera.focalLengthMm === mm}
-                onClick={() => setFocalLength(mm)}
-                disabled={locked}
+                aria-label={`${mm} mm${locked ? ', Pro' : ''}`}
+                {...lensKeys(i)}
+                onClick={() => {
+                  if (!locked) setFocalLength(mm);
+                }}
+                aria-disabled={locked || undefined}
+                className={locked ? 'cursor-not-allowed opacity-50' : undefined}
                 title={locked ? 'More lenses with Pro' : undefined}
                 data-testid={`lens-${mm}`}
               >
@@ -121,6 +147,11 @@ export function CameraControls({ advancedAllowed }: { advancedAllowed: boolean }
             );
           })}
         </div>
+        {!advancedAllowed ? (
+          <p className="mt-1 text-xs text-[var(--lm-text-muted)]">
+            16, 50, 85 and 135 mm are part of Pro. 24 and 35 mm are free.
+          </p>
+        ) : null}
       </div>
     </div>
   );

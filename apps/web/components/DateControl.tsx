@@ -56,7 +56,7 @@ export function DateControl({
           onChange={(e) => e.target.value && setDate(e.target.value)}
           disabled={disabled}
           className="h-11 flex-1 rounded-[var(--lm-radius-sm)] border border-[var(--lm-panel-border)] bg-[var(--lm-panel-raised)] px-3 text-sm text-[var(--lm-text)] focus:outline-none focus-visible:[box-shadow:var(--lm-focus)]"
-          aria-describedby="lm-date-human"
+          aria-describedby={blockedReason ? 'lm-date-human lm-date-blocked' : 'lm-date-human'}
           data-testid="date-input"
         />
         <Button
@@ -80,11 +80,9 @@ export function DateControl({
       <p id="lm-date-human" className="mt-1 text-xs text-[var(--lm-text-muted)]">
         {human}
       </p>
-      {blockedReason ? (
-        <p className="mt-1 text-xs text-[color:#ffd27a]" role="status">
-          {blockedReason}
-        </p>
-      ) : null}
+      <p id="lm-date-blocked" className="mt-1 text-xs text-[color:#ffd27a]" role="status">
+        {blockedReason ?? ''}
+      </p>
     </div>
   );
 }

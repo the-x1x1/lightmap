@@ -74,7 +74,7 @@ export function AstronomyDetails({ scene }: { scene: SceneState }) {
               value={`${scene.lunar.moonrise ? formatWallTime(scene.lunar.moonrise, tz) : '—'} / ${scene.lunar.moonset ? formatWallTime(scene.lunar.moonset, tz) : '—'}`}
             />
           </dl>
-          <p className="mt-1 text-xs text-[var(--lm-text-faint)]">{scene.lunar.accuracyNote}</p>
+          <p className="mt-1 text-xs text-[var(--lm-text-muted)]">{scene.lunar.accuracyNote}</p>
         </details>
       ) : null}
       <details className="group" data-testid="why-panel">

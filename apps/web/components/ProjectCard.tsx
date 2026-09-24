@@ -23,7 +23,14 @@ export function ProjectCard({
       )}
       data-testid="project-card"
     >
-      <span className="block truncate text-sm font-medium">{project.name}</span>
+      <span className="flex items-center gap-2 text-sm font-medium">
+        <span className="truncate">{project.name}</span>
+        {selected ? (
+          <span className="shrink-0 text-xs font-normal text-[var(--lm-sun)]">
+            <span aria-hidden>✓ </span>Selected
+          </span>
+        ) : null}
+      </span>
       <span className="mt-0.5 block text-xs text-[var(--lm-text-muted)]">
         {project.shootDate ? `Shoot ${project.shootDate} · ` : ''}
         {project.viewpointCount} viewpoint{project.viewpointCount === 1 ? '' : 's'}
