@@ -34,7 +34,7 @@ export function PreviewViewport({
   /** Current frame as a data URL at the requested width; null when no 3D renderer is active. */
   capture?: (maxWidth?: number) => Promise<string | null>;
   /** `export_preview` decision; undefined hides the export control. */
-  exportDecision?: EntitlementDecision;
+  exportDecision?: EntitlementDecision | undefined;
   /** Lets the shell return focus here after the expanded preview is collapsed. */
   expandButtonRef?: Ref<HTMLButtonElement>;
 }) {
