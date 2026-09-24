@@ -8,3 +8,4 @@ export {
 } from './build.ts';
 export * from './camera.ts';
 export * from './explain.ts';
+export * from './horizon.ts';

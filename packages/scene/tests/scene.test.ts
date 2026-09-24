@@ -21,6 +21,11 @@ import {
   relativeBearing,
 } from '../src/camera.ts';
 import { explainScene } from '../src/explain.ts';
+import {
+  horizonProfileFromSamples,
+  horizonRingDistances,
+  horizonSamplePoints,
+} from '../src/horizon.ts';
 import type { EnvironmentState } from '../src/types.ts';
 
 const kailua = {
@@ -187,6 +192,48 @@ describe('buildSceneState — Kailua Beach, 31 May 2026, 12:30 (acceptance case)
     );
     expect(c.dayEvents).not.toBe(a.dayEvents);
     expect(c.dayEvents.date).toBe('2026-06-01');
+  });
+
+  it('carries the terrain horizon when a profile is supplied: a ridge to the east delays first light', () => {
+    expect(buildSceneState(inputs()).terrainHorizon).toBeNull();
+    // A 600 m ridge on the ~2 km ring across the whole eastern half; flat to the west.
+    const ring = horizonRingDistances().reduce((b, d) =>
+      Math.abs(d - 2000) < Math.abs(b - 2000) ? d : b,
+    );
+    const samples = horizonSamplePoints(kailua.point).map((p) => ({
+      azimuthDeg: p.azimuthDeg,
+      distanceM: p.distanceM,
+      heightM: p.azimuthDeg >= 30 && p.azimuthDeg <= 150 && p.distanceM === ring ? 600 : 0,
+    }));
+    const profile = horizonProfileFromSamples(kailua.point, 2, 1.6, samples, {
+      providerId: 'test-dem',
+      resolutionM: 30,
+    });
+    // 06:00 HST: the Sun (≈ 3° up, ENE) is behind the ridge (≈ 16.5°).
+    const dawn = buildSceneState(
+      inputs({
+        horizonProfile: profile,
+        utc: localSelectionToUtc({ year: 2026, month: 5, day: 31 }, 6 * 60, kailua.timeZone),
+      }),
+    );
+    expect(dawn.terrainHorizon).not.toBeNull();
+    expect(dawn.solar.isAboveHorizon).toBe(true);
+    expect(dawn.terrainHorizon!.sunAboveTerrain).toBe(false);
+    expect(dawn.terrainHorizon!.horizonAtSunDeg).toBeGreaterThan(10);
+    const ev = dawn.terrainHorizon!.sunEvents;
+    expect(ev.differsFromAstronomical).toBe(true);
+    // First light over the ridge comes more than an hour after the 05:48 sunrise; last light is
+    // the ordinary sunset over the flat western sea (within the refraction tolerance).
+    expect(ev.firstLight!.getTime() - dawn.dayEvents.sunrise!.getTime()).toBeGreaterThan(
+      60 * 60_000,
+    );
+    expect(Math.abs(ev.lastLight!.getTime() - dawn.dayEvents.sunset!.getTime())).toBeLessThan(
+      3 * 60_000,
+    );
+    // Noon: clear of the ridge; the per-day events are memoised per profile.
+    const noon = buildSceneState(inputs({ horizonProfile: profile }));
+    expect(noon.terrainHorizon!.sunAboveTerrain).toBe(true);
+    expect(noon.terrainHorizon!.sunEvents).toBe(ev);
   });
 });
 

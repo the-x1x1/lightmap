@@ -22,6 +22,13 @@ import {
   type WeatherScenarioId,
 } from '@lightmap/weather';
 import { deriveConfidence, deriveSourceMode } from './confidence.ts';
+import {
+  aboveTerrain,
+  horizonElevationAt,
+  terrainSunEvents,
+  type HorizonProfile,
+  type TerrainSunEvents,
+} from './horizon.ts';
 import type {
   AtmosphereState,
   CameraState,
@@ -29,6 +36,7 @@ import type {
   LocationState,
   RenderSettings,
   SceneState,
+  TerrainHorizonState,
 } from './types.ts';
 
 export interface SceneInputs {
@@ -53,6 +61,61 @@ export interface SceneInputs {
   /** Cached day events for this civil date, to avoid recomputing on every scrub tick. */
   dayEvents?: DayEvents;
   astronomyService?: AstronomyService;
+  /** Terrain horizon sampled around this location (null/undefined: none yet). */
+  horizonProfile?: HorizonProfile | null;
+}
+
+// Terrain sun events per (profile, civil day): the scan is ~300 solar positions, so it is memoised
+// per profile rather than repeated on every scrub tick.
+const terrainEventCache = new WeakMap<HorizonProfile, Map<string, TerrainSunEvents>>();
+
+function terrainHorizonState(
+  profile: HorizonProfile,
+  svc: AstronomyService,
+  inputs: Pick<SceneInputs, 'location'>,
+  solar: SceneState['solar'],
+  lunar: SceneState['lunar'],
+  dayEvents: DayEvents,
+): TerrainHorizonState {
+  const { location } = inputs;
+  const key = `${dayEvents.date}|${dayEvents.timeZone}|${location.point.latitude}|${location.point.longitude}`;
+  let perDay = terrainEventCache.get(profile);
+  if (!perDay) {
+    perDay = new Map();
+    terrainEventCache.set(profile, perDay);
+  }
+  let sunEvents = perDay.get(key);
+  if (!sunEvents) {
+    sunEvents = terrainSunEvents(
+      profile,
+      (t) => {
+        const s = svc.getSolarState({
+          latitude: location.point.latitude,
+          longitude: location.point.longitude,
+          timestampUtc: t,
+          timeZone: location.timeZone,
+        });
+        return { azimuthDeg: s.azimuthDegrees, elevationDeg: s.elevationDegrees };
+      },
+      {
+        dayStart: dayEvents.dayStart,
+        dayEnd: dayEvents.dayEnd,
+        sunrise: dayEvents.sunrise,
+        sunset: dayEvents.sunset,
+      },
+    );
+    if (perDay.size > 8) perDay.clear();
+    perDay.set(key, sunEvents);
+  }
+  return {
+    profile,
+    horizonAtSunDeg: horizonElevationAt(profile, solar.azimuthDegrees),
+    sunAboveTerrain: aboveTerrain(profile, solar.azimuthDegrees, solar.elevationDegrees),
+    moonAboveTerrain: lunar
+      ? aboveTerrain(profile, lunar.azimuthDegrees, lunar.elevationDegrees)
+      : null,
+    sunEvents,
+  };
 }
 
 export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
@@ -122,6 +185,9 @@ export function buildSceneState(inputs: SceneInputs): SceneState {
     sourceMode: deriveSourceMode(confidence),
     confidence,
     render: inputs.render,
+    terrainHorizon: inputs.horizonProfile
+      ? terrainHorizonState(inputs.horizonProfile, svc, inputs, solar, lunar, dayEvents)
+      : null,
   };
 }
 

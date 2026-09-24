@@ -3,6 +3,7 @@
  * atmosphere, environment, source mode and confidence. The renderer consumes it; UI components
  * read it; nothing combines weather, astronomy and camera values anywhere else.
  */
+import type { HorizonProfile, TerrainSunEvents } from './horizon.ts';
 import type { LunarState, SolarState, DayEvents } from '@lightmap/astronomy';
 import type { GeoPoint } from '@lightmap/geospatial';
 import type {
@@ -97,6 +98,23 @@ export interface RenderSettings {
   reducedMotion: boolean;
 }
 
+/**
+ * The terrain horizon around the viewpoint and what it does to today's Sun (`horizon.ts`).
+ * Present only when a profile has been sampled for this location; the renderer's ellipsoid
+ * fallback never produces one.
+ */
+export interface TerrainHorizonState {
+  profile: HorizonProfile;
+  /** Terrain-horizon elevation at the Sun's current bearing, degrees. */
+  horizonAtSunDeg: number;
+  /** Whether the Sun (upper limb, refracted) shows above the terrain right now. */
+  sunAboveTerrain: boolean;
+  /** Same for the Moon when included. */
+  moonAboveTerrain: boolean | null;
+  /** Today's first/last light over the terrain and the visible spells. */
+  sunEvents: TerrainSunEvents;
+}
+
 export interface SceneState {
   location: LocationState;
   /** Wall-clock at the location. */
@@ -111,4 +129,6 @@ export interface SceneState {
   sourceMode: SourceMode;
   confidence: ConfidenceState;
   render: RenderSettings;
+  /** Null until a terrain horizon has been sampled for this location. */
+  terrainHorizon: TerrainHorizonState | null;
 }

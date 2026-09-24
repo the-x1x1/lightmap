@@ -17,7 +17,7 @@ import {
   utcToWallClock,
   type CelestialBody,
 } from '@lightmap/astronomy';
-import type { SceneState } from '@lightmap/scene';
+import { aboveTerrain, type SceneState } from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
 import { Button, RadioGroup } from '@lightmap/ui';
 import { usePlannerStore } from '@/features/planner/store';
@@ -166,7 +166,14 @@ export function LightFinder({
     setMinutes(sel.minutes);
   }
 
-  const matches = result?.res.matches ?? [];
+  const profile = scene.terrainHorizon?.profile ?? null;
+  const [hideBehindTerrain, setHideBehindTerrain] = useState(false);
+  const behindTerrain = (m: SerializedMatch) =>
+    profile !== null && !aboveTerrain(profile, m.azimuthDegrees, m.elevationDegrees);
+  const allMatches = result?.res.matches ?? [];
+  const hidden = profile && hideBehindTerrain ? allMatches.filter(behindTerrain).length : 0;
+  const matches =
+    profile && hideBehindTerrain ? allMatches.filter((m) => !behindTerrain(m)) : allMatches;
   const shown = matches.slice(0, MAX_RESULTS);
   const dates = new Set(matches.map((m) => m.date)).size;
 
@@ -420,10 +427,23 @@ export function LightFinder({
               {' '}
               · scanned {result.res.scannedDays} days in {result.ms.toFixed(0)} ms
               {result.res.truncated ? ' · range capped at 1100 days' : ''}
+              {hidden > 0 ? ` · ${hidden} behind terrain hidden` : ''}
             </span>
           </p>
         ) : null}
       </div>
+      {profile ? (
+        <label className="flex items-center gap-2 text-xs text-[var(--lm-text-muted)]">
+          <input
+            type="checkbox"
+            checked={hideBehindTerrain}
+            onChange={(e) => setHideBehindTerrain(e.target.checked)}
+            data-testid="finder-hide-terrain"
+          />
+          Hide moments when the {body} is behind the terrain
+          <span className="sr-only">. {profile.caveat}</span>
+        </label>
+      ) : null}
       {result ? (
         <div className="space-y-2" data-testid="finder-results-list">
           {result.clipped ? (
@@ -458,6 +478,11 @@ export function LightFinder({
                       {m.illuminatedFraction !== null
                         ? ` · ${Math.round(m.illuminatedFraction * 100)} % lit`
                         : ''}
+                      {behindTerrain(m) ? (
+                        <span className="ml-1 text-[color:#ffd27a]" title={profile?.caveat}>
+                          · behind terrain
+                        </span>
+                      ) : null}
                     </span>
                   </button>
                 </li>

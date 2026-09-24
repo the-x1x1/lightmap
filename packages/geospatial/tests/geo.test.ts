@@ -3,6 +3,7 @@ import {
   bearingDegrees,
   clampBounds,
   compassLabel,
+  destinationPoint,
   gridKey,
   haversineMeters,
   isValidLatLon,
@@ -69,5 +70,18 @@ describe('geo helpers (ported from WorldView world-model/geo.ts)', () => {
     const c = gridKey({ latitude: 21.5, longitude: -157.727 });
     expect(a).toBe(b);
     expect(a).not.toBe(c);
+  });
+});
+
+describe('destinationPoint', () => {
+  it('inverts haversine/bearing and wraps across the date line', () => {
+    const from = { latitude: 21.397, longitude: -157.727 };
+    const to = destinationPoint(from, 47, 12_345);
+    expect(haversineMeters(from, to)).toBeCloseTo(12_345, 0);
+    expect(bearingDegrees(from, to)).toBeCloseTo(47, 3);
+    const east = destinationPoint({ latitude: 0, longitude: 179.999 }, 90, 5000);
+    expect(east.longitude).toBeLessThan(-179.9);
+    const north = destinationPoint({ latitude: 60, longitude: 10 }, 0, 111_195);
+    expect(north.latitude).toBeCloseTo(61, 2);
   });
 });

@@ -31,6 +31,35 @@ export function AstronomyDetails({ scene }: { scene: SceneState }) {
           value={scene.dayEvents.sunset ? formatWallTime(scene.dayEvents.sunset, tz) : '—'}
           testId="sunset"
         />
+        {scene.terrainHorizon?.sunEvents.differsFromAstronomical ? (
+          <>
+            <Row
+              label="First light over terrain"
+              value={
+                scene.terrainHorizon.sunEvents.firstLight
+                  ? formatWallTime(scene.terrainHorizon.sunEvents.firstLight, tz)
+                  : '—'
+              }
+              testId="terrain-first-light"
+            />
+            <Row
+              label="Last light over terrain"
+              value={
+                scene.terrainHorizon.sunEvents.lastLight
+                  ? formatWallTime(scene.terrainHorizon.sunEvents.lastLight, tz)
+                  : '—'
+              }
+              testId="terrain-last-light"
+            />
+          </>
+        ) : null}
+        {scene.terrainHorizon ? (
+          <Row
+            label="Terrain horizon at sun"
+            value={`${scene.terrainHorizon.horizonAtSunDeg.toFixed(1)}°`}
+            testId="terrain-horizon-at-sun"
+          />
+        ) : null}
         <Row label="Phase" value={s.phase.replace('-', ' ')} />
         <Row
           label="Solar time"

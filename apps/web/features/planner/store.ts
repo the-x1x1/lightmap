@@ -18,6 +18,7 @@ import {
   type LocationState,
 } from '@lightmap/scene';
 import type { WeatherScenarioId } from '@lightmap/weather';
+import type { HorizonProfile } from '@lightmap/scene';
 import type { GeoPoint } from '@lightmap/geospatial';
 
 export interface PlannerState {
@@ -44,6 +45,11 @@ export interface PlannerState {
   finderTarget: { azimuthDeg: number; elevationDeg: number } | null;
   /** The next click in the viewpoint view sets `finderTarget`. */
   finderPicking: boolean;
+  /**
+   * Terrain horizon sampled around the current location (null until sampled, or when the
+   * renderer has no terrain). Cleared with the location; `useTerrainHorizon` refills it.
+   */
+  horizonProfile: HorizonProfile | null;
 }
 
 export interface PlannerActions {
@@ -71,6 +77,7 @@ export interface PlannerActions {
   setReducedMotion: (v: boolean) => void;
   setFinderTarget: (t: { azimuthDeg: number; elevationDeg: number } | null) => void;
   setFinderPicking: (v: boolean) => void;
+  setHorizonProfile: (profile: HorizonProfile | null) => void;
   /** Restore a saved viewpoint. */
   restore: (v: {
     location: LocationState;
@@ -102,6 +109,7 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
   sensorWidthMm: 36,
   finderTarget: null,
   finderPicking: false,
+  horizonProfile: null,
   previewExpanded: false,
   qualityCeiling: 1,
   showPerfPanel: false,
@@ -114,10 +122,13 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
       : { ...defaultCamera(loc.point, prev.camera.headingDeg), mode: prev.camera.mode };
     // Keep the chosen wall-clock time when the zone changes: "12:30" stays "12:30" at the new place.
     // A picked finder target belongs to the old viewpoint.
-    set({ location: loc, camera, finderTarget: null, finderPicking: false });
+    set({ location: loc, camera, finderTarget: null, finderPicking: false, horizonProfile: null });
   },
   clearLocation() {
-    set({ location: null });
+    set({ location: null, horizonProfile: null });
+  },
+  setHorizonProfile(profile) {
+    set({ horizonProfile: profile });
   },
   setDate(date) {
     if (parseCivilDate(date)) set({ date });
@@ -218,6 +229,7 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
       forceScenario: v.scenario !== null,
       finderTarget: null,
       finderPicking: false,
+      horizonProfile: null,
     });
   },
 }));

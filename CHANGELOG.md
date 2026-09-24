@@ -4,6 +4,13 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Terrain horizon** ("when does the sun clear the ridge?"): the land horizon around the pin is
+  sampled through the renderer from the DEM (curvature + refraction; `horizon.ts`, tested on a
+  synthetic ridge); the scene knows whether the sun/moon is behind terrain and the day's first and
+  last light over it. "Sun behind terrain" badge, `▲/▽ Ridge` timeline markers when they differ
+  from sunrise/sunset, rows in Sun & moon details, finder results tagged/hideable, caveat
+  everywhere (trees/buildings not modelled). `SceneHost.sampleGroundHeights`, store
+  `horizonProfile`, `useTerrainHorizon`.
 - **Shadow quality (Phase 4)**: low-Sun shadows are no longer faded away by the renderer
   (Cesium's `fadingEnabled` off — whether shadows exist is decided by the Sun and the cloud, not
   by taste); shadow reach follows the camera (20 km at eye level, 3× the orbit range in map view).

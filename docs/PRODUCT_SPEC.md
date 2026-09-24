@@ -249,6 +249,31 @@ tropical multi-crossing ordering, moon illumination filter, recurrence summary a
 (`packages/astronomy/tests/solver.test.ts`); chip wording incl. UTC+14 calendar days and the
 location's civil date for the return (`apps/web/tests/unit/recurrence-text.test.ts`).
 
+### 8b. Terrain horizon — "when does the sun clear the ridge?"
+
+When real terrain is configured, the app samples the land horizon around the pin through the
+renderer (120 bearings × 22 log-spaced rings out to 40 km, at three DEM tile levels) and keeps a
+**terrain horizon profile** for the place (`@lightmap/scene` `horizon.ts`; Earth curvature and
+standard refraction k = 0.13 included; sea-level dip for the eye height). From it the scene
+carries, every tick: the terrain-horizon elevation at the sun's bearing, whether the sun's
+refracted upper limb shows above it, the same for the moon, and today's **first and last light
+over the terrain** with any spells in between (5-minute scan, bisection to 10 s).
+
+Shown as: a **"Sun behind terrain"** badge beside the source and forecast badges while the sun is
+astronomically up but below the ridge; `▲ Ridge` / `▽ Ridge` markers on the timeline (only when
+they differ from sunrise/sunset by more than three minutes — under that, refraction conventions
+differ by as much); "First/Last light over terrain" and "Terrain horizon at sun" rows in Sun &
+moon details; the preview-basis Terrain row names the sampled reach and the highest ridge; the
+light finder tags moments that are **behind terrain** and can hide them. Every surface carries the
+caveat: terrain only — trees, buildings and cloud on the ridge are not in the elevation model,
+and a sharp ridgeline can sit between samples. No profile is kept when fewer than 60 % of the
+samples answered, and none exists on the ellipsoid fallback.
+
+Tests: elevation angle with curvature/refraction, sea-horizon dip, profile from a synthetic ridge
+(elevation and distance, interpolation, missing samples), above-terrain decision at the
+astronomical-sunrise limit, first light over a ridge vs astronomical sunrise, memoised per-day
+events in `buildSceneState` (`packages/scene/tests/{horizon,scene}.test.ts`).
+
 ## 9. Projects and saved viewpoints (plan §4, §17)
 
 Account required. Limits come from the entitlement snapshot, never from UI constants.

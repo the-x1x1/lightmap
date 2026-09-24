@@ -64,6 +64,22 @@ export function bearingDegrees(a: GeoPoint, b: GeoPoint): number {
   return normalizeDegrees(Math.atan2(y, x) / DEG);
 }
 
+/** Point at `distanceM` along the great circle with initial bearing `bearingDeg` from `from`. */
+export function destinationPoint(from: GeoPoint, bearingDeg: number, distanceM: number): GeoPoint {
+  const d = distanceM / EARTH_RADIUS_M;
+  const b = bearingDeg * DEG;
+  const la1 = from.latitude * DEG;
+  const lo1 = from.longitude * DEG;
+  const la2 = Math.asin(Math.sin(la1) * Math.cos(d) + Math.cos(la1) * Math.sin(d) * Math.cos(b));
+  const lo2 =
+    lo1 +
+    Math.atan2(
+      Math.sin(b) * Math.sin(d) * Math.cos(la1),
+      Math.cos(d) - Math.sin(la1) * Math.sin(la2),
+    );
+  return { latitude: la2 / DEG, longitude: normalizeLongitude(lo2 / DEG) };
+}
+
 /** Wrap any angle into [0, 360). */
 export function normalizeDegrees(deg: number): number {
   const x = deg % 360;

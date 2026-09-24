@@ -76,6 +76,7 @@ function fakeHost() {
     setCelestialBodies: rec('setCelestialBodies'),
     sunScreenPosition: () => [0.5, 0.6],
     sampleGroundHeight: async () => 42,
+    sampleGroundHeights: async (pts: readonly unknown[]) => pts.map(() => 42),
     requestRender: rec('requestRender'),
     stats: () => ({
       fps: 60,

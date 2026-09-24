@@ -85,6 +85,7 @@ export function useScene(
   const minutes = usePlannerStore((s) => s.minutes);
   const scenario = usePlannerStore((s) => s.scenario);
   const forceScenario = usePlannerStore((s) => s.forceScenario);
+  const horizonProfile = usePlannerStore((s) => s.horizonProfile);
   const camera = usePlannerStore((s) => s.camera);
   const utc = useMemo(() => selectedUtc({ location, date, minutes }), [location, date, minutes]);
   const caps = useCapabilities();
@@ -142,6 +143,7 @@ export function useScene(
       includeLunar: opts.includeLunar ?? true,
       realReference: false,
       dayEvents,
+      horizonProfile,
     });
     // `now` changes every render but only matters at the horizon boundary; exclude to avoid churn.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -158,6 +160,7 @@ export function useScene(
     providerFailed,
     opts.render,
     opts.includeLunar,
+    horizonProfile,
   ]);
 
   return {
