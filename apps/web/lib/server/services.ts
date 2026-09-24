@@ -52,9 +52,15 @@ export function getServices(): Services {
   if (services) return services;
   const { env, issues, ok } = getEnv();
   const log = createLogger({ level: env.LOG_LEVEL, bindings: { service: 'web' } });
-  for (const i of issues)
-    log[i.severity === 'error' ? 'error' : 'warn'](`env ${i.key}: ${i.message}`);
-  if (!ok && env.NODE_ENV === 'production')
+  // `next build` loads every route module to collect page data, with NODE_ENV=production but
+  // without the production secrets (they belong to the running server, not the build machine or
+  // CI). The strict check is for starting the server; during the build it is skipped silently and
+  // the real process validates again on its first request.
+  const building = process.env['NEXT_PHASE'] === 'phase-production-build';
+  if (!building)
+    for (const i of issues)
+      log[i.severity === 'error' ? 'error' : 'warn'](`env ${i.key}: ${i.message}`);
+  if (!ok && env.NODE_ENV === 'production' && !building)
     throw new Error('Refusing to start with invalid production environment (see log)');
   const timezone: TimezoneProvider = new GeoTzTimezoneProvider();
   const geo = createGeospatialProviders(env, { timezoneProvider: timezone });
