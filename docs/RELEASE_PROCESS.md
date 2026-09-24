@@ -111,7 +111,7 @@ access. If a webhook backlog built up, Stripe redelivers; idempotency makes rede
       verified.
 - [ ] `SENTRY_DSN` (or equivalent) set; `/api/health` monitored.
 - [ ] Managed database backups and point-in-time recovery enabled and tested once.
-- [ ] Retention job (`pnpm retention`) scheduled daily; verified once with `--dry-run`
+- [ ] Retention job: `retention.yml` sees the production `DATABASE_URL`; run it once manually with the dry-run switch and read the log
       (`PRIVACY.md` §8).
 - [ ] Legal pages (privacy, terms) contain real text, not placeholders.
 

@@ -1,0 +1,44 @@
+name: Retention
+
+# docs/PRIVACY.md §8–9: erase accounts whose deletion request is older than 14 days and purge
+# expired provider-cache rows. Runs daily against the production database when the secret exists;
+# otherwise it only proves the script still runs (dry run against nothing is refused, so we skip).
+
+on:
+  schedule:
+    - cron: '17 4 * * *' # 04:17 UTC daily
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Only report what would be erased'
+        type: boolean
+        default: true
+
+jobs:
+  retention:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Retention job
+        if: env.DATABASE_URL != ''
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" = "true" ]; then
+            pnpm retention -- --dry-run
+          else
+            pnpm retention
+          fi
+      - name: No production database configured
+        if: env.DATABASE_URL == ''
+        run: echo "::notice::DATABASE_URL secret is not set on the 'production' environment; retention skipped."

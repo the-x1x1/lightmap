@@ -91,9 +91,10 @@ hex characters (`clientKey()` in `apps/web/lib/server/rate-limit.ts`). Raw IPs a
 5. Stripe retains its own customer and invoice records under its terms; the operator should cancel
    the subscription in Stripe as part of deletion (Customer Portal or Dashboard).
 
-The scheduled job that calls `erase()` for accounts past the window is a production-configuration
-item (see `RELEASE_PROCESS.md` pre-flight); the repository method and cascade rules exist and are
-tested.
+The scheduled job is `.github/workflows/retention.yml`: daily at 04:17 UTC against the
+`production` environment's `DATABASE_URL` (skipped with a notice until that secret exists), plus a
+manual run with a dry-run switch. Hosts with their own scheduler can run `pnpm retention` instead;
+the job is idempotent.
 
 ## 9. Data retention
 

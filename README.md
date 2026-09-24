@@ -139,7 +139,8 @@ is blocked (real-reference imagery).
 unit tests with coverage, attribution gate, licence gate, secrets scan, migration validity, build,
 bundle budget. On `main` it also applies migrations to a PostGIS service and runs the repository
 integration tests and Playwright E2E. `security.yml` adds `pnpm audit` and CodeQL weekly.
-`release.yml` builds, migrates, deploys and smoke-tests on a `v*` tag.
+`release.yml` builds, migrates, deploys and smoke-tests on a `v*` tag. `retention.yml` runs the
+daily account-erasure / cache-purge job once the production database secret exists.
 
 ## Documentation
 
