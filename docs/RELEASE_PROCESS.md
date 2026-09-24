@@ -106,7 +106,7 @@ access. If a webhook backlog built up, Stripe redelivers; idempotency makes rede
       verified.
 - [ ] `SENTRY_DSN` (or equivalent) set; `/api/health` monitored.
 - [ ] Managed database backups and point-in-time recovery enabled and tested once.
-- [ ] Retention job for account erasure scheduled only once the cancel-on-sign-in path exists
+- [ ] Retention job (`pnpm retention`) scheduled daily; verified once with `--dry-run`
       (`PRIVACY.md` §8).
 - [ ] Legal pages (privacy, terms) contain real text, not placeholders.
 
