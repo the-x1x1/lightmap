@@ -18,6 +18,12 @@ export interface HostShadows {
   darkness: number;
   size: number;
   softShadows: boolean;
+  /**
+   * How far from the camera shadows are resolved, metres. Cesium spreads its cascades over this
+   * distance, so it is a trade between reach (a ridge's shadow across a valley) and crispness near
+   * the camera; the controller picks it from the camera mode and altitude.
+   */
+  maximumDistance: number;
 }
 
 export interface HostAtmosphere {

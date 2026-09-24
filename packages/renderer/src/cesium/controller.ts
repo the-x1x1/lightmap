@@ -156,7 +156,8 @@ export class SceneController {
     this.applyOverlay(scene);
 
     // Shadows toggle is cheap; size/softness is expensive.
-    const shadowKey = `${lighting.shadowsEnabled}|${scene.render.shadowMapSize}|${scene.render.softShadows}`;
+    const maximumDistance = shadowReachM(scene, this.orbit.rangeM);
+    const shadowKey = `${lighting.shadowsEnabled}|${scene.render.shadowMapSize}|${scene.render.softShadows}|${maximumDistance}`;
     if (shadowKey !== this.lastShadowKey) {
       this.lastShadowKey = shadowKey;
       this.host.setShadows({
@@ -164,6 +165,7 @@ export class SceneController {
         darkness: lighting.shadowDarkness,
         size: scene.render.shadowMapSize,
         softShadows: scene.render.softShadows,
+        maximumDistance,
       });
     } else if (lighting.shadowsEnabled) {
       this.host.setShadows({
@@ -171,6 +173,7 @@ export class SceneController {
         darkness: lighting.shadowDarkness,
         size: scene.render.shadowMapSize,
         softShadows: scene.render.softShadows,
+        maximumDistance,
       });
     }
 
@@ -325,4 +328,16 @@ export function sunPathForDay(
 function sunAt(t: Date, scene: SceneState): { azimuthDeg: number; elevationDeg: number } {
   const p = sunPosition(t, scene.location.point.latitude, scene.location.point.longitude);
   return { azimuthDeg: p.azimuthDeg, elevationDeg: p.elevationDeg };
+}
+
+/**
+ * Shadow reach (metres) for the shadow map's cascades. Eye level: 20 km, so a ridge's shadow
+ * reaches across a valley at low sun while the near ground stays crisp with a 2048–4096 map. Map
+ * view: grows with the orbit range so shadows do not stop at an arbitrary line inside the frame,
+ * and is capped where a shadow map stops resolving anything useful.
+ */
+export function shadowReachM(scene: SceneState, orbitRangeM: number): number {
+  if (scene.camera.mode === 'viewpoint') return 20_000;
+  const reach = Math.round(orbitRangeM * 3);
+  return Math.max(8_000, Math.min(60_000, Math.round(reach / 1000) * 1000));
 }

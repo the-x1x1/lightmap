@@ -269,6 +269,103 @@
         await new Promise((r) => {
           window.__takeShot = r;
         });
+        // Shadow probe (accuracy before beauty): a 20 m tower on flat ground; its shadow must fall on
+        // the anti-solar side with length h / tan(el), and must not fade at low Sun. Measured from
+        // the frame itself: ground luminance along the shadow line vs the same distances on the Sun
+        // side, and just beyond the shadow's end.
+        const C = await import('@cesium/engine');
+        const cesiumScene = host.scene;
+        const towerLat = kailua.point.latitude + 0.0009;
+        const towerLng = kailua.point.longitude;
+        const enu = C.Transforms.eastNorthUpToFixedFrame(
+          C.Cartesian3.fromDegrees(towerLng, towerLat, 0),
+        );
+        cesiumScene.primitives.add(
+          new C.Primitive({
+            geometryInstances: new C.GeometryInstance({
+              geometry: C.BoxGeometry.fromDimensions({
+                dimensions: new C.Cartesian3(12, 12, 20),
+                vertexFormat: C.PerInstanceColorAppearance.VERTEX_FORMAT,
+              }),
+              modelMatrix: C.Matrix4.multiplyByTranslation(
+                enu,
+                new C.Cartesian3(0, 0, 10),
+                new C.Matrix4(),
+              ),
+              attributes: {
+                color: C.ColorGeometryInstanceAttribute.fromColor(
+                  C.Color.fromCssColorString('#d0d0d0'),
+                ),
+              },
+            }),
+            appearance: new C.PerInstanceColorAppearance({ closed: true }),
+            shadows: C.ShadowMode.ENABLED,
+            asynchronous: false,
+          }),
+        );
+        const shadowScene = scene(18.25, 'clear');
+        controller.apply(shadowScene);
+        controller.setOrbit({ headingDeg: 0, pitchDeg: -89, rangeM: 420 });
+        await wait(3000);
+        const el = shadowScene.solar.elevationDegrees;
+        const az = shadowScene.solar.azimuthDegrees;
+        const shadowAz = (az + 180) % 360;
+        const len = 20 / Math.tan((el * Math.PI) / 180);
+        const probe = (bearingDeg, distM) => {
+          const b = (bearingDeg * Math.PI) / 180;
+          const world = C.Matrix4.multiplyByPoint(
+            enu,
+            new C.Cartesian3(Math.sin(b) * distM, Math.cos(b) * distM, 0.3),
+            new C.Cartesian3(),
+          );
+          const w = C.SceneTransforms.worldToWindowCoordinates(cesiumScene, world);
+          return w ? { x: w.x, y: w.y } : null;
+        };
+        const fr = [0.3, 0.5, 0.7];
+        const pts = {
+          inShadow: fr.map((f) => probe(shadowAz, 8 + len * f)),
+          sunSide: fr.map((f) => probe(az, 8 + len * f)),
+          beyond: [probe(shadowAz, len * 1.6 + 12)],
+        };
+        const dataUrl = await host.captureThumbnail(4096);
+        const lum = await new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            const cv = document.createElement('canvas');
+            cv.width = img.width;
+            cv.height = img.height;
+            const ctx = cv.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            const sx = img.width / cesiumScene.canvas.clientWidth;
+            const sy = img.height / cesiumScene.canvas.clientHeight;
+            const at = (p) => {
+              if (!p) return null;
+              const d = ctx.getImageData(Math.round(p.x * sx), Math.round(p.y * sy), 1, 1).data;
+              return (0.2126 * d[0] + 0.7152 * d[1] + 0.0722 * d[2]) / 255;
+            };
+            resolve({
+              inShadow: pts.inShadow.map(at),
+              sunSide: pts.sunSide.map(at),
+              beyond: pts.beyond.map(at),
+            });
+          };
+          img.src = dataUrl;
+        });
+        window.__smoke.shadowProbe = { el, az, shadowAz, lengthM: len, pts, lum };
+        log(
+          'shadow probe el=' +
+            el.toFixed(1) +
+            ' shadow ' +
+            lum.inShadow.map((v) => v && v.toFixed(2)).join('/') +
+            ' sun side ' +
+            lum.sunSide.map((v) => v && v.toFixed(2)).join('/') +
+            ' beyond ' +
+            lum.beyond.map((v) => v && v.toFixed(2)).join('/'),
+        );
+        window.__smoke.shot = 'shadow-tower';
+        await new Promise((r) => {
+          window.__takeShot = r;
+        });
         const thumb = await host.captureThumbnail(320);
         window.__smoke.thumbnail = thumb
           ? thumb.slice(0, 40) + '… (' + thumb.length + ' chars)'
