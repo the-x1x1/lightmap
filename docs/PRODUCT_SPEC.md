@@ -234,6 +234,14 @@ Account required. Limits come from the entitlement snapshot, never from UI const
 app-generated thumbnail when the renderer can capture one. Reopening a viewpoint restores
 location, UTC instant (rendered in the location's zone), camera and scenario exactly.
 
+**Shot variants** (plan §25 Phase 6): a viewpoint can hold variants — the same place and camera at
+other dates/times or scenarios ("07:10 vs 18:40 vs 4 August"). A variant is a viewpoint row with
+`parentViewpointId`; it keeps the parent's label, counts toward the plan's viewpoint limits like any
+other viewpoint (no hidden quota), is listed under its parent, opens exactly like a viewpoint and
+is deleted with its parent. One level only: a variant of a variant is re-parented to the top-level
+viewpoint. The drawer offers "+ Variant" on a card when the planner currently sits at that
+viewpoint's place (within ~5 m).
+
 No collaboration or sharing in v0.1.
 
 ## 10. Accounts (plan §16)

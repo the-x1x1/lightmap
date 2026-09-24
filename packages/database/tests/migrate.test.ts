@@ -32,26 +32,31 @@ function fakeDb() {
 describe('migration runner', () => {
   it('loads the real migration files in order and they validate', async () => {
     const files = await loadMigrations();
-    expect(files.map((f) => f.name)).toEqual(['0001_initial.sql', '0002_postgis_optional.sql']);
+    expect(files.map((f) => f.name)).toEqual([
+      '0001_initial.sql',
+      '0002_postgis_optional.sql',
+      '0003_viewpoint_variants.sql',
+    ]);
     expect(validateMigrationSet(files)).toEqual([]);
     expect(files[0]!.sql).toContain('CREATE TABLE IF NOT EXISTS viewpoints');
     expect(files[1]!.sql).toContain('pg_available_extensions');
+    expect(files[2]!.sql).toContain('parent_viewpoint_id');
   });
 
   it('applies once, skips on rerun, and refuses modified files', async () => {
     const files = await loadMigrations();
     const { exec, statements } = fakeDb();
     const first = await migrate(exec, files);
-    expect(first.applied).toHaveLength(2);
+    expect(first.applied).toHaveLength(files.length);
     const second = await migrate(exec, files);
     expect(second.applied).toHaveLength(0);
-    expect(second.skipped).toHaveLength(2);
+    expect(second.skipped).toHaveLength(files.length);
     expect(statements.some((s) => s.includes('CREATE TABLE IF NOT EXISTS schema_migrations'))).toBe(
       true,
     );
     const tampered: MigrationFile[] = [
       { ...files[0]!, sql: files[0]!.sql + '\n-- edited', checksum: 'nope' },
-      files[1]!,
+      ...files.slice(1),
     ];
     await expect(migrate(exec, tampered)).rejects.toThrow('modified after being applied');
   });

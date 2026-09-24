@@ -98,6 +98,50 @@ export function ProjectDrawer({
     }
   }
 
+  // Group shot variants under their parent; variants of a deleted/unknown parent surface top-level.
+  const all = project.data?.project.viewpoints ?? [];
+  const ids = new Set(all.map((v) => v.id));
+  const topLevel = all.filter((v) => !v.parentViewpointId || !ids.has(v.parentViewpointId));
+  const variantsOf = new Map<string, ViewpointDto[]>();
+  for (const v of all)
+    if (v.parentViewpointId && ids.has(v.parentViewpointId))
+      variantsOf.set(v.parentViewpointId, [...(variantsOf.get(v.parentViewpointId) ?? []), v]);
+
+  /** The planner sits at this viewpoint's place (a few metres) — its time can be saved as a variant. */
+  function atViewpoint(v: ViewpointDto): boolean {
+    if (!scene) return false;
+    const p = scene.location.point;
+    return Math.abs(p.latitude - v.latitude) < 5e-5 && Math.abs(p.longitude - v.longitude) < 5e-5;
+  }
+
+  async function saveVariant(parent: ViewpointDto) {
+    if (!scene || !selectedId) return;
+    setError(null);
+    try {
+      const thumb = await captureThumbnail();
+      // A variant keeps the parent's label; its own identity is the time and scenario.
+      await m.saveViewpoint.mutateAsync({
+        projectId: selectedId,
+        body: { ...viewpointPayload(scene, parent.label, thumb), parentViewpointId: parent.id },
+      });
+      setStatus(`Saved a variant of “${parent.label}” at ${scene.localTime.time}.`);
+      void project.refetch();
+    } catch (e) {
+      handle(e);
+    }
+  }
+
+  function remove(v: ViewpointDto) {
+    void m.removeViewpoint
+      .mutateAsync(v.id)
+      .then(() => {
+        setStatus(v.parentViewpointId ? 'Variant deleted.' : `Deleted “${v.label}”.`);
+        focusHeading('lm-viewpoints-h');
+        return project.refetch();
+      })
+      .catch(handle);
+  }
+
   function open(v: ViewpointDto) {
     restore({
       location: {
@@ -275,21 +319,21 @@ export function ProjectDrawer({
             <p className="text-sm text-[var(--lm-text-muted)]">Nothing saved here yet.</p>
           ) : null}
           <div className="space-y-2">
-            {project.data?.project.viewpoints.map((v) => (
+            {topLevel.map((v) => (
               <SavedViewpointCard
                 key={v.id}
                 viewpoint={v}
+                variants={variantsOf.get(v.id) ?? []}
                 onOpen={() => open(v)}
-                onDelete={() =>
-                  void m.removeViewpoint
-                    .mutateAsync(v.id)
-                    .then(() => {
-                      setStatus(`Deleted “${v.label}”.`);
-                      focusHeading('lm-viewpoints-h');
-                      return project.refetch();
-                    })
-                    .catch(handle)
-                }
+                onOpenVariant={(x) => open(x)}
+                onDelete={() => remove(v)}
+                onDeleteVariant={(x) => remove(x)}
+                {...(scene && atViewpoint(v)
+                  ? {
+                      onSaveVariant: () => void saveVariant(v),
+                      saveVariantBusy: m.saveViewpoint.isPending,
+                    }
+                  : {})}
               />
             ))}
           </div>
