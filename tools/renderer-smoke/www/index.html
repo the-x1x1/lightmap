@@ -1,0 +1,228 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>LightMap renderer smoke</title>
+    <!-- Runs the real renderer (packages/renderer) against a bundled Cesium build in a headless browser. See ../README.md. -->
+    <link rel="stylesheet" href="/cesium-build/Widgets/widgets.css" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #000;
+      }
+      #map {
+        width: 960px;
+        height: 600px;
+      }
+      #credits {
+        position: fixed;
+        bottom: 0;
+        right: 0;
+        color: #fff;
+        font: 10px sans-serif;
+      }
+    </style>
+    <script>
+      window.CESIUM_BASE_URL = '/cesium/';
+    </script>
+    <script type="importmap">
+      {
+        "imports": {
+          "@cesium/engine": "/cesium-build/index.js",
+          "@lightmap/config": "/dist/config/src/index.js",
+          "@lightmap/geospatial": "/dist/geospatial/src/index.js",
+          "@lightmap/astronomy": "/dist/astronomy/src/index.js",
+          "@lightmap/weather": "/dist/weather/src/index.js",
+          "@lightmap/scene": "/dist/scene/src/index.js",
+          "@lightmap/renderer": "/dist/renderer/src/index.js",
+          "@lightmap/renderer/cesium": "/dist/renderer/src/cesium/index.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="credits"></div>
+    <script type="module">
+      window.__smoke = { errors: [], steps: [], done: false };
+      const log = (s) => {
+        window.__smoke.steps.push(s);
+        console.log('[smoke]', s);
+      };
+      window.addEventListener('error', (e) =>
+        window.__smoke.errors.push('window: ' + (e.message || e)),
+      );
+      window.addEventListener('unhandledrejection', (e) =>
+        window.__smoke.errors.push('rejection: ' + ((e.reason && e.reason.message) || e.reason)),
+      );
+      try {
+        const { localSelectionToUtc } = await import('@lightmap/astronomy');
+        const { buildSceneState, DEFAULT_RENDER_SETTINGS, defaultCamera } =
+          await import('@lightmap/scene');
+        const { OPEN_METEO_CAPABILITIES } = await import('@lightmap/weather');
+        const { SceneController, lightingFromScene } = await import('@lightmap/renderer');
+        const { createCesiumHost } = await import('@lightmap/renderer/cesium');
+        log('modules loaded');
+        const kailua = {
+          point: { latitude: 21.397, longitude: -157.727 },
+          timeZone: 'Pacific/Honolulu',
+          label: 'Kailua Beach',
+          source: 'search',
+        };
+        const env = {
+          terrainAvailable: false,
+          terrainProviderId: 'ellipsoid',
+          basemapProviderId: 'natural-earth-ii',
+          basemapDetail: 'coarse',
+          buildingsAvailable: false,
+          groundElevationM: 2,
+          attributions: [],
+          fixtureMode: true,
+        };
+        const scene = (hour, scenario, camera) =>
+          buildSceneState({
+            location: kailua,
+            utc: localSelectionToUtc({ year: 2026, month: 5, day: 31 }, hour * 60, kailua.timeZone),
+            now: new Date('2026-05-01T00:00:00Z'),
+            camera: camera ?? defaultCamera(kailua.point, 90),
+            environment: env,
+            scenario,
+            forceScenario: true,
+            weather: { capabilities: OPEN_METEO_CAPABILITIES, frames: [], providerFailed: false },
+            render: DEFAULT_RENDER_SETTINGS,
+            includeLunar: true,
+            realReference: false,
+          });
+        const host = await createCesiumHost({
+          container: document.getElementById('map'),
+          creditContainer: document.getElementById('credits'),
+          requestRenderMode: false,
+          msaaSamples: 1,
+          onError: (m, e) =>
+            window.__smoke.errors.push('host: ' + m + ' ' + ((e && e.message) || e)),
+        });
+        log('host created');
+        const controller = new SceneController(host, { aspect: () => 960 / 600 });
+        await controller.setProviders(
+          { kind: 'ellipsoid', attribution: '' },
+          { kind: 'cesium-natural-earth', attribution: 'NE' },
+        );
+        log('providers set');
+        const s1 = scene(12.5, 'clear');
+        controller.apply(s1);
+        window.__smoke.lighting = { clear: lightingFromScene(s1) };
+        log('applied noon clear');
+        const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+        const frames = (n) =>
+          new Promise((resolve) => {
+            let k = 0;
+            const h = () => {
+              if (++k >= n) {
+                host_scene_postRender_remove();
+                resolve();
+              }
+            };
+            const host_scene_postRender_remove = host.__scene.postRender.addEventListener(h);
+          });
+        window.__smoke.phase = 'noon-clear';
+        await wait(6000);
+        const stats1 = host.stats();
+        window.__smoke.stats1 = stats1;
+        window.__smoke.cesiumSun = stats1.cesiumSunDirectionEcef;
+        window.__smoke.ourSun = lightingFromScene(s1).sunDirectionEcef;
+        window.__smoke.shot = 'noon-clear';
+        await wait(200);
+        await new Promise((r) => {
+          window.__takeShot = r;
+        });
+        const s2 = scene(12.5, 'overcast');
+        controller.apply(s2);
+        window.__smoke.lighting.overcast = lightingFromScene(s2);
+        log('applied noon overcast');
+        await wait(1500);
+        window.__smoke.shot = 'noon-overcast';
+        await new Promise((r) => {
+          window.__takeShot = r;
+        });
+        const golden = scene(18.75, 'clear', {
+          ...defaultCamera(kailua.point, 250),
+          mode: 'viewpoint',
+          pitchDeg: 5,
+        });
+        controller.apply(golden);
+        window.__smoke.lighting.golden = lightingFromScene(golden);
+        log('applied golden viewpoint');
+        await wait(2500);
+        window.__smoke.shot = 'golden-viewpoint';
+        await new Promise((r) => {
+          window.__takeShot = r;
+        });
+        const blue = scene(19.5, 'clear', {
+          ...defaultCamera(kailua.point, 250),
+          mode: 'viewpoint',
+          pitchDeg: 5,
+        });
+        controller.apply(blue);
+        log('applied blue hour viewpoint');
+        await wait(1500);
+        window.__smoke.shot = 'blue-viewpoint';
+        await new Promise((r) => {
+          window.__takeShot = r;
+        });
+        const partly = scene(15, 'partly-cloudy', {
+          ...defaultCamera(kailua.point, 250),
+          mode: 'viewpoint',
+          pitchDeg: 12,
+        });
+        controller.apply(partly);
+        log('applied partly viewpoint');
+        await wait(1500);
+        window.__smoke.shot = 'partly-viewpoint';
+        await new Promise((r) => {
+          window.__takeShot = r;
+        });
+        const night = scene(23, 'clear', {
+          ...defaultCamera(kailua.point, 120),
+          mode: 'viewpoint',
+          pitchDeg: 30,
+        });
+        controller.apply(night);
+        log('applied night viewpoint');
+        await wait(1500);
+        window.__smoke.shot = 'night-viewpoint';
+        await new Promise((r) => {
+          window.__takeShot = r;
+        });
+        const storm = scene(12.5, 'storm', {
+          ...defaultCamera(kailua.point, 250),
+          mode: 'viewpoint',
+          pitchDeg: 5,
+        });
+        controller.apply(storm);
+        log('applied storm viewpoint');
+        await wait(1500);
+        window.__smoke.shot = 'storm-viewpoint';
+        await new Promise((r) => {
+          window.__takeShot = r;
+        });
+        const thumb = await host.captureThumbnail(320);
+        window.__smoke.thumbnail = thumb
+          ? thumb.slice(0, 40) + '… (' + thumb.length + ' chars)'
+          : null;
+        // pick: click centre of the canvas via the host's own handler
+        let picked = null;
+        host.onPick((p) => {
+          picked = p;
+        });
+        window.__smoke.pickerInstalled = true;
+        window.__smoke.stats = host.stats();
+        log('done');
+      } catch (e) {
+        window.__smoke.errors.push('fatal: ' + ((e && e.stack) || e));
+      }
+      window.__smoke.done = true;
+    </script>
+  </body>
+</html>

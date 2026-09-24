@@ -134,7 +134,11 @@ describe('SceneController', () => {
     expect(cam.kind).toBe('viewpoint');
     expect(cam.headingDeg).toBe(45);
     expect(cam.fovDeg).toBeGreaterThan(vp.camera.fovDeg); // portrait: vertical fov is wider than horizontal
-    expect(calls['setCelestialBodies']!.at(-1)![0]).toBe(true);
+    expect(calls['setCelestialBodies']!.at(-1)![0]).toEqual({
+      sun: true,
+      moon: false,
+      stars: false,
+    }); // noon: sun disc, no stars
     const overlay = calls['setOverlay']!.at(-1)![0] as { visible: boolean };
     expect(overlay.visible).toBe(false);
   });

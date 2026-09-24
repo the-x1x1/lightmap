@@ -7,8 +7,20 @@ import { kelvinToRgb } from '@lightmap/weather';
 import { shadowOnGround, sunLightDirectionEcef, type Vec3 } from './sun-vector.ts';
 
 export interface LightingParameters {
-  /** Sun → ground direction in ECEF for DirectionalLight. */
+  /** True Sun → ground direction in ECEF (for overlays and the ephemeris cross-check). */
   sunDirectionEcef: Vec3;
+  /**
+   * Direction handed to the renderer's DirectionalLight. Equal to `sunDirectionEcef` while the Sun
+   * is up. During twilight the elevation is clamped to a grazing −1.5°: Cesium's single-scattering
+   * sky goes black the moment its light source dips below the horizon, whereas a real twilight sky
+   * stays lit by multiple scattering. The grade shader then darkens and blues the sky by
+   * `nightFactor`, so the result is a luminous blue hour rather than instant night.
+   */
+  lightDirectionEcef: Vec3;
+  /** Stars/skybox should be visible (Sun well below the horizon). */
+  starsVisible: boolean;
+  /** Scene is lit by the Moon (Sun < −12°, Moon up); light direction is then the Moon's. */
+  moonlit: boolean;
   /** Linear RGB tint of direct light (1,1,1 = neutral). */
   sunColor: [number, number, number];
   /** Direct light intensity multiplier (Cesium `light.intensity`; 1 ≈ clear noon). */
@@ -62,16 +74,37 @@ export function lightingFromScene(s: SceneState): LightingParameters {
 
   // Direct sunlight fades in from the horizon (atmospheric extinction) and is cut by cloud.
   const horizonFade = smooth(-0.833, 4, el) * (0.55 + 0.45 * smooth(4, 25, el));
-  const sunIntensity = 2.2 * horizonFade * p.sunTransmittance;
+  const direct = 2.2 * horizonFade * p.sunTransmittance;
+  // Twilight ambient: a dim, cool, horizon-grazing light so the ground is not black during blue
+  // hour (Cesium's globe has no sky-ambient term). Peaks just below the horizon, gone by −14°.
+  const twilightAmbient =
+    0.35 * smooth(-14, -1, el) * (1 - smooth(-1, 3, el)) * (0.6 + 0.4 * p.diffuseFraction);
+  // Moonlight: once the Sun is well down and the Moon is up, the scene's light comes from the
+  // Moon — dim, cool, from the Moon's direction. Shadows stay off (too faint to be honest about).
+  const moon = s.lunar;
+  const moonUp = moon !== null && moon.isAboveHorizon;
+  const moonlight = moonUp ? 0.14 * moon.illuminatedFraction * (1 - smooth(-18, -12, el)) : 0;
+  const moonlit = moonlight > 0.005;
+  const sunIntensity = direct + twilightAmbient + moonlight;
   const directLightPresent = el > -0.833 && p.sunTransmittance > 0.12;
+  // Clamp to a grazing angle through twilight; below −18° the sky is genuinely dark.
+  const lightElevation = el >= -1.5 ? el : el > -18 ? -1.5 : el;
+  const starsVisible = el < -8;
 
   // Colour: black-body tint from elevation, desaturated toward white as cloud diffuses it.
   const tint = kelvinToRgb(atmosphere.colorTemperatureK);
   const mixToWhite = p.diffuseFraction * 0.6;
-  const sunColor: [number, number, number] = [
+  const moonTint: [number, number, number] = [0.78, 0.86, 1];
+  const sunColorBase: [number, number, number] = [
     tint[0] + (1 - tint[0]) * mixToWhite,
     tint[1] + (1 - tint[1]) * mixToWhite,
     tint[2] + (1 - tint[2]) * mixToWhite,
+  ];
+  const moonWeight = sunIntensity > 0 ? moonlight / sunIntensity : 0;
+  const sunColor: [number, number, number] = [
+    sunColorBase[0] + (moonTint[0] - sunColorBase[0]) * moonWeight,
+    sunColorBase[1] + (moonTint[1] - sunColorBase[1]) * moonWeight,
+    sunColorBase[2] + (moonTint[2] - sunColorBase[2]) * moonWeight,
   ];
 
   // Shadows: darkness rises (shadows fade) as diffuse light takes over; off when no direct light.
@@ -79,6 +112,9 @@ export function lightingFromScene(s: SceneState): LightingParameters {
   const shadowsEnabled = s.render.shadows && directLightPresent;
 
   const nightFactor = 1 - smooth(-18, 0, el);
+  // Twilight lift for the sky dome: the atmosphere is lit at a grazing angle, so give it more
+  // energy while the Sun is just below the horizon; the grade shader brings the level back down.
+  const twilightBoost = 1 + 0.9 * smooth(-14, -2, el) * (1 - smooth(-2, 0, el));
   const twilightWarm = smooth(-6, 0, el) * (1 - smooth(6, 20, el)); // peaks at the horizon
   const atmosphereHue = 0.03 * twilightWarm;
   const atmosphereSaturation = -0.35 * p.cloudOpacity + 0.1 * twilightWarm;
@@ -94,6 +130,22 @@ export function lightingFromScene(s: SceneState): LightingParameters {
       location.point.latitude,
       location.point.longitude,
     ),
+    lightDirectionEcef:
+      moonlit && el < -12 && moon
+        ? sunLightDirectionEcef(
+            moon.azimuthDegrees,
+            Math.max(moon.elevationDegrees, 2),
+            location.point.latitude,
+            location.point.longitude,
+          )
+        : sunLightDirectionEcef(
+            solar.azimuthDegrees,
+            lightElevation,
+            location.point.latitude,
+            location.point.longitude,
+          ),
+    starsVisible,
+    moonlit,
     sunColor,
     sunIntensity,
     directLightPresent,
@@ -103,7 +155,8 @@ export function lightingFromScene(s: SceneState): LightingParameters {
       hueShift: atmosphereHue,
       saturationShift: atmosphereSaturation,
       brightnessShift: atmosphereBrightness,
-      lightIntensity: 20 * (0.4 + 0.6 * (1 - nightFactor)),
+      // Moonlit: the atmosphere's lobe around the light becomes the Moon's halo; keep it modest.
+      lightIntensity: 20 * (0.4 + 0.6 * (1 - nightFactor)) * twilightBoost * (moonlit ? 0.3 : 1),
     },
     fogDensity,
     grade: {

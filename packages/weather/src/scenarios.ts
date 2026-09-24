@@ -240,10 +240,12 @@ export interface ColorTemperatureCurvePoint {
 
 export const DEFAULT_COLOR_TEMPERATURE_CURVE: readonly ColorTemperatureCurvePoint[] = Object.freeze(
   [
-    { elevationDeg: -18, kelvin: 9000 }, // astronomical twilight: deep blue sky light only
-    { elevationDeg: -12, kelvin: 8500 },
-    { elevationDeg: -6, kelvin: 7800 }, // blue hour
-    { elevationDeg: -4, kelvin: 4200 }, // last direct light is very warm
+    { elevationDeg: -18, kelvin: 11000 }, // astronomical twilight: only the darkest blue sky light
+    { elevationDeg: -12, kelvin: 10000 },
+    { elevationDeg: -6, kelvin: 9000 }, // end of civil twilight
+    { elevationDeg: -4, kelvin: 8000 }, // blue hour proper
+    { elevationDeg: -2, kelvin: 6500 }, // afterglow: sky light takes over from the last direct light
+    { elevationDeg: -0.833, kelvin: 3200 }, // last direct light at sunset
     { elevationDeg: 0, kelvin: 2900 }, // sun on the horizon
     { elevationDeg: 5, kelvin: 3800 }, // golden light
     { elevationDeg: 10, kelvin: 4800 },

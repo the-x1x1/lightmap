@@ -1,0 +1,6 @@
+www/dist/
+www/cesium-build
+www/engine
+www/cdeps
+shot-*.png
+result.json
