@@ -212,7 +212,8 @@ No lens optical simulation (distortion, depth of field) in v1.
   10 minutes per civil day, detects crossings of the target bearing (ignoring the ±180° wrap) and
   refines each by bisection to ~1 s; elevation, phase and rising/setting trend are evaluated at the
   refined instant. Correct in the tropics (several crossings a day) and in polar summer (the sun
-  circles). Runs in the browser; a year of sun alignments takes a few milliseconds.
+  circles). Runs in the browser in a Web Worker (`features/finder/solver.worker.ts`; main-thread
+  fallback), so a three-year moon search never freezes the timeline.
 - **Results**: count of moments and dates, each row `date · local time · elevation · rising/setting
 (· % lit)`; selecting a row moves the planner to that instant so the preview shows it.
 - **Honesty**: results are geometry only — terrain occlusion, clouds and near-horizon refraction
