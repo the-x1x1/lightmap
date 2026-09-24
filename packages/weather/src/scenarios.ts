@@ -244,7 +244,11 @@ export function parametersForForecast(frame: {
   if (observed && observed.high > 0.3 && observed.low + observed.mid < 0.3) {
     const veil = clamp01((observed.high - 0.3) / 0.7);
     out.sunTransmittance = clamp01(Math.max(out.sunTransmittance, 0.55 + 0.3 * (1 - veil)));
-    out.diffuseFraction = clamp01(Math.max(out.diffuseFraction, 0.3 + 0.2 * veil));
+    // Diffuse share follows the surviving beam (the total-cover interpolation would otherwise
+    // leave overcast-grade shadow fading under a sky that passes 60 % of the sun).
+    out.diffuseFraction = clamp01(
+      Math.min(Math.max(out.diffuseFraction, 0.3 + 0.2 * veil), 1 - 0.6 * out.sunTransmittance),
+    );
   }
   // Visibility → haze. 40 km+ is crisp; 5 km is noticeably hazy; < 1 km is fog.
   if (

@@ -93,12 +93,14 @@ void main() {
     // Clouds share the scene's sky-luminance dimming (overcast decks are darker than fair ones).
     float deckLum = mix(1.0, u_skyLuminance, 0.6);
     // How each deck is lit. A cloud at height h over the observer stays in sunlight until the Sun
-    // is acos(R/(R+h)) below the horizon (+~0.5° refraction): ≈1° for a 1 km base, ≈2° at 4 km,
-    // ≈3.5–4° at 10–12 km. So low cloud goes into shadow at sunset while cirrus stays lit — and
-    // pink — for another 15–20 minutes. Geometry, not taste.
-    float sunUp   = smoothstep(-1.2, 1.5, u_sunElevation);
-    float midLit  = smoothstep(-2.5, -0.5, u_sunElevation);
-    float highLit = smoothstep(-4.0, -2.5, u_sunElevation);
+    // is acos(R/(R+h)) below the horizon — 1.0° for a 1 km base, 2.0° at 4 km, 3.2–3.5° at
+    // 10–12 km (R = 6371 km) — plus ≈0.5° of refraction: ≈1.5°, ≈2.5°, ≈3.7–4.0°. Each ramp is
+    // centred on its band's typical height, so low cloud goes into shadow just after sunset while
+    // cirrus stays lit — and pink — for another 15–20 minutes. The transition is applied across
+    // the whole sky; a real deck stays lit a little longer toward the Sun (known simplification).
+    float sunUp   = smoothstep(-2.0, -0.5, u_sunElevation);
+    float midLit  = smoothstep(-3.0, -1.5, u_sunElevation);
+    float highLit = smoothstep(-4.5, -3.0, u_sunElevation);
     // Direct light reaching a cloud is warm from the golden hour down: fully orange-red once the
     // Sun is below the observer's horizon (the beam has crossed the whole atmosphere twice).
     float lowSun  = 1.0 - smoothstep(-1.0, 8.0, u_sunElevation);

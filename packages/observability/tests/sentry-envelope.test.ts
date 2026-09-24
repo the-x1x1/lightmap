@@ -13,10 +13,17 @@ describe('parseDsn', () => {
     expect(d).toMatchObject({ publicKey: 'abc123', host: 'o42.ingest.sentry.io', projectId: '99' });
     expect(d.endpoint).toBe('https://o42.ingest.sentry.io/api/99/envelope/');
   });
-  it('supports self-hosted DSNs with a path prefix', () => {
-    expect(parseDsn('https://k@errors.example.com/sentry/7').endpoint).toBe(
-      'https://errors.example.com/sentry/api/7/envelope/',
+  it('supports self-hosted DSNs with a path prefix and echoes the DSN as configured', () => {
+    const d = parseDsn('https://k@errors.example.com/sentry/7');
+    expect(d.endpoint).toBe('https://errors.example.com/sentry/api/7/envelope/');
+    const env = buildEnvelope(
+      buildEvent('x', undefined, { now: new Date(0), eventId: 'e' }),
+      d,
+      new Date(0),
     );
+    expect(JSON.parse(env.split('\n')[0]!)).toMatchObject({
+      dsn: 'https://k@errors.example.com/sentry/7',
+    });
   });
   it('rejects malformed DSNs', () => {
     expect(() => parseDsn('https://host/1')).toThrow();
@@ -94,8 +101,7 @@ describe('createSentryEnvelopeReporter', () => {
       now: () => new Date('2026-09-24T00:00:00Z'),
       eventId: () => 'a'.repeat(32),
     });
-    r.capture(new Error('nope'), { route: '/api/x' });
-    await new Promise((res) => setTimeout(res, 0));
+    await r.capture(new Error('nope'), { route: '/api/x' });
     expect(calls).toHaveLength(1);
     expect(calls[0]!.url).toBe('https://o1.ingest.sentry.io/api/5/envelope/');
     expect(calls[0]!.headers['X-Sentry-Auth']).toContain('sentry_key=key');
@@ -104,9 +110,10 @@ describe('createSentryEnvelopeReporter', () => {
       dsn: 'https://key@o1.ingest.sentry.io/5',
       fetchImpl: () => Promise.reject(new Error('offline')),
     });
-    expect(() => {
-      failing.capture(new Error('x'));
-    }).not.toThrow();
-    await new Promise((res) => setTimeout(res, 0));
+    await expect(failing.capture(new Error('x'))).resolves.toBeUndefined();
+    // Non-Error values that cannot be serialised (BigInt) or contexts with cycles still report.
+    const cyclic: Record<string, unknown> = {};
+    cyclic['self'] = cyclic;
+    await expect(failing.capture(10n, cyclic)).resolves.toBeUndefined();
   });
 });

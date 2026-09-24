@@ -66,17 +66,23 @@ export function getServices(): Services {
     log.warn(
       'DATABASE_URL unset: accounts, projects and billing are disabled; map exploration works',
     );
-  // Error monitoring: any Sentry-DSN-compatible ingest when SENTRY_DSN is set, logs otherwise.
-  const errors: ErrorReporter = env.SENTRY_DSN
-    ? createSentryEnvelopeReporter({
+  // Error monitoring: any Sentry-DSN-compatible ingest when SENTRY_DSN is set, logs otherwise. A
+  // malformed DSN must not take every route down with it (this runs inside errorResponse too).
+  let errors: ErrorReporter = loggingErrorReporter(log);
+  if (env.SENTRY_DSN) {
+    try {
+      errors = createSentryEnvelopeReporter({
         dsn: env.SENTRY_DSN,
         release: `lightmap@${APP_VERSION}`,
         environment: env.NODE_ENV,
         tags: { service: 'web' },
         log,
-      })
-    : loggingErrorReporter(log);
-  if (env.SENTRY_DSN) log.info('error reporting enabled (envelope transport)');
+      });
+      log.info('error reporting enabled (envelope transport)');
+    } catch (e) {
+      log.error('SENTRY_DSN rejected; error reports go to the logs only', { error: String(e) });
+    }
+  }
   services = {
     env,
     log,

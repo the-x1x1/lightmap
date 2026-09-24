@@ -32,6 +32,8 @@ export interface ParsedDsn {
   protocol: string;
   /** Envelope endpoint URL. */
   endpoint: string;
+  /** The DSN as configured (self-hosted path prefixes included), echoed in the envelope header. */
+  raw: string;
 }
 
 /** `https://<key>@o123.ingest.sentry.io/456` → endpoint + auth parts. Throws on a malformed DSN. */
@@ -42,7 +44,14 @@ export function parseDsn(dsn: string): ParsedDsn {
     throw new Error('SENTRY_DSN is not a valid DSN (expected protocol://key@host/projectId)');
   const basePath = u.pathname.replace(/^\/+/, '').split('/').slice(0, -1).join('/');
   const endpoint = `${u.protocol}//${u.host}/${basePath ? `${basePath}/` : ''}api/${projectId}/envelope/`;
-  return { publicKey: u.username, host: u.host, projectId, protocol: u.protocol, endpoint };
+  return {
+    publicKey: u.username,
+    host: u.host,
+    projectId,
+    protocol: u.protocol,
+    endpoint,
+    raw: dsn,
+  };
 }
 
 function hex32(): string {
@@ -71,6 +80,14 @@ export function framesFromStack(stack: string | undefined): Array<{
     });
   }
   return frames.reverse().slice(-50);
+}
+
+function safeStringify(v: unknown): string {
+  try {
+    return JSON.stringify(v) ?? String(v);
+  } catch {
+    return String(v);
+  }
 }
 
 export interface SentryEvent {
@@ -117,7 +134,7 @@ export function buildEvent(
       ],
     };
   } else {
-    ev.message = typeof error === 'string' ? error : JSON.stringify(error)?.slice(0, 1000);
+    ev.message = typeof error === 'string' ? error : safeStringify(error).slice(0, 1000);
   }
   if (context && Object.keys(context).length) ev.extra = redact(context);
   return ev;
@@ -127,7 +144,7 @@ export function buildEnvelope(event: SentryEvent, dsn: ParsedDsn, sentAt: Date):
   const header = JSON.stringify({
     event_id: event.event_id,
     sent_at: sentAt.toISOString(),
-    dsn: `${dsn.protocol}//${dsn.publicKey}@${dsn.host}/${dsn.projectId}`,
+    dsn: dsn.raw,
   });
   const body = JSON.stringify(event);
   const item = JSON.stringify({ type: 'event', length: new TextEncoder().encode(body).length });
@@ -142,24 +159,31 @@ export function createSentryEnvelopeReporter(opts: SentryEnvelopeOptions): Error
   const auth = `Sentry sentry_version=7, sentry_client=lightmap-envelope/1, sentry_key=${dsn.publicKey}`;
   return {
     capture(error, context) {
-      const at = now();
-      const event = buildEvent(error, context, {
-        ...(opts.release ? { release: opts.release } : {}),
-        ...(opts.environment ? { environment: opts.environment } : {}),
-        ...(opts.tags ? { tags: opts.tags } : {}),
-        now: at,
-        eventId: eventId(),
-      });
-      opts.log?.error('unhandled error', { error, ...(context ?? {}) });
-      void fetchImpl(dsn.endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-sentry-envelope', 'X-Sentry-Auth': auth },
-        body: buildEnvelope(event, dsn, at),
-      })
-        .then((res) => {
-          if (!res.ok) opts.log?.warn('error report rejected', { status: res.status });
+      // Reporting must never take the request down with it: everything here is guarded, and the
+      // returned promise never rejects.
+      try {
+        opts.log?.error('unhandled error', { error, ...(context ?? {}) });
+        const at = now();
+        const event = buildEvent(error, context, {
+          ...(opts.release ? { release: opts.release } : {}),
+          ...(opts.environment ? { environment: opts.environment } : {}),
+          ...(opts.tags ? { tags: opts.tags } : {}),
+          now: at,
+          eventId: eventId(),
+        });
+        return fetchImpl(dsn.endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-sentry-envelope', 'X-Sentry-Auth': auth },
+          body: buildEnvelope(event, dsn, at),
         })
-        .catch((e: unknown) => opts.log?.warn('error report failed', { error: String(e) }));
+          .then((res) => {
+            if (!res.ok) opts.log?.warn('error report rejected', { status: res.status });
+          })
+          .catch((e: unknown) => opts.log?.warn('error report failed', { error: String(e) }));
+      } catch (e) {
+        opts.log?.warn('error report failed', { error: String(e) });
+        return Promise.resolve();
+      }
     },
   };
 }

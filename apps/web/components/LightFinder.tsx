@@ -13,6 +13,7 @@ import {
   civilDateString,
   formatWallTime,
   parseCivilDate,
+  utcToLocalSelection,
   utcToWallClock,
   type CelestialBody,
 } from '@lightmap/astronomy';
@@ -159,9 +160,10 @@ export function LightFinder({
   }
 
   function jumpTo(m: SerializedMatch) {
-    const w = utcToWallClock(new Date(m.timestampUtc), tz);
-    setDate(civilDateString(w));
-    setMinutes(w.hour * 60 + w.minute);
+    // Elapsed minutes since local midnight, so the jump lands on the instant even on a DST day.
+    const sel = utcToLocalSelection(new Date(m.timestampUtc), tz);
+    setDate(sel.date);
+    setMinutes(sel.minutes);
   }
 
   const matches = result?.res.matches ?? [];

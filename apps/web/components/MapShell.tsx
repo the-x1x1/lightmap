@@ -204,6 +204,7 @@ export function MapShell() {
             aria-expanded={sheetOpen}
             aria-controls="planning-panel-body"
             onPointerDown={(e) => {
+              handleSettledByPointer.current = false;
               handleSwipe.current = { id: e.pointerId, y0: e.clientY };
               e.currentTarget.setPointerCapture(e.pointerId);
             }}
@@ -220,12 +221,11 @@ export function MapShell() {
             onPointerCancel={() => {
               handleSwipe.current = null;
             }}
-            onClick={() => {
-              if (handleSettledByPointer.current) {
-                handleSettledByPointer.current = false;
-                return;
-              }
-              setSheetOpen(!sheetOpen);
+            onClick={(e) => {
+              // Keyboard activation arrives as a click with detail 0 and no pointer events; a
+              // pointer press was already settled in pointerup (a swipe never produces a click).
+              if (e.detail === 0 || !handleSettledByPointer.current) setSheetOpen(!sheetOpen);
+              handleSettledByPointer.current = false;
             }}
             data-testid="sheet-handle"
           >

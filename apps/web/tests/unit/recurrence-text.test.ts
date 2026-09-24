@@ -83,6 +83,15 @@ describe('describeRecurrence', () => {
     expect(t.back).toBeNull();
     expect(t.backTime).toBeNull();
   });
+  it('says nothing about how long the light lasts when nothing past today was searched', () => {
+    const t = describeRecurrence(
+      { runEnds: null, runClipped: true, next: null, daysUntilNext: null },
+      'UTC',
+      '2026-06-21',
+    );
+    expect(t.lasts).toBeNull();
+    expect(t.back).toBeNull();
+  });
   it('marks the run as a lower bound when the searched range ran out', () => {
     const t = describeRecurrence(
       { runEnds: '2026-07-05', runClipped: true, next: null, daysUntilNext: null },

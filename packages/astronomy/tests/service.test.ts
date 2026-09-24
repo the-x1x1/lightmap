@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { MeeusAstronomyService, compassFromAzimuth, localSelectionToUtc } from '../src/service.ts';
+import {
+  MeeusAstronomyService,
+  compassFromAzimuth,
+  localSelectionToUtc,
+  utcToLocalSelection,
+} from '../src/service.ts';
 import { lightPhase, twilightBand } from '../src/events.ts';
 import { refractionDeg } from '../src/solar.ts';
 
@@ -121,5 +126,27 @@ describe('MeeusAstronomyService', () => {
     expect(compassFromAzimuth(0)).toBe('N');
     expect(compassFromAzimuth(112.5)).toBe('ESE');
     expect(compassFromAzimuth(348.75)).toBe('N');
+  });
+});
+
+describe('utcToLocalSelection', () => {
+  it('round-trips with localSelectionToUtc, including across a DST gap', () => {
+    // New York springs forward on 2026-03-08: 02:00 → 03:00. 03:30 wall clock is 150 minutes into
+    // the civil day (midnight → 03:30 with one hour missing), not 210.
+    const ny = 'America/New_York';
+    const at = new Date('2026-03-08T07:30:00Z'); // 03:30 EDT
+    const sel = utcToLocalSelection(at, ny);
+    expect(sel).toEqual({ date: '2026-03-08', minutes: 150 });
+    expect(localSelectionToUtc({ year: 2026, month: 3, day: 8 }, sel.minutes, ny).getTime()).toBe(
+      at.getTime(),
+    );
+    // An ordinary day: elapsed minutes equal the wall clock.
+    const plain = utcToLocalSelection(new Date('2026-05-31T22:30:00Z'), 'Pacific/Honolulu');
+    expect(plain).toEqual({ date: '2026-05-31', minutes: 12 * 60 + 30 });
+    // Far side of the date line.
+    expect(utcToLocalSelection(new Date('2026-01-01T00:30:00Z'), 'Pacific/Kiritimati')).toEqual({
+      date: '2026-01-01',
+      minutes: 14 * 60 + 30,
+    });
   });
 });

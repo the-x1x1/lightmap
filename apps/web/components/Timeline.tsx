@@ -93,9 +93,13 @@ export function Timeline({ dayEvents, timeZone, phase, className }: TimelineProp
     () => (dayEvents ? dayGradient(dayEvents) : 'rgba(255,255,255,0.15)'),
     [dayEvents],
   );
-  const hh = Math.floor(minutes / 60) % 24;
-  const mm = minutes % 60;
-  const timeLabel = `${hh.toString().padStart(2, '0')}:${mm.toString().padStart(2, '0')}`;
+  // `minutes` is elapsed time since local midnight; on a DST day that is not the wall clock, so
+  // the label comes from the instant itself whenever the day's bounds are known.
+  const timeLabel = dayEvents
+    ? formatWallTime(new Date(dayEvents.dayStart.getTime() + minutes * 60_000), timeZone)
+    : `${Math.floor(minutes / 60)
+        .toString()
+        .padStart(2, '0')}:${(minutes % 60).toString().padStart(2, '0')}`;
 
   return (
     <div className={cx('w-full', className)} data-testid="timeline">
