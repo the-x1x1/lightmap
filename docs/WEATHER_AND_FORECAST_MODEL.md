@@ -129,14 +129,27 @@ between Clear, Partly Cloudy and Overcast (plan §10), not for radiometric accur
 - Per-client burst limit (30/min) and daily budgets (40 anonymous / 150 free / 600 pro weather
   calls per day, in `usage_counters`) protect cost. Cache hits are not charged.
 
-## 8. Why climatology is Phase 7, and its rule
+## 8. Climatology: "Typical for this month" (Phase 7, delivered)
 
-Climatology ("May afternoons here are historically clear 44 %, partly cloudy 38 %, overcast 18 %")
-needs a multi-year historical archive per location, an aggregation pipeline, and a provider whose
-terms allow storing derived statistics. None of that is required to prove the product, and a badly
-presented climatology is the fastest way to destroy trust. When it ships:
+Climatology ("May daylight hours here were Clear 44 %, Mostly clear 20 %, Partly cloudy 18 %,
+Overcast 12 %, Rain 6 %") is the third thing of §1 — a distribution over past years, neither a
+forecast nor a scenario.
 
-- it appears only as a small "Typical for this month" indicator next to the scenario buttons;
-- it may suggest which scenario to look at first; it never selects one silently;
-- it is never rendered with a "Forecast" badge, never given a confidence above SCENARIO, and never
-  turned into a deterministic prediction (plan §4, §25 Phase 7).
+- **Source**: ERA5 reanalysis via Open-Meteo's archive API (`open-meteo-era5`,
+  `DATA_SOURCES_AND_LICENSING.md`), the last ten complete calendar years.
+- **Method** (`summarizeClimatology`, `packages/weather/src/climatology.ts`): every hour of the
+  month in every year is classified with the same `scenarioForConditions()` thresholds the live
+  forecast uses (cloud cover < 12 % clear, < 40 % mostly clear, < 80 % partly cloudy, else overcast;
+  ≥ 0.5 mm/h → storm), restricted to local daylight hours 06:00–20:00 in the location's zone;
+  shares, mean cloud cover, wet-hour and wet-day fractions are reported with the year span and
+  sample size.
+- **Presentation**: a small "Typical for {month}" block under the scenario buttons with the badge
+  **Climatology · not a forecast**; each class is a button that _compares_ that scenario (explicit
+  user action — nothing is selected silently); the most common class is marked "most common".
+  The summary line names the hours, the years and "history, not a prediction for your date".
+- **Never**: rendered with a Forecast badge, given a confidence above SCENARIO, or turned into a
+  deterministic prediction (plan §4, §25 Phase 7). `ClimatologySummary.kind` is `'CLIMATOLOGY'` and
+  its `label` is fixed to "Typical for this month" so the wording cannot drift.
+- **Cost**: one summary is up to ten upstream requests; cached 30 days per 0.5° cell × month
+  (`provider_cache`, namespace `climatology`), budgeted per plan (`DAILY_BUDGET_LIMITS.climatology`),
+  Pro entitlement `climatology` enforced server-side.

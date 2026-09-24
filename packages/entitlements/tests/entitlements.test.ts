@@ -119,6 +119,8 @@ describe('can()', () => {
     expect(finder.allowed).toBe(false);
     expect(finder.reason).toContain('14-day window');
     expect(can(pro, 'reverse_planning').allowed).toBe(true);
+    expect(can(free, 'climatology').reason).toContain('Typical conditions');
+    expect(can(pro, 'climatology').allowed).toBe(true);
   });
   it('maps Stripe prices to plans without guessing', () => {
     const map = { pro: ['price_month', 'price_year'] };

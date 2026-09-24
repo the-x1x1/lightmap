@@ -13,7 +13,7 @@ mode but production configuration is still outstanding.
 | 4     | Visual quality                              | Started: preview export delivered (unreleased)                            |
 | 5     | Real references                             | Future — blocked on licensing                                             |
 | 6     | Advanced camera planning / reverse planning | **Solver + Light finder delivered (unreleased)**; drag-in-frame UI future |
-| 7     | Long-range climatology                      | Future                                                                    |
+| 7     | Long-range climatology                      | **Delivered (unreleased)** — Open-Meteo/ERA5, Pro entitlement             |
 | 8     | High-fidelity environment reconstruction    | Future                                                                    |
 | 9     | Native mobile                               | Future — only after PWA demand is proven                                  |
 
@@ -96,11 +96,14 @@ Next: drag the sun/moon marker directly in the preview frame to set the target (
 shot variants per viewpoint, sensor formats, and a "next occurrence" chip on the timeline.
 `frameCoordinates()` is already the inverse of what the drag needs.
 
-## Phase 7 — Long-range climatology (future)
+## Phase 7 — Long-range climatology (delivered, unreleased)
 
-Historical distributions of cloudiness, haze and rain by month and hour, shown as "Typical for this
-month" beside the scenario buttons. Never labelled as a forecast, never given a confidence above
-SCENARIO (`WEATHER_AND_FORECAST_MODEL.md` §8).
+"Typical for this month" beside the scenario buttons: shares of the five scenario classes over
+daylight hours across the last ten years (ERA5 via Open-Meteo's archive, `ClimatologyProvider`
+abstraction with a fixture), mean cloud and wet-day fraction, tap-to-compare, most-common marker.
+Never labelled a forecast, never above SCENARIO confidence (`WEATHER_AND_FORECAST_MODEL.md` §8).
+Pro entitlement `climatology`; cached 30 days per 0.5° cell. Future: per-hour-of-day breakdown and
+haze/visibility climatology once a source with those fields is licensed.
 
 ## Phase 8 — High-fidelity environment reconstruction (future)
 
