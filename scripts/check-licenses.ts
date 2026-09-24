@@ -17,10 +17,32 @@ interface PkgJson {
   private?: boolean;
 }
 
+interface Exception {
+  /** Exact SPDX expression(s) the exception covers; any other licence for the package still fails. */
+  license: string | string[];
+  reason: string;
+  approvedBy: string;
+  date: string;
+}
+
 interface Allowlist {
   permissive: string[];
-  exceptions: Record<string, { license: string; reason: string; approvedBy: string; date: string }>;
+  /** Keyed by package name, or by a prefix ending in `*` for platform-split packages (`@img/sharp-*`). */
+  exceptions: Record<string, Exception>;
   ignore: string[];
+}
+
+function exceptionFor(name: string): Exception | undefined {
+  const exact = allowlist.exceptions[name];
+  if (exact) return exact;
+  for (const [key, e] of Object.entries(allowlist.exceptions)) {
+    if (key.endsWith('*') && name.startsWith(key.slice(0, -1))) return e;
+  }
+  return undefined;
+}
+
+function exceptionCovers(e: Exception, license: string): boolean {
+  return Array.isArray(e.license) ? e.license.includes(license) : e.license === license;
 }
 
 const root = resolve(process.argv[1] ? join(process.argv[1], '..', '..') : '.');
@@ -105,8 +127,10 @@ const rows: string[] = [];
 for (const [key, info] of [...seen].sort(([a], [b]) => a.localeCompare(b))) {
   const name = key.slice(0, key.lastIndexOf('@'));
   if (allowlist.ignore.includes(name)) continue;
-  const exception = allowlist.exceptions[name];
-  const ok = isPermissive(info.license) || (exception && exception.license === info.license);
+  const exception = exceptionFor(name);
+  const ok =
+    isPermissive(info.license) ||
+    (exception !== undefined && exceptionCovers(exception, info.license));
   if (!ok)
     problems.push(
       `${key}: ${info.license}${info.license === 'UNKNOWN' ? ' (no licence field — needs review)' : ''}`,

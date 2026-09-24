@@ -10,6 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production
+    permissions:
+      contents: write # create the GitHub release
+    env:
+      # Read once here so steps can test them in `if:` (the secrets context is not available there).
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -24,19 +30,22 @@ jobs:
       - run: pnpm build
         env:
           NEXT_TELEMETRY_DISABLED: 1
-          NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL }}
       - name: Database migration (forward-only; see docs/RELEASE_PROCESS.md for rollback)
+        if: env.DATABASE_URL != ''
         run: pnpm db:migrate
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
       - name: Deploy
         run: |
           echo "Deploy step is host-specific and intentionally not coupled to app code (plan §13)."
           echo "Wire one of: vercel deploy --prod · fly deploy · render deploy hook. See docs/RELEASE_PROCESS.md."
       - name: Smoke test
+        if: env.NEXT_PUBLIC_APP_URL != ''
         run: |
-          curl -fsS "${{ vars.NEXT_PUBLIC_APP_URL }}/api/health" | tee health.json
+          curl -fsS "$NEXT_PUBLIC_APP_URL/api/health" | tee health.json
           node -e "const h=require('./health.json'); if(!h.ok) process.exit(1)"
+      - name: No production target yet
+        if: env.DATABASE_URL == '' || env.NEXT_PUBLIC_APP_URL == ''
+        run: |
+          echo "::notice::Migration/smoke skipped: set the DATABASE_URL secret and NEXT_PUBLIC_APP_URL variable on the 'production' environment once a host exists (docs/RELEASE_PROCESS.md §5)."
       - name: GitHub release
         uses: softprops/action-gh-release@v2
         with:

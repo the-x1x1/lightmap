@@ -74,6 +74,11 @@ approval):
 Order matters: migrate before deploy so the new code never meets an old schema; migrations must
 therefore be backward compatible with the previous release for the minutes both may run.
 
+Until a production host exists, steps 3 and 5 are skipped (the workflow checks whether the
+`DATABASE_URL` secret and `NEXT_PUBLIC_APP_URL` variable are set on the `production` environment
+and prints a notice instead), so tagging still produces a GitHub release from a fully gated build.
+Set both in _Settings → Environments → production_ when the host is ready.
+
 ## 6. Rollback
 
 **Application**: redeploy the previous tag on the host (`vercel rollback`, `fly deploy --image

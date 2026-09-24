@@ -99,8 +99,16 @@ Not a data source, but PII flows to it (email, payment). Covered by Stripe's DPA
 
 Handled by `scripts/check-licenses.ts` against `scripts/license-allowlist.json`: permissive
 licences pass; anything else (GPL/AGPL/LGPL/SSPL/unknown) fails CI unless an exception with a
-written reason is recorded. `THIRD_PARTY_NOTICES.md` is regenerated with `pnpm licenses
---write-notices`.
+written reason is recorded. An exception key may end in `*` to cover platform-split packages.
+`THIRD_PARTY_NOTICES.md` is regenerated with `pnpm licenses --write-notices` (it is a generated
+file, excluded from Prettier).
+
+Recorded exceptions (both awaiting the owner's written confirmation):
+
+| Package        | Licence                                       | Why it is acceptable                                                                                                                                                                                         |
+| -------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `geo-tz`       | MIT code; ODbL timezone-boundary data         | Attribution carried; the database is used unmodified and not redistributed.                                                                                                                                  |
+| `@img/sharp-*` | `LGPL-3.0-or-later` (libvips prebuilt binary) | Optional dependency of Next.js for `next/image`; never imported by LightMap code; unmodified native module loaded server-side only, never shipped to browsers. Weak copyleft does not reach LightMap's code. |
 
 ## Pre-launch checklist
 
