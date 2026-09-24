@@ -2,7 +2,9 @@
 import { auditRepo, subscriptionsRepo, usersRepo, type Db } from '@lightmap/database';
 import type { BillingStore, SubscriptionUpsert } from './webhook.ts';
 
-export function databaseBillingStore(db: Db): BillingStore & { linkCustomer(userId: string, customerId: string): Promise<void> } {
+export function databaseBillingStore(
+  db: Db,
+): BillingStore & { linkCustomer(userId: string, customerId: string): Promise<void> } {
   const subs = subscriptionsRepo(db);
   const audit = auditRepo(db);
   const users = usersRepo(db);
@@ -23,7 +25,18 @@ export function databaseBillingStore(db: Db): BillingStore & { linkCustomer(user
       const existing = await subs.forUser(userId);
       if (existing) return;
       // A placeholder record so the customer ↔ user mapping exists before the first subscription event.
-      await subs.upsert({ provider: 'stripe', userId, providerCustomerId: customerId, providerSubscriptionId: null, status: 'incomplete', planKey: 'free', priceId: null, periodStart: null, periodEnd: null, cancelAtPeriodEnd: false });
+      await subs.upsert({
+        provider: 'stripe',
+        userId,
+        providerCustomerId: customerId,
+        providerSubscriptionId: null,
+        status: 'incomplete',
+        planKey: 'free',
+        priceId: null,
+        periodStart: null,
+        periodEnd: null,
+        cancelAtPeriodEnd: false,
+      });
     },
   };
 }

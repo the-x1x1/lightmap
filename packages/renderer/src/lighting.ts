@@ -19,7 +19,12 @@ export interface LightingParameters {
   shadowDarkness: number;
   shadowsEnabled: boolean;
   /** Sky-atmosphere shifts (Cesium: hue/saturation/brightness deltas around 0). */
-  atmosphere: { hueShift: number; saturationShift: number; brightnessShift: number; lightIntensity: number };
+  atmosphere: {
+    hueShift: number;
+    saturationShift: number;
+    brightnessShift: number;
+    lightIntensity: number;
+  };
   /** Fog density (Cesium `scene.fog.density`), driven by haze. */
   fogDensity: number;
   /** Post-process grade uniforms. */
@@ -63,7 +68,11 @@ export function lightingFromScene(s: SceneState): LightingParameters {
   // Colour: black-body tint from elevation, desaturated toward white as cloud diffuses it.
   const tint = kelvinToRgb(atmosphere.colorTemperatureK);
   const mixToWhite = p.diffuseFraction * 0.6;
-  const sunColor: [number, number, number] = [tint[0] + (1 - tint[0]) * mixToWhite, tint[1] + (1 - tint[1]) * mixToWhite, tint[2] + (1 - tint[2]) * mixToWhite];
+  const sunColor: [number, number, number] = [
+    tint[0] + (1 - tint[0]) * mixToWhite,
+    tint[1] + (1 - tint[1]) * mixToWhite,
+    tint[2] + (1 - tint[2]) * mixToWhite,
+  ];
 
   // Shadows: darkness rises (shadows fade) as diffuse light takes over; off when no direct light.
   const shadowDarkness = clamp01(0.25 + 0.75 * p.diffuseFraction - 0.15 * smooth(0, 30, el));
@@ -79,13 +88,23 @@ export function lightingFromScene(s: SceneState): LightingParameters {
   const skyGradient = skyGradientFor(el, p.cloudOpacity, atmosphere.warmth, p.skyLuminance);
 
   return {
-    sunDirectionEcef: sunLightDirectionEcef(solar.azimuthDegrees, el, location.point.latitude, location.point.longitude),
+    sunDirectionEcef: sunLightDirectionEcef(
+      solar.azimuthDegrees,
+      el,
+      location.point.latitude,
+      location.point.longitude,
+    ),
     sunColor,
     sunIntensity,
     directLightPresent,
     shadowDarkness,
     shadowsEnabled,
-    atmosphere: { hueShift: atmosphereHue, saturationShift: atmosphereSaturation, brightnessShift: atmosphereBrightness, lightIntensity: 20 * (0.4 + 0.6 * (1 - nightFactor)) },
+    atmosphere: {
+      hueShift: atmosphereHue,
+      saturationShift: atmosphereSaturation,
+      brightnessShift: atmosphereBrightness,
+      lightIntensity: 20 * (0.4 + 0.6 * (1 - nightFactor)),
+    },
     fogDensity,
     grade: {
       saturation: p.saturation,
@@ -106,7 +125,12 @@ export function lightingFromScene(s: SceneState): LightingParameters {
 }
 
 /** Three CSS colours: zenith, mid-sky, horizon. */
-export function skyGradientFor(elevationDeg: number, cloudOpacity: number, warmth: number, skyLuminance: number): [string, string, string] {
+export function skyGradientFor(
+  elevationDeg: number,
+  cloudOpacity: number,
+  warmth: number,
+  skyLuminance: number,
+): [string, string, string] {
   const day = smooth(-6, 8, elevationDeg);
   const night = 1 - smooth(-18, -6, elevationDeg);
   const horizonGlow = smooth(-8, -1, elevationDeg) * (1 - smooth(1, 12, elevationDeg));
@@ -121,8 +145,20 @@ export function skyGradientFor(elevationDeg: number, cloudOpacity: number, warmt
   const nightHorizon: [number, number, number] = [18, 24, 48];
   const glow: [number, number, number] = warmth > 0.55 ? [255, 150, 70] : [120, 140, 210];
 
-  const mix = (a: [number, number, number], b: [number, number, number], t: number): [number, number, number] => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
-  const build = (clear: [number, number, number], nightC: [number, number, number], glowAmount: number): string => {
+  const mix = (
+    a: [number, number, number],
+    b: [number, number, number],
+    t: number,
+  ): [number, number, number] => [
+    a[0] + (b[0] - a[0]) * t,
+    a[1] + (b[1] - a[1]) * t,
+    a[2] + (b[2] - a[2]) * t,
+  ];
+  const build = (
+    clear: [number, number, number],
+    nightC: [number, number, number],
+    glowAmount: number,
+  ): string => {
     let c = mix(clear, overcast, cloudOpacity);
     c = mix(c, nightC, night);
     c = mix(c, nightC, (1 - day) * (1 - night) * 0.5);
@@ -130,5 +166,9 @@ export function skyGradientFor(elevationDeg: number, cloudOpacity: number, warmt
     const l = 1 - (1 - lum) * (1 - night);
     return `rgb(${Math.round(c[0] * l)}, ${Math.round(c[1] * l)}, ${Math.round(c[2] * l)})`;
   };
-  return [build(zenithClear, nightZenith, 0), build(midClear, mix(nightZenith, nightHorizon, 0.5), horizonGlow * 0.3), build(horizonClear, nightHorizon, horizonGlow)];
+  return [
+    build(zenithClear, nightZenith, 0),
+    build(midClear, mix(nightZenith, nightHorizon, 0.5), horizonGlow * 0.3),
+    build(horizonClear, nightHorizon, horizonGlow),
+  ];
 }

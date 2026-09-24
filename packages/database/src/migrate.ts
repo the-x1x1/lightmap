@@ -42,27 +42,39 @@ export interface MigrateResult {
   notices: string[];
 }
 
-export async function migrate(db: SqlExecutor, migrations?: MigrationFile[], log: (line: string) => void = () => {}): Promise<MigrateResult> {
+export async function migrate(
+  db: SqlExecutor,
+  migrations?: MigrationFile[],
+  log: (line: string) => void = () => {},
+): Promise<MigrateResult> {
   const files = migrations ?? (await loadMigrations());
   await db.unsafe(`CREATE TABLE IF NOT EXISTS schema_migrations (
     name text PRIMARY KEY,
     checksum text NOT NULL,
     applied_at timestamptz NOT NULL DEFAULT now()
   )`);
-  const rows = await db.query<{ name: string; checksum: string }>('SELECT name, checksum FROM schema_migrations');
+  const rows = await db.query<{ name: string; checksum: string }>(
+    'SELECT name, checksum FROM schema_migrations',
+  );
   const done = new Map(rows.map((r) => [r.name, r.checksum]));
   const result: MigrateResult = { applied: [], skipped: [], notices: [] };
   for (const m of files) {
     const existing = done.get(m.name);
     if (existing !== undefined) {
-      if (existing !== m.checksum) throw new Error(`Migration ${m.name} was modified after being applied (checksum mismatch). Write a new migration instead.`);
+      if (existing !== m.checksum)
+        throw new Error(
+          `Migration ${m.name} was modified after being applied (checksum mismatch). Write a new migration instead.`,
+        );
       result.skipped.push(m.name);
       continue;
     }
     log(`applying ${m.name}`);
     await db.begin(async (tx) => {
       await tx.unsafe(m.sql);
-      await tx.query('INSERT INTO schema_migrations (name, checksum) VALUES ($1, $2)', [m.name, m.checksum]);
+      await tx.query('INSERT INTO schema_migrations (name, checksum) VALUES ($1, $2)', [
+        m.name,
+        m.checksum,
+      ]);
     });
     result.applied.push(m.name);
   }
@@ -81,7 +93,8 @@ export function validateMigrationSet(files: MigrationFile[]): string[] {
     if (n <= last) problems.push(`${f.name} is out of order`);
     last = n;
     if (f.sql.trim().length === 0) problems.push(`${f.name} is empty`);
-    if (/\bDROP\s+TABLE\b(?!.*IF EXISTS)/i.test(f.sql)) problems.push(`${f.name} drops a table without IF EXISTS`);
+    if (/\bDROP\s+TABLE\b(?!.*IF EXISTS)/i.test(f.sql))
+      problems.push(`${f.name} drops a table without IF EXISTS`);
   }
   return problems;
 }

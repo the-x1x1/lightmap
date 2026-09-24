@@ -8,7 +8,10 @@ const WEATHER_MODES = ['FORECAST', 'EXTENDED_FORECAST', 'SCENARIO', 'RECENT_PAST
 const SOURCE_TYPES = ['REAL_REFERENCE', 'SIMULATED_LIGHTING', 'ESTIMATED_PREVIEW'] as const;
 
 /** Validate a viewpoint body (create: all fields; patch: any subset). Thumbnails are capped at ~200 KB. */
-export function parseViewpoint(body: unknown, mode: 'create' | 'patch'): { input: Partial<ViewpointInput>; snapshot: SnapshotInput | undefined } {
+export function parseViewpoint(
+  body: unknown,
+  mode: 'create' | 'patch',
+): { input: Partial<ViewpointInput>; snapshot: SnapshotInput | undefined } {
   const o = v.obj(body);
   const opt = mode === 'patch';
   const input: Partial<ViewpointInput> = {};
@@ -18,7 +21,10 @@ export function parseViewpoint(body: unknown, mode: 'create' | 'patch'): { input
   if (lat !== undefined && lat !== null) input.latitude = lat;
   const lng = v.number(o['longitude'], 'longitude', -180, 180, { optional: opt });
   if (lng !== undefined && lng !== null) input.longitude = lng;
-  const elev = v.number(o['elevationM'], 'elevationM', -500, 9000, { optional: true, nullable: true });
+  const elev = v.number(o['elevationM'], 'elevationM', -500, 9000, {
+    optional: true,
+    nullable: true,
+  });
   if (elev !== undefined) input.elevationM = elev;
   const tz = v.string(o['timezone'], 'timezone', { min: 1, max: 64, optional: opt });
   if (tz !== undefined && tz !== null) {
@@ -31,14 +37,19 @@ export function parseViewpoint(body: unknown, mode: 'create' | 'patch'): { input
   if (pitch !== undefined && pitch !== null) input.pitchDeg = pitch;
   const fov = v.number(o['fieldOfViewDeg'], 'fieldOfViewDeg', 1, 179, { optional: opt });
   if (fov !== undefined && fov !== null) input.fieldOfViewDeg = fov;
-  const focal = v.number(o['focalLengthEquivalentMm'], 'focalLengthEquivalentMm', 1, 2000, { optional: true, nullable: true });
+  const focal = v.number(o['focalLengthEquivalentMm'], 'focalLengthEquivalentMm', 1, 2000, {
+    optional: true,
+    nullable: true,
+  });
   if (focal !== undefined) input.focalLengthEquivalentMm = focal;
-  if (o['selectedDatetimeUtc'] !== undefined || !opt) input.selectedDatetimeUtc = v.instant(o['selectedDatetimeUtc'], 'selectedDatetimeUtc');
+  if (o['selectedDatetimeUtc'] !== undefined || !opt)
+    input.selectedDatetimeUtc = v.instant(o['selectedDatetimeUtc'], 'selectedDatetimeUtc');
   const wm = v.oneOf(o['weatherMode'], 'weatherMode', WEATHER_MODES, { optional: opt });
   if (wm !== undefined && wm !== null) input.weatherMode = wm;
   if (o['weatherScenario'] !== undefined) {
     const ws = o['weatherScenario'];
-    if (ws !== null && !isScenarioId(ws)) throw new Error('weatherScenario is not a known scenario');
+    if (ws !== null && !isScenarioId(ws))
+      throw new Error('weatherScenario is not a known scenario');
     input.weatherScenario = ws as string | null;
   }
   const st = v.oneOf(o['previewSourceType'], 'previewSourceType', SOURCE_TYPES, { optional: opt });
@@ -47,8 +58,13 @@ export function parseViewpoint(body: unknown, mode: 'create' | 'patch'): { input
   let snapshot: SnapshotInput | undefined;
   if (o['snapshot'] !== undefined && o['snapshot'] !== null) {
     const s = v.obj(o['snapshot']);
-    const thumb = v.string(s['thumbnailDataUrl'], 'thumbnailDataUrl', { optional: true, nullable: true, max: 220_000 });
-    if (thumb && !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(thumb)) throw new Error('thumbnailDataUrl must be a base64 image data URL');
+    const thumb = v.string(s['thumbnailDataUrl'], 'thumbnailDataUrl', {
+      optional: true,
+      nullable: true,
+      max: 220_000,
+    });
+    if (thumb && !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(thumb))
+      throw new Error('thumbnailDataUrl must be a base64 image data URL');
     snapshot = {
       sourceType: v.oneOf(s['sourceType'], 'snapshot.sourceType', SOURCE_TYPES) as string,
       providerMetadata: s['providerMetadata'] ?? {},

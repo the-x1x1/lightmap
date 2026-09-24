@@ -3,7 +3,12 @@
  * synchronous: astronomy is computed inline (sub-millisecond), and weather frames arrive already
  * fetched so the timeline never waits on the network (plan §19).
  */
-import { astronomy as defaultAstronomy, utcToWallClock, type AstronomyService, type DayEvents } from '@lightmap/astronomy';
+import {
+  astronomy as defaultAstronomy,
+  utcToWallClock,
+  type AstronomyService,
+  type DayEvents,
+} from '@lightmap/astronomy';
 import {
   colorTemperatureKelvin,
   decideWeatherMode,
@@ -17,7 +22,14 @@ import {
   type WeatherScenarioId,
 } from '@lightmap/weather';
 import { deriveConfidence, deriveSourceMode } from './confidence.ts';
-import type { AtmosphereState, CameraState, EnvironmentState, LocationState, RenderSettings, SceneState } from './types.ts';
+import type {
+  AtmosphereState,
+  CameraState,
+  EnvironmentState,
+  LocationState,
+  RenderSettings,
+  SceneState,
+} from './types.ts';
 
 export interface SceneInputs {
   location: LocationState;
@@ -56,14 +68,26 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
 export function buildSceneState(inputs: SceneInputs): SceneState {
   const svc = inputs.astronomyService ?? defaultAstronomy;
   const { location, utc } = inputs;
-  const solarInput = { latitude: location.point.latitude, longitude: location.point.longitude, timestampUtc: utc, timeZone: location.timeZone };
+  const solarInput = {
+    latitude: location.point.latitude,
+    longitude: location.point.longitude,
+    timestampUtc: utc,
+    timeZone: location.timeZone,
+  };
   const solar = svc.getSolarState(solarInput);
   const lunar = inputs.includeLunar ? svc.getLunarState(solarInput) : null;
   const wall = utcToWallClock(utc, location.timeZone);
   const dayEvents =
-    inputs.dayEvents && inputs.dayEvents.timeZone === location.timeZone && inputs.dayEvents.date === dateOf(wall)
+    inputs.dayEvents &&
+    inputs.dayEvents.timeZone === location.timeZone &&
+    inputs.dayEvents.date === dateOf(wall)
       ? inputs.dayEvents
-      : svc.getDayEvents({ latitude: location.point.latitude, longitude: location.point.longitude, timeZone: location.timeZone, date: wall });
+      : svc.getDayEvents({
+          latitude: location.point.latitude,
+          longitude: location.point.longitude,
+          timeZone: location.timeZone,
+          date: wall,
+        });
 
   const atmosphere = deriveAtmosphere(inputs, solar.elevationDegrees);
   const horizon = decideWeatherMode(utc, inputs.now, inputs.weather.capabilities);
@@ -82,7 +106,12 @@ export function buildSceneState(inputs: SceneInputs): SceneState {
 
   return {
     location,
-    localTime: { date: dateOf(wall), time: `${pad(wall.hour)}:${pad(wall.minute)}`, offsetMinutes: wall.offsetMinutes, zoneAbbreviation: wall.zoneAbbreviation },
+    localTime: {
+      date: dateOf(wall),
+      time: `${pad(wall.hour)}:${pad(wall.minute)}`,
+      offsetMinutes: wall.offsetMinutes,
+      zoneAbbreviation: wall.zoneAbbreviation,
+    },
     utc,
     camera: inputs.camera,
     solar,
@@ -104,17 +133,33 @@ function dateOf(w: { year: number; month: number; day: number }): string {
   return `${w.year.toString().padStart(4, '0')}-${pad(w.month)}-${pad(w.day)}`;
 }
 
-export function deriveAtmosphere(inputs: Pick<SceneInputs, 'utc' | 'now' | 'scenario' | 'forceScenario' | 'weather'>, solarElevationDeg: number): AtmosphereState {
+export function deriveAtmosphere(
+  inputs: Pick<SceneInputs, 'utc' | 'now' | 'scenario' | 'forceScenario' | 'weather'>,
+  solarElevationDeg: number,
+): AtmosphereState {
   const caps = inputs.weather.capabilities;
   const decision = decideWeatherMode(inputs.utc, inputs.now, caps);
   const kelvin = colorTemperatureKelvin(solarElevationDeg);
   const warmth = warmthFromKelvin(kelvin);
-  const frame = decision.fetchWorthwhile && !inputs.weather.providerFailed ? interpolateFrame(inputs.weather.frames, inputs.utc) : null;
-  const useForecast = frame !== null && !inputs.forceScenario && (decision.mode === 'FORECAST' || decision.mode === 'EXTENDED_FORECAST' || decision.mode === 'RECENT_PAST');
+  const frame =
+    decision.fetchWorthwhile && !inputs.weather.providerFailed
+      ? interpolateFrame(inputs.weather.frames, inputs.utc)
+      : null;
+  const useForecast =
+    frame !== null &&
+    !inputs.forceScenario &&
+    (decision.mode === 'FORECAST' ||
+      decision.mode === 'EXTENDED_FORECAST' ||
+      decision.mode === 'RECENT_PAST');
 
   if (useForecast) {
     const scenario = scenarioForConditions(frame.cloudCoverTotal, frame);
-    const label = decision.mode === 'EXTENDED_FORECAST' ? 'Extended forecast (low confidence)' : decision.mode === 'RECENT_PAST' ? 'Recent conditions' : 'Forecast';
+    const label =
+      decision.mode === 'EXTENDED_FORECAST'
+        ? 'Extended forecast (low confidence)'
+        : decision.mode === 'RECENT_PAST'
+          ? 'Recent conditions'
+          : 'Forecast';
     return {
       mode: decision.mode,
       scenario,

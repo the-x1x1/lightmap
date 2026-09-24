@@ -47,10 +47,16 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
   // Scenario switching visibly changes the sky gradient and the direct-light figure.
   await page.getByTestId('scenario-clear').click();
   const clearDirect = await page.getByTestId('preview-scenario').locator('..').textContent();
-  const skyClear = await page.getByTestId('preview-panel').locator('[title="Sky gradient for this moment"]').getAttribute('style');
+  const skyClear = await page
+    .getByTestId('preview-panel')
+    .locator('[title="Sky gradient for this moment"]')
+    .getAttribute('style');
   await page.getByTestId('scenario-overcast').click();
   const overDirect = await page.getByTestId('preview-scenario').locator('..').textContent();
-  const skyOver = await page.getByTestId('preview-panel').locator('[title="Sky gradient for this moment"]').getAttribute('style');
+  const skyOver = await page
+    .getByTestId('preview-panel')
+    .locator('[title="Sky gradient for this moment"]')
+    .getAttribute('style');
   expect(clearDirect).toContain('100 % direct');
   expect(overDirect).toContain('20 % direct');
   expect(skyClear).not.toEqual(skyOver);
@@ -61,7 +67,9 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
   await expect(overlay).toHaveAttribute('data-sun-elevation', /^-/);
 });
 
-test('a date beyond the forecast horizon is labelled a scenario, never a forecast', async ({ page }) => {
+test('a date beyond the forecast horizon is labelled a scenario, never a forecast', async ({
+  page,
+}) => {
   await page.goto('/');
   await pickKailua(page);
   const far = new Date();
@@ -73,7 +81,9 @@ test('a date beyond the forecast horizon is labelled a scenario, never a forecas
   await expect(page.getByTestId('scenario-forecast')).toHaveCount(0);
 });
 
-test('a date inside the horizon shows the (fixture) forecast and allows comparing scenarios', async ({ page }) => {
+test('a date inside the horizon shows the (fixture) forecast and allows comparing scenarios', async ({
+  page,
+}) => {
   await page.goto('/');
   await pickKailua(page);
   const soon = new Date();
@@ -102,7 +112,9 @@ test('camera rotates and the heading readout follows', async ({ page }) => {
   await expect(page.getByTestId('camera-controls')).toContainText('35 mm');
 });
 
-test('sign in (dev), create a project, save the viewpoint, reload and reopen it', async ({ page }) => {
+test('sign in (dev), create a project, save the viewpoint, reload and reopen it', async ({
+  page,
+}) => {
   await page.goto('/');
   await pickKailua(page);
   await setDateTime(page, new Date().toISOString().slice(0, 10), 9 * 60);

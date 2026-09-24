@@ -9,11 +9,11 @@ master implementation plan.
 Full-screen map with the planning controls in a bottom sheet (mobile) or a compact side panel
 (desktop). The map and preview are the hero; the screen must not read as a GIS workstation.
 
-| Region | Contents |
-|---|---|
-| Top | Brand mark (from the central brand config, never a hard-coded string), location search, account button |
-| Centre | Interactive globe (Cesium) or, when WebGL is unavailable, the Quality-0 map lighting overlay; a dropped pin; sun-direction and shadow-direction overlays once a location is selected |
-| Sheet / panel | Selected location label, date control, time readout, timeline scrubber, weather mode/scenario controls, preview panel, "Save to project" |
+| Region        | Contents                                                                                                                                                                             |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Top           | Brand mark (from the central brand config, never a hard-coded string), location search, account button                                                                               |
+| Centre        | Interactive globe (Cesium) or, when WebGL is unavailable, the Quality-0 map lighting overlay; a dropped pin; sun-direction and shadow-direction overlays once a location is selected |
+| Sheet / panel | Selected location label, date control, time readout, timeline scrubber, weather mode/scenario controls, preview panel, "Save to project"                                             |
 
 The sheet can be dragged up for details; the preview can expand full-screen; scenario controls
 scroll horizontally on narrow screens. Projects are accessible without leaving the current
@@ -53,12 +53,12 @@ visual refresh (terrain re-light, shadow map) is debounced.
 
 Keyboard, when the thumb has focus:
 
-| Key | Effect |
-|---|---|
-| ← / → | ±1 minute |
-| PageUp / PageDown | ±1 hour |
-| Home | jump to sunrise |
-| End | jump to sunset |
+| Key               | Effect          |
+| ----------------- | --------------- |
+| ← / →             | ±1 minute       |
+| PageUp / PageDown | ±1 hour         |
+| Home              | jump to sunrise |
+| End               | jump to sunset  |
 
 The thumb has `aria-valuetext` carrying the time and the current light phase (for example
 "18:42, golden hour"). A "Now" action resets date and time to the present at the location.
@@ -72,13 +72,13 @@ The weather **mode** is decided by one pure function (`decideWeatherMode`) from 
 instant, "now", and the provider's declared horizon. Details are in
 `WEATHER_AND_FORECAST_MODEL.md`. Behaviour by mode:
 
-| Mode | When | What the user sees |
-|---|---|---|
-| `FORECAST` | ≤ 7 days ahead | "Forecast" badge (HIGH ≤ 48 h, MEDIUM after). Forecast-driven atmosphere is shown first. |
-| `EXTENDED_FORECAST` | 8–16 days ahead | "Extended forecast — low confidence" badge. Still forecast-driven. |
-| `SCENARIO` | Beyond the provider horizon, no provider, or provider error | "Forecast unavailable this far ahead — compare scenarios." Scenario buttons take over. |
-| `RECENT_PAST` | ≤ 92 days ago | "Recent conditions from the provider archive." |
-| `PAST` | Older than the archive | "Historical weather … is not loaded — showing a scenario." Behaves like SCENARIO. |
+| Mode                | When                                                        | What the user sees                                                                       |
+| ------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `FORECAST`          | ≤ 7 days ahead                                              | "Forecast" badge (HIGH ≤ 48 h, MEDIUM after). Forecast-driven atmosphere is shown first. |
+| `EXTENDED_FORECAST` | 8–16 days ahead                                             | "Extended forecast — low confidence" badge. Still forecast-driven.                       |
+| `SCENARIO`          | Beyond the provider horizon, no provider, or provider error | "Forecast unavailable this far ahead — compare scenarios." Scenario buttons take over.   |
+| `RECENT_PAST`       | ≤ 92 days ago                                               | "Recent conditions from the provider archive."                                           |
+| `PAST`              | Older than the archive                                      | "Historical weather … is not loaded — showing a scenario." Behaves like SCENARIO.        |
 
 Five scenarios, always available: **Clear · Mostly Clear · Partly Cloudy · Overcast · Rain / Storm**.
 Their render parameters are deterministic constants (see the scenario table in
@@ -111,14 +111,14 @@ confidence dimension.
 
 ## 6. Source labels (plan §2, §11)
 
-Every preview carries exactly one of three labels. They describe what the picture *is*, not how
+Every preview carries exactly one of three labels. They describe what the picture _is_, not how
 good it looks.
 
-| Label | Shown when | Can claim | Cannot claim |
-|---|---|---|---|
-| **Real Reference** | A licensed photograph or panorama near the point is displayed (imagery confidence `REAL_REFERENCE`) | The place looks like this; attribution, capture date/time and heading when known | That the image was taken at the requested date, time or weather unless it actually was |
-| **Simulated Lighting** | Terrain confidence HIGH and scene detail not LOW | Geometry is real terrain and map data; light direction, shadow direction, sky state and colour temperature follow astronomy and the selected weather state | Exact surface appearance, vegetation, small structures, or anything beyond what the geometry contains |
-| **Estimated Preview** | Everything else (no terrain, flat ellipsoid, coarse basemap) | Light direction and sky state are exact; the scene is an approximation | Terrain relief, real horizons, or any detail of the place |
+| Label                  | Shown when                                                                                          | Can claim                                                                                                                                                  | Cannot claim                                                                                          |
+| ---------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Real Reference**     | A licensed photograph or panorama near the point is displayed (imagery confidence `REAL_REFERENCE`) | The place looks like this; attribution, capture date/time and heading when known                                                                           | That the image was taken at the requested date, time or weather unless it actually was                |
+| **Simulated Lighting** | Terrain confidence HIGH and scene detail not LOW                                                    | Geometry is real terrain and map data; light direction, shadow direction, sky state and colour temperature follow astronomy and the selected weather state | Exact surface appearance, vegetation, small structures, or anything beyond what the geometry contains |
+| **Estimated Preview**  | Everything else (no terrain, flat ellipsoid, coarse basemap)                                        | Light direction and sky state are exact; the scene is an approximation                                                                                     | Terrain relief, real horizons, or any detail of the place                                             |
 
 In v0.1 **Real Reference never appears**: no imagery provider is contracted
 (`REFERENCE_IMAGERY_PROVIDER=none`). The UI works without it.
@@ -127,13 +127,13 @@ In v0.1 **Real Reference never appears**: no imagery provider is contracted
 
 Independent dimensions, never a single percentage:
 
-| Dimension | Values | Rule |
-|---|---|---|
-| Astronomy | HIGH · LOW | HIGH whenever the location and time zone are valid |
-| Terrain | HIGH · LOW | HIGH with a real terrain provider; LOW on the flat ellipsoid or when terrain fails |
-| Scene detail | HIGH · MEDIUM · LOW | HIGH = street-level basemap with buildings; MEDIUM = street or regional basemap; LOW = coarse basemap |
-| Weather | HIGH · MEDIUM · LOW · SCENARIO | From the horizon decision (§4); SCENARIO also when the provider fails |
-| Real reference | Available · Unavailable | Whether a licensed image is on screen |
+| Dimension      | Values                         | Rule                                                                                                  |
+| -------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| Astronomy      | HIGH · LOW                     | HIGH whenever the location and time zone are valid                                                    |
+| Terrain        | HIGH · LOW                     | HIGH with a real terrain provider; LOW on the flat ellipsoid or when terrain fails                    |
+| Scene detail   | HIGH · MEDIUM · LOW            | HIGH = street-level basemap with buildings; MEDIUM = street or regional basemap; LOW = coarse basemap |
+| Weather        | HIGH · MEDIUM · LOW · SCENARIO | From the horizon decision (§4); SCENARIO also when the provider fails                                 |
+| Real reference | Available · Unavailable        | Whether a licensed image is on screen                                                                 |
 
 Environment (used internally) combines terrain and scene detail. Each dimension carries a
 one-line, user-facing reason. Example:
@@ -192,17 +192,17 @@ No collaboration or sharing in v0.1.
 
 ## 11. Plans and entitlements (plan §15)
 
-| | Free | Photographer Pro |
-|---|---|---|
-| Map access, sun/twilight data | Yes | Yes |
-| Date window | 14 days ahead, 7 days back | Unrestricted |
-| Projects | 1 | Unlimited |
-| Saved viewpoints | 3 (total and per project) | 200 per project, 5,000 total |
-| Preview quality ceiling | 1 (terrain preview) | 3 |
-| Hourly forecast detail & comparison | – | Yes |
-| Moon planning | Basic | Yes |
-| Planning-card export | – | Yes |
-| Camera tools (lens presets, heading, pitch) | – | Yes |
+|                                             | Free                       | Photographer Pro             |
+| ------------------------------------------- | -------------------------- | ---------------------------- |
+| Map access, sun/twilight data               | Yes                        | Yes                          |
+| Date window                                 | 14 days ahead, 7 days back | Unrestricted                 |
+| Projects                                    | 1                          | Unlimited                    |
+| Saved viewpoints                            | 3 (total and per project)  | 200 per project, 5,000 total |
+| Preview quality ceiling                     | 1 (terrain preview)        | 3                            |
+| Hourly forecast detail & comparison         | –                          | Yes                          |
+| Moon planning                               | Basic                      | Yes                          |
+| Planning-card export                        | –                          | Yes                          |
+| Camera tools (lens presets, heading, pitch) | –                          | Yes                          |
 
 A Studio plan exists as a definition only (no Stripe price). The paywall shows the denial reason
 from the entitlement decision; a subscription unlocks the current plan immediately after the
@@ -212,17 +212,17 @@ webhook lands. Details in `BILLING_AND_ENTITLEMENTS.md`.
 
 Every provider failure resolves to a usable state with a specific message.
 
-| Failure | Behaviour |
-|---|---|
-| Weather provider error or timeout | Badge: "Live forecast unavailable right now — showing your selected scenario." Weather confidence becomes SCENARIO. Scrubbing continues. |
-| Weather requested beyond horizon | The client never asks; the API returns 422 `outside_horizon` if it does. |
-| Terrain provider unavailable | Render on the flat WGS84 ellipsoid; terrain confidence LOW; source label degrades to Estimated Preview. |
-| Imagery tiles fail | Fall back to the bundled Natural Earth II basemap; environment confidence drops. |
-| Geocoder unavailable | Search shows "Place search unavailable — paste coordinates instead"; coordinate entry and map clicks keep working. |
-| Billing provider unavailable | Checkout/portal show an error; **no entitlement is ever granted** because the server snapshot is derived only from stored subscription records. |
-| Real imagery unavailable | Always true in v0.1; simulation is unaffected. |
-| No WebGL | Quality-0 map lighting overlay with sun arrow, shadow arrow, twilight band and sky gradient. |
-| Database unavailable | Anonymous planning still works (no persistence); saving and sign-in report the outage. |
+| Failure                           | Behaviour                                                                                                                                       |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Weather provider error or timeout | Badge: "Live forecast unavailable right now — showing your selected scenario." Weather confidence becomes SCENARIO. Scrubbing continues.        |
+| Weather requested beyond horizon  | The client never asks; the API returns 422 `outside_horizon` if it does.                                                                        |
+| Terrain provider unavailable      | Render on the flat WGS84 ellipsoid; terrain confidence LOW; source label degrades to Estimated Preview.                                         |
+| Imagery tiles fail                | Fall back to the bundled Natural Earth II basemap; environment confidence drops.                                                                |
+| Geocoder unavailable              | Search shows "Place search unavailable — paste coordinates instead"; coordinate entry and map clicks keep working.                              |
+| Billing provider unavailable      | Checkout/portal show an error; **no entitlement is ever granted** because the server snapshot is derived only from stored subscription records. |
+| Real imagery unavailable          | Always true in v0.1; simulation is unaffected.                                                                                                  |
+| No WebGL                          | Quality-0 map lighting overlay with sun arrow, shadow arrow, twilight band and sky gradient.                                                    |
+| Database unavailable              | Anonymous planning still works (no persistence); saving and sign-in report the outage.                                                          |
 
 Generic "Something went wrong" is not acceptable when a recovery message exists.
 

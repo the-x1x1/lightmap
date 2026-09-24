@@ -1,13 +1,35 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_COLOR_TEMPERATURE_CURVE, SCENARIOS, colorTemperatureKelvin, isScenarioId, kelvinToRgb, parametersForForecast, scenarioById, scenarioForConditions, warmthFromKelvin } from '../src/scenarios.ts';
+import {
+  DEFAULT_COLOR_TEMPERATURE_CURVE,
+  SCENARIOS,
+  colorTemperatureKelvin,
+  isScenarioId,
+  kelvinToRgb,
+  parametersForForecast,
+  scenarioById,
+  scenarioForConditions,
+  warmthFromKelvin,
+} from '../src/scenarios.ts';
 
 describe('scenarios are deterministic and visibly distinct', () => {
   it('has the five plan scenarios in order of increasing cloud', () => {
-    expect(SCENARIOS.map((s) => s.id)).toEqual(['clear', 'mostly-clear', 'partly-cloudy', 'overcast', 'storm']);
+    expect(SCENARIOS.map((s) => s.id)).toEqual([
+      'clear',
+      'mostly-clear',
+      'partly-cloudy',
+      'overcast',
+      'storm',
+    ]);
     for (let i = 1; i < SCENARIOS.length; i++) {
-      expect(SCENARIOS[i]!.parameters.cloudCover).toBeGreaterThanOrEqual(SCENARIOS[i - 1]!.parameters.cloudCover);
-      expect(SCENARIOS[i]!.parameters.sunTransmittance).toBeLessThan(SCENARIOS[i - 1]!.parameters.sunTransmittance);
-      expect(SCENARIOS[i]!.parameters.diffuseFraction).toBeGreaterThan(SCENARIOS[i - 1]!.parameters.diffuseFraction);
+      expect(SCENARIOS[i]!.parameters.cloudCover).toBeGreaterThanOrEqual(
+        SCENARIOS[i - 1]!.parameters.cloudCover,
+      );
+      expect(SCENARIOS[i]!.parameters.sunTransmittance).toBeLessThan(
+        SCENARIOS[i - 1]!.parameters.sunTransmittance,
+      );
+      expect(SCENARIOS[i]!.parameters.diffuseFraction).toBeGreaterThan(
+        SCENARIOS[i - 1]!.parameters.diffuseFraction,
+      );
     }
   });
 
@@ -53,7 +75,11 @@ describe('scenarios are deterministic and visibly distinct', () => {
     expect(fog.haze).toBeGreaterThan(0.9);
     expect(fog.sunTransmittance).toBeLessThanOrEqual(0.15);
 
-    const rain = parametersForForecast({ cloudCoverTotal: 90, precipitationAmount: 4, precipitationProbability: 90 });
+    const rain = parametersForForecast({
+      cloudCoverTotal: 90,
+      precipitationAmount: 4,
+      precipitationProbability: 90,
+    });
     expect(rain.precipitation).toBeGreaterThan(0.5);
     expect(rain.skyLuminance).toBeLessThan(over.skyLuminance);
 
@@ -71,7 +97,12 @@ describe('colour temperature curve', () => {
     expect(colorTemperatureKelvin(-30)).toBe(DEFAULT_COLOR_TEMPERATURE_CURVE[0]!.kelvin);
   });
   it('is configurable', () => {
-    expect(colorTemperatureKelvin(10, [{ elevationDeg: 0, kelvin: 1000 }, { elevationDeg: 20, kelvin: 3000 }])).toBe(2000);
+    expect(
+      colorTemperatureKelvin(10, [
+        { elevationDeg: 0, kelvin: 1000 },
+        { elevationDeg: 20, kelvin: 3000 },
+      ]),
+    ).toBe(2000);
   });
   it('maps kelvin to warmth and a plausible tint', () => {
     expect(warmthFromKelvin(2900)).toBeCloseTo(1, 5);

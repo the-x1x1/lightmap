@@ -22,7 +22,8 @@ export const brand = {
   billing: {
     /** Stripe product display names, kept here so the checkout page and the paywall agree. */
     proName: 'Photographer Pro',
-    proDescription: 'Unrestricted date planning, projects, moon planning and high-quality previews.',
+    proDescription:
+      'Unrestricted date planning, projects, moon planning and high-quality previews.',
     freeName: 'Free',
   },
   colors: {

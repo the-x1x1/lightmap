@@ -1,12 +1,22 @@
 'use client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { can, type EntitlementContext, type EntitlementDecision, type EntitlementKey } from '@lightmap/entitlements';
+import {
+  can,
+  type EntitlementContext,
+  type EntitlementDecision,
+  type EntitlementKey,
+} from '@lightmap/entitlements';
 import { api } from '@/lib/client/api';
 import type { EntitlementsResponse } from '@/lib/api-types';
 
 /** Server-derived entitlement snapshot; the client never decides plans itself. */
 export function useAccount() {
-  const q = useQuery({ queryKey: ['account'], queryFn: () => api.get<EntitlementsResponse>('/api/account/entitlements'), staleTime: 60_000, retry: 1 });
+  const q = useQuery({
+    queryKey: ['account'],
+    queryFn: () => api.get<EntitlementsResponse>('/api/account/entitlements'),
+    staleTime: 60_000,
+    retry: 1,
+  });
   const snapshot = q.data?.entitlements ?? null;
   return {
     ...q,
@@ -23,7 +33,8 @@ export function useAccount() {
 
 export function useCheckout() {
   return useMutation({
-    mutationFn: (interval: 'monthly' | 'yearly') => api.post<{ url: string }>('/api/billing/checkout', { interval }),
+    mutationFn: (interval: 'monthly' | 'yearly') =>
+      api.post<{ url: string }>('/api/billing/checkout', { interval }),
     onSuccess: (r) => {
       window.location.href = r.url;
     },
@@ -41,5 +52,8 @@ export function usePortal() {
 
 export function useDeleteAccount() {
   const qc = useQueryClient();
-  return useMutation({ mutationFn: () => api.post<{ ok: boolean; erasesAfterDays: number }>('/api/account/delete', {}), onSuccess: () => void qc.invalidateQueries({ queryKey: ['account'] }) });
+  return useMutation({
+    mutationFn: () => api.post<{ ok: boolean; erasesAfterDays: number }>('/api/account/delete', {}),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['account'] }),
+  });
 }

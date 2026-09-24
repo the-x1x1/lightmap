@@ -20,7 +20,7 @@ single "accuracy %" would hide all of this and would be impossible to define hon
    - scene detail: HIGH (street basemap + buildings) / MEDIUM (street or regional) / LOW (coarse);
    - weather: HIGH / MEDIUM / LOW from the horizon, or **SCENARIO**;
    - imagery: REAL_REFERENCE or NONE.
-   `deriveConfidence()` and `deriveSourceMode()` are pure functions with exhaustive unit tests.
+     `deriveConfidence()` and `deriveSourceMode()` are pure functions with exhaustive unit tests.
 2. **The overall label is one of three source modes** derived from confidence, not chosen by hand:
    REAL_REFERENCE when licensed imagery is shown; SIMULATED_LIGHTING when terrain is HIGH and scene
    detail is not LOW; otherwise ESTIMATED_PREVIEW. Each has a fixed description of what it can and

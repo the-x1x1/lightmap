@@ -1,9 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { parseEnv } from '@lightmap/config';
-import { FixtureGeocoder, FixtureTimezoneProvider, etcZoneForLongitude } from '../src/providers/fixtures.ts';
+import {
+  FixtureGeocoder,
+  FixtureTimezoneProvider,
+  etcZoneForLongitude,
+} from '../src/providers/fixtures.ts';
 import { NominatimGeocoder } from '../src/providers/nominatim.ts';
 import { extractHeight } from '../src/providers/map-sources.ts';
-import { activeAttributions, createGeospatialProviders, publicDescriptors } from '../src/providers/registry.ts';
+import {
+  activeAttributions,
+  createGeospatialProviders,
+  publicDescriptors,
+} from '../src/providers/registry.ts';
 
 describe('fixture providers', () => {
   it('finds Kailua and resolves its time zone', async () => {
@@ -18,7 +26,9 @@ describe('fixture providers', () => {
     expect(etcZoneForLongitude(-150)).toBe('Etc/GMT+10');
     expect(etcZoneForLongitude(150)).toBe('Etc/GMT-10');
     expect(etcZoneForLongitude(3)).toBe('Etc/UTC');
-    expect(await new FixtureTimezoneProvider().lookup({ latitude: 0, longitude: -30 })).toBe('Etc/GMT+2');
+    expect(await new FixtureTimezoneProvider().lookup({ latitude: 0, longitude: -30 })).toBe(
+      'Etc/GMT+2',
+    );
   });
 });
 
@@ -30,11 +40,35 @@ describe('Nominatim adapter', () => {
     const fetchImpl = (async (url: string | URL | Request, init?: RequestInit) => {
       calls.push(String(url));
       expect((init?.headers as Record<string, string>)['User-Agent']).toContain('LightMap');
-      return new Response(JSON.stringify([{ place_id: 1, display_name: 'Kailua Beach Park, Kailua, Hawaii', lat: '21.397', lon: '-157.727', address: { country_code: 'us' }, boundingbox: ['21.39', '21.40', '-157.73', '-157.72'] }]), { status: 200 });
+      return new Response(
+        JSON.stringify([
+          {
+            place_id: 1,
+            display_name: 'Kailua Beach Park, Kailua, Hawaii',
+            lat: '21.397',
+            lon: '-157.727',
+            address: { country_code: 'us' },
+            boundingbox: ['21.39', '21.40', '-157.73', '-157.72'],
+          },
+        ]),
+        { status: 200 },
+      );
     }) as typeof fetch;
-    const g = new NominatimGeocoder({ userAgent: 'LightMap-test', fetchImpl, now: () => t, sleep: async (ms) => { slept.push(ms); t += ms; } });
+    const g = new NominatimGeocoder({
+      userAgent: 'LightMap-test',
+      fetchImpl,
+      now: () => t,
+      sleep: async (ms) => {
+        slept.push(ms);
+        t += ms;
+      },
+    });
     const a = await g.search('Kailua Beach');
-    expect(a[0]).toMatchObject({ label: 'Kailua Beach Park, Kailua, Hawaii', countryCode: 'US', sourceId: 'nominatim:1' });
+    expect(a[0]).toMatchObject({
+      label: 'Kailua Beach Park, Kailua, Hawaii',
+      countryCode: 'US',
+      sourceId: 'nominatim:1',
+    });
     expect(a[0]?.bounds?.north).toBe(21.4);
     t += 200;
     await g.search('Lanikai');
@@ -42,7 +76,10 @@ describe('Nominatim adapter', () => {
     expect(calls[0]).toContain('format=jsonv2');
   });
   it('drops results without coordinates', async () => {
-    const fetchImpl = (async () => new Response(JSON.stringify([{ display_name: 'x' }]), { status: 200 })) as unknown as typeof fetch;
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify([{ display_name: 'x' }]), {
+        status: 200,
+      })) as unknown as typeof fetch;
     const g = new NominatimGeocoder({ userAgent: 'LightMap-test', fetchImpl });
     expect(await g.search('anything')).toEqual([]);
   });
@@ -59,7 +96,11 @@ describe('registry', () => {
     expect(activeAttributions(p).map((m) => m.id)).toContain('natural-earth-ii');
   });
   it('degrades to safe defaults when credentials are missing', () => {
-    const env = parseEnv({ TERRAIN_PROVIDER: 'cesium-ion', IMAGERY_PROVIDER: 'cesium-ion', GEOCODER_PROVIDER: 'fixture' }).env;
+    const env = parseEnv({
+      TERRAIN_PROVIDER: 'cesium-ion',
+      IMAGERY_PROVIDER: 'cesium-ion',
+      GEOCODER_PROVIDER: 'fixture',
+    }).env;
     const p = createGeospatialProviders(env);
     expect(p.terrain.meta.id).toBe('ellipsoid');
     expect(p.basemap.meta.id).toBe('natural-earth-ii');

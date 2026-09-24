@@ -87,7 +87,8 @@ const WEEKDAYS: Record<string, number> = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 
 /** The wall clock reading in `zone` at the instant `date`. */
 export function utcToWallClock(date: Date, zone: string): WallClock {
   const parts = formatter(zone).formatToParts(date);
-  const get = (type: Intl.DateTimeFormatPartTypes): string => parts.find((p) => p.type === type)?.value ?? '';
+  const get = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((p) => p.type === type)?.value ?? '';
   const year = Number(get('year'));
   const month = Number(get('month'));
   const day = Number(get('day'));
@@ -96,7 +97,17 @@ export function utcToWallClock(date: Date, zone: string): WallClock {
   const second = Number(get('second'));
   const asUtc = Date.UTC(year, month - 1, day, hour, minute, second);
   const offsetMinutes = Math.round((asUtc - Math.floor(date.getTime() / 1000) * 1000) / 60_000);
-  return { year, month, day, hour, minute, second, offsetMinutes, zoneAbbreviation: get('timeZoneName'), weekday: WEEKDAYS[get('weekday')] ?? 0 };
+  return {
+    year,
+    month,
+    day,
+    hour,
+    minute,
+    second,
+    offsetMinutes,
+    zoneAbbreviation: get('timeZoneName'),
+    weekday: WEEKDAYS[get('weekday')] ?? 0,
+  };
 }
 
 /** UTC offset of `zone` at `date`, minutes east. */
@@ -131,7 +142,10 @@ export function wallClockToUtc(civil: CivilTime, zone: string): Date {
   }
   // Overlap (fall back): two instants map to this wall time; prefer the earlier one.
   const earlier = guess - 3_600_000;
-  if (wallMatches(earlier, zone, target) && zoneOffsetMinutes(new Date(earlier), zone) !== zoneOffsetMinutes(new Date(guess), zone)) {
+  if (
+    wallMatches(earlier, zone, target) &&
+    zoneOffsetMinutes(new Date(earlier), zone) !== zoneOffsetMinutes(new Date(guess), zone)
+  ) {
     return new Date(earlier);
   }
   // Gap (spring forward): the wall time never occurs; `guess` then reads as target+gap, which is
@@ -145,14 +159,20 @@ function wallMatches(instantMs: number, zone: string, targetUtcMs: number): bool
 }
 
 /** UTC instants of local midnight starting the civil date, and the next midnight. */
-export function localDayBounds(civil: Pick<CivilTime, 'year' | 'month' | 'day'>, zone: string): { start: Date; end: Date } {
+export function localDayBounds(
+  civil: Pick<CivilTime, 'year' | 'month' | 'day'>,
+  zone: string,
+): { start: Date; end: Date } {
   const start = wallClockToUtc({ ...civil, hour: 0, minute: 0, second: 0 }, zone);
   const next = addCivilDays(civil, 1);
   const end = wallClockToUtc({ ...next, hour: 0, minute: 0, second: 0 }, zone);
   return { start, end };
 }
 
-export function addCivilDays(civil: Pick<CivilTime, 'year' | 'month' | 'day'>, days: number): { year: number; month: number; day: number } {
+export function addCivilDays(
+  civil: Pick<CivilTime, 'year' | 'month' | 'day'>,
+  days: number,
+): { year: number; month: number; day: number } {
   const d = new Date(Date.UTC(civil.year, civil.month - 1, civil.day + days));
   return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
 }

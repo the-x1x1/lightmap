@@ -12,7 +12,12 @@ export async function GET(_req: Request, { params }: Params) {
     const ctx = await requireUser();
     const { id } = await params;
     const p = await projectsRepo(requireDb()).get(ctx.user.id, id);
-    return json({ project: { ...projectDto({ ...p, viewpointCount: p.viewpoints.length }), viewpoints: p.viewpoints.map((vp) => viewpointDto(vp)) } });
+    return json({
+      project: {
+        ...projectDto({ ...p, viewpointCount: p.viewpoints.length }),
+        viewpoints: p.viewpoints.map((vp) => viewpointDto(vp)),
+      },
+    });
   } catch (e) {
     return errorResponse(e);
   }
@@ -27,7 +32,11 @@ export async function PATCH(req: Request, { params }: Params) {
       const out: { name?: string; description?: string | null; shootDate?: string | null } = {};
       const name = v.string(o['name'], 'name', { min: 1, max: 120, optional: true });
       if (name) out.name = name;
-      const description = v.string(o['description'], 'description', { optional: true, nullable: true, max: 2000 });
+      const description = v.string(o['description'], 'description', {
+        optional: true,
+        nullable: true,
+        max: 2000,
+      });
       if (description !== undefined) out.description = description;
       const shootDate = v.isoDate(o['shootDate'], 'shootDate', { optional: true, nullable: true });
       if (shootDate !== undefined) out.shootDate = shootDate;

@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { addCivilDays, civilDateString, formatWallTime, isValidTimeZone, julianDay, localDayBounds, parseCivilDate, utcToWallClock, wallClockToUtc, zoneOffsetMinutes } from '../src/time.ts';
+import {
+  addCivilDays,
+  civilDateString,
+  formatWallTime,
+  isValidTimeZone,
+  julianDay,
+  localDayBounds,
+  parseCivilDate,
+  utcToWallClock,
+  wallClockToUtc,
+  zoneOffsetMinutes,
+} from '../src/time.ts';
 
 describe('Julian day', () => {
   it('J2000.0 epoch is JD 2451545.0', () => {
@@ -9,14 +20,20 @@ describe('Julian day', () => {
 
 describe('wall clock ↔ UTC', () => {
   it('Honolulu has no DST: 12:30 HST is 22:30 UTC', () => {
-    const utc = wallClockToUtc({ year: 2026, month: 5, day: 31, hour: 12, minute: 30 }, 'Pacific/Honolulu');
+    const utc = wallClockToUtc(
+      { year: 2026, month: 5, day: 31, hour: 12, minute: 30 },
+      'Pacific/Honolulu',
+    );
     expect(utc.toISOString()).toBe('2026-05-31T22:30:00.000Z');
     const w = utcToWallClock(utc, 'Pacific/Honolulu');
     expect([w.hour, w.minute, w.offsetMinutes, w.zoneAbbreviation]).toEqual([12, 30, -600, 'HST']);
   });
 
   it('London springs forward on 2026-03-29: 01:30 does not exist and shifts to 02:30 BST', () => {
-    const utc = wallClockToUtc({ year: 2026, month: 3, day: 29, hour: 1, minute: 30 }, 'Europe/London');
+    const utc = wallClockToUtc(
+      { year: 2026, month: 3, day: 29, hour: 1, minute: 30 },
+      'Europe/London',
+    );
     expect(utc.toISOString()).toBe('2026-03-29T01:30:00.000Z');
     expect(formatWallTime(utc, 'Europe/London')).toBe('02:30');
     expect(zoneOffsetMinutes(new Date('2026-03-29T00:59:00Z'), 'Europe/London')).toBe(0);
@@ -24,7 +41,10 @@ describe('wall clock ↔ UTC', () => {
   });
 
   it('London falls back on 2026-10-25: 01:30 happens twice and resolves to the earlier (BST) instant', () => {
-    const utc = wallClockToUtc({ year: 2026, month: 10, day: 25, hour: 1, minute: 30 }, 'Europe/London');
+    const utc = wallClockToUtc(
+      { year: 2026, month: 10, day: 25, hour: 1, minute: 30 },
+      'Europe/London',
+    );
     expect(utc.toISOString()).toBe('2026-10-25T00:30:00.000Z');
     expect(utcToWallClock(utc, 'Europe/London').offsetMinutes).toBe(60);
   });

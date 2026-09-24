@@ -4,11 +4,16 @@ import { FixtureWeatherProvider } from './providers/fixture.ts';
 import { OpenMeteoProvider } from './providers/open-meteo.ts';
 
 /** Select the configured weather provider. Server-side only (the Open-Meteo key must not leak). */
-export function createWeatherProvider(env: Env, opts: { fetchImpl?: typeof fetch; now?: () => Date } = {}): WeatherProvider {
+export function createWeatherProvider(
+  env: Env,
+  opts: { fetchImpl?: typeof fetch; now?: () => Date } = {},
+): WeatherProvider {
   switch (env.WEATHER_PROVIDER) {
     case 'open-meteo':
       return new OpenMeteoProvider({
-        baseUrl: env.OPEN_METEO_API_KEY ? 'https://customer-api.open-meteo.com' : env.OPEN_METEO_BASE_URL,
+        baseUrl: env.OPEN_METEO_API_KEY
+          ? 'https://customer-api.open-meteo.com'
+          : env.OPEN_METEO_BASE_URL,
         ...(env.OPEN_METEO_API_KEY ? { apiKey: env.OPEN_METEO_API_KEY } : {}),
         ...(opts.fetchImpl ? { fetchImpl: opts.fetchImpl } : {}),
         ...(opts.now ? { now: opts.now } : {}),

@@ -26,7 +26,7 @@ const DEG = Math.PI / 180;
 
 export function normalizeLongitude(lon: number): number {
   if (!Number.isFinite(lon)) return lon;
-  let x = ((lon + 180) % 360 + 360) % 360 - 180;
+  let x = ((((lon + 180) % 360) + 360) % 360) - 180;
   if (x === -180 && lon > 0) x = 180;
   return x;
 }
@@ -90,7 +90,24 @@ export function gridKey(p: GeoPoint, cellDeg = 0.05): string {
 
 /** Compass label for a bearing, 16-point ("SSE"). */
 export function compassLabel(bearing: number, points: 8 | 16 = 16): string {
-  const names16 = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+  const names16 = [
+    'N',
+    'NNE',
+    'NE',
+    'ENE',
+    'E',
+    'ESE',
+    'SE',
+    'SSE',
+    'S',
+    'SSW',
+    'SW',
+    'WSW',
+    'W',
+    'WNW',
+    'NW',
+    'NNW',
+  ];
   const names8 = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
   const names = points === 16 ? names16 : names8;
   const step = 360 / names.length;

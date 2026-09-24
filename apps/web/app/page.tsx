@@ -4,7 +4,10 @@ import dynamic from 'next/dynamic';
 const MapShell = dynamic(() => import('@/components/MapShell').then((m) => m.MapShell), {
   ssr: false,
   loading: () => (
-    <main className="flex h-dvh items-center justify-center bg-[var(--lm-chrome)] text-sm text-[var(--lm-text-muted)]" aria-busy>
+    <main
+      className="flex h-dvh items-center justify-center bg-[var(--lm-chrome)] text-sm text-[var(--lm-text-muted)]"
+      aria-busy
+    >
       Loading LightMap…
     </main>
   ),

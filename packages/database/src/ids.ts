@@ -4,7 +4,10 @@
  */
 const ENCODING = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 
-export function ulid(now: number = Date.now(), random: (n: number) => Uint8Array = randomBytes): string {
+export function ulid(
+  now: number = Date.now(),
+  random: (n: number) => Uint8Array = randomBytes,
+): string {
   let time = '';
   let t = now;
   for (let i = 0; i < 10; i++) {

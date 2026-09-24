@@ -13,7 +13,14 @@ const dataHosts = [
   'https://assets.ion.cesium.com',
   'https://*.virtualearth.net',
   'https://dev.virtualearth.net',
-  ...(process.env['IMAGERY_XYZ_URL'] ? [new URL(process.env['IMAGERY_XYZ_URL'].replace(/\{[^}]+\}/g, 'x')).origin.replace(/^https?:\/\/[^.]+\./, 'https://*.')] : []),
+  ...(process.env['IMAGERY_XYZ_URL']
+    ? [
+        new URL(process.env['IMAGERY_XYZ_URL'].replace(/\{[^}]+\}/g, 'x')).origin.replace(
+          /^https?:\/\/[^.]+\./,
+          'https://*.',
+        ),
+      ]
+    : []),
 ];
 
 const csp = [
@@ -25,7 +32,7 @@ const csp = [
   "worker-src 'self' blob:",
   "child-src 'self' blob:",
   "font-src 'self' data:",
-  "frame-src https://js.stripe.com https://checkout.stripe.com",
+  'frame-src https://js.stripe.com https://checkout.stripe.com',
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self' https://checkout.stripe.com https://billing.stripe.com",
@@ -37,7 +44,11 @@ const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'X-Frame-Options', value: 'DENY' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self), payment=(self "https://checkout.stripe.com")' },
+  {
+    key: 'Permissions-Policy',
+    value:
+      'camera=(), microphone=(), geolocation=(self), payment=(self "https://checkout.stripe.com")',
+  },
   { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
   { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
 ];
@@ -45,11 +56,36 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  transpilePackages: ['@lightmap/astronomy', '@lightmap/auth', '@lightmap/billing', '@lightmap/config', '@lightmap/database', '@lightmap/entitlements', '@lightmap/geospatial', '@lightmap/observability', '@lightmap/renderer', '@lightmap/scene', '@lightmap/ui', '@lightmap/weather'],
+  transpilePackages: [
+    '@lightmap/astronomy',
+    '@lightmap/auth',
+    '@lightmap/billing',
+    '@lightmap/config',
+    '@lightmap/database',
+    '@lightmap/entitlements',
+    '@lightmap/geospatial',
+    '@lightmap/observability',
+    '@lightmap/renderer',
+    '@lightmap/scene',
+    '@lightmap/ui',
+    '@lightmap/weather',
+  ],
   serverExternalPackages: ['geo-tz', 'postgres', 'stripe', 'nodemailer'],
-  experimental: { optimizePackageImports: ['@radix-ui/react-dialog', '@radix-ui/react-popover', '@radix-ui/react-dropdown-menu'] },
+  experimental: {
+    optimizePackageImports: [
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-popover',
+      '@radix-ui/react-dropdown-menu',
+    ],
+  },
   async headers() {
-    return [{ source: '/(.*)', headers: securityHeaders }, { source: '/cesium/(.*)', headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }] }];
+    return [
+      { source: '/(.*)', headers: securityHeaders },
+      {
+        source: '/cesium/(.*)',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+    ];
   },
   webpack: (config) => {
     // Cesium resolves its assets at runtime from CESIUM_BASE_URL; nothing to alias. Keep source maps off for the big chunk.

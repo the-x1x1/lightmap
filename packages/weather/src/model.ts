@@ -69,8 +69,20 @@ export interface WeatherSeries {
 
 export interface WeatherProvider {
   getCapabilities(): WeatherCapabilities;
-  getForecast(lat: number, lng: number, from: Date, to: Date, opts?: { signal?: AbortSignal }): Promise<WeatherSeries>;
-  getHistorical(lat: number, lng: number, from: Date, to: Date, opts?: { signal?: AbortSignal }): Promise<WeatherSeries>;
+  getForecast(
+    lat: number,
+    lng: number,
+    from: Date,
+    to: Date,
+    opts?: { signal?: AbortSignal },
+  ): Promise<WeatherSeries>;
+  getHistorical(
+    lat: number,
+    lng: number,
+    from: Date,
+    to: Date,
+    opts?: { signal?: AbortSignal },
+  ): Promise<WeatherSeries>;
   /** Phase 7. Not implemented by v0.1 providers; the method exists so the interface is stable. */
   getClimatology?(lat: number, lng: number, month: number): Promise<unknown>;
 }
@@ -96,7 +108,9 @@ export function interpolateFrame(frames: readonly WeatherFrame[], at: Date): Wea
   const tb = Date.parse(b.timestamp);
   const f = tb === ta ? 0 : (t - ta) / (tb - ta);
   const mix = (x: number | null | undefined, y: number | null | undefined): number | null =>
-    x === null || x === undefined || y === null || y === undefined ? (x ?? y ?? null) : x + (y - x) * f;
+    x === null || x === undefined || y === null || y === undefined
+      ? (x ?? y ?? null)
+      : x + (y - x) * f;
   const mixAngle = (x: number | null, y: number | null): number | null => {
     if (x === null || y === null) return x ?? y;
     let d = ((y - x + 540) % 360) - 180;
@@ -123,7 +137,8 @@ export function interpolateFrame(frames: readonly WeatherFrame[], at: Date): Wea
 }
 
 /** WMO 4677 code → coarse family used by the UI and the scenario mapper. */
-export type WeatherFamily = 'clear' | 'cloudy' | 'fog' | 'drizzle' | 'rain' | 'snow' | 'thunderstorm' | 'unknown';
+export type WeatherFamily =
+  'clear' | 'cloudy' | 'fog' | 'drizzle' | 'rain' | 'snow' | 'thunderstorm' | 'unknown';
 
 export function weatherFamily(code: number | null): WeatherFamily {
   if (code === null) return 'unknown';
@@ -139,12 +154,34 @@ export function weatherFamily(code: number | null): WeatherFamily {
 
 export function describeWeatherCode(code: number | null): string {
   const names: Record<number, string> = {
-    0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast', 45: 'Fog', 48: 'Depositing rime fog',
-    51: 'Light drizzle', 53: 'Moderate drizzle', 55: 'Dense drizzle', 56: 'Light freezing drizzle', 57: 'Dense freezing drizzle',
-    61: 'Slight rain', 63: 'Moderate rain', 65: 'Heavy rain', 66: 'Light freezing rain', 67: 'Heavy freezing rain',
-    71: 'Slight snow', 73: 'Moderate snow', 75: 'Heavy snow', 77: 'Snow grains',
-    80: 'Slight rain showers', 81: 'Moderate rain showers', 82: 'Violent rain showers', 85: 'Slight snow showers', 86: 'Heavy snow showers',
-    95: 'Thunderstorm', 96: 'Thunderstorm with slight hail', 99: 'Thunderstorm with heavy hail',
+    0: 'Clear sky',
+    1: 'Mainly clear',
+    2: 'Partly cloudy',
+    3: 'Overcast',
+    45: 'Fog',
+    48: 'Depositing rime fog',
+    51: 'Light drizzle',
+    53: 'Moderate drizzle',
+    55: 'Dense drizzle',
+    56: 'Light freezing drizzle',
+    57: 'Dense freezing drizzle',
+    61: 'Slight rain',
+    63: 'Moderate rain',
+    65: 'Heavy rain',
+    66: 'Light freezing rain',
+    67: 'Heavy freezing rain',
+    71: 'Slight snow',
+    73: 'Moderate snow',
+    75: 'Heavy snow',
+    77: 'Snow grains',
+    80: 'Slight rain showers',
+    81: 'Moderate rain showers',
+    82: 'Violent rain showers',
+    85: 'Slight snow showers',
+    86: 'Heavy snow showers',
+    95: 'Thunderstorm',
+    96: 'Thunderstorm with slight hail',
+    99: 'Thunderstorm with heavy hail',
   };
   if (code === null) return 'Unknown';
   return names[code] ?? `Weather code ${code}`;

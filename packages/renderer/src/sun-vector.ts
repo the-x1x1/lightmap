@@ -59,13 +59,22 @@ export function ecefToEnu(v: Vec3, latitudeDeg: number, longitudeDeg: number): V
 }
 
 /** The direction sunlight travels (Sun → ground) in ECEF, ready for Cesium's DirectionalLight. */
-export function sunLightDirectionEcef(azimuthDeg: number, elevationDeg: number, latitudeDeg: number, longitudeDeg: number): Vec3 {
+export function sunLightDirectionEcef(
+  azimuthDeg: number,
+  elevationDeg: number,
+  latitudeDeg: number,
+  longitudeDeg: number,
+): Vec3 {
   const toward = enuToEcef(enuTowardSun(azimuthDeg, elevationDeg), latitudeDeg, longitudeDeg);
   return { x: -toward.x, y: -toward.y, z: -toward.z };
 }
 
 /** Recover azimuth/elevation from an ECEF "toward the Sun" vector — used by the debug panel to cross-check Cesium's own sun. */
-export function azElFromEcefToward(v: Vec3, latitudeDeg: number, longitudeDeg: number): { azimuthDeg: number; elevationDeg: number } {
+export function azElFromEcefToward(
+  v: Vec3,
+  latitudeDeg: number,
+  longitudeDeg: number,
+): { azimuthDeg: number; elevationDeg: number } {
   const e = ecefToEnu(v, latitudeDeg, longitudeDeg);
   const len = Math.hypot(e.x, e.y, e.z) || 1;
   const az = (Math.atan2(e.x / len, e.y / len) / DEG + 360) % 360;
@@ -92,7 +101,10 @@ export function angleBetweenDeg(a: Vec3, b: Vec3): number {
  * Shadow direction on flat ground: the azimuth shadows fall toward (opposite the Sun) and the
  * length of a shadow cast by a 1 m object. Both are used by the Quality-0 overlay.
  */
-export function shadowOnGround(azimuthDeg: number, elevationDeg: number): { azimuthDeg: number; lengthPerMetre: number | null } {
+export function shadowOnGround(
+  azimuthDeg: number,
+  elevationDeg: number,
+): { azimuthDeg: number; lengthPerMetre: number | null } {
   const fall = (azimuthDeg + 180) % 360;
   if (elevationDeg <= 0.1) return { azimuthDeg: fall, lengthPerMetre: null };
   return { azimuthDeg: fall, lengthPerMetre: 1 / Math.tan(elevationDeg * DEG) };

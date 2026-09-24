@@ -5,7 +5,12 @@
  */
 import type { LunarState, SolarState, DayEvents } from '@lightmap/astronomy';
 import type { GeoPoint } from '@lightmap/geospatial';
-import type { AtmosphereParameters, WeatherFrame, WeatherMode, WeatherScenarioId } from '@lightmap/weather';
+import type {
+  AtmosphereParameters,
+  WeatherFrame,
+  WeatherMode,
+  WeatherScenarioId,
+} from '@lightmap/weather';
 
 export interface LocationState {
   point: GeoPoint;

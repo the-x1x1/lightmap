@@ -57,7 +57,8 @@ export class SceneController {
     this.host = host;
     this.debounceMs = options.expensiveDebounceMs ?? 250;
     this.setTimeoutImpl = options.setTimeoutImpl ?? ((fn, ms) => setTimeout(fn, ms));
-    this.clearTimeoutImpl = options.clearTimeoutImpl ?? ((h) => clearTimeout(h as ReturnType<typeof setTimeout>));
+    this.clearTimeoutImpl =
+      options.clearTimeoutImpl ?? ((h) => clearTimeout(h as ReturnType<typeof setTimeout>));
     this.aspect = options.aspect ?? (() => 16 / 9);
     this.overlayRadiusM = options.overlayRadiusM ?? 400;
   }
@@ -103,9 +104,17 @@ export class SceneController {
 
     // --- cheap, every tick -----------------------------------------------------------------
     this.host.setTime(scene.utc);
-    this.host.setLight({ directionEcef: lighting.sunDirectionEcef, color: lighting.sunColor, intensity: lighting.sunIntensity });
+    this.host.setLight({
+      directionEcef: lighting.sunDirectionEcef,
+      color: lighting.sunColor,
+      intensity: lighting.sunIntensity,
+    });
     this.host.setAtmosphere({ ...lighting.atmosphere, fogDensity: lighting.fogDensity });
-    const toward = enuToEcef(enuTowardSun(scene.solar.azimuthDegrees, scene.solar.elevationDegrees), scene.location.point.latitude, scene.location.point.longitude);
+    const toward = enuToEcef(
+      enuTowardSun(scene.solar.azimuthDegrees, scene.solar.elevationDegrees),
+      scene.location.point.latitude,
+      scene.location.point.longitude,
+    );
     const sunScreen = this.host.sunScreenPosition(toward);
     const uniforms: HostGradeUniforms = {
       u_saturation: lighting.grade.saturation,
@@ -126,7 +135,10 @@ export class SceneController {
     };
     this.host.setGrade(uniforms);
 
-    const pinMoved = !prev || prev.location.point.latitude !== scene.location.point.latitude || prev.location.point.longitude !== scene.location.point.longitude;
+    const pinMoved =
+      !prev ||
+      prev.location.point.latitude !== scene.location.point.latitude ||
+      prev.location.point.longitude !== scene.location.point.longitude;
     const modeChanged = !prev || prev.camera.mode !== scene.camera.mode;
     this.applyCamera(scene, pinMoved || modeChanged);
     this.applyOverlay(scene);
@@ -135,9 +147,19 @@ export class SceneController {
     const shadowKey = `${lighting.shadowsEnabled}|${scene.render.shadowMapSize}|${scene.render.softShadows}`;
     if (shadowKey !== this.lastShadowKey) {
       this.lastShadowKey = shadowKey;
-      this.host.setShadows({ enabled: lighting.shadowsEnabled, darkness: lighting.shadowDarkness, size: scene.render.shadowMapSize, softShadows: scene.render.softShadows });
+      this.host.setShadows({
+        enabled: lighting.shadowsEnabled,
+        darkness: lighting.shadowDarkness,
+        size: scene.render.shadowMapSize,
+        softShadows: scene.render.softShadows,
+      });
     } else if (lighting.shadowsEnabled) {
-      this.host.setShadows({ enabled: true, darkness: lighting.shadowDarkness, size: scene.render.shadowMapSize, softShadows: scene.render.softShadows });
+      this.host.setShadows({
+        enabled: true,
+        darkness: lighting.shadowDarkness,
+        size: scene.render.shadowMapSize,
+        softShadows: scene.render.softShadows,
+      });
     }
 
     const celestial = scene.camera.mode === 'viewpoint';
@@ -152,7 +174,10 @@ export class SceneController {
       this.scheduleExpensive(() => {
         if (qualityKey !== this.lastQualityKey) {
           this.lastQualityKey = qualityKey;
-          this.host.setQuality({ terrainScreenSpaceError: scene.render.terrainScreenSpaceError, resolutionScale: scene.render.resolutionScale });
+          this.host.setQuality({
+            terrainScreenSpaceError: scene.render.terrainScreenSpaceError,
+            resolutionScale: scene.render.resolutionScale,
+          });
         }
         if (pinMoved) void this.refreshGroundHeight(scene);
       });
@@ -175,7 +200,15 @@ export class SceneController {
         fovDeg: cesiumFovDeg(cam.fovDeg, this.aspect()),
       };
     } else {
-      hostCam = { kind: 'orbit', target: p, targetHeightM: ground, headingDeg: this.orbit.headingDeg, pitchDeg: this.orbit.pitchDeg, rangeM: this.orbit.rangeM, fly };
+      hostCam = {
+        kind: 'orbit',
+        target: p,
+        targetHeightM: ground,
+        headingDeg: this.orbit.headingDeg,
+        pitchDeg: this.orbit.pitchDeg,
+        rangeM: this.orbit.rangeM,
+        fly,
+      };
     }
     this.host.setCamera(hostCam);
   }
@@ -191,8 +224,12 @@ export class SceneController {
     const overlay: HostOverlay = {
       pin: { ...scene.location.point, heightM: this.groundHeightM },
       sunPath,
-      sun: scene.solar.elevationDegrees > -0.833 ? { azimuthDeg: scene.solar.azimuthDegrees, elevationDeg: scene.solar.elevationDegrees } : null,
-      shadowAzimuthDeg: scene.solar.elevationDegrees > 0.1 ? (scene.solar.azimuthDegrees + 180) % 360 : null,
+      sun:
+        scene.solar.elevationDegrees > -0.833
+          ? { azimuthDeg: scene.solar.azimuthDegrees, elevationDeg: scene.solar.elevationDegrees }
+          : null,
+      shadowAzimuthDeg:
+        scene.solar.elevationDegrees > 0.1 ? (scene.solar.azimuthDegrees + 180) % 360 : null,
       radiusM: this.overlayRadiusM,
       visible: scene.camera.mode === 'map',
     };
@@ -234,7 +271,10 @@ export class SceneController {
 }
 
 /** Sun positions through the civil day, every 10 minutes while above the horizon. */
-export function sunPathForDay(scene: SceneState, stepMinutes = 10): Array<{ azimuthDeg: number; elevationDeg: number }> {
+export function sunPathForDay(
+  scene: SceneState,
+  stepMinutes = 10,
+): Array<{ azimuthDeg: number; elevationDeg: number }> {
   const out: Array<{ azimuthDeg: number; elevationDeg: number }> = [];
   const start = scene.dayEvents.dayStart.getTime();
   const end = scene.dayEvents.dayEnd.getTime();

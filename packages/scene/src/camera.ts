@@ -49,7 +49,10 @@ export function relativeBearing(headingDeg: number, targetAzimuthDeg: number): n
 }
 
 /** Is a direction (e.g. the Sun) inside the horizontal field of view? */
-export function isInFrame(camera: Pick<CameraState, 'headingDeg' | 'fovDeg'>, azimuthDeg: number): boolean {
+export function isInFrame(
+  camera: Pick<CameraState, 'headingDeg' | 'fovDeg'>,
+  azimuthDeg: number,
+): boolean {
   return Math.abs(relativeBearing(camera.headingDeg, azimuthDeg)) <= camera.fovDeg / 2;
 }
 
@@ -59,7 +62,12 @@ export function isInFrame(camera: Pick<CameraState, 'headingDeg' | 'fovDeg'>, az
  * aspect ratio. Null when it is behind the camera. This is the building block for reverse
  * planning (plan §26): "I want the sun here in frame".
  */
-export function frameCoordinates(camera: Pick<CameraState, 'headingDeg' | 'pitchDeg' | 'fovDeg'>, azimuthDeg: number, elevationDeg: number, aspect = 3 / 2): { x: number; y: number } | null {
+export function frameCoordinates(
+  camera: Pick<CameraState, 'headingDeg' | 'pitchDeg' | 'fovDeg'>,
+  azimuthDeg: number,
+  elevationDeg: number,
+  aspect = 3 / 2,
+): { x: number; y: number } | null {
   const DEG = Math.PI / 180;
   const rel = relativeBearing(camera.headingDeg, azimuthDeg) * DEG;
   const el = elevationDeg * DEG;
@@ -80,7 +88,11 @@ export function frameCoordinates(camera: Pick<CameraState, 'headingDeg' | 'pitch
 /** Lighting geometry relative to the camera, in photographer's terms. */
 export type LightingGeometry = 'front-lit' | 'side-lit' | 'back-lit' | 'top-lit' | 'below-horizon';
 
-export function lightingGeometry(camera: Pick<CameraState, 'headingDeg'>, sunAzimuthDeg: number, sunElevationDeg: number): LightingGeometry {
+export function lightingGeometry(
+  camera: Pick<CameraState, 'headingDeg'>,
+  sunAzimuthDeg: number,
+  sunElevationDeg: number,
+): LightingGeometry {
   if (sunElevationDeg < -0.833) return 'below-horizon';
   if (sunElevationDeg > 70) return 'top-lit';
   const rel = Math.abs(relativeBearing(camera.headingDeg, sunAzimuthDeg));

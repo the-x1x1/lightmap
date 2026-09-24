@@ -1,13 +1,37 @@
 import { describe, expect, it } from 'vitest';
 import { localSelectionToUtc } from '@lightmap/astronomy';
-import { DEFAULT_RENDER_SETTINGS, buildSceneState, defaultCamera, type EnvironmentState, type SceneInputs } from '@lightmap/scene';
+import {
+  DEFAULT_RENDER_SETTINGS,
+  buildSceneState,
+  defaultCamera,
+  type EnvironmentState,
+  type SceneInputs,
+} from '@lightmap/scene';
 import { OPEN_METEO_CAPABILITIES, type WeatherScenarioId } from '@lightmap/weather';
 import { lightingFromScene, skyGradientFor } from '../src/lighting.ts';
 
-const kailua = { point: { latitude: 21.397, longitude: -157.727 }, timeZone: 'Pacific/Honolulu', label: 'Kailua Beach', source: 'search' as const };
-const env: EnvironmentState = { terrainAvailable: true, terrainProviderId: 'reearth-mapterhorn-terrain', basemapProviderId: 'xyz-imagery', basemapDetail: 'street', buildingsAvailable: false, groundElevationM: 2, attributions: [], fixtureMode: false };
+const kailua = {
+  point: { latitude: 21.397, longitude: -157.727 },
+  timeZone: 'Pacific/Honolulu',
+  label: 'Kailua Beach',
+  source: 'search' as const,
+};
+const env: EnvironmentState = {
+  terrainAvailable: true,
+  terrainProviderId: 'reearth-mapterhorn-terrain',
+  basemapProviderId: 'xyz-imagery',
+  basemapDetail: 'street',
+  buildingsAvailable: false,
+  groundElevationM: 2,
+  attributions: [],
+  fixtureMode: false,
+};
 
-function scene(hourLocal: number, scenario: WeatherScenarioId = 'clear', over: Partial<SceneInputs> = {}) {
+function scene(
+  hourLocal: number,
+  scenario: WeatherScenarioId = 'clear',
+  over: Partial<SceneInputs> = {},
+) {
   return buildSceneState({
     location: kailua,
     utc: localSelectionToUtc({ year: 2026, month: 5, day: 31 }, hourLocal * 60, kailua.timeZone),
@@ -68,14 +92,19 @@ describe('lightingFromScene', () => {
     const am = lightingFromScene(scene(8));
     const pm = lightingFromScene(scene(16));
     // Morning light travels westward (sun in the east); evening light travels eastward.
-    const dotAm = am.sunDirectionEcef.x * pm.sunDirectionEcef.x + am.sunDirectionEcef.y * pm.sunDirectionEcef.y + am.sunDirectionEcef.z * pm.sunDirectionEcef.z;
+    const dotAm =
+      am.sunDirectionEcef.x * pm.sunDirectionEcef.x +
+      am.sunDirectionEcef.y * pm.sunDirectionEcef.y +
+      am.sunDirectionEcef.z * pm.sunDirectionEcef.z;
     expect(dotAm).toBeLessThan(0.5);
     expect(am.shadow.azimuthDeg).toBeGreaterThan(180); // shadows fall west-ish in the morning
     expect(pm.shadow.azimuthDeg).toBeLessThan(180);
   });
 
   it('haze drives fog density; clear skies produce a blue gradient and overcast a grey one', () => {
-    expect(lightingFromScene(scene(12, 'storm')).fogDensity).toBeGreaterThan(lightingFromScene(scene(12, 'clear')).fogDensity * 3);
+    expect(lightingFromScene(scene(12, 'storm')).fogDensity).toBeGreaterThan(
+      lightingFromScene(scene(12, 'clear')).fogDensity * 3,
+    );
     const [zenithClear] = skyGradientFor(45, 0, 0.5, 1);
     const [zenithOver] = skyGradientFor(45, 0.95, 0.5, 0.85);
     const rgb = (s: string) => s.match(/\d+/g)!.map(Number) as [number, number, number];

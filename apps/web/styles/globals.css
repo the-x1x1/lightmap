@@ -12,26 +12,95 @@
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-html, body { height: 100%; background: var(--lm-chrome); color: var(--lm-text); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
-body { overscroll-behavior: none; }
-#__next, main { height: 100%; }
+html,
+body {
+  height: 100%;
+  background: var(--lm-chrome);
+  color: var(--lm-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+body {
+  overscroll-behavior: none;
+}
+#__next,
+main {
+  height: 100%;
+}
 
 /* Cesium chrome we do not want. Credits stay (attribution is mandatory) but move into our footer. */
-.cesium-widget-credits { display: none !important; }
-.cesium-widget canvas { outline: none; }
+.cesium-widget-credits {
+  display: none !important;
+}
+.cesium-widget canvas {
+  outline: none;
+}
 
 /* Timeline range input: big thumb for touch (plan §20), visible focus, no colour-only state. */
-.lm-range { -webkit-appearance: none; appearance: none; width: 100%; height: 44px; background: transparent; cursor: pointer; }
-.lm-range::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: var(--lm-range-track, rgba(255,255,255,0.15)); }
-.lm-range::-moz-range-track { height: 6px; border-radius: 3px; background: var(--lm-range-track, rgba(255,255,255,0.15)); }
-.lm-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 28px; height: 28px; margin-top: -11px; border-radius: 50%; background: var(--lm-text); border: 3px solid var(--lm-chrome); box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
-.lm-range::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; background: var(--lm-text); border: 3px solid var(--lm-chrome); box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
-.lm-range:focus-visible { outline: none; }
-.lm-range:focus-visible::-webkit-slider-thumb { box-shadow: var(--lm-focus); }
-.lm-range:focus-visible::-moz-range-thumb { box-shadow: var(--lm-focus); }
+.lm-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 44px;
+  background: transparent;
+  cursor: pointer;
+}
+.lm-range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--lm-range-track, rgba(255, 255, 255, 0.15));
+}
+.lm-range::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--lm-range-track, rgba(255, 255, 255, 0.15));
+}
+.lm-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  margin-top: -11px;
+  border-radius: 50%;
+  background: var(--lm-text);
+  border: 3px solid var(--lm-chrome);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+.lm-range::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--lm-text);
+  border: 3px solid var(--lm-chrome);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+.lm-range:focus-visible {
+  outline: none;
+}
+.lm-range:focus-visible::-webkit-slider-thumb {
+  box-shadow: var(--lm-focus);
+}
+.lm-range:focus-visible::-moz-range-thumb {
+  box-shadow: var(--lm-focus);
+}
 
-.lm-scrollbar-none { scrollbar-width: none; }
-.lm-scrollbar-none::-webkit-scrollbar { display: none; }
+.lm-scrollbar-none {
+  scrollbar-width: none;
+}
+.lm-scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
 
-@keyframes lm-sheet-in { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
-.lm-sheet-in { animation: lm-sheet-in 220ms ease-out; }
+@keyframes lm-sheet-in {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.lm-sheet-in {
+  animation: lm-sheet-in 220ms ease-out;
+}

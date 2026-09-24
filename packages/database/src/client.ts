@@ -17,7 +17,13 @@ export interface DbHandle {
 }
 
 export function createDb(url: string, opts: { max?: number } = {}): DbHandle {
-  const sql = postgres(url, { max: opts.max ?? 8, idle_timeout: 30, connect_timeout: 10, prepare: true, onnotice: () => {} });
+  const sql = postgres(url, {
+    max: opts.max ?? 8,
+    idle_timeout: 30,
+    connect_timeout: 10,
+    prepare: true,
+    onnotice: () => {},
+  });
   const db = drizzle(sql, { schema });
   return { db, sql, executor: executorFor(sql), close: () => sql.end({ timeout: 5 }) };
 }
@@ -26,7 +32,8 @@ export function createDb(url: string, opts: { max?: number } = {}): DbHandle {
 export function executorFor(sql: Sql): SqlExecutor {
   return {
     unsafe: (text) => sql.unsafe(text),
-    query: async <T>(text: string, params: unknown[] = []) => (await sql.unsafe(text, params as never)) as unknown as T[],
+    query: async <T>(text: string, params: unknown[] = []) =>
+      (await sql.unsafe(text, params as never)) as unknown as T[],
     begin: (fn) => sql.begin((tx) => fn(executorFor(tx as unknown as Sql))) as Promise<never>,
   };
 }

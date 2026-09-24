@@ -7,7 +7,13 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { computeDayEvents, parseCivilDate, type DayEvents } from '@lightmap/astronomy';
-import { buildSceneState, DEFAULT_RENDER_SETTINGS, type EnvironmentState, type RenderSettings, type SceneState } from '@lightmap/scene';
+import {
+  buildSceneState,
+  DEFAULT_RENDER_SETTINGS,
+  type EnvironmentState,
+  type RenderSettings,
+  type SceneState,
+} from '@lightmap/scene';
 import { decideWeatherMode, type WeatherCapabilities, type WeatherFrame } from '@lightmap/weather';
 import { gridKey } from '@lightmap/geospatial';
 import { selectedUtc, usePlannerStore } from './store.ts';
@@ -18,7 +24,12 @@ export interface SceneBundle {
   scene: SceneState | null;
   utc: Date | null;
   dayEvents: DayEvents | null;
-  weather: { loading: boolean; error: string | null; providerFailed: boolean; capabilities: WeatherCapabilities | null };
+  weather: {
+    loading: boolean;
+    error: string | null;
+    providerFailed: boolean;
+    capabilities: WeatherCapabilities | null;
+  };
   capabilities: CapabilitiesResponse | null;
   environment: EnvironmentState;
 }
@@ -43,7 +54,10 @@ export function useCapabilities() {
   });
 }
 
-export function environmentFromCapabilities(c: CapabilitiesResponse | null, groundElevationM: number | null): EnvironmentState {
+export function environmentFromCapabilities(
+  c: CapabilitiesResponse | null,
+  groundElevationM: number | null,
+): EnvironmentState {
   if (!c) return FALLBACK_ENV;
   return {
     terrainAvailable: c.providers.terrain.kind !== 'ellipsoid',
@@ -57,7 +71,9 @@ export function environmentFromCapabilities(c: CapabilitiesResponse | null, grou
   };
 }
 
-export function useScene(opts: { now?: Date; render?: RenderSettings; includeLunar?: boolean } = {}): SceneBundle {
+export function useScene(
+  opts: { now?: Date; render?: RenderSettings; includeLunar?: boolean } = {},
+): SceneBundle {
   const location = usePlannerStore((s) => s.location);
   const date = usePlannerStore((s) => s.date);
   const minutes = usePlannerStore((s) => s.minutes);
@@ -75,7 +91,10 @@ export function useScene(opts: { now?: Date; render?: RenderSettings; includeLun
   const weatherQuery = useQuery({
     queryKey: ['weather', cell, date],
     enabled: Boolean(location && cell && horizon?.fetchWorthwhile),
-    queryFn: () => fetchJson<WeatherResponse>(`/api/weather?lat=${location!.point.latitude.toFixed(4)}&lng=${location!.point.longitude.toFixed(4)}&date=${date}&tz=${encodeURIComponent(location!.timeZone)}`),
+    queryFn: () =>
+      fetchJson<WeatherResponse>(
+        `/api/weather?lat=${location!.point.latitude.toFixed(4)}&lng=${location!.point.longitude.toFixed(4)}&date=${date}&tz=${encodeURIComponent(location!.timeZone)}`,
+      ),
     staleTime: 30 * 60_000,
     gcTime: 6 * 60 * 60_000,
     retry: 1,
@@ -86,10 +105,18 @@ export function useScene(opts: { now?: Date; render?: RenderSettings; includeLun
     if (!location) return null;
     const civil = parseCivilDate(date);
     if (!civil) return null;
-    return computeDayEvents({ latitude: location.point.latitude, longitude: location.point.longitude, timeZone: location.timeZone, date: civil });
+    return computeDayEvents({
+      latitude: location.point.latitude,
+      longitude: location.point.longitude,
+      timeZone: location.timeZone,
+      date: civil,
+    });
   }, [location, date]);
 
-  const environment = useMemo(() => environmentFromCapabilities(caps.data ?? null, location?.point.elevationM ?? null), [caps.data, location?.point.elevationM]);
+  const environment = useMemo(
+    () => environmentFromCapabilities(caps.data ?? null, location?.point.elevationM ?? null),
+    [caps.data, location?.point.elevationM],
+  );
 
   const frames: readonly WeatherFrame[] = weatherQuery.data?.frames ?? [];
   const providerFailed = Boolean(horizon?.fetchWorthwhile && weatherQuery.isError);
@@ -112,13 +139,31 @@ export function useScene(opts: { now?: Date; render?: RenderSettings; includeLun
     });
     // `now` changes every render but only matters at the horizon boundary; exclude to avoid churn.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location, utc, dayEvents, camera, environment, scenario, forceScenario, weatherCaps, frames, providerFailed, opts.render, opts.includeLunar]);
+  }, [
+    location,
+    utc,
+    dayEvents,
+    camera,
+    environment,
+    scenario,
+    forceScenario,
+    weatherCaps,
+    frames,
+    providerFailed,
+    opts.render,
+    opts.includeLunar,
+  ]);
 
   return {
     scene,
     utc,
     dayEvents,
-    weather: { loading: weatherQuery.isLoading, error: weatherQuery.error ? String(weatherQuery.error) : null, providerFailed, capabilities: weatherCaps },
+    weather: {
+      loading: weatherQuery.isLoading,
+      error: weatherQuery.error ? String(weatherQuery.error) : null,
+      providerFailed,
+      capabilities: weatherCaps,
+    },
     capabilities: caps.data ?? null,
     environment,
   };

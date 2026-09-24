@@ -3,7 +3,12 @@ import { computeDayEvents } from '@lightmap/astronomy';
 import { dayGradient, dayMarkers } from '@/components/Timeline';
 
 describe('timeline markers', () => {
-  const ev = computeDayEvents({ latitude: 21.397, longitude: -157.727, timeZone: 'Pacific/Honolulu', date: { year: 2026, month: 5, day: 31 } });
+  const ev = computeDayEvents({
+    latitude: 21.397,
+    longitude: -157.727,
+    timeZone: 'Pacific/Honolulu',
+    date: { year: 2026, month: 5, day: 31 },
+  });
   it('places sunrise/noon/sunset in order within the day', () => {
     const m = dayMarkers(ev);
     const keys = m.map((x) => x.key);
@@ -17,7 +22,12 @@ describe('timeline markers', () => {
     expect(g.endsWith('#0c1230 100%)')).toBe(true);
   });
   it('handles polar days without markers', () => {
-    const tromso = computeDayEvents({ latitude: 69.6492, longitude: 18.9553, timeZone: 'Europe/Oslo', date: { year: 2026, month: 6, day: 21 } });
+    const tromso = computeDayEvents({
+      latitude: 69.6492,
+      longitude: 18.9553,
+      timeZone: 'Europe/Oslo',
+      date: { year: 2026, month: 6, day: 21 },
+    });
     expect(dayMarkers(tromso).map((x) => x.key)).toEqual(['noon']);
     expect(dayGradient(tromso)).toContain('#6aa7e6');
   });

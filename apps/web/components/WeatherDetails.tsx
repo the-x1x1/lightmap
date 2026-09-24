@@ -14,11 +14,19 @@ export function WeatherDetails({ scene }: { scene: SceneState }) {
         <Row label="Diffuse share" value={`${Math.round(p.diffuseFraction * 100)} %`} />
         <Row label="Haze" value={`${Math.round(p.haze * 100)} %`} />
         {f ? <Row label="Conditions" value={describeWeatherCode(f.weatherCode)} /> : null}
-        {f?.precipitationProbability !== null && f?.precipitationProbability !== undefined ? <Row label="Rain chance" value={`${Math.round(f.precipitationProbability)} %`} /> : null}
-        {f?.visibility !== null && f?.visibility !== undefined ? <Row label="Visibility" value={`${(f.visibility / 1000).toFixed(0)} km`} /> : null}
-        {f?.windSpeed !== null && f?.windSpeed !== undefined ? <Row label="Wind" value={`${f.windSpeed.toFixed(0)} m/s`} /> : null}
+        {f?.precipitationProbability !== null && f?.precipitationProbability !== undefined ? (
+          <Row label="Rain chance" value={`${Math.round(f.precipitationProbability)} %`} />
+        ) : null}
+        {f?.visibility !== null && f?.visibility !== undefined ? (
+          <Row label="Visibility" value={`${(f.visibility / 1000).toFixed(0)} km`} />
+        ) : null}
+        {f?.windSpeed !== null && f?.windSpeed !== undefined ? (
+          <Row label="Wind" value={`${f.windSpeed.toFixed(0)} m/s`} />
+        ) : null}
       </dl>
-      {a.providerAttribution ? <p className="text-xs text-[var(--lm-text-faint)]">{a.providerAttribution}</p> : null}
+      {a.providerAttribution ? (
+        <p className="text-xs text-[var(--lm-text-faint)]">{a.providerAttribution}</p>
+      ) : null}
     </div>
   );
 }

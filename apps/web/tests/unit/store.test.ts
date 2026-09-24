@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { selectedUtc, usePlannerStore } from '@/features/planner/store';
 
-const kailua = { point: { latitude: 21.397, longitude: -157.727 }, timeZone: 'Pacific/Honolulu', label: 'Kailua Beach', source: 'search' as const };
+const kailua = {
+  point: { latitude: 21.397, longitude: -157.727 },
+  timeZone: 'Pacific/Honolulu',
+  label: 'Kailua Beach',
+  source: 'search' as const,
+};
 
 describe('planner store', () => {
   it('keeps the wall-clock selection when the location changes zones', () => {
@@ -28,7 +33,14 @@ describe('planner store', () => {
     expect(usePlannerStore.getState().camera.fovDeg).toBeCloseTo(39.6, 1);
   });
   it('restores a saved viewpoint into date/time/camera/scenario', () => {
-    usePlannerStore.getState().restore({ location: kailua, utc: new Date('2026-05-31T22:30:00Z'), camera: { ...usePlannerStore.getState().camera, headingDeg: 270, mode: 'viewpoint' }, scenario: 'overcast' });
+    usePlannerStore
+      .getState()
+      .restore({
+        location: kailua,
+        utc: new Date('2026-05-31T22:30:00Z'),
+        camera: { ...usePlannerStore.getState().camera, headingDeg: 270, mode: 'viewpoint' },
+        scenario: 'overcast',
+      });
     const st = usePlannerStore.getState();
     expect(st.date).toBe('2026-05-31');
     expect(st.minutes).toBe(750);

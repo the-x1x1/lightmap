@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { parseEnv } from '@lightmap/config';
 import { describeWeatherCode, interpolateFrame, weatherFamily } from '../src/model.ts';
 import { FixtureWeatherProvider } from '../src/providers/fixture.ts';
-import { OPEN_METEO_CAPABILITIES, OpenMeteoProvider, normalizeOpenMeteo } from '../src/providers/open-meteo.ts';
+import {
+  OPEN_METEO_CAPABILITIES,
+  OpenMeteoProvider,
+  normalizeOpenMeteo,
+} from '../src/providers/open-meteo.ts';
 import { createWeatherProvider } from '../src/registry.ts';
 
 const sample = {
@@ -31,9 +35,22 @@ const sample = {
 
 describe('Open-Meteo normalisation', () => {
   it('maps hourly arrays to frames and drops frames without cloud cover', () => {
-    const s = normalizeOpenMeteo(sample, 21.397, -157.727, new Date('2026-05-30T12:00:00Z'), OPEN_METEO_CAPABILITIES);
+    const s = normalizeOpenMeteo(
+      sample,
+      21.397,
+      -157.727,
+      new Date('2026-05-30T12:00:00Z'),
+      OPEN_METEO_CAPABILITIES,
+    );
     expect(s.frames).toHaveLength(2);
-    expect(s.frames[0]).toMatchObject({ timestamp: '2026-05-31T00:00:00.000Z', cloudCoverTotal: 10, cloudCoverLow: 5, windDirection: 350, weatherCode: 0, visibility: 40000 });
+    expect(s.frames[0]).toMatchObject({
+      timestamp: '2026-05-31T00:00:00.000Z',
+      cloudCoverTotal: 10,
+      cloudCoverLow: 5,
+      windDirection: 350,
+      weatherCode: 0,
+      visibility: 40000,
+    });
     expect(s.latitude).toBe(21.4);
     expect(s.modelElevationM).toBe(3);
     expect(s.timeZone).toBeNull();
@@ -57,7 +74,12 @@ describe('Open-Meteo normalisation', () => {
       return new Response(JSON.stringify(sample), { status: 200 });
     }) as typeof fetch;
     const p = new OpenMeteoProvider({ apiKey: 'k', fetchImpl });
-    await p.getForecast(21.397, -157.727, new Date('2026-05-31T00:00:00Z'), new Date('2026-05-31T23:00:00Z'));
+    await p.getForecast(
+      21.397,
+      -157.727,
+      new Date('2026-05-31T00:00:00Z'),
+      new Date('2026-05-31T23:00:00Z'),
+    );
     expect(seen[0]).toContain('customer-api.open-meteo.com');
     expect(seen[0]).toContain('apikey=k');
     expect(seen[0]).toContain('cloud_cover_low');
@@ -67,30 +89,55 @@ describe('Open-Meteo normalisation', () => {
   });
 
   it('surfaces provider errors', async () => {
-    const fetchImpl = (async () => new Response(JSON.stringify({ error: true, reason: 'bad' }), { status: 200 })) as unknown as typeof fetch;
-    await expect(new OpenMeteoProvider({ fetchImpl }).getForecast(0, 0, new Date(), new Date())).rejects.toThrow('bad');
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify({ error: true, reason: 'bad' }), {
+        status: 200,
+      })) as unknown as typeof fetch;
+    await expect(
+      new OpenMeteoProvider({ fetchImpl }).getForecast(0, 0, new Date(), new Date()),
+    ).rejects.toThrow('bad');
     const fetch500 = (async () => new Response('x', { status: 500 })) as unknown as typeof fetch;
-    await expect(new OpenMeteoProvider({ fetchImpl: fetch500 }).getForecast(0, 0, new Date(), new Date())).rejects.toThrow('500');
+    await expect(
+      new OpenMeteoProvider({ fetchImpl: fetch500 }).getForecast(0, 0, new Date(), new Date()),
+    ).rejects.toThrow('500');
   });
 });
 
 describe('fixture provider', () => {
   it('is deterministic, labelled and hourly', async () => {
     const p = new FixtureWeatherProvider();
-    const a = await p.getForecast(21.397, -157.727, new Date('2026-05-31T00:00:00Z'), new Date('2026-05-31T00:00:00Z'));
-    const b = await p.getForecast(21.397, -157.727, new Date('2026-05-31T00:00:00Z'), new Date('2026-05-31T00:00:00Z'));
+    const a = await p.getForecast(
+      21.397,
+      -157.727,
+      new Date('2026-05-31T00:00:00Z'),
+      new Date('2026-05-31T00:00:00Z'),
+    );
+    const b = await p.getForecast(
+      21.397,
+      -157.727,
+      new Date('2026-05-31T00:00:00Z'),
+      new Date('2026-05-31T00:00:00Z'),
+    );
     expect(a.frames).toHaveLength(24);
     expect(a.frames.map((f) => f.cloudCoverTotal)).toEqual(b.frames.map((f) => f.cloudCoverTotal));
     expect(a.capabilities.isFixture).toBe(true);
     expect(a.capabilities.attribution).toContain('not a forecast');
-    const storm = await new FixtureWeatherProvider({ pattern: 'storm' }).getForecast(0, 0, new Date(), new Date());
+    const storm = await new FixtureWeatherProvider({ pattern: 'storm' }).getForecast(
+      0,
+      0,
+      new Date(),
+      new Date(),
+    );
     expect(storm.frames[0]?.weatherCode).toBe(63);
   });
 });
 
 describe('registry and codes', () => {
   it('selects providers from env', () => {
-    expect(createWeatherProvider(parseEnv({ WEATHER_PROVIDER: 'fixture' }).env).getCapabilities().providerId).toBe('fixture');
+    expect(
+      createWeatherProvider(parseEnv({ WEATHER_PROVIDER: 'fixture' }).env).getCapabilities()
+        .providerId,
+    ).toBe('fixture');
     expect(createWeatherProvider(parseEnv({}).env).getCapabilities().providerId).toBe('open-meteo');
   });
   it('classifies WMO codes', () => {

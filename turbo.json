@@ -7,7 +7,19 @@
     "build": {
       "dependsOn": ["^build"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"],
-      "env": ["NEXT_PUBLIC_*", "DATABASE_URL", "AUTH_*", "STRIPE_*", "LIGHTMAP_*", "CESIUM_ION_TOKEN", "OPEN_METEO_*", "GEOCODER_*", "TERRAIN_*", "IMAGERY_*", "SENTRY_DSN"]
+      "env": [
+        "NEXT_PUBLIC_*",
+        "DATABASE_URL",
+        "AUTH_*",
+        "STRIPE_*",
+        "LIGHTMAP_*",
+        "CESIUM_ION_TOKEN",
+        "OPEN_METEO_*",
+        "GEOCODER_*",
+        "TERRAIN_*",
+        "IMAGERY_*",
+        "SENTRY_DSN"
+      ]
     },
     "typecheck": {
       "dependsOn": ["^typecheck"]

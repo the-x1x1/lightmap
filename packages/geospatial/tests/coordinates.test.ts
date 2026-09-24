@@ -5,8 +5,14 @@ describe('parseCoordinates', () => {
   it('parses decimal pairs in several spellings', () => {
     expect(parseCoordinates('21.397, -157.727')).toEqual({ latitude: 21.397, longitude: -157.727 });
     expect(parseCoordinates('21.397 -157.727')).toEqual({ latitude: 21.397, longitude: -157.727 });
-    expect(parseCoordinates('21.397N, 157.727W')).toEqual({ latitude: 21.397, longitude: -157.727 });
-    expect(parseCoordinates('-33.8688;151.2093')).toEqual({ latitude: -33.8688, longitude: 151.2093 });
+    expect(parseCoordinates('21.397N, 157.727W')).toEqual({
+      latitude: 21.397,
+      longitude: -157.727,
+    });
+    expect(parseCoordinates('-33.8688;151.2093')).toEqual({
+      latitude: -33.8688,
+      longitude: 151.2093,
+    });
   });
 
   it('parses DMS pairs', () => {
@@ -17,7 +23,10 @@ describe('parseCoordinates', () => {
   });
 
   it('parses a Google Maps URL fragment', () => {
-    expect(parseCoordinates('https://www.google.com/maps/@21.397,-157.727,15z')).toEqual({ latitude: 21.397, longitude: -157.727 });
+    expect(parseCoordinates('https://www.google.com/maps/@21.397,-157.727,15z')).toEqual({
+      latitude: 21.397,
+      longitude: -157.727,
+    });
   });
 
   it('rejects place names and out-of-range values', () => {
@@ -27,6 +36,8 @@ describe('parseCoordinates', () => {
   });
 
   it('formats with hemispheres', () => {
-    expect(formatCoordinates({ latitude: 21.397, longitude: -157.727 })).toBe('21.3970° N, 157.7270° W');
+    expect(formatCoordinates({ latitude: 21.397, longitude: -157.727 })).toBe(
+      '21.3970° N, 157.7270° W',
+    );
   });
 });

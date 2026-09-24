@@ -3,10 +3,20 @@ import type { Project, Viewpoint } from '@lightmap/database';
 import type { ProjectDto, ViewpointDto } from '@/lib/api-types';
 
 export function projectDto(p: Project & { viewpointCount?: number }): ProjectDto {
-  return { id: p.id, name: p.name, description: p.description, shootDate: p.shootDate, createdAt: p.createdAt.toISOString(), updatedAt: p.updatedAt.toISOString(), viewpointCount: p.viewpointCount ?? 0 };
+  return {
+    id: p.id,
+    name: p.name,
+    description: p.description,
+    shootDate: p.shootDate,
+    createdAt: p.createdAt.toISOString(),
+    updatedAt: p.updatedAt.toISOString(),
+    viewpointCount: p.viewpointCount ?? 0,
+  };
 }
 
-export function viewpointDto(v: Viewpoint & { snapshot?: { thumbnailDataUrl: string | null } | null }): ViewpointDto {
+export function viewpointDto(
+  v: Viewpoint & { snapshot?: { thumbnailDataUrl: string | null } | null },
+): ViewpointDto {
   return {
     id: v.id,
     projectId: v.projectId,

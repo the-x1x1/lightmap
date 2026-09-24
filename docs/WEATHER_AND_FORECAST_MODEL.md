@@ -6,11 +6,11 @@ How LightMap turns "what will the sky do?" into something honest and renderable.
 
 ## 1. Three different things
 
-| | What it is | Where it comes from | How it is labelled |
-|---|---|---|---|
-| **Forecast** | A numerical weather model's prediction for a specific hour | The configured `WeatherProvider`, inside its declared horizon | "Forecast" / "Extended forecast — low confidence" |
-| **Scenario** | A user-chosen, deterministic set of atmosphere parameters | `SCENARIOS` constants | "Scenario: Overcast", "Forecast unavailable this far ahead" |
-| **Climatology** | Historical frequency of conditions for a place, month and hour | Phase 7, not implemented | "Typical for this month" — never "Forecast" |
+|                 | What it is                                                     | Where it comes from                                           | How it is labelled                                          |
+| --------------- | -------------------------------------------------------------- | ------------------------------------------------------------- | ----------------------------------------------------------- |
+| **Forecast**    | A numerical weather model's prediction for a specific hour     | The configured `WeatherProvider`, inside its declared horizon | "Forecast" / "Extended forecast — low confidence"           |
+| **Scenario**    | A user-chosen, deterministic set of atmosphere parameters      | `SCENARIOS` constants                                         | "Scenario: Overcast", "Forecast unavailable this far ahead" |
+| **Climatology** | Historical frequency of conditions for a place, month and hour | Phase 7, not implemented                                      | "Typical for this month" — never "Forecast"                 |
 
 Rules (plan §1, §9): do not pretend weather is known beyond the forecast horizon; do not silently
 use historical weather as a future forecast; label scenarios as scenarios.
@@ -21,16 +21,16 @@ use historical weather as a future forecast; label scenarios as scenarios.
 provider declares `reliableHorizonHours`, `maxHorizonHours` and `historicalDays`; Open-Meteo
 declares 7 days, 16 days and 92 days.
 
-| Lead time (selected − now) | Mode | Weather confidence | Fetch? | User-facing reason |
-|---|---|---|---|---|
-| ≤ 48 h ahead | `FORECAST` | HIGH | yes | "Forecast" |
-| 48 h – 7 days ahead | `FORECAST` | MEDIUM | yes | "Forecast, N days ahead" |
-| 8 – 16 days ahead | `EXTENDED_FORECAST` | LOW | yes | "Extended forecast, N days ahead — low confidence" |
-| > 16 days ahead | `SCENARIO` | SCENARIO | no | "Forecast unavailable this far ahead (N days) — compare scenarios" |
-| 0 – 92 days ago | `RECENT_PAST` | HIGH | yes | "Recent conditions from the provider archive" |
-| > 92 days ago | `PAST` | SCENARIO | no | "Historical weather for N days ago is not loaded — showing a scenario" |
-| No provider configured | `SCENARIO` | SCENARIO | no | "No weather provider configured — choose a scenario" |
-| Provider call fails | (mode unchanged) | SCENARIO | – | "Live forecast unavailable — showing your selected scenario" |
+| Lead time (selected − now) | Mode                | Weather confidence | Fetch? | User-facing reason                                                     |
+| -------------------------- | ------------------- | ------------------ | ------ | ---------------------------------------------------------------------- |
+| ≤ 48 h ahead               | `FORECAST`          | HIGH               | yes    | "Forecast"                                                             |
+| 48 h – 7 days ahead        | `FORECAST`          | MEDIUM             | yes    | "Forecast, N days ahead"                                               |
+| 8 – 16 days ahead          | `EXTENDED_FORECAST` | LOW                | yes    | "Extended forecast, N days ahead — low confidence"                     |
+| > 16 days ahead            | `SCENARIO`          | SCENARIO           | no     | "Forecast unavailable this far ahead (N days) — compare scenarios"     |
+| 0 – 92 days ago            | `RECENT_PAST`       | HIGH               | yes    | "Recent conditions from the provider archive"                          |
+| > 92 days ago              | `PAST`              | SCENARIO           | no     | "Historical weather for N days ago is not loaded — showing a scenario" |
+| No provider configured     | `SCENARIO`          | SCENARIO           | no     | "No weather provider configured — choose a scenario"                   |
+| Provider call fails        | (mode unchanged)    | SCENARIO           | –      | "Live forecast unavailable — showing your selected scenario"           |
 
 `PAST` is deliberately treated as a scenario: the archive could be fetched, but until a product
 reason exists LightMap does not spend requests on it and does not imply it knows.
@@ -42,19 +42,19 @@ already knows it is in scenario mode and should not have asked.
 
 Every vendor response is converted into frames; nothing downstream knows the vendor.
 
-| Field | Unit | Notes |
-|---|---|---|
-| `timestamp` | UTC ISO | hourly frames start on the hour |
-| `cloudCoverTotal` | 0–100 % | required |
-| `cloudCoverLow` / `Mid` / `High` | 0–100 % or null | |
-| `precipitationProbability` | 0–100 % or null | |
-| `precipitationAmount` | mm/hour or null | |
-| `humidity` | 0–100 % or null | |
-| `visibility` | metres or null | |
-| `windSpeed` | m/s or null | |
-| `windDirection` | degrees from, or null | interpolated as an angle |
-| `weatherCode` | WMO 4677 or null | nearest frame wins when interpolating |
-| `directNormalIrradiance`, `diffuseRadiation`, `shortwaveRadiation` | W/m², optional | |
+| Field                                                              | Unit                  | Notes                                 |
+| ------------------------------------------------------------------ | --------------------- | ------------------------------------- |
+| `timestamp`                                                        | UTC ISO               | hourly frames start on the hour       |
+| `cloudCoverTotal`                                                  | 0–100 %               | required                              |
+| `cloudCoverLow` / `Mid` / `High`                                   | 0–100 % or null       |                                       |
+| `precipitationProbability`                                         | 0–100 % or null       |                                       |
+| `precipitationAmount`                                              | mm/hour or null       |                                       |
+| `humidity`                                                         | 0–100 % or null       |                                       |
+| `visibility`                                                       | metres or null        |                                       |
+| `windSpeed`                                                        | m/s or null           |                                       |
+| `windDirection`                                                    | degrees from, or null | interpolated as an angle              |
+| `weatherCode`                                                      | WMO 4677 or null      | nearest frame wins when interpolating |
+| `directNormalIrradiance`, `diffuseRadiation`, `shortwaveRadiation` | W/m², optional        |                                       |
 
 `interpolateFrame(frames, at)` gives a linear blend between the two bracketing hourly frames so
 scrubbing is continuous; null fields interpolate as null. A `WeatherSeries` wraps the frames with
@@ -89,19 +89,19 @@ overhead, cooling through 7800–9000 K in twilight). The curve is configurable.
 
 From `SCENARIOS` in `scenarios.ts`. Deterministic; the same scenario always yields the same numbers.
 
-| Scenario | cloudCover | cloudOpacity | cloudDensity | sunTransmittance | diffuseFraction | skyLuminance | haze | saturation | contrast | precipitation |
-|---|---|---|---|---|---|---|---|---|---|---|
-| Clear | 0.05 | 0.05 | 0.20 | 1.00 | 0.15 | 1.00 | 0.10 | 1.00 | 1.00 | 0 |
-| Mostly Clear | 0.25 | 0.30 | 0.35 | 0.92 | 0.25 | 1.00 | 0.15 | 0.98 | 0.97 | 0 |
-| Partly Cloudy | 0.55 | 0.60 | 0.50 | 0.70 | 0.45 | 1.05 | 0.25 | 0.95 | 0.90 | 0 |
-| Overcast | 0.95 | 0.95 | 0.85 | 0.20 | 0.90 | 0.85 | 0.45 | 0.85 | 0.75 | 0 |
-| Rain / Storm | 1.00 | 1.00 | 1.00 | 0.08 | 0.97 | 0.55 | 0.70 | 0.70 | 0.65 | 1 |
+| Scenario      | cloudCover | cloudOpacity | cloudDensity | sunTransmittance | diffuseFraction | skyLuminance | haze | saturation | contrast | precipitation |
+| ------------- | ---------- | ------------ | ------------ | ---------------- | --------------- | ------------ | ---- | ---------- | -------- | ------------- |
+| Clear         | 0.05       | 0.05         | 0.20         | 1.00             | 0.15            | 1.00         | 0.10 | 1.00       | 1.00     | 0             |
+| Mostly Clear  | 0.25       | 0.30         | 0.35         | 0.92             | 0.25            | 1.00         | 0.15 | 0.98       | 0.97     | 0             |
+| Partly Cloudy | 0.55       | 0.60         | 0.50         | 0.70             | 0.45            | 1.05         | 0.25 | 0.95       | 0.90     | 0             |
+| Overcast      | 0.95       | 0.95         | 0.85         | 0.20             | 0.90            | 0.85         | 0.45 | 0.85       | 0.75     | 0             |
+| Rain / Storm  | 1.00       | 1.00         | 1.00         | 0.08             | 0.97            | 0.55         | 0.70 | 0.70       | 0.65     | 1             |
 
 Meaning: `sunTransmittance` drives shadow contrast and direct-light intensity; `diffuseFraction`
 is the share of soft, directionless sky light; `skyLuminance` is relative sky brightness;
 `cloudOpacity`/`cloudDensity` control how much cloud is drawn and how thick it reads; `haze` is
 aerial perspective; `saturation`/`contrast` are grade multipliers around 1.0. These numbers are
-physically motivated but deliberately simple; they are tuned for an *obvious* visual difference
+physically motivated but deliberately simple; they are tuned for an _obvious_ visual difference
 between Clear, Partly Cloudy and Overcast (plan §10), not for radiometric accuracy.
 
 ## 6. Provider: Open-Meteo

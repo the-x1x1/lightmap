@@ -22,14 +22,19 @@ interface Golden {
     lon: number;
     date: string;
     tzHours: number;
-    sun: Record<'beginCivilTwilight' | 'rise' | 'transit' | 'set' | 'endCivilTwilight', string | null>;
+    sun: Record<
+      'beginCivilTwilight' | 'rise' | 'transit' | 'set' | 'endCivilTwilight',
+      string | null
+    >;
     moon: { curphase: string; fracillum: string };
     altaz: Array<{ utc: string; altitudeDeg: number; azimuthDeg: number }>;
   }>;
 }
 
 const here = dirname(fileURLToPath(import.meta.url));
-const golden = JSON.parse(readFileSync(join(here, 'fixtures', 'usno-golden.json'), 'utf8')) as Golden;
+const golden = JSON.parse(
+  readFileSync(join(here, 'fixtures', 'usno-golden.json'), 'utf8'),
+) as Golden;
 
 function hhmm(d: Date | null, tzHours: number): string | null {
   if (!d) return null;
@@ -64,7 +69,12 @@ describe('USNO golden set', () => {
       const tolerance = Math.abs(c.lat) > 66 ? 2 : 1;
 
       it('matches rise, set, transit and civil twilight to the minute', () => {
-        const ev = computeDayEvents({ latitude: c.lat, longitude: c.lon, date: { year: y, month: m, day: d }, timeZone: tz });
+        const ev = computeDayEvents({
+          latitude: c.lat,
+          longitude: c.lon,
+          date: { year: y, month: m, day: d },
+          timeZone: tz,
+        });
         const got = {
           beginCivilTwilight: hhmm(ev.dawn, c.tzHours),
           rise: hhmm(ev.sunrise, c.tzHours),
@@ -76,7 +86,12 @@ describe('USNO golden set', () => {
           const want = c.sun[key];
           const have = got[key];
           if (want === null) {
-            if (key === 'transit' && c.sun.rise === null && c.sun.set === null && c.sun.beginCivilTwilight !== null) {
+            if (
+              key === 'transit' &&
+              c.sun.rise === null &&
+              c.sun.set === null &&
+              c.sun.beginCivilTwilight !== null
+            ) {
               // USNO omits the transit row in polar night; the Sun still culminates (below the
               // horizon) and LightMap reports that instant because twilight peaks there.
               expect(ev.polar).toBe('polar-night');
@@ -86,7 +101,10 @@ describe('USNO golden set', () => {
             expect(have, `${key} should not occur`).toBeNull();
           } else {
             expect(have, `${key} missing`).not.toBeNull();
-            expect(minutesApart(have!, want), `${key}: got ${have}, USNO ${want}`).toBeLessThanOrEqual(tolerance);
+            expect(
+              minutesApart(have!, want),
+              `${key}: got ${have}, USNO ${want}`,
+            ).toBeLessThanOrEqual(tolerance);
           }
         }
       });
@@ -94,7 +112,10 @@ describe('USNO golden set', () => {
       for (const a of c.altaz) {
         it(`sun direction at ${a.utc} within 0.02° of USNO`, () => {
           const p = sunPosition(new Date(a.utc), c.lat, c.lon);
-          const sep = separationDeg(unit(p.azimuthDeg, p.elevationDeg), unit(a.azimuthDeg, a.altitudeDeg));
+          const sep = separationDeg(
+            unit(p.azimuthDeg, p.elevationDeg),
+            unit(a.azimuthDeg, a.altitudeDeg),
+          );
           expect(sep).toBeLessThan(0.02);
           expect(Math.abs(p.elevationDeg - a.altitudeDeg)).toBeLessThan(0.01);
         });

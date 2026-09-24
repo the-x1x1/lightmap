@@ -13,9 +13,12 @@ export function GET() {
     background_color: brand.colors.chrome,
     theme_color: brand.colors.chrome,
     orientation: 'any',
-    icons: [
-      { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-    ],
+    icons: [{ src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
   };
-  return new Response(JSON.stringify(manifest), { headers: { 'content-type': 'application/manifest+json', 'cache-control': 'public, max-age=86400' } });
+  return new Response(JSON.stringify(manifest), {
+    headers: {
+      'content-type': 'application/manifest+json',
+      'cache-control': 'public, max-age=86400',
+    },
+  });
 }

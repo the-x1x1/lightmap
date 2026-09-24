@@ -7,7 +7,14 @@
  */
 import { create } from 'zustand';
 import { localSelectionToUtc, parseCivilDate, utcToWallClock } from '@lightmap/astronomy';
-import { defaultCamera, horizontalFovDeg, normalizeHeading, clampPitch, type CameraState, type LocationState } from '@lightmap/scene';
+import {
+  defaultCamera,
+  horizontalFovDeg,
+  normalizeHeading,
+  clampPitch,
+  type CameraState,
+  type LocationState,
+} from '@lightmap/scene';
 import type { WeatherScenarioId } from '@lightmap/weather';
 import type { GeoPoint } from '@lightmap/geospatial';
 
@@ -49,7 +56,12 @@ export interface PlannerActions {
   togglePerfPanel(): void;
   setReducedMotion(v: boolean): void;
   /** Restore a saved viewpoint. */
-  restore(v: { location: LocationState; utc: Date; camera: CameraState; scenario: WeatherScenarioId | null }): void;
+  restore(v: {
+    location: LocationState;
+    utc: Date;
+    camera: CameraState;
+    scenario: WeatherScenarioId | null;
+  }): void;
 }
 
 export type PlannerStore = PlannerState & PlannerActions;
@@ -60,7 +72,9 @@ function todayIn(timeZone: string): { date: string; minutes: number } {
   return { date, minutes: w.hour * 60 + w.minute };
 }
 
-const initialToday = todayIn(typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC');
+const initialToday = todayIn(
+  typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC',
+);
 
 export const usePlannerStore = create<PlannerStore>((set, get) => ({
   location: null,
@@ -77,7 +91,9 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
 
   setLocation(loc, opts) {
     const prev = get();
-    const camera: CameraState = opts?.keepCamera ? { ...prev.camera, eye: loc.point } : { ...defaultCamera(loc.point, prev.camera.headingDeg), mode: prev.camera.mode };
+    const camera: CameraState = opts?.keepCamera
+      ? { ...prev.camera, eye: loc.point }
+      : { ...defaultCamera(loc.point, prev.camera.headingDeg), mode: prev.camera.mode };
     // Keep the chosen wall-clock time when the zone changes: "12:30" stays "12:30" at the new place.
     set({ location: loc, camera });
   },
@@ -105,7 +121,13 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
   },
   rotateCamera(dh, dp) {
     const c = get().camera;
-    set({ camera: { ...c, headingDeg: normalizeHeading(c.headingDeg + dh), pitchDeg: clampPitch(c.pitchDeg + dp) } });
+    set({
+      camera: {
+        ...c,
+        headingDeg: normalizeHeading(c.headingDeg + dh),
+        pitchDeg: clampPitch(c.pitchDeg + dp),
+      },
+    });
   },
   setHeading(h) {
     set({ camera: { ...get().camera, headingDeg: normalizeHeading(h) } });
@@ -117,7 +139,9 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
     set({ camera: { ...get().camera, focalLengthMm: mm, fovDeg: horizontalFovDeg(mm) } });
   },
   setFov(fov) {
-    set({ camera: { ...get().camera, fovDeg: Math.max(5, Math.min(120, fov)), focalLengthMm: null } });
+    set({
+      camera: { ...get().camera, fovDeg: Math.max(5, Math.min(120, fov)), focalLengthMm: null },
+    });
   },
   setPanel(panel) {
     set({ panel });
@@ -155,6 +179,11 @@ export function selectedUtc(s: Pick<PlannerState, 'location' | 'date' | 'minutes
   return localSelectionToUtc(civil, s.minutes, s.location.timeZone);
 }
 
-export function locationFromPoint(point: GeoPoint, timeZone: string, label: string, source: LocationState['source']): LocationState {
+export function locationFromPoint(
+  point: GeoPoint,
+  timeZone: string,
+  label: string,
+  source: LocationState['source'],
+): LocationState {
   return { point, timeZone, label, source };
 }
