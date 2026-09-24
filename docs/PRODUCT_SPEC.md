@@ -194,9 +194,12 @@ No lens optical simulation (distortion, depth of field) in v1.
 
 "I want the sun _there_ — when does that happen?" A collapsible section in the plan panel.
 
-- **Target**: centre of the viewpoint camera's frame (heading → azimuth, pitch → elevation), the
-  body's current position, or typed azimuth/elevation. Elevation matching can be switched off
-  ("any elevation above the horizon").
+- **Target**: a point clicked in the viewpoint view ("Point in the view": the click's frame
+  coordinates are inverted through `directionFromFrame()` to a bearing and elevation, and a ring
+  marks it, re-projected as the camera moves), the centre of the camera's frame (heading →
+  azimuth, pitch → elevation), the body's current position, or typed azimuth/elevation. Elevation
+  matching can be switched off ("any elevation above the horizon"). Picking switches the camera to
+  viewpoint mode; a new place clears the pick.
 - **Body**: sun, or moon with a minimum illuminated fraction (default 80 %).
 - **Range**: civil dates at the location, default today → +365 days, capped at 1100 days.
   Free plans search inside their date window; the range is clipped and explained, never refused.

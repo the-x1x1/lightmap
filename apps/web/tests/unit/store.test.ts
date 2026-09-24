@@ -32,6 +32,22 @@ describe('planner store', () => {
     s.setFocalLength(50);
     expect(usePlannerStore.getState().camera.fovDeg).toBeCloseTo(39.6, 1);
   });
+  it('finder picking forces the viewpoint camera and the target is cleared on a new place', () => {
+    const s = usePlannerStore.getState();
+    s.setCameraMode('map');
+    s.setFinderPicking(true);
+    expect(usePlannerStore.getState().camera.mode).toBe('viewpoint');
+    expect(usePlannerStore.getState().finderPicking).toBe(true);
+    s.setFinderTarget({ azimuthDeg: 250, elevationDeg: 8 });
+    expect(usePlannerStore.getState().finderPicking).toBe(false);
+    expect(usePlannerStore.getState().finderTarget).toEqual({ azimuthDeg: 250, elevationDeg: 8 });
+    s.setLocation({ ...kailua, label: 'Elsewhere' });
+    expect(usePlannerStore.getState().finderTarget).toBeNull();
+    expect(usePlannerStore.getState().sheetOpen).toBe(true);
+    s.setSheetOpen(false);
+    s.setPanel('projects');
+    expect(usePlannerStore.getState().sheetOpen).toBe(true); // opening a panel opens the sheet
+  });
   it('restores a saved viewpoint into date/time/camera/scenario', () => {
     usePlannerStore.getState().restore({
       location: kailua,

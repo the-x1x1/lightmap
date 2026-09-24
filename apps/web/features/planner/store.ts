@@ -36,6 +36,10 @@ export interface PlannerState {
   showPerfPanel: boolean;
   /** Set once from device capabilities. */
   reducedMotion: boolean;
+  /** Light finder: a direction picked in the viewpoint frame (plan §26 "I want the sun here"). */
+  finderTarget: { azimuthDeg: number; elevationDeg: number } | null;
+  /** The next click in the viewpoint view sets `finderTarget`. */
+  finderPicking: boolean;
 }
 
 export interface PlannerActions {
@@ -58,6 +62,8 @@ export interface PlannerActions {
   setQualityCeiling: (q: 0 | 1 | 2 | 3) => void;
   togglePerfPanel: () => void;
   setReducedMotion: (v: boolean) => void;
+  setFinderTarget: (t: { azimuthDeg: number; elevationDeg: number } | null) => void;
+  setFinderPicking: (v: boolean) => void;
   /** Restore a saved viewpoint. */
   restore: (v: {
     location: LocationState;
@@ -88,6 +94,8 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
   camera: defaultCamera({ latitude: 0, longitude: 0 }),
   panel: 'plan',
   sheetOpen: true,
+  finderTarget: null,
+  finderPicking: false,
   previewExpanded: false,
   qualityCeiling: 1,
   showPerfPanel: false,
@@ -99,7 +107,8 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
       ? { ...prev.camera, eye: loc.point }
       : { ...defaultCamera(loc.point, prev.camera.headingDeg), mode: prev.camera.mode };
     // Keep the chosen wall-clock time when the zone changes: "12:30" stays "12:30" at the new place.
-    set({ location: loc, camera });
+    // A picked finder target belongs to the old viewpoint.
+    set({ location: loc, camera, finderTarget: null, finderPicking: false });
   },
   clearLocation() {
     set({ location: null });
@@ -165,6 +174,17 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
   setReducedMotion(v) {
     set({ reducedMotion: v });
   },
+  setFinderTarget(t) {
+    set({ finderTarget: t, finderPicking: false });
+  },
+  setFinderPicking(v) {
+    // Picking only makes sense in the eye-level view.
+    set(
+      v
+        ? { finderPicking: true, camera: { ...get().camera, mode: 'viewpoint' } }
+        : { finderPicking: false },
+    );
+  },
   restore(v) {
     const w = utcToWallClock(v.utc, v.location.timeZone);
     set({
@@ -174,6 +194,8 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
       camera: v.camera,
       scenario: v.scenario ?? get().scenario,
       forceScenario: v.scenario !== null,
+      finderTarget: null,
+      finderPicking: false,
     });
   },
 }));

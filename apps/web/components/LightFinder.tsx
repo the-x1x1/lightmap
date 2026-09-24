@@ -25,7 +25,7 @@ import { Button, RadioGroup } from '@lightmap/ui';
 import { usePlannerStore } from '@/features/planner/store';
 import { Paywall } from './Paywall';
 
-type TargetMode = 'current' | 'frame' | 'manual';
+type TargetMode = 'pick' | 'frame' | 'current' | 'manual';
 
 export interface LightFinderProps {
   scene: SceneState;
@@ -56,6 +56,9 @@ export function LightFinder({
   const setDate = usePlannerStore((s) => s.setDate);
   const setMinutes = usePlannerStore((s) => s.setMinutes);
   const camera = usePlannerStore((s) => s.camera);
+  const finderTarget = usePlannerStore((s) => s.finderTarget);
+  const finderPicking = usePlannerStore((s) => s.finderPicking);
+  const setFinderPicking = usePlannerStore((s) => s.setFinderPicking);
   const tz = scene.location.timeZone;
   const today = todayAt(tz);
   const ids = useId();
@@ -80,13 +83,15 @@ export function LightFinder({
 
   const bodyState = body === 'moon' ? scene.lunar : scene.solar;
   const target = useMemo(() => {
-    if (mode === 'frame') return { az: camera.headingDeg, el: camera.pitchDeg };
+    if (mode === 'pick' && finderTarget)
+      return { az: finderTarget.azimuthDeg, el: finderTarget.elevationDeg };
+    if (mode === 'pick' || mode === 'frame') return { az: camera.headingDeg, el: camera.pitchDeg };
     if (mode === 'current' && bodyState)
       return { az: bodyState.azimuthDegrees, el: bodyState.elevationDegrees };
     const az = Number(manualAz);
     const el = Number(manualEl);
     return { az: Number.isFinite(az) ? az : 0, el: Number.isFinite(el) ? el : 0 };
-  }, [mode, camera.headingDeg, camera.pitchDeg, bodyState, manualAz, manualEl]);
+  }, [mode, finderTarget, camera.headingDeg, camera.pitchDeg, bodyState, manualAz, manualEl]);
 
   function run() {
     setError(null);
@@ -189,16 +194,41 @@ export function LightFinder({
         <RadioGroup<TargetMode>
           ariaLabel="Target direction source"
           variant="grid"
-          columns={3}
+          columns={2}
           value={mode}
-          onChange={setMode}
+          onChange={(m) => {
+            setMode(m);
+            if (m === 'pick' && !finderTarget) setFinderPicking(true);
+            else if (m !== 'pick' && finderPicking) setFinderPicking(false);
+          }}
           className="text-xs"
           options={[
+            { value: 'pick', label: 'Point in the view', testId: 'finder-mode-pick' },
             { value: 'frame', label: 'Centre of frame', testId: 'finder-mode-frame' },
             { value: 'current', label: 'Where it is now', testId: 'finder-mode-current' },
             { value: 'manual', label: 'Type a bearing', testId: 'finder-mode-manual' },
           ]}
         />
+        {mode === 'pick' ? (
+          <div className="flex items-center justify-between gap-2 text-xs text-[var(--lm-text-muted)]">
+            <span>
+              {finderPicking
+                ? 'Click the spot in the 3D view where the sun or moon should be.'
+                : finderTarget
+                  ? `Picked ${Math.round(finderTarget.azimuthDeg)}° ${compassLabel(finderTarget.azimuthDeg)}, ${finderTarget.elevationDeg.toFixed(1)}° up — the ring in the view marks it.`
+                  : 'Nothing picked yet.'}
+            </span>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => setFinderPicking(!finderPicking)}
+              aria-pressed={finderPicking}
+              data-testid="finder-pick"
+            >
+              {finderPicking ? 'Cancel' : finderTarget ? 'Pick again' : 'Pick'}
+            </Button>
+          </div>
+        ) : null}
         {mode === 'frame' ? (
           <p className="text-xs text-[var(--lm-text-muted)]">
             Uses the camera heading and pitch ({Math.round(camera.headingDeg)}°{' '}

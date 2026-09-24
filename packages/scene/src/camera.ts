@@ -85,6 +85,33 @@ export function frameCoordinates(
   return { x: dx / z2 / halfW, y: y2 / z2 / halfH };
 }
 
+/**
+ * Inverse of `frameCoordinates`: the compass azimuth and elevation of a point in the frame
+ * (x −1…1 left→right, y −1…1 bottom→top). This is what "put the sun *here*" needs (plan §26):
+ * the photographer clicks a spot in the viewpoint preview and the finder searches for it.
+ */
+export function directionFromFrame(
+  camera: Pick<CameraState, 'headingDeg' | 'pitchDeg' | 'fovDeg'>,
+  x: number,
+  y: number,
+  aspect = 3 / 2,
+): { azimuthDeg: number; elevationDeg: number } {
+  const DEG = Math.PI / 180;
+  const halfW = Math.tan((camera.fovDeg * DEG) / 2);
+  const halfH = halfW / aspect;
+  // Direction in the pitched camera frame (forward = +z), then undo the pitch rotation.
+  const dx = x * halfW;
+  const y2 = y * halfH;
+  const z2 = 1;
+  const p = camera.pitchDeg * DEG;
+  const dy = y2 * Math.cos(p) + z2 * Math.sin(p);
+  const dz = -y2 * Math.sin(p) + z2 * Math.cos(p);
+  const len = Math.hypot(dx, dy, dz);
+  const elevationDeg = Math.asin(dy / len) / DEG;
+  const rel = Math.atan2(dx, dz) / DEG;
+  return { azimuthDeg: normalizeHeading(camera.headingDeg + rel), elevationDeg };
+}
+
 /** Lighting geometry relative to the camera, in photographer's terms. */
 export type LightingGeometry = 'front-lit' | 'side-lit' | 'back-lit' | 'top-lit' | 'below-horizon';
 
