@@ -25,7 +25,7 @@ jobs:
       - name: pnpm audit (high and above fail)
         run: pnpm audit --audit-level high
       - run: pnpm secrets:scan
-      - run: pnpm licenses
+      - run: pnpm licenses:check
   codeql:
     name: CodeQL
     runs-on: ubuntu-latest

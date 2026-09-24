@@ -26,7 +26,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm typecheck && pnpm test:unit && pnpm licenses
+      - run: pnpm typecheck && pnpm test:unit && pnpm licenses:check
       - run: pnpm build
         env:
           NEXT_TELEMETRY_DISABLED: 1

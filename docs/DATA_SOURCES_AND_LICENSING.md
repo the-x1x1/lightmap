@@ -111,7 +111,7 @@ Not a data source, but PII flows to it (email, payment). Covered by Stripe's DPA
 Handled by `scripts/check-licenses.ts` against `scripts/license-allowlist.json`: permissive
 licences pass; anything else (GPL/AGPL/LGPL/SSPL/unknown) fails CI unless an exception with a
 written reason is recorded. An exception key may end in `*` to cover platform-split packages.
-`THIRD_PARTY_NOTICES.md` is regenerated with `pnpm licenses --write-notices` (it is a generated
+`THIRD_PARTY_NOTICES.md` is regenerated with `pnpm licenses:check --write-notices` (it is a generated
 file, excluded from Prettier).
 
 Recorded exceptions (both awaiting the owner's written confirmation):

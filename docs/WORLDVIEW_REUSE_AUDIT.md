@@ -107,4 +107,4 @@ requirement behind it. None of it exists in LightMap in any form.
   citations and the ADRs.
 - `pnpm test --filter @lightmap/geospatial --filter @lightmap/renderer` runs the tests listed
   in the table.
-- `pnpm licenses` (see `scripts/check-licenses.ts`) shows no `@worldview/*` package.
+- `pnpm licenses:check` (see `scripts/check-licenses.ts`) shows no `@worldview/*` package.

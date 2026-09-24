@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
@@ -13,5 +14,6 @@ export default defineConfig({
     setupFiles: ['tests/setup.ts'],
     globals: false,
   },
-  resolve: { alias: { '@': new URL('.', import.meta.url).pathname } },
+  // fileURLToPath, not URL.pathname: on Windows the latter is "/C:/…" with %20 for spaces.
+  resolve: { alias: { '@': fileURLToPath(new URL('.', import.meta.url)) } },
 });
