@@ -118,3 +118,12 @@ Reading the table:
 - Hosting dashboard — egress and compute; compare with sessions from analytics.
 
 Update §1 and §5 with the measured values and date the revision.
+
+## 7. Reading actual usage
+
+`pnpm usage:report -- --days 14` prints daily totals per budgeted resource from `usage_counters`
+(total, distinct keys, the busiest key's share, the Pro daily budget for comparison); `--json`
+for dashboards. Aggregates only — no user keys leave the database. Compare the `weather` and
+`climatology` totals with the provider's own usage page monthly; a busiest-key share above ~30 %
+on a resource means one client is dominating and the budgets in `DAILY_BUDGET_LIMITS` should be
+reviewed.

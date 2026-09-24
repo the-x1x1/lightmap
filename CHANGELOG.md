@@ -4,6 +4,7 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- `pnpm usage:report`: daily per-resource totals from `usage_counters` (aggregates only).
 - **Sensor formats** (Pro camera tools): pick your sensor and type your lens's focal length.
 - Light finder searches run in a Web Worker (main-thread fallback).
 - **Shot variants**: save the same viewpoint at other times/scenarios under one card

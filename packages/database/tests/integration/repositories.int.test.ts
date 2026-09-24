@@ -182,6 +182,13 @@ run('repositories (integration)', () => {
     const day = `it-${alice.slice(0, 6)}`;
     expect(await usage.increment(alice, 'weather', 1, day)).toBe(1);
     expect(await usage.increment(alice, 'weather', 2, day)).toBe(3);
+    // Aggregates for the usage report: totals, distinct keys, top-key share; no keys returned.
+    await usage.increment(bob, 'weather', 1, day);
+    const totals = await usage.dailyTotals(day, day);
+    const w = totals.find((t) => t.day === day && t.resource === 'weather')!;
+    expect(w).toMatchObject({ total: 4, keys: 2 });
+    expect(w.topShare).toBeCloseTo(0.75, 6);
+    expect(JSON.stringify(totals)).not.toContain(alice);
   });
 
   it('deletion requests become due after the window', async () => {
