@@ -14,6 +14,7 @@ export const ENTITLEMENT_KEYS = [
   'export_preview',
   'moon_planning',
   'advanced_camera_tools',
+  'reverse_planning',
 ] as const;
 
 export type EntitlementKey = (typeof ENTITLEMENT_KEYS)[number];
@@ -77,6 +78,7 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
       'export_preview',
       'moon_planning',
       'advanced_camera_tools',
+      'reverse_planning',
     ),
     limits: {
       futureDateWindowDays: null,
@@ -93,6 +95,7 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
       'Moon planning',
       'High-quality preview and planning-card export',
       'Camera tools: lens presets, heading and pitch',
+      'Light finder: every date the sun or moon lands where you want it',
     ],
   },
   studio: {
@@ -108,6 +111,7 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
       'export_preview',
       'moon_planning',
       'advanced_camera_tools',
+      'reverse_planning',
     ),
     limits: {
       futureDateWindowDays: null,
@@ -344,6 +348,17 @@ export function can(
         ...(has ? {} : { reason: 'High-quality previews are part of Pro.', upgradeTo }),
       };
     }
+    case 'reverse_planning': {
+      // Free plans may search inside their date window (same rule as future_date_planning), so
+      // the tool is usable — and the reason to upgrade is concrete when the range is clipped.
+      if (has) return { allowed: true, key };
+      return {
+        allowed: false,
+        key,
+        reason: `${label(key)} beyond your ${snap.limits.futureDateWindowDays ?? 14}-day window is part of Pro.`,
+        upgradeTo,
+      };
+    }
     case 'forecast_detail':
     case 'export_preview':
     case 'moon_planning':
@@ -365,6 +380,7 @@ export function label(key: EntitlementKey): string {
     export_preview: 'Planning-card export',
     moon_planning: 'Moon planning',
     advanced_camera_tools: 'Advanced camera tools',
+    reverse_planning: 'Light finder (reverse planning)',
   };
   return labels[key];
 }

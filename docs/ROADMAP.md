@@ -12,7 +12,7 @@ mode but production configuration is still outstanding.
 | 3     | Accounts, projects, billing                 | **Delivered as plumbing in v0.1.0**; production configuration outstanding |
 | 4     | Visual quality                              | Future                                                                    |
 | 5     | Real references                             | Future — blocked on licensing                                             |
-| 6     | Advanced camera planning / reverse planning | Future                                                                    |
+| 6     | Advanced camera planning / reverse planning | **Solver + Light finder delivered (unreleased)**; drag-in-frame UI future |
 | 7     | Long-range climatology                      | Future                                                                    |
 | 8     | High-fidelity environment reconstruction    | Future                                                                    |
 | 9     | Native mobile                               | Future — only after PWA demand is proven                                  |
@@ -82,11 +82,17 @@ licensed provider integration, near-coordinate lookup, capture metadata, attribu
 side-by-side real vs simulated view. Does not start until commercial rights are documented in
 `DATA_SOURCES_AND_LICENSING.md`.
 
-## Phase 6 — Advanced camera planning (future)
+## Phase 6 — Advanced camera planning (in progress)
 
-Composition frame, saved shot variants, sensor formats, and the **reverse-planning solver**: place
-the desired sun position in frame and search the calendar for matching azimuth/elevation (plan §26).
-`frameCoordinates()` and `SolarState` are already designed for this.
+Delivered (unreleased): the **reverse-planning solver** (`findDirectionMatches` in
+`@lightmap/astronomy`, tested at equinox/solstice/polar/tropical cases) and the **Light finder**
+panel — target from the centre of the viewpoint frame, the body's current position or typed values;
+sun or moon with an illumination floor; date range clipped to the plan window for Free; results jump
+the planner to the instant (`PRODUCT_SPEC.md` §8a). Entitlement `reverse_planning`.
+
+Next: drag the sun/moon marker directly in the preview frame to set the target (plan §26), saved
+shot variants per viewpoint, sensor formats, and a "next occurrence" chip on the timeline.
+`frameCoordinates()` is already the inverse of what the drag needs.
 
 ## Phase 7 — Long-range climatology (future)
 

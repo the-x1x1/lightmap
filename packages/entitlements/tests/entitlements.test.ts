@@ -115,6 +115,10 @@ describe('can()', () => {
     expect(can(free, 'moon_planning').allowed).toBe(true); // free includes basic moon
     expect(can(free, 'advanced_camera_tools').allowed).toBe(false);
     expect(can(free, 'map_access').allowed).toBe(true);
+    const finder = can(free, 'reverse_planning');
+    expect(finder.allowed).toBe(false);
+    expect(finder.reason).toContain('14-day window');
+    expect(can(pro, 'reverse_planning').allowed).toBe(true);
   });
   it('maps Stripe prices to plans without guessing', () => {
     const map = { pro: ['price_month', 'price_year'] };

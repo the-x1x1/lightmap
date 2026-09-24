@@ -36,6 +36,26 @@ main {
   outline: none;
 }
 
+/* Text/number/date fields in the planning panel (same look as the date control). */
+.lm-input {
+  height: 2.5rem;
+  border-radius: var(--lm-radius-sm);
+  border: 1px solid var(--lm-panel-border);
+  background: var(--lm-panel-raised);
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+  color: var(--lm-text);
+}
+.lm-input:read-only {
+  color: var(--lm-text-muted);
+}
+.lm-input:focus {
+  outline: none;
+}
+.lm-input:focus-visible {
+  box-shadow: var(--lm-focus);
+}
+
 /* Timeline range input: big thumb for touch (plan §20), visible focus, no colour-only state. */
 .lm-range {
   -webkit-appearance: none;

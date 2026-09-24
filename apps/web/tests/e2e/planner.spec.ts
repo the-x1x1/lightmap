@@ -115,6 +115,30 @@ test('camera rotates and the heading readout follows', async ({ page }) => {
   await expect(page.getByTestId('camera-controls')).toContainText('35 mm');
 });
 
+test('light finder: sunset due west from Kailua exists and jumps the planner to it', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await pickKailua(page);
+  await page.getByTestId('details-light-finder').locator('summary').click();
+  await page.getByTestId('finder-mode-manual').click();
+  await page.getByTestId('finder-azimuth').fill('270');
+  await page.getByTestId('finder-elevation').fill('-0.8');
+  // Anonymous visitors search inside the free window (today ± window), which always contains today.
+  await page.getByTestId('finder-run').click();
+  const results = page.getByTestId('finder-results');
+  await expect(results).toBeVisible();
+  await expect(results).toContainText(/scanned \d+ days/);
+  // The sun sets due west only near the equinoxes; assert the honest outcome either way.
+  const text = (await results.textContent()) ?? '';
+  if (/\b0 moments\b/.test(text)) {
+    await expect(results).toContainText('Nothing in this range');
+  } else {
+    await results.getByRole('button').first().click();
+    await expect(page.getByTestId('timeline-time')).toHaveText(/^(17|18|19):\d\d$/);
+  }
+});
+
 test('sign in (dev), create a project, save the viewpoint, reload and reopen it', async ({
   page,
 }) => {

@@ -166,6 +166,31 @@ focal-length preset, and mode.
 
 No lens optical simulation (distortion, depth of field) in v1.
 
+### 8a. Light finder — reverse planning (plan §26)
+
+"I want the sun _there_ — when does that happen?" A collapsible section in the plan panel.
+
+- **Target**: centre of the viewpoint camera's frame (heading → azimuth, pitch → elevation), the
+  body's current position, or typed azimuth/elevation. Elevation matching can be switched off
+  ("any elevation above the horizon").
+- **Body**: sun, or moon with a minimum illuminated fraction (default 80 %).
+- **Range**: civil dates at the location, default today → +365 days, capped at 1100 days.
+  Free plans search inside their date window; the range is clipped and explained, never refused.
+- **Tolerances**: azimuth ±2°, elevation ±1° by default; adjustable.
+- **Method**: `findDirectionMatches()` in `@lightmap/astronomy` samples the body's azimuth every
+  10 minutes per civil day, detects crossings of the target bearing (ignoring the ±180° wrap) and
+  refines each by bisection to ~1 s; elevation, phase and rising/setting trend are evaluated at the
+  refined instant. Correct in the tropics (several crossings a day) and in polar summer (the sun
+  circles). Runs in the browser; a year of sun alignments takes a few milliseconds.
+- **Results**: count of moments and dates, each row `date · local time · elevation · rising/setting
+(· % lit)`; selecting a row moves the planner to that instant so the preview shows it.
+- **Honesty**: results are geometry only — terrain occlusion, clouds and near-horizon refraction
+  are not part of the search; the note under the list says so and points to the preview.
+
+Tests: equinox sunrise due east, solstice-noon elevation `90 − φ + δ`, Tromsø midnight sun at
+`φ + δ − 90`, sunset-azimuth round trip against `computeDayEvents`, "sun on a ridge" windows,
+tropical multi-crossing ordering, moon illumination filter (`packages/astronomy/tests/solver.test.ts`).
+
 ## 9. Projects and saved viewpoints (plan §4, §17)
 
 Account required. Limits come from the entitlement snapshot, never from UI constants.
@@ -203,6 +228,7 @@ No collaboration or sharing in v0.1.
 | Moon planning                               | Basic                      | Yes                          |
 | Planning-card export                        | –                          | Yes                          |
 | Camera tools (lens presets, heading, pitch) | –                          | Yes                          |
+| Light finder (reverse planning)             | Inside the date window     | Any range (≤ 1100 days)      |
 
 A Studio plan exists as a definition only (no Stripe price). The paywall shows the denial reason
 from the entitlement decision; a subscription unlocks the current plan immediately after the

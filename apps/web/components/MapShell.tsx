@@ -21,6 +21,7 @@ import { PreviewViewport } from './PreviewViewport';
 import { ConfidencePanel } from './ConfidencePanel';
 import { CameraControls } from './CameraControls';
 import { AstronomyDetails } from './AstronomyDetails';
+import { LightFinder } from './LightFinder';
 import { WeatherDetails } from './WeatherDetails';
 import { ProjectDrawer } from './ProjectDrawer';
 import { AccountMenu, AccountPanel } from './AccountMenu';
@@ -71,6 +72,10 @@ export function MapShell() {
   const dateDecision = account.snapshot
     ? account.can('future_date_planning', { targetDate: date, today })
     : { allowed: true, key: 'future_date_planning' as const };
+  // Signed-out visitors get the free window; the server never sees these searches anyway.
+  const finderDecision = account.snapshot
+    ? account.can('reverse_planning')
+    : { allowed: false, key: 'reverse_planning' as const, reason: undefined };
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -223,6 +228,24 @@ export function MapShell() {
                       advancedAllowed={account.can('advanced_camera_tools').allowed}
                     />
                     <ConfidencePanel scene={scene} />
+                    <details data-testid="details-light-finder">
+                      <summary className="cursor-pointer text-xs uppercase tracking-wide text-[var(--lm-text-muted)]">
+                        Light finder — when is the sun{' '}
+                        <em className="not-italic normal-case">there</em>?
+                      </summary>
+                      <div className="mt-2">
+                        <LightFinder
+                          scene={scene}
+                          allowed={finderDecision.allowed}
+                          reason={finderDecision.allowed ? null : (finderDecision.reason ?? null)}
+                          windowDays={{
+                            ahead: account.snapshot?.limits.futureDateWindowDays ?? 14,
+                            back: account.snapshot?.limits.pastDateWindowDays ?? 7,
+                          }}
+                          moonAllowed={account.can('moon_planning').allowed || !account.snapshot}
+                        />
+                      </div>
+                    </details>
                     <details data-testid="details-astronomy">
                       <summary className="cursor-pointer text-xs uppercase tracking-wide text-[var(--lm-text-muted)]">
                         Sun &amp; moon details
