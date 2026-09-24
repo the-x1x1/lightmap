@@ -50,7 +50,7 @@ export function parseViewpoint(
     const ws = o['weatherScenario'];
     if (ws !== null && !isScenarioId(ws))
       throw new Error('weatherScenario is not a known scenario');
-    input.weatherScenario = ws as string | null;
+    input.weatherScenario = ws;
   }
   const st = v.oneOf(o['previewSourceType'], 'previewSourceType', SOURCE_TYPES, { optional: opt });
   if (st !== undefined && st !== null) input.previewSourceType = st;

@@ -22,12 +22,18 @@ export default tseslint.config(
   {
     languageOptions: {
       parserOptions: {
-        projectService: true,
+        projectService: {
+          // The root Vitest config belongs to no package tsconfig.
+          allowDefaultProject: ['vitest.config.ts'],
+        },
         tsconfigRootDir: import.meta.dirname,
       },
       globals: { ...globals.browser, ...globals.node },
     },
     rules: {
+      // Provider interfaces are async by contract; fixture and test implementations often resolve
+      // synchronously. Requiring an `await` there adds noise, not safety.
+      '@typescript-eslint/require-await': 'off',
       '@typescript-eslint/consistent-type-imports': ['error', { fixStyle: 'inline-type-imports' }],
       '@typescript-eslint/no-unused-vars': [
         'error',
@@ -52,7 +58,10 @@ export default tseslint.config(
               message:
                 'LightMap has no runtime dependency on WorldView (docs/WORLDVIEW_REUSE_AUDIT.md).',
             },
-            { group: ['cesium'], message: 'Import @cesium/engine, not cesium (ADR-0002).' },
+            {
+              regex: '^cesium(/|$)',
+              message: 'Import @cesium/engine, not cesium (ADR-0002).',
+            },
           ],
         },
       ],
@@ -69,7 +78,7 @@ export default tseslint.config(
         {
           patterns: [
             { group: ['@worldview/*'], message: 'No WorldView runtime dependency.' },
-            { group: ['cesium'], message: 'Import @cesium/engine, not cesium (ADR-0002).' },
+            { regex: '^cesium(/|$)', message: 'Import @cesium/engine, not cesium (ADR-0002).' },
             {
               group: ['stripe', 'postgres', 'drizzle-orm', 'drizzle-orm/*'],
               message: 'Server-only SDKs belong in packages/*, not in the web app UI.',
@@ -89,7 +98,12 @@ export default tseslint.config(
     rules: {
       'no-restricted-imports': [
         'error',
-        { patterns: [{ group: ['@worldview/*'] }, { group: ['cesium'] }] },
+        {
+          patterns: [
+            { group: ['@worldview/*'], message: 'No WorldView runtime dependency.' },
+            { regex: '^cesium(/|$)', message: 'Import @cesium/engine, not cesium (ADR-0002).' },
+          ],
+        },
       ],
     },
   },

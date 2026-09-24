@@ -2,7 +2,7 @@
  * Copy Cesium's static runtime assets (Workers, ThirdParty wasm, Assets) from @cesium/engine into
  * public/cesium so `window.CESIUM_BASE_URL = '/cesium'` resolves. Runs before dev/build. Idempotent.
  */
-import { cpSync, existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -32,7 +32,7 @@ for (const [from, to] of pairs) {
   cpSync(from, to, { recursive: true });
   console.log(`[cesium-assets] copied ${from} → ${to}`);
 }
-writeFileSync(
-  join(target, 'VERSION'),
-  `${JSON.parse(String(require('node:fs').readFileSync(join(enginePkg, 'package.json')))).version}\n`,
-);
+const engineVersion = (
+  JSON.parse(readFileSync(join(enginePkg, 'package.json'), 'utf8')) as { version: string }
+).version;
+writeFileSync(join(target, 'VERSION'), `${engineVersion}\n`);

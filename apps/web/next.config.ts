@@ -51,11 +51,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  webpack: (config) => {
-    // Cesium resolves its assets at runtime from CESIUM_BASE_URL; nothing to alias. Keep source maps off for the big chunk.
-    config.module.rules.push({ test: /\.glsl$/, type: 'asset/source' });
-    return config;
-  },
 };
 
 export default nextConfig;

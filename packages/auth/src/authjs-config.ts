@@ -80,7 +80,8 @@ export function buildAuthConfig({ env, db, log }: AuthConfigDeps): NextAuthConfi
         name: 'Dev sign-in',
         credentials: { email: { label: 'Email', type: 'email' } },
         async authorize(credentials) {
-          const email = normalizeEmail(String(credentials?.['email'] ?? ''));
+          const raw = credentials?.['email'];
+          const email = normalizeEmail(typeof raw === 'string' ? raw : '');
           if (!email) return null;
           // Find or create the user directly; Credentials providers bypass the adapter.
           const existing = await db.query.users.findFirst({
@@ -109,10 +110,10 @@ export function buildAuthConfig({ env, db, log }: AuthConfigDeps): NextAuthConfi
 
   return {
     adapter: DrizzleAdapter(db, {
-      usersTable: schema.users as never,
-      accountsTable: schema.accounts as never,
-      sessionsTable: schema.sessions as never,
-      verificationTokensTable: schema.verificationTokens as never,
+      usersTable: schema.users,
+      accountsTable: schema.accounts,
+      sessionsTable: schema.sessions,
+      verificationTokensTable: schema.verificationTokens,
     }),
     providers,
     // Credentials providers require JWT sessions in Auth.js; database sessions for everything else.

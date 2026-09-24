@@ -48,6 +48,6 @@ const nextAuth =
 export const handlers = nextAuth?.handlers ?? disabled.handlers;
 export const auth: () => Promise<{
   user?: { id?: string; email?: string | null; name?: string | null; image?: string | null };
-} | null> = nextAuth ? (nextAuth.auth as unknown as typeof auth) : disabled.auth;
+} | null> = nextAuth ? nextAuth.auth : disabled.auth;
 export const signIn = nextAuth?.signIn ?? disabled.signIn;
 export const signOut = nextAuth?.signOut ?? disabled.signOut;

@@ -10,8 +10,11 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 async function setRangeValue(locator: Locator, value: number) {
   await locator.evaluate((el, v) => {
     const input = el as HTMLInputElement;
-    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-    setter.call(input, String(v));
+    // Call the prototype setter on the element itself (React patches the instance setter).
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+      input,
+      String(v),
+    );
     input.dispatchEvent(new Event('input', { bubbles: true }));
     input.dispatchEvent(new Event('change', { bubbles: true }));
   }, value);

@@ -50,7 +50,7 @@ while (Date.now() - start < 180000) {
     shots[state.shot] = true;
     await page.evaluate(() => {
       window.__smoke.shot = null;
-      window.__takeShot && window.__takeShot();
+      if (window.__takeShot) window.__takeShot();
     });
   }
   if (state.done) break;

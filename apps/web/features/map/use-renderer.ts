@@ -34,7 +34,7 @@ export interface UseRendererOptions {
   container: React.RefObject<HTMLDivElement | null>;
   credits: React.RefObject<HTMLDivElement | null>;
   capabilities: CapabilitiesResponse | null;
-  onPick: (p: GeoPoint & { viaTerrain: boolean }) => void;
+  onPick: (p: GeoPoint & { viaTerrain: boolean }) => void | Promise<void>;
   onQualityChange: (q: {
     shadowMapSize: 1024 | 2048 | 4096;
     softShadows: boolean;
@@ -79,7 +79,7 @@ export function useRenderer(opts: UseRendererOptions): RendererHandle {
     }
     let cancelled = false;
     let disposers: Array<() => void> = [];
-    (async () => {
+    void (async () => {
       try {
         (window as unknown as { CESIUM_BASE_URL?: string }).CESIUM_BASE_URL = '/cesium';
         const { createCesiumHost } = await import('@lightmap/renderer/cesium');
@@ -119,7 +119,11 @@ export function useRenderer(opts: UseRendererOptions): RendererHandle {
           setState((s) => ({ ...s, qualityLabel: q.label }));
         };
         emitQuality();
-        disposers.push(host.onPick((p) => onPickRef.current(p)));
+        disposers.push(
+          host.onPick((p) => {
+            void onPickRef.current(p);
+          }),
+        );
         disposers.push(
           host.onFrameSample((fps) => {
             // Governor only; stats are polled by the perf panel so a sample never re-renders React.

@@ -76,13 +76,13 @@ export class StripeBillingProvider implements BillingProvider {
   constructEvent(rawBody: string, signature: string): StripeEventLike {
     if (!this.webhookSecret) throw new Error('STRIPE_WEBHOOK_SECRET is not configured');
     const event = this.client().webhooks.constructEvent(rawBody, signature, this.webhookSecret);
-    return event as unknown as StripeEventLike;
+    return event;
   }
 
   async fetchSubscription(id: string): Promise<StripeSubscriptionLike | null> {
     try {
       const sub = await this.client().subscriptions.retrieve(id);
-      return sub as unknown as StripeSubscriptionLike;
+      return sub;
     } catch {
       return null;
     }
