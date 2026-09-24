@@ -58,11 +58,20 @@ CesiumJS scene through a narrow host interface. `geospatial`, `database`, `billi
 pnpm install
 cp .env.example .env            # edit as needed; defaults run in fixture/limited mode
 pnpm env:validate               # explains what is configured
-createdb lightmap               # or point DATABASE_URL at any Postgres
-pnpm db:migrate
-pnpm db:seed                    # optional: dev user + six fixture viewpoints
-pnpm dev                        # http://localhost:3000
+pnpm dev                        # http://localhost:3000 — map, astronomy and forecasts work without a database
 ```
+
+Accounts, projects, saved viewpoints and billing need PostgreSQL. The quickest local option is
+Docker (PostGIS image, matches the default `DATABASE_URL` in `.env.example`):
+
+```sh
+pnpm db:up                      # docker compose up -d db
+pnpm db:migrate                 # applies packages/database/migrations/*.sql
+pnpm db:seed                    # optional: dev user + six fixture viewpoints
+```
+
+Any other Postgres 15+ works: point `DATABASE_URL` in `.env` at it. The `db:*` scripts read `.env`
+automatically (Node's `--env-file-if-exists`); `next dev` loads it too.
 
 Sign in during development with **Dev sign-in** (any email; `AUTH_DEV_LOGIN=true`, refused in
 production) or with a magic link printed to the server log when `EMAIL_SERVER` is empty.
