@@ -115,6 +115,10 @@ Also delivered: the **"this light" chip** under the timeline — how long the cu
 position lasts and when it comes back, one click to jump there (`summarizeRecurrence()`,
 `PRODUCT_SPEC.md` §8a).
 
+Also delivered: the **terrain horizon** — "when does the sun clear the ridge?" (sampled through
+the renderer from the DEM; "Sun behind terrain" badge, ridge markers on the timeline, first/last
+light over terrain, finder tags; `PRODUCT_SPEC.md` §8b).
+
 Next: DOF and horizon levelling remain future.
 
 ## Phase 7 — Long-range climatology (delivered, unreleased)

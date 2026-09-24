@@ -121,6 +121,11 @@ export interface SceneHost {
   sunScreenPosition(directionTowardSunEcef: Vec3): [number, number] | null;
   /** Ground height at a point once terrain is loaded; null when unknown. */
   sampleGroundHeight(p: GeoPoint): Promise<number | null>;
+  /**
+   * Terrain heights for many points at a fixed tile level (lower = coarser, cheaper; ~9 for far
+   * rings, ~13 near the viewpoint). Null per point when unknown; all zeros on the ellipsoid.
+   */
+  sampleGroundHeights(points: readonly GeoPoint[], level: number): Promise<Array<number | null>>;
   requestRender(): void;
   stats(): HostStats;
   /** Subscribe to clicks/taps on the ground. */

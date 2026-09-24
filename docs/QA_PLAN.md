@@ -109,6 +109,11 @@ start`).
       per place-day.
 - [ ] Clear → Overcast → Storm visibly differ; shadows vanish in Overcast.
 - [ ] Rotate camera in viewpoint mode; sun-in-frame indicator behaves.
+- [ ] Terrain horizon (real terrain configured): pin a valley floor (e.g. Lauterbrunnen 46.593,
+      7.909) at 07:00 in June — "Sun behind terrain" badge shows, the timeline has a `▲ Ridge`
+      marker later than sunrise, Sun & moon details list first/last light over terrain, and the
+      light finder tags morning matches "behind terrain"; pin a beach facing open sea — no
+      badge, no ridge markers; the Preview basis Terrain row names the sampled reach.
 - [ ] On a phone (real iPhone and Android, portrait): focusing the search box, a date field or
       the lens box does **not** zoom the page; the sheet's bottom padding clears the home
       indicator and the top bar clears the notch in the installed (standalone) app; swiping the
@@ -121,7 +126,7 @@ start`).
       to its window with the paywall reason; the search does not freeze the timeline (worker).
 - [ ] "This light" chip under the timeline: on a March afternoon it reads "Like this until
       <a day or two ahead> · Back <late September> (in ~186 days) <a time close to the current
-                  one>"; clicking "Back …" jumps date and time and the sun sits at the same place in the
+                      one>"; clicking "Back …" jumps date and time and the sun sits at the same place in the
       frame; at night the chip is absent; while scrubbing it dims and settles within a second;
       signed out / Free it reads "Beyond your date window · Pro" and opens the compact paywall.
 - [ ] Export card (Pro): PNG downloads; it shows the source badge, the forecast/scenario line, the

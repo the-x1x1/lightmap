@@ -16,6 +16,8 @@ export interface TimelineProps {
   timeZone: string;
   /** Current phase label for the aria description. */
   phase?: string | undefined;
+  /** Terrain first/last light when they differ from sunrise/sunset (extra markers). */
+  terrain?: { firstLight: Date | null; lastLight: Date | null } | null | undefined;
   className?: string | undefined;
 }
 
@@ -34,7 +36,7 @@ function minutesOf(d: Date | null, dayStart: Date): number | null {
   return (d.getTime() - dayStart.getTime()) / 60_000;
 }
 
-export function dayMarkers(ev: DayEvents): Marker[] {
+export function dayMarkers(ev: DayEvents, terrain?: TimelineProps['terrain']): Marker[] {
   const m = (
     key: string,
     d: Date | null,
@@ -54,6 +56,12 @@ export function dayMarkers(ev: DayEvents): Marker[] {
     m('goldenStart', ev.goldenHourEveningStart, 'Golden hour begins', 'Golden', '✦', 'sun'),
     m('sunset', ev.sunset, 'Sunset', 'Set', '↓', 'sun'),
     m('dusk', ev.civilDusk, 'Civil dusk (blue hour ends)', 'Dusk', '◑', 'twilight'),
+    terrain
+      ? m('ridgeRise', terrain.firstLight, 'Sun clears the terrain', 'Ridge', '▲', 'sun')
+      : null,
+    terrain
+      ? m('ridgeSet', terrain.lastLight, 'Sun drops behind the terrain', 'Ridge', '▽', 'sun')
+      : null,
   ].filter((x): x is Marker => x !== null);
 }
 
@@ -81,14 +89,17 @@ export function dayGradient(ev: DayEvents): string {
   return `linear-gradient(90deg, ${stops.map(([c, p]) => `${c} ${p}`).join(', ')})`;
 }
 
-export function Timeline({ dayEvents, timeZone, phase, className }: TimelineProps) {
+export function Timeline({ dayEvents, timeZone, phase, terrain, className }: TimelineProps) {
   const minutes = usePlannerStore((s) => s.minutes);
   const setMinutes = usePlannerStore((s) => s.setMinutes);
   const id = useId();
   const total = dayEvents
     ? Math.round((dayEvents.dayEnd.getTime() - dayEvents.dayStart.getTime()) / 60_000)
     : 1440;
-  const markers = useMemo(() => (dayEvents ? dayMarkers(dayEvents) : []), [dayEvents]);
+  const markers = useMemo(
+    () => (dayEvents ? dayMarkers(dayEvents, terrain) : []),
+    [dayEvents, terrain],
+  );
   const gradient = useMemo(
     () => (dayEvents ? dayGradient(dayEvents) : 'rgba(255,255,255,0.15)'),
     [dayEvents],

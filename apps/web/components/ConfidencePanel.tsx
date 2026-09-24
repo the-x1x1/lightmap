@@ -24,7 +24,15 @@ export function ConfidencePanel({ scene }: { scene: SceneState }) {
   const c = scene.confidence;
   const rows: Array<[string, string, string]> = [
     ['Astronomy', c.astronomy, c.notes.astronomy],
-    ['Terrain', c.terrain, c.terrain === 'HIGH' ? 'Real elevation data' : 'Flat ground assumed'],
+    [
+      'Terrain',
+      c.terrain,
+      c.terrain === 'HIGH'
+        ? scene.terrainHorizon
+          ? `Real elevation data; terrain horizon sampled to ${Math.round(scene.terrainHorizon.profile.maxDistanceM / 1000)} km (highest ridge ${scene.terrainHorizon.profile.maxElevationDeg.toFixed(1)}°). ${scene.terrainHorizon.profile.caveat}`
+          : 'Real elevation data'
+        : 'Flat ground assumed',
+    ],
     ['Scene detail', c.sceneDetail, c.notes.environment],
     ['Weather', c.weather, c.notes.weather],
     ['Real reference', c.imagery, c.notes.imagery],

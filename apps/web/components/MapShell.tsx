@@ -10,6 +10,7 @@ import { addCivilDays, civilDateString, parseCivilDate, utcToWallClock } from '@
 import { DEFAULT_RENDER_SETTINGS } from '@lightmap/scene';
 import { usePlannerStore } from '@/features/planner/store';
 import { useScene } from '@/features/planner/use-scene';
+import { useTerrainHorizon } from '@/features/planner/use-terrain-horizon';
 import { useAccount } from '@/features/account/use-account';
 import { Button, cx } from '@lightmap/ui';
 import { WorldMap, type RendererInfo } from './WorldMap';
@@ -67,6 +68,7 @@ export function MapShell() {
     error: null,
     capabilities: null,
     capture: () => Promise.resolve(null),
+    sampleHeights: null,
   });
 
   const render = useMemo(() => ({ ...DEFAULT_RENDER_SETTINGS, reducedMotion }), [reducedMotion]);
@@ -75,6 +77,13 @@ export function MapShell() {
     includeLunar: account.can('moon_planning').allowed || !account.snapshot,
   });
   const { scene, dayEvents, capabilities, weather } = bundle;
+  // Terrain horizon around the pin (sampled through the renderer; nothing on the ellipsoid).
+  useTerrainHorizon({
+    sampleHeights: rendererInfo.sampleHeights,
+    terrainAvailable: capabilities ? capabilities.providers.terrain.kind !== 'ellipsoid' : false,
+    terrainProviderId: capabilities?.providers.terrain.providerId ?? 'ellipsoid',
+    eyeHeightM: scene?.camera.eyeHeightM ?? 1.6,
+  });
 
   // Free-plan date window (plan §38): explain, never block silently. "Today" is the location's
   // civil date so the decision matches the server's.
@@ -292,6 +301,11 @@ export function MapShell() {
                   dayEvents={dayEvents}
                   timeZone={location?.timeZone ?? 'UTC'}
                   phase={scene?.solar.phase}
+                  terrain={
+                    scene?.terrainHorizon?.sunEvents.differsFromAstronomical
+                      ? scene.terrainHorizon.sunEvents
+                      : null
+                  }
                 />
                 {scene && isEnabled('reversePlanning') ? (
                   <NextOccurrence

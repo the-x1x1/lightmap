@@ -58,6 +58,19 @@ the Sun side and the point just beyond `h / tan(el)` is fully lit (`shadow-tower
 finite (1024–4096) and softens with reach; terrain self-shadowing at grazing angles shows some
 shadow-map artefacts.
 
+### Terrain horizon
+
+The land horizon around the viewpoint is sampled from the same DEM the preview renders
+(`SceneHost.sampleGroundHeights`, three tile levels by distance) and turned into a 3°-step profile
+with Earth curvature and standard refraction (`@lightmap/scene` `horizon.ts`). The Sun counts as
+visible when its refracted upper limb clears the profile at its bearing. **Claim:** whether the
+Sun is behind the ridge now, and the day's first/last light over the terrain to within a few
+minutes for ridges the DEM resolves. **Caveat:** trees, buildings and cloud on the ridge are not
+in a DEM; a ridgeline can fall between the 3° bearings or the ring distances; DEM resolution
+(≈30 m) rounds sharp crests; the eye-height dip uses the sampled ground height at the pin.
+Verified: synthetic-ridge unit tests (`packages/scene/tests/horizon.test.ts`); on the ellipsoid
+fallback no profile is produced, so nothing can be claimed there.
+
 ### Colour temperature
 
 A configurable curve of elevation → Kelvin (`weather/src/scenarios.ts`,

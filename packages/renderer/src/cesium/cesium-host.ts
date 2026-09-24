@@ -541,6 +541,35 @@ export class CesiumSceneHost implements SceneHost {
     }
   }
 
+  async sampleGroundHeights(
+    points: readonly GeoPoint[],
+    level: number,
+  ): Promise<Array<number | null>> {
+    const C = this.C;
+    await this.terrainReady;
+    const tp = this.scene.terrainProvider;
+    if (tp instanceof C.EllipsoidTerrainProvider) return points.map(() => 0);
+    const out: Array<number | null> = new Array<number | null>(points.length).fill(null);
+    // Chunked so one failed tile does not lose the whole profile.
+    const chunk = 256;
+    for (let i = 0; i < points.length; i += chunk) {
+      const slice = points.slice(i, i + chunk);
+      try {
+        const res = await C.sampleTerrain(
+          tp,
+          Math.max(0, Math.min(15, Math.round(level))),
+          slice.map((p) => C.Cartographic.fromDegrees(p.longitude, p.latitude)),
+        );
+        res.forEach((c, j) => {
+          out[i + j] = c && Number.isFinite(c.height) ? c.height : null;
+        });
+      } catch {
+        // leave nulls
+      }
+    }
+    return out;
+  }
+
   requestRender(): void {
     this.scene.requestRender();
   }

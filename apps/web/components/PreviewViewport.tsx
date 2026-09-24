@@ -20,6 +20,7 @@ import {
 import { Button } from '@lightmap/ui';
 import { PreviewSourceBadge } from './PreviewSourceBadge';
 import { ForecastBadge } from './ForecastBadge';
+import { TerrainHorizonBadge } from './TerrainHorizonBadge';
 import { Paywall } from './Paywall';
 
 export function PreviewViewport({
@@ -76,6 +77,7 @@ export function PreviewViewport({
         </h2>
         <PreviewSourceBadge mode={scene.sourceMode} />
         <ForecastBadge scene={scene} />
+        <TerrainHorizonBadge scene={scene} />
         <span className="ml-auto flex items-center gap-1">
           {exportDecision ? (
             <Button

@@ -26,6 +26,9 @@ export interface RendererInfo {
   capabilities: RendererCapabilities | null;
   /** JPEG data URL of the current frame, downscaled to `maxWidth` (default 320 for thumbnails). */
   capture: (maxWidth?: number) => Promise<string | null>;
+  /** Terrain heights at a tile level, for the terrain horizon; null when no host is running. */
+  sampleHeights:
+    ((points: readonly GeoPoint[], level: number) => Promise<Array<number | null>>) | null;
 }
 
 export interface WorldMapProps {
@@ -135,6 +138,7 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
       error: renderer.error,
       capabilities: renderer.capabilities,
       capture: (maxWidth = 320) => (host ? host.captureThumbnail(maxWidth) : Promise.resolve(null)),
+      sampleHeights: host ? (points, level) => host.sampleGroundHeights(points, level) : null,
     });
   }, [
     renderer.mode,
