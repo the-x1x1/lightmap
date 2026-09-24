@@ -4,6 +4,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **"This light" chip** under the timeline: how long the sun keeps returning to its current
+  position and when it comes back after that ("Like this until … · Back … 17:47"); one click
+  jumps there. `summarizeRecurrence()` in `@lightmap/astronomy` (tested at equinox/solstice);
+  Free plans see the answer inside their window and an honest "Beyond your date window · Pro".
 - **Error monitoring**: `SENTRY_DSN` enables a dependency-free Sentry-envelope reporter (release,
   environment, redacted context; tests); API 500s and webhook failures are reported; health
   reports the real package version. `docs/RUNBOOKS.md` covers provider outage, Stripe webhook

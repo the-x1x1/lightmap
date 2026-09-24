@@ -44,8 +44,10 @@ export {
 export {
   findDirectionMatches,
   elevationAtAzimuthByDay,
+  summarizeRecurrence,
   wrapDelta,
   type CelestialBody,
+  type RecurrenceSummary,
   type DirectionTarget,
   type DirectionMatch,
   type SolverInput,
