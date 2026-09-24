@@ -9,7 +9,12 @@ import {
   type GeospatialProviders,
   type TimezoneProvider,
 } from '@lightmap/geospatial';
-import { createWeatherProvider, type WeatherProvider } from '@lightmap/weather';
+import {
+  createClimatologyProvider,
+  createWeatherProvider,
+  type ClimatologyProvider,
+  type WeatherProvider,
+} from '@lightmap/weather';
 import { createDb, type DbHandle } from '@lightmap/database';
 import { createBillingProvider, type BillingProvider } from '@lightmap/billing/stripe';
 import {
@@ -27,6 +32,7 @@ export interface Services {
   errors: ErrorReporter;
   geo: GeospatialProviders;
   weather: WeatherProvider;
+  climatology: ClimatologyProvider;
   billing: BillingProvider;
   /** Null when DATABASE_URL is unset: anonymous exploration still works; saving does not. */
   db: DbHandle | null;
@@ -48,6 +54,7 @@ export function getServices(): Services {
   const timezone: TimezoneProvider = new GeoTzTimezoneProvider();
   const geo = createGeospatialProviders(env, { timezoneProvider: timezone });
   const weather = createWeatherProvider(env);
+  const climatology = createClimatologyProvider(env);
   const billing = createBillingProvider(env);
   const db = env.DATABASE_URL ? createDb(env.DATABASE_URL) : null;
   if (!db)
@@ -60,6 +67,7 @@ export function getServices(): Services {
     errors: loggingErrorReporter(log),
     geo,
     weather,
+    climatology,
     billing,
     db,
     capabilities: envCapabilities(env),

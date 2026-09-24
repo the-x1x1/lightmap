@@ -12,6 +12,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 - **Planning-card export** (Phase 4 "preview export"): a PNG of the current frame with the solar
   facts, weather mode, source label, confidence and attribution, rendered in the browser; Pro via
   `export_preview`, paywall reason for Free.
+- **Climatology (Phase 7)**: "Typical for this month" — ten-year ERA5 shares of the five scenario
+  classes in daylight hours (Open-Meteo archive adapter + fixture, pure summariser with tests, API
+  route with 30-day cache and per-plan budget, `climatology` entitlement), tap-to-compare, never a
+  forecast.
 - **Accessibility pass (plan §28)**: skip link and DOM order, roving-tabindex radio groups
   (`RadioGroup`/`useRovingRadio` in `@lightmap/ui`), combobox `aria-activedescendant`, permanent
   status regions, focus management on panel swaps/deletes/preview collapse, `inert` collapsed sheet,

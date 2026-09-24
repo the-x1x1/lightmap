@@ -12,6 +12,7 @@ import {
   REEARTH_TERRAIN_META,
 } from '../packages/geospatial/src/providers/map-sources.ts';
 import { OPEN_METEO_CAPABILITIES } from '../packages/weather/src/providers/open-meteo.ts';
+import { OPEN_METEO_CLIMATOLOGY_CAPABILITIES } from '../packages/weather/src/providers/open-meteo-climatology.ts';
 
 const doc = readFileSync('docs/DATA_SOURCES_AND_LICENSING.md', 'utf8');
 const sources: Array<{ id: string; attribution: string }> = [
@@ -21,6 +22,10 @@ const sources: Array<{ id: string; attribution: string }> = [
   NATURAL_EARTH_META,
   CESIUM_ION_IMAGERY_META,
   { id: OPEN_METEO_CAPABILITIES.providerId, attribution: OPEN_METEO_CAPABILITIES.attribution },
+  {
+    id: OPEN_METEO_CLIMATOLOGY_CAPABILITIES.providerId,
+    attribution: OPEN_METEO_CLIMATOLOGY_CAPABILITIES.attribution,
+  },
   { id: 'geo-tz', attribution: 'timezone-boundary-builder' },
 ];
 const problems: string[] = [];

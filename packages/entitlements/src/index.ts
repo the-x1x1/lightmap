@@ -15,6 +15,7 @@ export const ENTITLEMENT_KEYS = [
   'moon_planning',
   'advanced_camera_tools',
   'reverse_planning',
+  'climatology',
 ] as const;
 
 export type EntitlementKey = (typeof ENTITLEMENT_KEYS)[number];
@@ -79,6 +80,7 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
       'moon_planning',
       'advanced_camera_tools',
       'reverse_planning',
+      'climatology',
     ),
     limits: {
       futureDateWindowDays: null,
@@ -96,6 +98,7 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
       'High-quality preview and planning-card export',
       'Camera tools: lens presets, heading and pitch',
       'Light finder: every date the sun or moon lands where you want it',
+      'Typical conditions for any month, from ten years of climate data',
     ],
   },
   studio: {
@@ -112,6 +115,7 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
       'moon_planning',
       'advanced_camera_tools',
       'reverse_planning',
+      'climatology',
     ),
     limits: {
       futureDateWindowDays: null,
@@ -363,6 +367,7 @@ export function can(
     case 'export_preview':
     case 'moon_planning':
     case 'advanced_camera_tools':
+    case 'climatology':
       return has
         ? { allowed: true, key }
         : { allowed: false, key, reason: `${label(key)} is part of Pro.`, upgradeTo };
@@ -381,6 +386,7 @@ export function label(key: EntitlementKey): string {
     moon_planning: 'Moon planning',
     advanced_camera_tools: 'Advanced camera tools',
     reverse_planning: 'Light finder (reverse planning)',
+    climatology: 'Typical conditions (climatology)',
   };
   return labels[key];
 }

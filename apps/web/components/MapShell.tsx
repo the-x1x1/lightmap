@@ -22,6 +22,7 @@ import { ConfidencePanel } from './ConfidencePanel';
 import { CameraControls } from './CameraControls';
 import { AstronomyDetails } from './AstronomyDetails';
 import { LightFinder } from './LightFinder';
+import { ClimatologyPanel } from './ClimatologyPanel';
 import { WeatherDetails } from './WeatherDetails';
 import { ProjectDrawer } from './ProjectDrawer';
 import { AccountMenu, AccountPanel } from './AccountMenu';
@@ -252,6 +253,18 @@ export function MapShell() {
                 {scene ? (
                   <>
                     <WeatherScenarioPicker scene={scene} weatherLoading={weather.loading} />
+                    <ClimatologyPanel
+                      scene={scene}
+                      decision={
+                        account.snapshot
+                          ? account.can('climatology')
+                          : {
+                              allowed: false,
+                              key: 'climatology',
+                              reason: 'Sign in with Pro to see typical conditions for any month.',
+                            }
+                      }
+                    />
                     {weather.providerFailed ? (
                       <ErrorState
                         live="status"

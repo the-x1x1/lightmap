@@ -13,3 +13,15 @@ export {
   type FixturePattern,
 } from './providers/fixture.ts';
 export { createWeatherProvider } from './registry.ts';
+export * from './climatology.ts';
+export {
+  OpenMeteoClimatologyProvider,
+  OPEN_METEO_CLIMATOLOGY_CAPABILITIES,
+  normalizeArchive,
+  type OpenMeteoClimatologyOptions,
+} from './providers/open-meteo-climatology.ts';
+export {
+  FixtureClimatologyProvider,
+  FIXTURE_CLIMATOLOGY_CAPABILITIES,
+} from './providers/fixture-climatology.ts';
+export { createClimatologyProvider } from './registry.ts';

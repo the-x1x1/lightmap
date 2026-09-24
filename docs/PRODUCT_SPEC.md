@@ -90,7 +90,12 @@ scenario: Overcast (forecast: Partly Cloudy)" so the forecast is never hidden. U
 the forecast. Outside the forecast window there is nothing to compare against; the scenario is
 simply the atmosphere and is labelled as such.
 
-Climatology ("Typical for this month") is Phase 7 and is not shown in v0.1.
+**Typical for this month** (Pro, entitlement `climatology`). Under the scenario buttons: the share
+of daylight hours in this calendar month over the last ten years that fell in each scenario class,
+from ERA5 reanalysis via Open-Meteo's archive, plus mean cloud cover and the fraction of wet days.
+Badge: **Climatology · not a forecast**. Each class is a button that compares that scenario; the
+most common one is marked, nothing is selected silently. Free plans see the locked block with the
+paywall reason. Rules and method in `WEATHER_AND_FORECAST_MODEL.md` §8.
 
 ## 5. Preview panel (plan §4)
 
@@ -239,6 +244,7 @@ No collaboration or sharing in v0.1.
 | Planning-card export                        | –                          | Yes                          |
 | Camera tools (lens presets, heading, pitch) | –                          | Yes                          |
 | Light finder (reverse planning)             | Inside the date window     | Any range (≤ 1100 days)      |
+| Typical conditions (climatology)            | –                          | Yes                          |
 
 A Studio plan exists as a definition only (no Stripe price). The paywall shows the denial reason
 from the entitlement decision; a subscription unlocks the current plan immediately after the

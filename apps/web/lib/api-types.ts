@@ -1,6 +1,11 @@
 /** Shapes shared between API routes and the client. Server types are the source; these are DTOs. */
 import type { PublicProviderDescriptors } from '@lightmap/geospatial';
-import type { WeatherCapabilities, WeatherFrame, WeatherMode } from '@lightmap/weather';
+import type {
+  ClimatologySummary,
+  WeatherCapabilities,
+  WeatherFrame,
+  WeatherMode,
+} from '@lightmap/weather';
 import type { EntitlementSnapshot } from '@lightmap/entitlements';
 import type { Place } from '@lightmap/geospatial';
 
@@ -24,6 +29,13 @@ export interface WeatherResponse {
   fetchedAt: string;
   cached: boolean;
   attribution: string;
+}
+
+/** "Typical for this month" — never a forecast (WEATHER_AND_FORECAST_MODEL.md §8). */
+export interface ClimatologyResponse {
+  summary: ClimatologySummary;
+  cached: boolean;
+  isFixture: boolean;
 }
 
 export interface LocationSearchResponse {

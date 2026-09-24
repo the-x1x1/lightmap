@@ -139,6 +139,7 @@ export const BUDGET_RESOURCES = [
   'imagery',
   'terrain_bytes',
   'preview',
+  'climatology',
 ] as const;
 export type BudgetResource = (typeof BUDGET_RESOURCES)[number];
 
@@ -151,4 +152,6 @@ export const DAILY_BUDGET_LIMITS: Record<
   imagery: { anonymous: 0, free: 0, pro: 0 },
   terrain_bytes: { anonymous: 300e6, free: 1e9, pro: 5e9 },
   preview: { anonymous: 200, free: 1000, pro: 5000 },
+  // One summary = up to ten archive requests upstream; cached 30 days per 0.5° cell.
+  climatology: { anonymous: 0, free: 0, pro: 60 },
 };
