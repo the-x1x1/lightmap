@@ -1,0 +1,25 @@
+/* LightMap design tokens (plan §20): dark-first, quiet, photographic. Values mirror packages/config brand.colors. */
+:root {
+  --lm-chrome: #0b0b0d;
+  --lm-panel: #16161a;
+  --lm-panel-raised: #1f1f25;
+  --lm-panel-border: rgba(255, 255, 255, 0.08);
+  --lm-text: #f4f4f5;
+  --lm-text-muted: #a1a1aa;
+  --lm-text-faint: #71717a;
+  --lm-sun: #f5b342;
+  --lm-sun-deep: #d98b1a;
+  --lm-twilight: #5b8def;
+  --lm-danger: #f26d6d;
+  --lm-ok: #58c48a;
+  --lm-radius: 12px;
+  --lm-radius-sm: 8px;
+  --lm-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --lm-focus: 0 0 0 2px var(--lm-chrome), 0 0 0 4px var(--lm-sun);
+  --lm-touch: 44px;
+  color-scheme: dark;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --lm-motion: 0ms; }
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
