@@ -87,10 +87,10 @@ run('repositories (integration)', () => {
       confidenceState: {},
       thumbnailDataUrl: 'data:image/jpeg;base64,BBBB',
     });
-    const [{ n }] = await h.sql<
+    const counted = await h.sql<
       Array<{ n: string }>
     >`select count(*)::text as n from preview_snapshots where viewpoint_id = ${v.id}`;
-    expect(Number(n)).toBe(1); // only the newest snapshot is kept
+    expect(Number(counted[0]?.n)).toBe(1); // only the newest snapshot is kept
     await expect(vps.get(bob, v.id)).rejects.toBeInstanceOf(NotFoundError);
     const full = await projects.get(alice, p.id);
     expect(full.viewpoints).toHaveLength(1);
