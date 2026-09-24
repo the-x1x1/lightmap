@@ -51,11 +51,12 @@
   "pnpm": {
     "overrides": {
       "postcss@<8.5.18": "^8.5.18",
-      "@auth/core@<0.41.3": "0.41.3"
+      "@auth/core@<0.41.3": "0.41.3",
+      "nodemailer": "^9.1.1"
     },
     "peerDependencyRules": {
       "allowedVersions": {
-        "next-auth>nodemailer": "9"
+        "nodemailer": "9"
       }
     }
   }
