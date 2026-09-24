@@ -11,6 +11,8 @@ export interface CapabilitiesResponse {
   devBanner: boolean;
   flags: Record<string, boolean>;
   billingConfigured: boolean;
+  /** Cesium ion tokens are public by design (scope them to the production domain in the ion dashboard); sent only when an ion provider is active. */
+  ionToken?: string;
   authMethods: { email: boolean; google: boolean; devLogin: boolean };
 }
 

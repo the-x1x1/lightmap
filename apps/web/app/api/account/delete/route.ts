@@ -1,5 +1,5 @@
 import { auditRepo, usersRepo } from '@lightmap/database';
-import { errorResponse, json } from '@/lib/server/http';
+import { errorResponse, json, requireSameOrigin } from '@/lib/server/http';
 import { requireDb, requireUser } from '@/lib/server/session';
 
 export const dynamic = 'force-dynamic';
@@ -8,8 +8,9 @@ export const dynamic = 'force-dynamic';
  * Account deletion request (plan §16, §30). Marks the account; data is erased by the retention job
  * after 14 days (docs/PRIVACY.md) so an accidental request can be reversed by signing in again.
  */
-export async function POST() {
+export async function POST(req: Request) {
   try {
+    requireSameOrigin(req);
     const ctx = await requireUser();
     const db = requireDb();
     await usersRepo(db).requestDeletion(ctx.user.id);

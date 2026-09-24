@@ -86,7 +86,7 @@ export function buildAuthConfig({ env, db, log }: AuthConfigDeps): NextAuthConfi
             return {
               id: existing.id,
               email: existing.email,
-              name: existing.displayName,
+              name: existing.name,
               image: existing.image,
             };
           const id = ulid();
@@ -94,7 +94,7 @@ export function buildAuthConfig({ env, db, log }: AuthConfigDeps): NextAuthConfi
             id,
             email,
             emailVerified: new Date(),
-            displayName: email.split('@')[0] ?? null,
+            name: email.split('@')[0] ?? null,
           });
           log('warn', `[dev] created user ${email} via dev sign-in`);
           return { id, email, name: email.split('@')[0] ?? null, image: null };

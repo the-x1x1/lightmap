@@ -3,7 +3,7 @@
  * able to access another user's project by changing an ID"). Ownership is a WHERE clause here,
  * not a check the API route might forget.
  */
-import { and, asc, count, desc, eq, isNull, lt, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, lt, sql } from 'drizzle-orm';
 import type { Db } from './client.ts';
 import { ulid } from './ids.ts';
 import {
@@ -52,7 +52,14 @@ export function projectsRepo(db: Db) {
         .where(and(eq(projects.userId, userId), isNull(projects.archivedAt)));
       return Number(r?.n ?? 0);
     },
-    async get(userId: string, id: string): Promise<Project & { viewpoints: Viewpoint[] }> {
+    async get(
+      userId: string,
+      id: string,
+    ): Promise<
+      Project & {
+        viewpoints: Array<Viewpoint & { snapshot: { thumbnailDataUrl: string | null } | null }>;
+      }
+    > {
       const [p] = await db
         .select()
         .from(projects)
@@ -64,7 +71,22 @@ export function projectsRepo(db: Db) {
         .from(viewpoints)
         .where(and(eq(viewpoints.projectId, id), eq(viewpoints.userId, userId)))
         .orderBy(asc(viewpoints.createdAt));
-      return { ...p, viewpoints: vps };
+      // Newest thumbnail per viewpoint (one row is kept per viewpoint, see saveSnapshot).
+      const ids = vps.map((v) => v.id);
+      const snaps =
+        ids.length === 0
+          ? []
+          : await db
+              .select({
+                viewpointId: previewSnapshots.viewpointId,
+                thumbnailDataUrl: previewSnapshots.thumbnailDataUrl,
+              })
+              .from(previewSnapshots)
+              .where(inArray(previewSnapshots.viewpointId, ids));
+      const byId = new Map(
+        snaps.map((x) => [x.viewpointId, { thumbnailDataUrl: x.thumbnailDataUrl }]),
+      );
+      return { ...p, viewpoints: vps.map((v) => ({ ...v, snapshot: byId.get(v.id) ?? null })) };
     },
     async create(userId: string, input: ProjectInput): Promise<Project> {
       const row: NewProject = {

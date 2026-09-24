@@ -1,9 +1,9 @@
-import type { ReactNode } from 'react';
+import type { HTMLAttributes, ReactNode } from 'react';
 import { cx } from './cx.ts';
 
 export type BadgeTone = 'neutral' | 'sun' | 'twilight' | 'ok' | 'warn' | 'danger';
 
-export interface BadgeProps {
+export interface BadgeProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'title'> {
   tone?: BadgeTone;
   children: ReactNode;
   className?: string;
@@ -23,9 +23,10 @@ const tones: Record<BadgeTone, string> = {
     'bg-[color:rgba(242,109,109,0.16)] text-[color:#ff9b9b] ring-[color:rgba(242,109,109,0.35)]',
 };
 
-export function Badge({ tone = 'neutral', children, className, icon, title }: BadgeProps) {
+export function Badge({ tone = 'neutral', children, className, icon, title, ...rest }: BadgeProps) {
   return (
     <span
+      {...rest}
       title={title}
       className={cx(
         'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium uppercase tracking-wide ring-1 ring-inset',

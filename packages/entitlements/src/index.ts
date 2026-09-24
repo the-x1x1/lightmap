@@ -161,7 +161,8 @@ export const PAST_DUE_GRACE_DAYS = 7;
  * Derive the effective snapshot. Status rules:
  *  - active / trialing → the plan applies.
  *  - past_due → the plan applies for PAST_DUE_GRACE_DAYS after periodEnd, flagged as grace.
- *  - canceled with cancelAtPeriodEnd and periodEnd in the future → plan applies until then.
+ *  - active + cancelAtPeriodEnd → plan applies until periodEnd (Stripe keeps it `active` until then).
+ *  - canceled → free immediately (Stripe emits it when access has ended).
  *  - anything else → free.
  * Never trusts a client-supplied tier: callers pass the server's subscription record.
  */
@@ -204,8 +205,9 @@ export function deriveEntitlements(
       );
     }
     case 'canceled':
-      if (periodActive && periodEnd !== null)
-        return snapshot(plan, plan, sub.status, false, sub.periodEnd, computedAt);
+      // Stripe sets `canceled` when access has actually ended — immediately for an operator or
+      // fraud cancellation, or at period end for cancel_at_period_end (which stays `active` until
+      // then). Either way, access is over now (plan §34: never accidentally grant).
       return snapshot(plan, free, sub.status, false, sub.periodEnd, computedAt);
     case 'paused':
     case 'unpaid':

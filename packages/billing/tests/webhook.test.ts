@@ -243,3 +243,40 @@ describe('webhook processing', () => {
     expect(rec.periodEnd?.getTime()).toBe(2000);
   });
 });
+
+describe('ordering and atomicity', () => {
+  it('maps a subscription.created that arrives before checkout via metadata.userId', async () => {
+    const store = memoryStore();
+    const out = await processWebhookEvent(
+      ev(
+        'evt_early',
+        'customer.subscription.created',
+        sub({ customer: 'cus_new', metadata: { userId: 'user_meta' } }),
+      ),
+      deps(store),
+    );
+    expect(out).toMatchObject({ outcome: 'processed', userId: 'user_meta' });
+    expect(store.customers['cus_new']).toBe('user_meta');
+    expect(store.subs[0]?.userId).toBe('user_meta');
+  });
+  it('does not record the event when applying it fails, so a retry can succeed', async () => {
+    const store = memoryStore({ cus_1: 'user_1' });
+    let fail = true;
+    const original = store.upsertSubscription.bind(store);
+    store.upsertSubscription = async (s) => {
+      if (fail) throw new Error('db blip');
+      return original(s);
+    };
+    await expect(
+      processWebhookEvent(ev('evt_retry', 'customer.subscription.created', sub()), deps(store)),
+    ).rejects.toThrow('db blip');
+    expect(store.events.has('evt_retry')).toBe(false);
+    fail = false;
+    const again = await processWebhookEvent(
+      ev('evt_retry', 'customer.subscription.created', sub()),
+      deps(store),
+    );
+    expect(again.outcome).toBe('processed');
+    expect(store.subs).toHaveLength(1);
+  });
+});

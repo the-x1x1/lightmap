@@ -1,10 +1,21 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 /**
  * The plan's E2E (§32): open → search Kailua Beach → 31 May → 12:30 → verify source/confidence →
  * clear → overcast changes the visuals → save project → reload → viewpoint persists.
  * Runs with fixture providers, so no network beyond localhost.
  */
+
+/** React overrides the value setter on inputs; use the prototype setter so onChange fires (utility-world fill() does not support range in all builds). */
+async function setRangeValue(locator: Locator, value: number) {
+  await locator.evaluate((el, v) => {
+    const input = el as HTMLInputElement;
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+    setter.call(input, String(v));
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  }, value);
+}
 
 async function pickKailua(page: Page) {
   await page.getByTestId('location-search').fill('Kailua');
@@ -16,12 +27,7 @@ async function setDateTime(page: Page, date: string, minutes: number) {
   await page.getByTestId('date-input').fill(date);
   const range = page.getByTestId('timeline-range');
   await range.focus();
-  await range.evaluate((el, m) => {
-    const input = el as HTMLInputElement;
-    input.value = String(m);
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-  }, minutes);
+  await setRangeValue(range, minutes);
 }
 
 test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async ({ page }) => {
@@ -75,7 +81,7 @@ test('a date beyond the forecast horizon is labelled a scenario, never a forecas
   const far = new Date();
   far.setDate(far.getDate() + 60);
   await setDateTime(page, far.toISOString().slice(0, 10), 12 * 60);
-  await expect(page.getByTestId('scenario-badge')).toContainText(/scenario/i);
+  await expect(page.getByTestId('scenario-badge').first()).toContainText(/scenario/i);
   await expect(page.getByTestId('scenario-summary')).toContainText(/unavailable this far ahead/i);
   await expect(page.getByTestId('confidence-weather')).toHaveAttribute('data-value', 'SCENARIO');
   await expect(page.getByTestId('scenario-forecast')).toHaveCount(0);
@@ -89,24 +95,18 @@ test('a date inside the horizon shows the (fixture) forecast and allows comparin
   const soon = new Date();
   soon.setDate(soon.getDate() + 2);
   await setDateTime(page, soon.toISOString().slice(0, 10), 14 * 60);
-  await expect(page.getByTestId('forecast-badge')).toContainText(/forecast/i);
+  await expect(page.getByTestId('forecast-badge').first()).toContainText(/forecast/i);
   await page.getByTestId('scenario-clear').click();
   await expect(page.getByTestId('scenario-summary')).toContainText(/comparing scenario/i);
   await page.getByTestId('scenario-forecast').click();
-  await expect(page.getByTestId('forecast-badge')).toBeVisible();
+  await expect(page.getByTestId('forecast-badge').first()).toBeVisible();
 });
 
 test('camera rotates and the heading readout follows', async ({ page }) => {
   await page.goto('/');
   await pickKailua(page);
   await page.getByTestId('camera-mode-viewpoint').click();
-  const heading = page.locator('#lm-heading');
-  await heading.evaluate((el) => {
-    const input = el as HTMLInputElement;
-    input.value = '270';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-  });
+  await setRangeValue(page.locator('#lm-heading'), 270);
   await expect(page.getByTestId('camera-heading')).toContainText('270° W');
   await page.getByTestId('lens-35').click();
   await expect(page.getByTestId('camera-controls')).toContainText('35 mm');

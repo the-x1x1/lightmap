@@ -56,7 +56,16 @@ describe('scenarios are deterministic and visibly distinct', () => {
     expect(scenarioForConditions(30)).toBe('mostly-clear');
     expect(scenarioForConditions(60)).toBe('partly-cloudy');
     expect(scenarioForConditions(90)).toBe('overcast');
-    expect(scenarioForConditions(40, { precipitationMm: 2 })).toBe('storm');
+    expect(scenarioForConditions(40, { precipitationAmount: 2 })).toBe('storm');
+    // A frame object (the real caller) with amount-only rain and no code must read as storm.
+    expect(
+      scenarioForConditions(40, {
+        cloudCoverTotal: 40,
+        precipitationAmount: 5,
+        precipitationProbability: 50,
+        weatherCode: null,
+      } as { precipitationAmount: number }),
+    ).toBe('storm');
     expect(scenarioForConditions(40, { weatherCode: 95 })).toBe('storm');
   });
 

@@ -19,7 +19,8 @@ import { cx } from '@lightmap/ui';
 export interface RendererInfo {
   mode: '3D' | 'OVERLAY' | 'loading';
   qualityLabel: string;
-  stats: HostStats | null;
+  /** Polled, not pushed: call when a panel wants numbers. */
+  getStats: () => HostStats | null;
   error: string | null;
   capabilities: RendererCapabilities | null;
   capture: () => Promise<string | null>;
@@ -107,6 +108,7 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
     onPick,
     onQualityChange: (q) => setQualityFromGovernor.current(q),
     enabled: true,
+    ionToken: capabilities?.ionToken,
   });
 
   // Apply the scene with the governor's quality merged in.
@@ -124,7 +126,7 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
     onRendererInfo?.({
       mode: renderer.mode,
       qualityLabel: renderer.qualityLabel,
-      stats: renderer.stats,
+      getStats: () => (host ? host.stats() : null),
       error: renderer.error,
       capabilities: renderer.capabilities,
       capture: () => (host ? host.captureThumbnail(320) : Promise.resolve(null)),
@@ -132,7 +134,6 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
   }, [
     renderer.mode,
     renderer.qualityLabel,
-    renderer.stats,
     renderer.error,
     renderer.capabilities,
     host,

@@ -1,12 +1,13 @@
 import { subscriptionsRepo } from '@lightmap/database';
-import { HttpError, errorResponse, json } from '@/lib/server/http';
+import { HttpError, errorResponse, json, requireSameOrigin } from '@/lib/server/http';
 import { getServices } from '@/lib/server/services';
 import { requireDb, requireUser } from '@/lib/server/session';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
+    requireSameOrigin(req);
     const s = getServices();
     const ctx = await requireUser();
     if (!s.billing.configured)

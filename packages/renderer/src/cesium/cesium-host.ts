@@ -49,6 +49,8 @@ export async function createCesiumHost(options: CesiumHostOptions): Promise<Scen
 }
 
 const DEG = Math.PI / 180;
+/** Frames in a one-second window below which the scene is judged idle, not slow. */
+export const MIN_FRAMES_FOR_SAMPLE = 12;
 
 export class CesiumSceneHost implements SceneHost {
   private readonly C: CesiumModule;
@@ -162,16 +164,23 @@ export class CesiumSceneHost implements SceneHost {
     });
     scene.postProcessStages.add(this.grade);
 
-    // Frame-rate sampling once a second, for the quality governor.
+    // Frame-rate sampling for the quality governor. With requestRenderMode the scene draws only on
+    // demand, so frames-per-wall-clock is meaningless while idle; a sample is emitted only for a
+    // one-second window with at least MIN_FRAMES_FOR_SAMPLE frames (continuous interaction: a
+    // scrub, an orbit, a flight). Idle windows are discarded.
     this.frameWindowStart = performance.now();
     this.preRenderRemover = scene.postRender.addEventListener(() => {
       this.frameCount++;
       const now = performance.now();
       if (now - this.frameWindowStart >= 1000) {
-        this.lastFps = (this.frameCount * 1000) / (now - this.frameWindowStart);
+        const fps = (this.frameCount * 1000) / (now - this.frameWindowStart);
+        const continuous = this.frameCount >= MIN_FRAMES_FOR_SAMPLE;
         this.frameCount = 0;
         this.frameWindowStart = now;
-        for (const l of this.frameListeners) l(this.lastFps);
+        if (continuous) {
+          this.lastFps = fps;
+          for (const l of this.frameListeners) l(fps);
+        }
       }
     });
 
@@ -286,9 +295,11 @@ export class CesiumSceneHost implements SceneHost {
 
   setOverlay(o: HostOverlay): void {
     const C = this.C;
-    for (const e of this.overlayEntities) this.widget.entities.remove(e);
-    this.overlayEntities = [];
-    if (!o.visible || !o.pin) return;
+    const ents = this.widget.entities;
+    if (!o.visible || !o.pin) {
+      for (const e of this.overlayEntities) e.show = false;
+      return;
+    }
     const pin = o.pin;
     const base = C.Cartesian3.fromDegrees(pin.longitude, pin.latitude, pin.heightM);
     const enu = C.Transforms.eastNorthUpToFixedFrame(base);
@@ -302,65 +313,82 @@ export class CesiumSceneHost implements SceneHost {
       );
       return C.Matrix4.multiplyByPoint(enu, v, new C.Cartesian3());
     };
-    const add = (opts: Cesium.Entity.ConstructorOptions): void => {
-      this.overlayEntities.push(this.widget.entities.add(opts));
-    };
-    add({
-      position: base,
-      point: {
-        pixelSize: 14,
-        color: C.Color.fromCssColorString('#f4f4f5'),
-        outlineColor: C.Color.fromCssColorString('#0b0b0d'),
-        outlineWidth: 3,
-        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-      },
-    });
-    if (o.sunPath.length > 1) {
-      add({
-        polyline: {
-          positions: o.sunPath.map((s) => local(s.azimuthDeg, s.elevationDeg, o.radiusM)),
-          width: 3,
-          material: C.Color.fromCssColorString('#f5b342').withAlpha(0.85),
-          arcType: C.ArcType.NONE,
-        },
-      });
+    // Entities are created once and updated in place; add/remove per scrub tick was measurable.
+    if (this.overlayEntities.length === 0) {
+      const gold = C.Color.fromCssColorString('#f5b342');
+      this.overlayEntities = [
+        ents.add({
+          point: {
+            pixelSize: 14,
+            color: C.Color.fromCssColorString('#f4f4f5'),
+            outlineColor: C.Color.fromCssColorString('#0b0b0d'),
+            outlineWidth: 3,
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
+          },
+        }),
+        ents.add({
+          polyline: { width: 3, material: gold.withAlpha(0.85), arcType: C.ArcType.NONE },
+        }),
+        ents.add({
+          point: {
+            pixelSize: 18,
+            color: gold,
+            outlineColor: C.Color.fromCssColorString('#7a4a00'),
+            outlineWidth: 2,
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
+          },
+        }),
+        ents.add({
+          polyline: {
+            width: 2,
+            material: new C.PolylineDashMaterialProperty({
+              color: gold.withAlpha(0.7),
+              dashLength: 12,
+            }),
+            arcType: C.ArcType.NONE,
+          },
+        }),
+        ents.add({
+          polyline: {
+            width: 6,
+            material: C.Color.fromCssColorString('#0b0b0d').withAlpha(0.6),
+            arcType: C.ArcType.NONE,
+          },
+        }),
+      ];
     }
+    const [pinE, pathE, sunE, rayE, shadowE] = this.overlayEntities as [
+      Cesium.Entity,
+      Cesium.Entity,
+      Cesium.Entity,
+      Cesium.Entity,
+      Cesium.Entity,
+    ];
+    pinE.position = new C.ConstantPositionProperty(base);
+    pinE.show = true;
+    if (o.sunPath.length > 1) {
+      pathE.polyline!.positions = new C.ConstantProperty(
+        o.sunPath.map((s) => local(s.azimuthDeg, s.elevationDeg, o.radiusM)),
+      );
+      pathE.show = true;
+    } else pathE.show = false;
     if (o.sun) {
       const sunPos = local(o.sun.azimuthDeg, o.sun.elevationDeg, o.radiusM);
-      add({
-        position: sunPos,
-        point: {
-          pixelSize: 18,
-          color: C.Color.fromCssColorString('#f5b342'),
-          outlineColor: C.Color.fromCssColorString('#7a4a00'),
-          outlineWidth: 2,
-          disableDepthTestDistance: Number.POSITIVE_INFINITY,
-        },
-      });
-      add({
-        polyline: {
-          positions: [base, sunPos],
-          width: 2,
-          material: new C.PolylineDashMaterialProperty({
-            color: C.Color.fromCssColorString('#f5b342').withAlpha(0.7),
-            dashLength: 12,
-          }),
-          arcType: C.ArcType.NONE,
-        },
-      });
+      sunE.position = new C.ConstantPositionProperty(sunPos);
+      sunE.show = true;
+      rayE.polyline!.positions = new C.ConstantProperty([base, sunPos]);
+      rayE.show = true;
+    } else {
+      sunE.show = false;
+      rayE.show = false;
     }
     if (o.shadowAzimuthDeg !== null) {
-      const shadowEnd = local(o.shadowAzimuthDeg, 0.5, Math.min(o.radiusM * 0.5, 200));
-      add({
-        polyline: {
-          positions: [base, shadowEnd],
-          width: 6,
-          material: C.Color.fromCssColorString('#0b0b0d').withAlpha(0.6),
-          arcType: C.ArcType.NONE,
-          clampToGround: false,
-        },
-      });
-    }
+      shadowE.polyline!.positions = new C.ConstantProperty([
+        base,
+        local(o.shadowAzimuthDeg, 0.5, Math.min(o.radiusM * 0.5, 200)),
+      ]);
+      shadowE.show = true;
+    } else shadowE.show = false;
   }
 
   setQuality(q: HostQuality): void {

@@ -28,11 +28,14 @@ use (Cesium ion, when configured).
 
 ## 3. Content Security Policy and headers
 
-Defined in `apps/web/next.config.ts` and sent on every response.
+The CSP is generated per request in `apps/web/middleware.ts` with a random nonce; Next.js reads
+the nonce from the request's CSP header and applies it to its own inline scripts, so production
+needs neither `'unsafe-inline'` nor `'unsafe-eval'`. The remaining security headers are static in
+`apps/web/next.config.ts`.
 
 ```
 default-src 'self'
-script-src 'self' 'wasm-unsafe-eval' blob:          (+ 'unsafe-eval' 'unsafe-inline' in development only)
+script-src 'self' 'nonce-<per request>' 'strict-dynamic' 'wasm-unsafe-eval' blob:   (+ 'unsafe-eval' in development)
 style-src 'self' 'unsafe-inline'
 img-src 'self' data: blob: <terrain/imagery/weather hosts>
 connect-src 'self' blob: data: <terrain/imagery/weather hosts> https://api.stripe.com
@@ -64,9 +67,10 @@ Other headers: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
 - Cookies are `HttpOnly`, `SameSite=Lax`, and `Secure` in production (`useSecureCookies: isProd`).
 - Session lifetime and rolling refresh are configured centrally (`SESSION_MAX_AGE_SECONDS`,
   `SESSION_UPDATE_AGE_SECONDS`).
-- **CSRF**: Auth.js's double-submit CSRF token protects sign-in/out. Mutating API routes are
-  same-origin JSON requests that require the session cookie; `SameSite=Lax` plus
-  `form-action 'self'` prevents cross-site form posts.
+- **CSRF**: Auth.js's double-submit CSRF token protects sign-in/out. Every mutating API route
+  calls `requireSameOrigin()` (`lib/server/http.ts`), which accepts `Sec-Fetch-Site: same-origin`
+  or an `Origin` equal to `NEXT_PUBLIC_APP_URL` and rejects anything else that carries cookies;
+  `SameSite=Lax` cookies and `form-action 'self'` add a second layer.
 - **Dev sign-in** (`AUTH_DEV_LOGIN`): a credentials provider that only exists when the flag is on.
   Auth.js requires JWT sessions for credentials providers, so this mode uses JWT. Environment
   validation marks `AUTH_DEV_LOGIN` as an **error in production**; the server refuses to start.

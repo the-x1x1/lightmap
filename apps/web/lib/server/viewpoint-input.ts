@@ -65,6 +65,16 @@ export function parseViewpoint(
     });
     if (thumb && !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(thumb))
       throw new Error('thumbnailDataUrl must be a base64 image data URL');
+    for (const key of [
+      'providerMetadata',
+      'astronomyState',
+      'weatherState',
+      'confidenceState',
+    ] as const) {
+      const val = s[key];
+      if (val !== undefined && JSON.stringify(val).length > 32_000)
+        throw new Error(`snapshot.${key} is too large`);
+    }
     snapshot = {
       sourceType: v.oneOf(s['sourceType'], 'snapshot.sourceType', SOURCE_TYPES) as string,
       providerMetadata: s['providerMetadata'] ?? {},

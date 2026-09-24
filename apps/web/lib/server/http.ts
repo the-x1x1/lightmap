@@ -79,7 +79,27 @@ export function str(
   return v;
 }
 
+/**
+ * CSRF defence in depth (plan §29): cookie-authenticated mutations must come from our own origin.
+ * Auth.js protects its own routes; this covers the JSON API. Browsers always send Sec-Fetch-Site
+ * (and Origin on POST/PATCH/DELETE); a request with neither is a non-browser client and is allowed
+ * only when it carries no cookies.
+ */
+export function requireSameOrigin(req: Request): void {
+  const site = req.headers.get('sec-fetch-site');
+  if (site === 'same-origin' || site === 'none') return;
+  const origin = req.headers.get('origin');
+  const appOrigin = new URL(getServices().env.NEXT_PUBLIC_APP_URL).origin;
+  if (origin) {
+    if (origin === appOrigin) return;
+    throw new HttpError(403, 'cross_origin', 'Cross-origin requests are not allowed.');
+  }
+  if (site) throw new HttpError(403, 'cross_origin', 'Cross-origin requests are not allowed.');
+  if (req.headers.get('cookie')) throw new HttpError(403, 'cross_origin', 'Missing Origin header.');
+}
+
 export async function readJson<T>(req: Request, validate: (v: unknown) => T): Promise<T> {
+  requireSameOrigin(req);
   let body: unknown;
   try {
     body = await req.json();
