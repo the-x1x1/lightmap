@@ -7,6 +7,7 @@ settings:
 overrides:
   postcss@<8.5.18: ^8.5.18
   '@auth/core@<0.41.3': 0.41.3
+  nodemailer: ^9.1.1
 
 importers:
 
@@ -122,7 +123,7 @@ importers:
         version: 15.5.26(@babel/core@7.29.7)(@playwright/test@1.63.0)(@types/node@22.20.4)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       next-auth:
         specifier: 5.0.0-beta.32
-        version: 5.0.0-beta.32(next@15.5.26(@babel/core@7.29.7)(@playwright/test@1.63.0)(@types/node@22.20.4)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(nodemailer@7.0.13)(react@19.3.0)
+        version: 5.0.0-beta.32(next@15.5.26(@playwright/test@1.63.0)(@types/node@22.20.4)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(nodemailer@9.1.1)(react@19.3.0)
       react:
         specifier: ^19.1.0
         version: 19.3.0
@@ -206,7 +207,7 @@ importers:
         specifier: 5.0.0-beta.32
         version: 5.0.0-beta.32(next@15.5.26(@playwright/test@1.63.0)(@types/node@22.20.4)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(nodemailer@9.1.1)(react@19.3.0)
       nodemailer:
-        specifier: ^9.1.0
+        specifier: ^9.1.1
         version: 9.1.1
       react:
         specifier: '>=19.0.0'
@@ -433,7 +434,7 @@ packages:
     peerDependencies:
       '@simplewebauthn/browser': ^9.0.1
       '@simplewebauthn/server': ^9.0.2
-      nodemailer: ^7.0.7 || ^8.0.5
+      nodemailer: ^9.1.1
     peerDependenciesMeta:
       '@simplewebauthn/browser':
         optional: true
@@ -3001,7 +3002,7 @@ packages:
       '@simplewebauthn/browser': ^9.0.1
       '@simplewebauthn/server': ^9.0.2
       next: ^14.0.0-0 || ^15.0.0 || ^16.0.0
-      nodemailer: ^7.0.7 || ^8.0.5
+      nodemailer: ^9.1.1
       react: ^18.2.0 || ^19.0.0
     peerDependenciesMeta:
       '@simplewebauthn/browser':
@@ -3035,10 +3036,6 @@ packages:
   node-releases@2.0.57:
     resolution: {integrity: sha512-kQK9LGGFiHtrWiNhZtA7Qbw17AQz+dmsEKODRIVTXA9+e5MS/2gZEBhYJt13GrAz5/IOZKddH/0Z3TP/Zgo+yw==}
     engines: {node: '>=18'}
-
-  nodemailer@7.0.13:
-    resolution: {integrity: sha512-PNDFSJdP+KFgdsG3ZzMXCgquO7I6McjY2vlqILjtJd0hy8wEvtugS9xKRF2NWlPNGxvLCXlTNIae4serI7dinw==}
-    engines: {node: '>=6.0.0'}
 
   nodemailer@9.1.1:
     resolution: {integrity: sha512-izw9mVKFix6YSnC9eLgV6g1opl9DUlRio9ZNcq+Wu9Ujn2UwF+8Nl0B8nz22kEC+CTZCvinkxwJ0DeFbb6NwcQ==}
@@ -3710,16 +3707,6 @@ snapshots:
       '@csstools/css-parser-algorithms': 3.0.5(@csstools/css-tokenizer@3.0.4)
       '@csstools/css-tokenizer': 3.0.4
       lru-cache: 10.4.3
-
-  '@auth/core@0.41.3(nodemailer@7.0.13)':
-    dependencies:
-      '@panva/hkdf': 1.2.1
-      jose: 6.2.12
-      oauth4webapi: 3.8.8
-      preact: 10.24.3
-      preact-render-to-string: 6.5.11(preact@10.24.3)
-    optionalDependencies:
-      nodemailer: 7.0.13
 
   '@auth/core@0.41.3(nodemailer@9.1.1)':
     dependencies:
@@ -5962,14 +5949,6 @@ snapshots:
 
   natural-compare@1.4.0: {}
 
-  next-auth@5.0.0-beta.32(next@15.5.26(@babel/core@7.29.7)(@playwright/test@1.63.0)(@types/node@22.20.4)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(nodemailer@7.0.13)(react@19.3.0):
-    dependencies:
-      '@auth/core': 0.41.3(nodemailer@7.0.13)
-      next: 15.5.26(@babel/core@7.29.7)(@playwright/test@1.63.0)(@types/node@22.20.4)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      react: 19.3.0
-    optionalDependencies:
-      nodemailer: 7.0.13
-
   next-auth@5.0.0-beta.32(next@15.5.26(@playwright/test@1.63.0)(@types/node@22.20.4)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(nodemailer@9.1.1)(react@19.3.0):
     dependencies:
       '@auth/core': 0.41.3(nodemailer@9.1.1)
@@ -6004,9 +5983,6 @@ snapshots:
       - babel-plugin-macros
 
   node-releases@2.0.57: {}
-
-  nodemailer@7.0.13:
-    optional: true
 
   nodemailer@9.1.1: {}
 
