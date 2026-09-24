@@ -5,6 +5,9 @@ import {
   DEFAULT_RENDER_SETTINGS,
   buildSceneState,
   defaultCamera,
+  horizonProfileFromSamples,
+  horizonRingDistances,
+  horizonSamplePoints,
   type EnvironmentState,
   type SceneInputs,
 } from '@lightmap/scene';
@@ -114,5 +117,36 @@ describe('buildPlanningCard', () => {
       generatedAt,
     });
     expect(card.notes.some((n) => n.includes('fixture'))).toBe(true);
+  });
+});
+
+describe('planning card — terrain horizon', () => {
+  it('prints first/last light over the terrain and the behind-terrain state, with the caveat', () => {
+    const ring = horizonRingDistances().reduce((b, d) =>
+      Math.abs(d - 2000) < Math.abs(b - 2000) ? d : b,
+    );
+    const samples = horizonSamplePoints(kailua.point).map((p) => ({
+      azimuthDeg: p.azimuthDeg,
+      distanceM: p.distanceM,
+      heightM: p.azimuthDeg >= 30 && p.azimuthDeg <= 150 && p.distanceM === ring ? 600 : 0,
+    }));
+    const horizonProfile = horizonProfileFromSamples(kailua.point, 2, 1.6, samples, {
+      providerId: 'test-dem',
+      resolutionM: 30,
+    });
+    const dawn = scene({
+      horizonProfile,
+      utc: localSelectionToUtc({ year: 2026, month: 5, day: 31 }, 6 * 60, kailua.timeZone),
+    });
+    const card = buildPlanningCard(dawn, { generatedAt: new Date('2026-05-01T00:00:00Z') });
+    const over = card.facts.find((f) => f.label === 'Over the terrain');
+    expect(over).toBeDefined();
+    expect(over!.value).toMatch(/first light \d\d:\d\d · last light \d\d:\d\d/);
+    expect(over!.value).toContain('trees and buildings not modelled');
+    const now = card.facts.find((f) => f.label === 'Right now');
+    expect(now?.value).toContain('sun behind the terrain');
+    // No profile: none of these rows exist.
+    const plain = buildPlanningCard(scene(), { generatedAt: new Date('2026-05-01T00:00:00Z') });
+    expect(plain.facts.some((f) => f.label === 'Over the terrain')).toBe(false);
   });
 });
