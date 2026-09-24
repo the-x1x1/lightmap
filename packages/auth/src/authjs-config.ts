@@ -90,14 +90,12 @@ export function buildAuthConfig({ env, db, log }: AuthConfigDeps): NextAuthConfi
               image: existing.image,
             };
           const id = ulid();
-          await db
-            .insert(schema.users)
-            .values({
-              id,
-              email,
-              emailVerified: new Date(),
-              displayName: email.split('@')[0] ?? null,
-            });
+          await db.insert(schema.users).values({
+            id,
+            email,
+            emailVerified: new Date(),
+            displayName: email.split('@')[0] ?? null,
+          });
           log('warn', `[dev] created user ${email} via dev sign-in`);
           return { id, email, name: email.split('@')[0] ?? null, image: null };
         },

@@ -9,7 +9,13 @@
       "date": "2026-05-31",
       "tzHours": -10,
       "sourceUrl": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-05-31&coords=21.3970,-157.7270&tz=-10&dst=false",
-      "sun": { "beginCivilTwilight": "05:24", "rise": "05:48", "transit": "12:29", "set": "19:09", "endCivilTwilight": "19:34" },
+      "sun": {
+        "beginCivilTwilight": "05:24",
+        "rise": "05:48",
+        "transit": "12:29",
+        "set": "19:09",
+        "endCivilTwilight": "19:34"
+      },
       "moon": { "curphase": "Full Moon", "fracillum": "100%" },
       "altaz": [
         {
@@ -29,7 +35,13 @@
       "date": "2026-06-21",
       "tzHours": -7,
       "sourceUrl": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-06-21&coords=33.4484,-112.0740&tz=-7&dst=false",
-      "sun": { "beginCivilTwilight": "04:50", "rise": "05:19", "transit": "12:30", "set": "19:41", "endCivilTwilight": "20:10" },
+      "sun": {
+        "beginCivilTwilight": "04:50",
+        "rise": "05:19",
+        "transit": "12:30",
+        "set": "19:41",
+        "endCivilTwilight": "20:10"
+      },
       "moon": { "curphase": "Waxing Crescent", "fracillum": "49%" },
       "altaz": [
         {
@@ -49,7 +61,13 @@
       "date": "2026-03-29",
       "tzHours": 0,
       "sourceUrl": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-03-29&coords=51.5074,-0.1278&tz=0&dst=false",
-      "sun": { "beginCivilTwilight": "05:09", "rise": "05:43", "transit": "12:05", "set": "18:29", "endCivilTwilight": "19:02" },
+      "sun": {
+        "beginCivilTwilight": "05:09",
+        "rise": "05:43",
+        "transit": "12:05",
+        "set": "18:29",
+        "endCivilTwilight": "19:02"
+      },
       "moon": { "curphase": "Waxing Gibbous", "fracillum": "87%" },
       "altaz": []
     },
@@ -61,7 +79,13 @@
       "date": "2026-10-25",
       "tzHours": 0,
       "sourceUrl": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-10-25&coords=51.5074,-0.1278&tz=0&dst=false",
-      "sun": { "beginCivilTwilight": "06:07", "rise": "06:42", "transit": "11:45", "set": "16:47", "endCivilTwilight": "17:21" },
+      "sun": {
+        "beginCivilTwilight": "06:07",
+        "rise": "06:42",
+        "transit": "11:45",
+        "set": "16:47",
+        "endCivilTwilight": "17:21"
+      },
       "moon": { "curphase": "Waxing Gibbous", "fracillum": "99%" },
       "altaz": []
     },
@@ -73,7 +97,13 @@
       "date": "2026-12-21",
       "tzHours": 11,
       "sourceUrl": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-12-21&coords=-33.8688,151.2093&tz=11&dst=false",
-      "sun": { "beginCivilTwilight": "05:11", "rise": "05:41", "transit": "12:53", "set": "20:05", "endCivilTwilight": "20:35" },
+      "sun": {
+        "beginCivilTwilight": "05:11",
+        "rise": "05:41",
+        "transit": "12:53",
+        "set": "20:05",
+        "endCivilTwilight": "20:35"
+      },
       "moon": { "curphase": "Waxing Gibbous", "fracillum": "87%" },
       "altaz": [
         {
@@ -93,7 +123,13 @@
       "date": "2026-06-21",
       "tzHours": 2,
       "sourceUrl": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-06-21&coords=69.6492,18.9553&tz=2&dst=false",
-      "sun": { "beginCivilTwilight": null, "rise": null, "transit": "12:46", "set": null, "endCivilTwilight": null },
+      "sun": {
+        "beginCivilTwilight": null,
+        "rise": null,
+        "transit": "12:46",
+        "set": null,
+        "endCivilTwilight": null
+      },
       "notes": "USNO: \"Object continuously above the Horizon\"; \"Object continuously above the Twilight Limit\". Lower transit 00:46.",
       "moon": { "curphase": "Waxing Crescent", "fracillum": "45%" },
       "altaz": []
@@ -106,7 +142,13 @@
       "date": "2026-12-21",
       "tzHours": 1,
       "sourceUrl": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-12-21&coords=69.6492,18.9553&tz=1&dst=false",
-      "sun": { "beginCivilTwilight": "09:31", "rise": null, "transit": null, "set": null, "endCivilTwilight": "13:53" },
+      "sun": {
+        "beginCivilTwilight": "09:31",
+        "rise": null,
+        "transit": null,
+        "set": null,
+        "endCivilTwilight": "13:53"
+      },
       "notes": "USNO: \"Object continuously below the Horizon\". Civil twilight 09:31–13:53.",
       "moon": { "curphase": "Waxing Gibbous", "fracillum": "90%" },
       "altaz": []
@@ -119,7 +161,13 @@
       "date": "2026-03-20",
       "tzHours": -5,
       "sourceUrl": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-03-20&coords=-0.1807,-78.4678&tz=-5&dst=false",
-      "sun": { "beginCivilTwilight": "05:57", "rise": "06:18", "transit": "12:21", "set": "18:24", "endCivilTwilight": "18:45" },
+      "sun": {
+        "beginCivilTwilight": "05:57",
+        "rise": "06:18",
+        "transit": "12:21",
+        "set": "18:24",
+        "endCivilTwilight": "18:45"
+      },
       "moon": { "curphase": "Waxing Crescent", "fracillum": "4%" },
       "altaz": []
     },
@@ -131,7 +179,13 @@
       "date": "2026-01-15",
       "tzHours": 13,
       "sourceUrl": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-01-15&coords=-13.8333,-171.7667&tz=13&dst=false",
-      "sun": { "beginCivilTwilight": "05:47", "rise": "06:11", "transit": "12:36", "set": "19:02", "endCivilTwilight": "19:25" },
+      "sun": {
+        "beginCivilTwilight": "05:47",
+        "rise": "06:11",
+        "transit": "12:36",
+        "set": "19:02",
+        "endCivilTwilight": "19:25"
+      },
       "moon": { "curphase": "Waning Crescent", "fracillum": "14%" },
       "altaz": []
     },
@@ -143,7 +197,13 @@
       "date": "2026-01-15",
       "tzHours": 14,
       "sourceUrl": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-01-15&coords=1.8721,-157.3630&tz=14&dst=false",
-      "sun": { "beginCivilTwilight": "06:16", "rise": "06:38", "transit": "12:39", "set": "18:39", "endCivilTwilight": "19:02" },
+      "sun": {
+        "beginCivilTwilight": "06:16",
+        "rise": "06:38",
+        "transit": "12:39",
+        "set": "18:39",
+        "endCivilTwilight": "19:02"
+      },
       "moon": { "curphase": "Waning Crescent", "fracillum": "14%" },
       "altaz": []
     },
@@ -155,7 +215,13 @@
       "date": "2026-03-08",
       "tzHours": -4,
       "sourceUrl": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-03-08&coords=40.7128,-74.0060&tz=-4&dst=false",
-      "sun": { "beginCivilTwilight": "06:52", "rise": "07:19", "transit": "13:07", "set": "18:55", "endCivilTwilight": "19:23" },
+      "sun": {
+        "beginCivilTwilight": "06:52",
+        "rise": "07:19",
+        "transit": "13:07",
+        "set": "18:55",
+        "endCivilTwilight": "19:23"
+      },
       "moon": { "curphase": "Waning Gibbous", "fracillum": "75%" },
       "altaz": []
     }
