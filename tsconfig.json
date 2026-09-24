@@ -1,0 +1,18 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/config" },
+    { "path": "packages/geospatial" },
+    { "path": "packages/astronomy" },
+    { "path": "packages/weather" },
+    { "path": "packages/scene" },
+    { "path": "packages/renderer" },
+    { "path": "packages/entitlements" },
+    { "path": "packages/observability" },
+    { "path": "packages/database" },
+    { "path": "packages/billing" },
+    { "path": "packages/auth" },
+    { "path": "packages/ui" },
+    { "path": "apps/web" }
+  ]
+}

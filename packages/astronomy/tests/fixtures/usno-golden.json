@@ -1,0 +1,163 @@
+{
+  "$comment": "Reference values fetched from the US Naval Observatory Astronomical Applications API (aa.usno.navy.mil) on 2026-09-24. Rise/set/transit/twilight come from /api/rstt/oneday (times rounded to the minute, local zone given by tzHours, dst=false). Sun altitude/azimuth come from /api/celnav (Hc/Zn), which are GEOMETRIC values — not refraction-corrected. Do not edit values by hand; re-fetch from USNO if a case changes.",
+  "cases": [
+    {
+      "case": "A",
+      "place": "Kailua Beach, Hawaii",
+      "lat": 21.397,
+      "lon": -157.727,
+      "date": "2026-05-31",
+      "tzHours": -10,
+      "sourceUrl": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-05-31&coords=21.3970,-157.7270&tz=-10&dst=false",
+      "sun": { "beginCivilTwilight": "05:24", "rise": "05:48", "transit": "12:29", "set": "19:09", "endCivilTwilight": "19:34" },
+      "moon": { "curphase": "Full Moon", "fracillum": "100%" },
+      "altaz": [
+        {
+          "utc": "2026-05-31T22:30:00Z",
+          "altitudeDeg": 89.306126,
+          "azimuthDeg": 333.467159,
+          "refracted": false,
+          "sourceUrl": "https://aa.usno.navy.mil/api/celnav?date=2026-05-31&time=22:30&coords=21.3970,-157.7270"
+        }
+      ]
+    },
+    {
+      "case": "B",
+      "place": "Phoenix, Arizona",
+      "lat": 33.4484,
+      "lon": -112.074,
+      "date": "2026-06-21",
+      "tzHours": -7,
+      "sourceUrl": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-06-21&coords=33.4484,-112.0740&tz=-7&dst=false",
+      "sun": { "beginCivilTwilight": "04:50", "rise": "05:19", "transit": "12:30", "set": "19:41", "endCivilTwilight": "20:10" },
+      "moon": { "curphase": "Waxing Crescent", "fracillum": "49%" },
+      "altaz": [
+        {
+          "utc": "2026-06-21T16:00:00Z",
+          "altitudeDeg": 43.225215,
+          "azimuthDeg": 88.090347,
+          "refracted": false,
+          "sourceUrl": "https://aa.usno.navy.mil/api/celnav?date=2026-06-21&time=16:00&coords=33.4484,-112.0740"
+        }
+      ]
+    },
+    {
+      "case": "C1",
+      "place": "London (UK DST starts this morning)",
+      "lat": 51.5074,
+      "lon": -0.1278,
+      "date": "2026-03-29",
+      "tzHours": 0,
+      "sourceUrl": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-03-29&coords=51.5074,-0.1278&tz=0&dst=false",
+      "sun": { "beginCivilTwilight": "05:09", "rise": "05:43", "transit": "12:05", "set": "18:29", "endCivilTwilight": "19:02" },
+      "moon": { "curphase": "Waxing Gibbous", "fracillum": "87%" },
+      "altaz": []
+    },
+    {
+      "case": "C2",
+      "place": "London (UK DST ends this morning)",
+      "lat": 51.5074,
+      "lon": -0.1278,
+      "date": "2026-10-25",
+      "tzHours": 0,
+      "sourceUrl": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-10-25&coords=51.5074,-0.1278&tz=0&dst=false",
+      "sun": { "beginCivilTwilight": "06:07", "rise": "06:42", "transit": "11:45", "set": "16:47", "endCivilTwilight": "17:21" },
+      "moon": { "curphase": "Waxing Gibbous", "fracillum": "99%" },
+      "altaz": []
+    },
+    {
+      "case": "D",
+      "place": "Sydney",
+      "lat": -33.8688,
+      "lon": 151.2093,
+      "date": "2026-12-21",
+      "tzHours": 11,
+      "sourceUrl": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-12-21&coords=-33.8688,151.2093&tz=11&dst=false",
+      "sun": { "beginCivilTwilight": "05:11", "rise": "05:41", "transit": "12:53", "set": "20:05", "endCivilTwilight": "20:35" },
+      "moon": { "curphase": "Waxing Gibbous", "fracillum": "87%" },
+      "altaz": [
+        {
+          "utc": "2026-12-21T01:00:00Z",
+          "altitudeDeg": 74.404326,
+          "azimuthDeg": 51.464578,
+          "refracted": false,
+          "sourceUrl": "https://aa.usno.navy.mil/api/celnav?date=2026-12-21&time=01:00&coords=-33.8688,151.2093"
+        }
+      ]
+    },
+    {
+      "case": "E1",
+      "place": "Tromsø (midnight sun)",
+      "lat": 69.6492,
+      "lon": 18.9553,
+      "date": "2026-06-21",
+      "tzHours": 2,
+      "sourceUrl": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-06-21&coords=69.6492,18.9553&tz=2&dst=false",
+      "sun": { "beginCivilTwilight": null, "rise": null, "transit": "12:46", "set": null, "endCivilTwilight": null },
+      "notes": "USNO: \"Object continuously above the Horizon\"; \"Object continuously above the Twilight Limit\". Lower transit 00:46.",
+      "moon": { "curphase": "Waxing Crescent", "fracillum": "45%" },
+      "altaz": []
+    },
+    {
+      "case": "E2",
+      "place": "Tromsø (polar night)",
+      "lat": 69.6492,
+      "lon": 18.9553,
+      "date": "2026-12-21",
+      "tzHours": 1,
+      "sourceUrl": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-12-21&coords=69.6492,18.9553&tz=1&dst=false",
+      "sun": { "beginCivilTwilight": "09:31", "rise": null, "transit": null, "set": null, "endCivilTwilight": "13:53" },
+      "notes": "USNO: \"Object continuously below the Horizon\". Civil twilight 09:31–13:53.",
+      "moon": { "curphase": "Waxing Gibbous", "fracillum": "90%" },
+      "altaz": []
+    },
+    {
+      "case": "F",
+      "place": "Quito (equator)",
+      "lat": -0.1807,
+      "lon": -78.4678,
+      "date": "2026-03-20",
+      "tzHours": -5,
+      "sourceUrl": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-03-20&coords=-0.1807,-78.4678&tz=-5&dst=false",
+      "sun": { "beginCivilTwilight": "05:57", "rise": "06:18", "transit": "12:21", "set": "18:24", "endCivilTwilight": "18:45" },
+      "moon": { "curphase": "Waxing Crescent", "fracillum": "4%" },
+      "altaz": []
+    },
+    {
+      "case": "G",
+      "place": "Apia, Samoa (UTC+13)",
+      "lat": -13.8333,
+      "lon": -171.7667,
+      "date": "2026-01-15",
+      "tzHours": 13,
+      "sourceUrl": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-01-15&coords=-13.8333,-171.7667&tz=13&dst=false",
+      "sun": { "beginCivilTwilight": "05:47", "rise": "06:11", "transit": "12:36", "set": "19:02", "endCivilTwilight": "19:25" },
+      "moon": { "curphase": "Waning Crescent", "fracillum": "14%" },
+      "altaz": []
+    },
+    {
+      "case": "H",
+      "place": "Kiritimati (UTC+14)",
+      "lat": 1.8721,
+      "lon": -157.363,
+      "date": "2026-01-15",
+      "tzHours": 14,
+      "sourceUrl": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-01-15&coords=1.8721,-157.3630&tz=14&dst=false",
+      "sun": { "beginCivilTwilight": "06:16", "rise": "06:38", "transit": "12:39", "set": "18:39", "endCivilTwilight": "19:02" },
+      "moon": { "curphase": "Waning Crescent", "fracillum": "14%" },
+      "altaz": []
+    },
+    {
+      "case": "I",
+      "place": "New York (US DST starts this morning; whole day shown in EDT)",
+      "lat": 40.7128,
+      "lon": -74.006,
+      "date": "2026-03-08",
+      "tzHours": -4,
+      "sourceUrl": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-03-08&coords=40.7128,-74.0060&tz=-4&dst=false",
+      "sun": { "beginCivilTwilight": "06:52", "rise": "07:19", "transit": "13:07", "set": "18:55", "endCivilTwilight": "19:23" },
+      "moon": { "curphase": "Waning Gibbous", "fracillum": "75%" },
+      "altaz": []
+    }
+  ]
+}

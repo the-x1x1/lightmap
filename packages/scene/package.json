@@ -1,0 +1,25 @@
+{
+  "name": "@lightmap/scene",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SceneState: the single model combining location, time, camera, solar, lunar, atmosphere, environment, source and confidence.",
+  "license": "SEE LICENSE IN ../../LICENSE",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@lightmap/astronomy": "workspace:*",
+    "@lightmap/weather": "workspace:*",
+    "@lightmap/geospatial": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0",
+    "@types/node": "^22.15.0"
+  }
+}

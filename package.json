@@ -1,0 +1,44 @@
+{
+  "name": "lightmap",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LightMap — a visual natural-light planner for photographers and filmmakers.",
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.12.0 <25",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @lightmap/web dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "turbo run test",
+    "test:unit": "vitest run",
+    "test:e2e": "pnpm --filter @lightmap/web test:e2e",
+    "db:migrate": "pnpm --filter @lightmap/database migrate",
+    "db:seed": "node --experimental-strip-types scripts/seed-dev.ts",
+    "env:validate": "node --experimental-strip-types scripts/validate-env.ts",
+    "licenses": "node --experimental-strip-types scripts/check-licenses.ts",
+    "secrets:scan": "node --experimental-strip-types scripts/scan-secrets.ts",
+    "release": "node --experimental-strip-types scripts/release.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.30.0",
+    "@types/node": "^22.15.0",
+    "@vitest/coverage-v8": "^3.2.0",
+    "eslint": "^9.30.0",
+    "eslint-config-prettier": "^10.1.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^16.2.0",
+    "prettier": "^3.6.0",
+    "turbo": "^2.5.0",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.35.0",
+    "vitest": "^3.2.0"
+  }
+}
