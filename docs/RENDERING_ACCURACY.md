@@ -47,10 +47,16 @@ every point of a large scene (parallax across a few kilometres is far below a de
 
 Cesium's shadow map from the same light, cast and received by terrain (`globe.shadows = ENABLED`).
 `shadowMap.darkness` rises with the scenario's diffuse fraction, so overcast shadows fade; shadows
-are switched off when direct light is below 12 % or the Sun is below −0.833°. **Claim:** direction
-and approximate length of terrain shadows; visible softening under cloud. **Caveat:** no
-buildings/trees in v0.1 (no BuildingProvider configured); shadow map resolution is finite (1024–4096)
-and fades beyond 8 km.
+are switched off when direct light is below 12 % or the Sun is below −0.833° — and only then:
+Cesium's default low-Sun fade (`shadowMap.fadingEnabled`) is **off**, because golden-hour shadows
+are the product. Reach (`maximumDistance`) is 20 km at eye level and 3× the orbit range (8–60 km)
+in map view, so a ridge's shadow crosses a valley. **Claim:** direction and length of shadows;
+visible softening under cloud. **Verified:** the smoke harness renders a 20 m tower at Sun
+elevation ≈ 11° and measures the frame — the ground along the shadow line is < 70 % as bright as
+the Sun side and the point just beyond `h / tan(el)` is fully lit (`shadow-tower` scene).
+**Caveat:** no buildings/trees in v0.1 (no BuildingProvider configured); shadow map resolution is
+finite (1024–4096) and softens with reach; terrain self-shadowing at grazing angles shows some
+shadow-map artefacts.
 
 ### Colour temperature
 

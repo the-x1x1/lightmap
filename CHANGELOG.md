@@ -4,6 +4,11 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Shadow quality (Phase 4)**: low-Sun shadows are no longer faded away by the renderer
+  (Cesium's `fadingEnabled` off — whether shadows exist is decided by the Sun and the cloud, not
+  by taste); shadow reach follows the camera (20 km at eye level, 3× the orbit range in map view).
+  The smoke harness now renders a tower and **measures** its shadow's direction, length and
+  darkness from the frame.
 - **Climatology by hour of day**: "Typical for this month" now includes 24 hour-of-day bars
   (mean cloud, clear share, wet share; night dimmed; selected hour ringed; table for assistive
   tech) and a pattern line naming the clearest and cloudiest three-hour stretch when the month

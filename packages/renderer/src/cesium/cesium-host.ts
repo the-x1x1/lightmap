@@ -132,7 +132,10 @@ export class CesiumSceneHost implements SceneHost {
     sm.softShadows = true;
     sm.darkness = 0.4;
     sm.maximumDistance = 8000;
-    sm.fadingEnabled = true;
+    // Cesium's default fades shadows out as the light nears the horizon. Low-sun shadows are the
+    // whole point of this product: whether they exist is decided by `lightingFromScene`
+    // (Sun above −0.833° and enough direct light), never by an aesthetic fade.
+    sm.fadingEnabled = false;
     sm.normalOffset = true;
 
     const ssc = scene.screenSpaceCameraController;
@@ -212,6 +215,8 @@ export class CesiumSceneHost implements SceneHost {
     sm.darkness = s.darkness;
     if (sm.size !== s.size) sm.size = s.size;
     if (sm.softShadows !== s.softShadows) sm.softShadows = s.softShadows;
+    if (Math.abs(sm.maximumDistance - s.maximumDistance) > 1)
+      sm.maximumDistance = s.maximumDistance;
   }
 
   setAtmosphere(a: HostAtmosphere): void {

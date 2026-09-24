@@ -75,11 +75,15 @@ Outstanding before commercial beta (plan §43):
 
 Delivered (unreleased): **preview export** — the planning card (`PRODUCT_SPEC.md` §5);
 **horizon haze** (aerial perspective by depth and Sun elevation); **twilight/blue-hour sky**
-correction and a low-Sun dome lift; textured overcast decks (`RENDERING_ACCURACY.md` §Sky).
+correction and a low-Sun dome lift; textured overcast decks; **layered clouds** — low / mid / high
+decks from the forecast's own cloud layers (or the scenario's split), each lit by the true Sun
+elevation so cirrus stays pink after sunset while a stratus deck goes dark; **shadow quality** —
+no low-Sun fade, camera-aware reach, and a measured shadow probe in the smoke harness
+(`RENDERING_ACCURACY.md`).
 
 Remaining: improved terrain texture; detailed buildings where licensed; physically based
-atmospheric scattering; water shader; layered clouds; shadow quality; better device performance
-adaptation. Everything stays grounded: geometry and light direction are never altered for looks.
+atmospheric scattering; water shader; better device performance adaptation. Everything stays
+grounded: geometry and light direction are never altered for looks.
 
 ## Phase 5 — Real references (future, requires licensing work)
 

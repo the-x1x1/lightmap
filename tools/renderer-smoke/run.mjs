@@ -2,7 +2,8 @@
  * Renderer smoke test: loads the real SceneController + CesiumSceneHost + grade shader in headless
  * Chromium against a bundled Cesium build, applies seven scenes (noon clear/overcast, golden hour,
  * blue hour, partly cloudy, moonlit night, storm, cirrus and stratus decks after sunset from a
- * forecast frame) and screenshots each. Fails on any runtime or
+ * forecast frame, a tower's shadow at low Sun) and screenshots each; the shadow scene is also
+ * measured (direction, length, no low-Sun fade). Fails on any runtime or
  * shader error. Usage (after `pnpm install`):
  *
  *   node --experimental-strip-types ../../node_modules/typescript/bin/tsc -p tsconfig.emit.json
@@ -68,4 +69,23 @@ console.log(
 );
 await browser.close();
 server.kill();
-process.exit(smoke.errors.length === 0 && Object.keys(shots).length >= 9 ? 0 : 1);
+// Shadow probe: the tower's shadow must be clearly darker than the Sun side and must end where
+// h / tan(el) says it ends (the point beyond it is as bright as the Sun side).
+const probe = smoke.shadowProbe;
+const mean = (xs) => xs.filter((v) => typeof v === 'number').reduce((a, b) => a + b, 0) / xs.length;
+let shadowOk = false;
+if (probe && probe.lum) {
+  const inShadow = mean(probe.lum.inShadow);
+  const sunSide = mean(probe.lum.sunSide);
+  const beyond = mean(probe.lum.beyond);
+  shadowOk =
+    Number.isFinite(inShadow) &&
+    Number.isFinite(sunSide) &&
+    inShadow < 0.7 * sunSide &&
+    Math.abs(beyond - sunSide) < 0.08;
+  console.log(
+    `shadow probe: el ${probe.el.toFixed(1)}°, length ${probe.lengthM.toFixed(0)} m, ` +
+      `in-shadow ${inShadow.toFixed(2)} vs sun-side ${sunSide.toFixed(2)}, beyond ${beyond.toFixed(2)} → ${shadowOk ? 'ok' : 'FAIL'}`,
+  );
+} else console.log('shadow probe: missing → FAIL');
+process.exit(smoke.errors.length === 0 && Object.keys(shots).length >= 10 && shadowOk ? 0 : 1);

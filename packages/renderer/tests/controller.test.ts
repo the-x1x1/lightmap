@@ -9,7 +9,12 @@ import {
   type SceneState,
 } from '@lightmap/scene';
 import { OPEN_METEO_CAPABILITIES } from '@lightmap/weather';
-import { SceneController, cesiumFovDeg, sunPathForDay } from '../src/cesium/controller.ts';
+import {
+  SceneController,
+  cesiumFovDeg,
+  shadowReachM,
+  sunPathForDay,
+} from '../src/cesium/controller.ts';
 import type { SceneHost } from '../src/cesium/host.ts';
 
 const kailua = {
@@ -172,7 +177,15 @@ describe('SceneController', () => {
     c.apply(scene({ scenario: 'storm' }));
     expect((calls['setShadows']![0]![0] as { enabled: boolean }).enabled).toBe(false);
     c.apply(scene({ scenario: 'clear' }));
-    expect((calls['setShadows']!.at(-1)![0] as { enabled: boolean }).enabled).toBe(true);
+    const last = calls['setShadows']!.at(-1)![0] as { enabled: boolean; maximumDistance: number };
+    expect(last.enabled).toBe(true);
+    // Golden-hour shadows are never faded away; reach follows the camera mode.
+    expect(last.maximumDistance).toBeGreaterThanOrEqual(8000);
+    const vp = scene({ scenario: 'clear' });
+    expect(shadowReachM({ ...vp, camera: { ...vp.camera, mode: 'viewpoint' } }, 500)).toBe(20_000);
+    expect(shadowReachM({ ...vp, camera: { ...vp.camera, mode: 'map' } }, 500)).toBe(8_000);
+    expect(shadowReachM({ ...vp, camera: { ...vp.camera, mode: 'map' } }, 10_000)).toBe(30_000);
+    expect(shadowReachM({ ...vp, camera: { ...vp.camera, mode: 'map' } }, 1e6)).toBe(60_000);
     const terrain = {
       kind: 'quantized-mesh' as const,
       url: 'https://t/layer.json',
