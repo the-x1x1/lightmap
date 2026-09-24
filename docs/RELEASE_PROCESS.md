@@ -33,7 +33,7 @@ In order, each must pass:
 10. Migration validity — `validateMigrationSet(loadMigrations())` reports no disordered, duplicate,
     empty or destructive files
 11. `pnpm build` (Next.js production build with telemetry disabled)
-12. `scripts/check-bundle.ts` — first-load JS for `/` ≤ 350 KB and the Cesium chunk is **not** in
+12. `scripts/check-bundle.ts` — first-load JS for `/` ≤ 150 KB gzipped (what `next build` reports as First Load JS) and the Cesium chunk is **not** in
     the first load
 
 `security.yml` additionally runs `pnpm audit --audit-level high`, the secrets scan, the licence check
