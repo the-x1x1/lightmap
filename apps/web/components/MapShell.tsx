@@ -220,7 +220,12 @@ export function MapShell() {
                         body="Showing your selected scenario. Astronomy is unaffected."
                       />
                     ) : null}
-                    <PreviewViewport scene={scene} rendererMode={rendererInfo.mode} />
+                    <PreviewViewport
+                      scene={scene}
+                      rendererMode={rendererInfo.mode}
+                      capture={rendererInfo.capture}
+                      exportDecision={account.can('export_preview')}
+                    />
                     {rendererInfo.error && rendererInfo.mode !== 'OVERLAY' ? (
                       <ErrorState title="Renderer notice" body={rendererInfo.error} />
                     ) : null}

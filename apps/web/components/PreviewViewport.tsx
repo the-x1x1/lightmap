@@ -9,23 +9,60 @@ import { formatWallTime } from '@lightmap/astronomy';
 import { compassLabel } from '@lightmap/geospatial';
 import { scenarioById } from '@lightmap/weather';
 import { lightingFromScene } from '@lightmap/renderer';
+import { useState } from 'react';
+import type { EntitlementDecision } from '@lightmap/entitlements';
 import { usePlannerStore } from '@/features/planner/store';
+import {
+  buildPlanningCard,
+  downloadBlob,
+  renderPlanningCardPng,
+} from '@/features/export/planning-card';
 import { Button } from '@lightmap/ui';
 import { PreviewSourceBadge } from './PreviewSourceBadge';
 import { ForecastBadge } from './ForecastBadge';
+import { Paywall } from './Paywall';
 
 export function PreviewViewport({
   scene,
   rendererMode,
+  capture,
+  exportDecision,
 }: {
   scene: SceneState;
   rendererMode: '3D' | 'OVERLAY' | 'loading';
+  /** Current frame as a data URL at the requested width; null when no 3D renderer is active. */
+  capture?: (maxWidth?: number) => Promise<string | null>;
+  /** `export_preview` decision; undefined hides the export control. */
+  exportDecision?: EntitlementDecision;
 }) {
   const expanded = usePlannerStore((s) => s.previewExpanded);
   const setExpanded = usePlannerStore((s) => s.setPreviewExpanded);
   const light = lightingFromScene(scene);
   const tz = scene.location.timeZone;
   const s = scene.solar;
+  const [exportState, setExportState] = useState<'idle' | 'busy' | 'paywall' | 'error'>('idle');
+
+  async function exportCard() {
+    if (!exportDecision) return;
+    if (!exportDecision.allowed) {
+      setExportState('paywall');
+      return;
+    }
+    setExportState('busy');
+    try {
+      const image = capture ? await capture(1280) : null;
+      const model = buildPlanningCard(scene, {
+        generatedAt: new Date(),
+        ...(typeof window !== 'undefined' ? { appUrl: window.location.origin } : {}),
+      });
+      const blob = await renderPlanningCardPng(model, image);
+      downloadBlob(blob, model.fileName);
+      setExportState('idle');
+    } catch {
+      setExportState('error');
+    }
+  }
+
   return (
     <section aria-labelledby="lm-preview-h" className="space-y-2" data-testid="preview-panel">
       <div className="flex flex-wrap items-center gap-2">
@@ -34,7 +71,19 @@ export function PreviewViewport({
         </h2>
         <PreviewSourceBadge mode={scene.sourceMode} />
         <ForecastBadge scene={scene} />
-        <span className="ml-auto">
+        <span className="ml-auto flex items-center gap-1">
+          {exportDecision ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => void exportCard()}
+              disabled={exportState === 'busy'}
+              aria-label="Export planning card (PNG)"
+              data-testid="preview-export"
+            >
+              {exportState === 'busy' ? 'Exporting…' : 'Export card'}
+            </Button>
+          ) : null}
           <Button
             size="sm"
             variant="ghost"
@@ -46,6 +95,14 @@ export function PreviewViewport({
           </Button>
         </span>
       </div>
+      {exportState === 'paywall' && exportDecision ? (
+        <Paywall compact reason={exportDecision.reason ?? 'Planning-card export is part of Pro.'} />
+      ) : null}
+      {exportState === 'error' ? (
+        <p role="alert" className="text-xs text-[color:#ffb3b3]">
+          Export failed in this browser. The facts above are the same as the card would show.
+        </p>
+      ) : null}
       <div className="grid grid-cols-3 gap-2 text-sm">
         <Stat
           label="Local time"
