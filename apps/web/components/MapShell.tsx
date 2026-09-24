@@ -77,6 +77,16 @@ export function MapShell() {
     includeLunar: account.can('moon_planning').allowed || !account.snapshot,
   });
   const { scene, dayEvents, capabilities, weather } = bundle;
+  // Ridge markers only where the terrain moved first/last light (else they would sit on top of
+  // the ordinary sunrise/sunset markers). Identity is stable per day thanks to the scene memo.
+  const terrainMarkers = useMemo(() => {
+    const ev = scene?.terrainHorizon?.sunEvents;
+    if (!ev || !ev.differsFromAstronomical) return null;
+    return {
+      firstLight: ev.firstLightDiffers ? ev.firstLight : null,
+      lastLight: ev.lastLightDiffers ? ev.lastLight : null,
+    };
+  }, [scene?.terrainHorizon?.sunEvents]);
   // Terrain horizon around the pin (sampled through the renderer; nothing on the ellipsoid).
   useTerrainHorizon({
     sampleHeights: rendererInfo.sampleHeights,
@@ -301,11 +311,7 @@ export function MapShell() {
                   dayEvents={dayEvents}
                   timeZone={location?.timeZone ?? 'UTC'}
                   phase={scene?.solar.phase}
-                  terrain={
-                    scene?.terrainHorizon?.sunEvents.differsFromAstronomical
-                      ? scene.terrainHorizon.sunEvents
-                      : null
-                  }
+                  terrain={terrainMarkers}
                 />
                 {scene && isEnabled('reversePlanning') ? (
                   <NextOccurrence

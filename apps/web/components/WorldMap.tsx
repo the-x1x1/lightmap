@@ -3,7 +3,7 @@
  * WorldMap: the Cesium globe (Quality 1+) with the Quality-0 overlay always available on top.
  * Click/tap sets the pin; in viewpoint mode drag rotates the camera (heading/pitch).
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { directionFromFrame, frameCoordinates } from '@lightmap/scene';
 import { usePlannerStore } from '@/features/planner/store';
 import { useApplyScene, useRenderer } from '@/features/map/use-renderer';
@@ -130,6 +130,15 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
   useApplyScene(renderer.controller, effectiveScene);
 
   const host = renderer.host;
+  // Stable per host, so consumers keyed on it (the terrain-horizon run) do not restart when the
+  // quality label or error text changes.
+  const sampleHeights = useMemo(
+    () =>
+      host
+        ? (points: readonly GeoPoint[], level: number) => host.sampleGroundHeights(points, level)
+        : null,
+    [host],
+  );
   useEffect(() => {
     onRendererInfo?.({
       mode: renderer.mode,
@@ -138,7 +147,7 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
       error: renderer.error,
       capabilities: renderer.capabilities,
       capture: (maxWidth = 320) => (host ? host.captureThumbnail(maxWidth) : Promise.resolve(null)),
-      sampleHeights: host ? (points, level) => host.sampleGroundHeights(points, level) : null,
+      sampleHeights,
     });
   }, [
     renderer.mode,
@@ -146,6 +155,7 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
     renderer.error,
     renderer.capabilities,
     host,
+    sampleHeights,
     onRendererInfo,
   ]);
 

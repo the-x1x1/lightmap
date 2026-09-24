@@ -24,6 +24,9 @@ export type SampleHeights = (
 ) => Promise<Array<number | null>>;
 
 const cache = new Map<string, HorizonProfile>();
+/** Runs in flight by key, so a re-render (quality rung change, re-geocoded pin) joins the run
+ * instead of restarting the 2 640 samples. */
+const pending = new Map<string, Promise<HorizonProfile | null>>();
 const MAX_CACHE = 24;
 /** Below this share of answered samples the profile is not trusted (a hole could hide a ridge). */
 const MIN_COVERAGE = 0.6;
@@ -57,7 +60,7 @@ export function useTerrainHorizon(input: {
       latitude: location.point.latitude,
       longitude: location.point.longitude,
     };
-    const run = async () => {
+    const run = async (): Promise<HorizonProfile | null> => {
       const pts = horizonSamplePoints(origin);
       const byLevel = new Map<number, number[]>();
       pts.forEach((p, i) => {
@@ -68,20 +71,20 @@ export function useTerrainHorizon(input: {
       });
       const heights: Array<number | null> = new Array<number | null>(pts.length).fill(null);
       const [ground] = await sampleHeights([origin], 13);
-      if (cancelled) return;
+      // Without the ground height at the pin the eye's datum is unknown: no profile.
+      if (ground === null || ground === undefined) return null;
       for (const [level, idx] of byLevel) {
         const res = await sampleHeights(
           idx.map((i) => pts[i]!.point),
           level,
         );
-        if (cancelled) return;
         res.forEach((h, j) => {
           heights[idx[j]!] = h;
         });
       }
       const profile = horizonProfileFromSamples(
         origin,
-        ground ?? location.point.elevationM ?? 0,
+        ground,
         eyeHeightM,
         pts.map((p, i) => ({
           azimuthDeg: p.azimuthDeg,
@@ -91,16 +94,25 @@ export function useTerrainHorizon(input: {
         { providerId: terrainProviderId, resolutionM: null },
       );
       // Too little data: no profile rather than a misleading one.
-      if (profile.coverage < MIN_COVERAGE) return;
+      if (profile.coverage < MIN_COVERAGE) return null;
       cache.set(key, profile);
       if (cache.size > MAX_CACHE) {
         const oldest = cache.keys().next().value;
         if (oldest !== undefined) cache.delete(oldest);
       }
-      if (!cancelled) setHorizonProfile(profile);
+      return profile;
     };
-    run().catch(() => {
-      // Sampling failed (tiles unavailable): the planner simply has no terrain horizon.
+    let job = pending.get(key);
+    if (!job) {
+      job = run()
+        .catch(() => null) // tiles unavailable: the planner simply has no terrain horizon
+        .finally(() => {
+          pending.delete(key);
+        });
+      pending.set(key, job);
+    }
+    void job.then((profile) => {
+      if (!cancelled && profile) setHorizonProfile(profile);
     });
     return () => {
       cancelled = true;

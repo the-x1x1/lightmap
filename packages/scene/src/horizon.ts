@@ -57,6 +57,17 @@ export interface HorizonProfile {
 export const HORIZON_CAVEAT =
   'Terrain only: trees, buildings and cloud on the ridge are not in the elevation model, and a sharp ridgeline can sit between samples.';
 
+/** The caveat with the sampled reach, so "no terrain effect" is never read as "no terrain". */
+export function horizonCaveat(maxDistanceM: number): string {
+  return `${HORIZON_CAVEAT} Terrain beyond ${Math.round(maxDistanceM / 1000)} km was not sampled.`;
+}
+
+/** Degrees to one decimal without a "-0.0" (a tiny sea-level dip reads as flat). */
+export function formatDeg(v: number, digits = 1): string {
+  const r = Number(v.toFixed(digits));
+  return (Object.is(r, -0) || r === 0 ? 0 : r).toFixed(digits);
+}
+
 /** Log-spaced ring distances, 40 m … 40 km (closer rings are denser: near ground blocks more sky). */
 export function horizonRingDistances(maxDistanceM = 40_000, rings = 22): number[] {
   const min = 40;
@@ -139,7 +150,7 @@ export function horizonProfileFromSamples(
     coverage: samples.length ? got / samples.length : 0,
     maxElevationDeg: Math.max(...elevationDeg),
     source,
-    caveat: HORIZON_CAVEAT,
+    caveat: horizonCaveat(maxDist),
   };
 }
 
@@ -170,9 +181,18 @@ export function aboveTerrain(
 export interface TerrainSunEvents {
   /** Intervals (UTC) during which the Sun is above the terrain horizon within [dayStart, dayEnd). */
   visible: Array<{ from: Date; to: Date }>;
-  /** First and last instant the Sun shows above the terrain today; null when it never does. */
+  /** The Sun is already above the terrain at local midnight (polar summer) / still up at day end. */
+  startsVisible: boolean;
+  endsVisible: boolean;
+  /**
+   * First and last instant the Sun *crosses* the terrain horizon today; null when it never does —
+   * including when it is up all day (see `startsVisible` / `endsVisible`).
+   */
   firstLight: Date | null;
   lastLight: Date | null;
+  /** Each side compared with its astronomical counterpart (> 3 min apart, or one missing). */
+  firstLightDiffers: boolean;
+  lastLightDiffers: boolean;
   /**
    * True when the terrain changed the day's first/last light by more than three minutes (below
    * that, refraction conventions differ by as much) or split the day into several visible spells.
@@ -222,18 +242,27 @@ export function terrainSunEvents(
     }
     prev = t;
   }
+  const startsVisible = vis(start);
+  const endsVisible = open !== null;
   if (open !== null) visible.push({ from: new Date(open), to: new Date(end) });
-  const firstLight = visible[0]?.from ?? null;
-  const lastLight = visible[visible.length - 1]?.to ?? null;
+  // A spell that begins at local midnight has no "first light"; one that runs to the day's end has
+  // no "last light" (polar summer, or the day the Sun stops setting).
+  const firstLight = startsVisible ? null : (visible[0]?.from ?? null);
+  const lastLight = endsVisible ? null : (visible[visible.length - 1]?.to ?? null);
   const tolerance = 3 * 60_000;
-  const differs =
-    (firstLight !== null &&
-      day.sunrise !== null &&
-      Math.abs(firstLight.getTime() - day.sunrise.getTime()) > tolerance) ||
-    (lastLight !== null &&
-      day.sunset !== null &&
-      Math.abs(lastLight.getTime() - day.sunset.getTime()) > tolerance) ||
-    (firstLight === null) !== (day.sunrise === null) ||
-    visible.length > 1;
-  return { visible, firstLight, lastLight, differsFromAstronomical: differs };
+  const differsFrom = (a: Date | null, b: Date | null) =>
+    (a === null) !== (b === null) ||
+    (a !== null && b !== null && Math.abs(a.getTime() - b.getTime()) > tolerance);
+  const firstLightDiffers = differsFrom(firstLight, day.sunrise);
+  const lastLightDiffers = differsFrom(lastLight, day.sunset);
+  return {
+    visible,
+    startsVisible,
+    endsVisible,
+    firstLight,
+    lastLight,
+    firstLightDiffers,
+    lastLightDiffers,
+    differsFromAstronomical: firstLightDiffers || lastLightDiffers || visible.length > 1,
+  };
 }

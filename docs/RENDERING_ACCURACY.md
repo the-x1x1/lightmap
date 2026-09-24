@@ -68,8 +68,10 @@ Sun is behind the ridge now, and the day's first/last light over the terrain to 
 minutes for ridges the DEM resolves. **Caveat:** trees, buildings and cloud on the ridge are not
 in a DEM; a ridgeline can fall between the 3° bearings or the ring distances; DEM resolution
 (≈30 m) rounds sharp crests; the eye-height dip uses the sampled ground height at the pin.
-Verified: synthetic-ridge unit tests (`packages/scene/tests/horizon.test.ts`); on the ellipsoid
-fallback no profile is produced, so nothing can be claimed there.
+Terrain beyond the sampled reach (40 km) is unknown, not flat — the caveat says so. Verified:
+synthetic-ridge and edge-of-day unit tests (`packages/scene/tests/horizon.test.ts`); on the
+ellipsoid fallback (configured, or the real provider failing to load) the host answers "unknown"
+for every sample, so no profile is produced and nothing is claimed.
 
 ### Colour temperature
 

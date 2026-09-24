@@ -57,10 +57,24 @@ export function dayMarkers(ev: DayEvents, terrain?: TimelineProps['terrain']): M
     m('sunset', ev.sunset, 'Sunset', 'Set', '↓', 'sun'),
     m('dusk', ev.civilDusk, 'Civil dusk (blue hour ends)', 'Dusk', '◑', 'twilight'),
     terrain
-      ? m('ridgeRise', terrain.firstLight, 'Sun clears the terrain', 'Ridge', '▲', 'sun')
+      ? m(
+          'ridgeRise',
+          terrain.firstLight,
+          'Sun clears the terrain (terrain only; trees and buildings not modelled)',
+          'Ridge',
+          '▲',
+          'sun',
+        )
       : null,
     terrain
-      ? m('ridgeSet', terrain.lastLight, 'Sun drops behind the terrain', 'Ridge', '▽', 'sun')
+      ? m(
+          'ridgeSet',
+          terrain.lastLight,
+          'Sun drops behind the terrain (terrain only; trees and buildings not modelled)',
+          'Ridge',
+          '▽',
+          'sun',
+        )
       : null,
   ].filter((x): x is Marker => x !== null);
 }

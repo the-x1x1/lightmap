@@ -1,6 +1,6 @@
 'use client';
 import type { SceneState } from '@lightmap/scene';
-import { explainScene } from '@lightmap/scene';
+import { explainScene, formatDeg } from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
 import { formatWallTime } from '@lightmap/astronomy';
 import { DayEventMarkers } from './Timeline';
@@ -38,7 +38,9 @@ export function AstronomyDetails({ scene }: { scene: SceneState }) {
               value={
                 scene.terrainHorizon.sunEvents.firstLight
                   ? formatWallTime(scene.terrainHorizon.sunEvents.firstLight, tz)
-                  : '—'
+                  : scene.terrainHorizon.sunEvents.startsVisible
+                    ? 'up at midnight'
+                    : 'never today'
               }
               testId="terrain-first-light"
             />
@@ -47,7 +49,9 @@ export function AstronomyDetails({ scene }: { scene: SceneState }) {
               value={
                 scene.terrainHorizon.sunEvents.lastLight
                   ? formatWallTime(scene.terrainHorizon.sunEvents.lastLight, tz)
-                  : '—'
+                  : scene.terrainHorizon.sunEvents.endsVisible
+                    ? 'still up at midnight'
+                    : 'never today'
               }
               testId="terrain-last-light"
             />
@@ -56,7 +60,7 @@ export function AstronomyDetails({ scene }: { scene: SceneState }) {
         {scene.terrainHorizon ? (
           <Row
             label="Terrain horizon at sun"
-            value={`${scene.terrainHorizon.horizonAtSunDeg.toFixed(1)}°`}
+            value={`${formatDeg(scene.terrainHorizon.horizonAtSunDeg)}° (sun's upper limb ${formatDeg(scene.solar.apparentElevationDegrees + 0.27)}°)`}
             testId="terrain-horizon-at-sun"
           />
         ) : null}
@@ -75,6 +79,11 @@ export function AstronomyDetails({ scene }: { scene: SceneState }) {
           value={`${Math.floor(scene.dayEvents.daylightMinutes / 60)} h ${Math.round(scene.dayEvents.daylightMinutes % 60)} min`}
         />
       </dl>
+      {scene.terrainHorizon ? (
+        <p className="text-xs text-[var(--lm-text-muted)]" data-testid="terrain-caveat">
+          {scene.terrainHorizon.profile.caveat}
+        </p>
+      ) : null}
       <details className="group">
         <summary className="cursor-pointer text-xs uppercase tracking-wide text-[var(--lm-text-muted)]">
           All day events
