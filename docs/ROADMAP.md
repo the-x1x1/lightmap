@@ -71,11 +71,13 @@ Outstanding before commercial beta (plan §43):
 
 ## Phase 4 — Visual quality (started, 2+ releases)
 
-Delivered (unreleased): **preview export** — the planning card (`PRODUCT_SPEC.md` §5).
+Delivered (unreleased): **preview export** — the planning card (`PRODUCT_SPEC.md` §5);
+**horizon haze** (aerial perspective by depth and Sun elevation); **twilight/blue-hour sky**
+correction and a low-Sun dome lift; textured overcast decks (`RENDERING_ACCURACY.md` §Sky).
 
-Remaining: improved terrain texture; detailed buildings where licensed; atmospheric scattering;
-water shader; layered clouds; shadow quality; horizon haze; better device performance adaptation.
-Everything stays grounded: geometry and light direction are never altered for looks.
+Remaining: improved terrain texture; detailed buildings where licensed; physically based
+atmospheric scattering; water shader; layered clouds; shadow quality; better device performance
+adaptation. Everything stays grounded: geometry and light direction are never altered for looks.
 
 ## Phase 5 — Real references (future, requires licensing work)
 

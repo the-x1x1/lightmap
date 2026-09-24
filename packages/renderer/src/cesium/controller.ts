@@ -135,6 +135,8 @@ export class SceneController {
       u_skyLuminance: lighting.grade.skyLuminance,
       u_nightFactor: lighting.grade.nightFactor,
       u_precipitation: lighting.grade.precipitation,
+      u_horizonHaze: lighting.grade.horizonHaze,
+      u_sunElevation: lighting.grade.sunElevation,
       // Clouds drift with the selected time, not the wall clock, so scrubbing reads as motion.
       u_time: (scene.utc.getTime() / 60_000) % 100_000,
       u_sunScreen: sunScreen ?? [-1, -1],

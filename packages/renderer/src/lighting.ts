@@ -52,6 +52,13 @@ export interface LightingParameters {
     skyLuminance: number;
     nightFactor: number;
     precipitation: number;
+    /**
+     * Aerial perspective toward the horizon: the scenario's haze plus the longer atmospheric path
+     * at low sun. Applied to ground pixels by depth in the grade shader; never to geometry.
+     */
+    horizonHaze: number;
+    /** Geometric sun elevation, degrees (shader-side twilight shaping). */
+    sunElevation: number;
   };
   /** Flat-ground shadow geometry for the 2D overlay. */
   shadow: { azimuthDeg: number; lengthPerMetre: number | null };
@@ -87,8 +94,10 @@ export function lightingFromScene(s: SceneState): LightingParameters {
   const moonlit = moonlight > 0.005;
   const sunIntensity = direct + twilightAmbient + moonlight;
   const directLightPresent = el > -0.833 && p.sunTransmittance > 0.12;
-  // Clamp to a grazing angle through twilight; below −18° the sky is genuinely dark.
-  const lightElevation = el >= -1.5 ? el : el > -18 ? -1.5 : el;
+  // Clamp to a grazing angle through twilight; below −18° the sky is genuinely dark. Cesium's
+  // single-scattering dome collapses within ~1° of the light dipping under the horizon, so the
+  // clamp sits just under it and the grade shader restores the real blue-hour darkening.
+  const lightElevation = el >= -0.6 ? el : el > -18 ? -0.6 : el;
   const starsVisible = el < -8;
 
   // Colour: black-body tint from elevation, desaturated toward white as cloud diffuses it.
@@ -114,11 +123,18 @@ export function lightingFromScene(s: SceneState): LightingParameters {
   const nightFactor = 1 - smooth(-18, 0, el);
   // Twilight lift for the sky dome: the atmosphere is lit at a grazing angle, so give it more
   // energy while the Sun is just below the horizon; the grade shader brings the level back down.
-  const twilightBoost = 1 + 0.9 * smooth(-14, -2, el) * (1 - smooth(-2, 0, el));
+  const twilightBoost = 1 + 1.6 * smooth(-14, -2, el) * (1 - smooth(-2, 0, el));
+  // Low sun: the zenith dome is dim in single scattering; real skies keep a medium blue from
+  // multiple scattering. Lift brightness a little between −6° and +12°.
+  const lowSunLift = 0.12 * smooth(-6, 0, el) * (1 - smooth(4, 14, el));
+  const horizonHaze = clamp01(
+    p.haze + 0.35 * smooth(-6, 2, el) * (1 - smooth(2, 15, el)) * (1 - 0.5 * p.cloudOpacity),
+  );
   const twilightWarm = smooth(-6, 0, el) * (1 - smooth(6, 20, el)); // peaks at the horizon
   const atmosphereHue = 0.03 * twilightWarm;
   const atmosphereSaturation = -0.35 * p.cloudOpacity + 0.1 * twilightWarm;
-  const atmosphereBrightness = -0.25 * p.cloudOpacity - 0.05 * p.haze + 0.2 * (p.skyLuminance - 1);
+  const atmosphereBrightness =
+    -0.25 * p.cloudOpacity - 0.05 * p.haze + 0.2 * (p.skyLuminance - 1) + lowSunLift;
   const fogDensity = 0.00002 + 0.0009 * p.haze;
 
   const skyGradient = skyGradientFor(el, p.cloudOpacity, atmosphere.warmth, p.skyLuminance);
@@ -171,6 +187,8 @@ export function lightingFromScene(s: SceneState): LightingParameters {
       skyLuminance: p.skyLuminance,
       nightFactor,
       precipitation: p.precipitation,
+      horizonHaze,
+      sunElevation: el,
     },
     shadow: shadowOnGround(solar.azimuthDegrees, el),
     skyGradient,

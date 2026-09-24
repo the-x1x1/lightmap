@@ -68,6 +68,15 @@ haze; fog density encodes visibility. **Claim:** sky is bright/blue when clear a
 overcast; twilight colours sit on the correct side of the sky. **Caveat:** not a spectral
 scattering model (Phase 4); no real cloud shapes.
 
+Two corrections compensate for the single-scattering model, both driven by the true Sun elevation
+and never by taste: (1) **twilight** — the dome collapses within a degree of the light setting, so
+the atmosphere light is clamped to a grazing −0.6° while the Sun is between −0.6° and −18°, and the
+grade shader restores the real darkening (`nightFactor`) and the deep blue of civil twilight
+(`blueHour` term, −6°…0°, warm glow preserved where the Sun set); (2) **aerial perspective** — far
+ground is lifted toward the sky colour by depth, more strongly at low Sun (`horizonHaze`), tinted
+by the light's colour. The light direction and terrain shading are untouched by either. Verified in
+`tools/renderer-smoke` (contact sheet `docs/media/renderer-smoke-2026-09-24b.png`).
+
 ### Weather scenarios
 
 Deterministic parameter sets (`SCENARIOS`) or continuous parameters derived from a forecast frame.

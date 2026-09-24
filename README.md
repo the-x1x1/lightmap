@@ -7,11 +7,11 @@ on real terrain. Scrub the day like a game timeline. Save the viewpoint to a sho
 
 > "LightMap" is a working name. Rename in `packages/config/src/brand.ts`.
 
-<!-- screenshots: docs/media/ (placeholder until the first deployed build) -->
+![Renderer smoke contact sheet: noon clear, noon overcast, golden hour, blue hour, partly cloudy, moonlit night, storm](docs/media/renderer-smoke-2026-09-24b.png)
 
-| Map + timeline       | Golden hour, viewpoint mode | Overcast scenario    |
-| -------------------- | --------------------------- | -------------------- |
-| _screenshot pending_ | _screenshot pending_        | _screenshot pending_ |
+_Seven scenes from the headless renderer smoke test (`tools/renderer-smoke`): noon clear, noon
+overcast, golden hour, blue hour, partly cloudy, moonlit night, storm — Kailua Beach, 31 May 2026,
+flat ellipsoid terrain, software GL. App screenshots follow the first deployed build._
 
 ## What it does (v0.1)
 

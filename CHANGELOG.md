@@ -12,6 +12,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 - **Planning-card export** (Phase 4 "preview export"): a PNG of the current frame with the solar
   facts, weather mode, source label, confidence and attribution, rendered in the browser; Pro via
   `export_preview`, paywall reason for Free.
+- **Renderer (Phase 4)**: blue hour is blue — twilight dome clamp at −0.6° with a civil-twilight
+  restoration term that keeps the sunset glow warm; low-Sun zenith lift; aerial perspective toward
+  the horizon by depth and Sun elevation (`horizonHaze` uniform); textured overcast decks. Verified
+  in the headless smoke harness (new contact sheet in `docs/media`).
 - **Climatology (Phase 7)**: "Typical for this month" — ten-year ERA5 shares of the five scenario
   classes in daylight hours (Open-Meteo archive adapter + fixture, pure summariser with tests, API
   route with 30-day cache and per-plan budget, `climatology` entitlement), tap-to-compare, never a

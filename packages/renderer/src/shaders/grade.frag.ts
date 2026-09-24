@@ -28,6 +28,8 @@ uniform float u_cloudOpacity;
 uniform float u_skyLuminance;
 uniform float u_nightFactor;
 uniform float u_precipitation;
+uniform float u_horizonHaze;    // aerial perspective toward the horizon (scenario haze + low sun)
+uniform float u_sunElevation;   // degrees, geometric
 uniform float u_time;
 uniform vec2  u_sunScreen;      // sun position in 0..1 screen space (may be off-screen)
 uniform float u_sunVisible;     // 1 when the sun is above the horizon and not blocked by cloud
@@ -69,6 +71,8 @@ void main() {
     // Cloud colour: bright white lit by the sun when thin/scattered, grey when dense/overcast.
     vec3 skyLit = color * (0.95 + 0.15 * u_skyLuminance);
     vec3 cloudCol = mix(vec3(1.0, 1.0, 1.0), vec3(0.55, 0.58, 0.62), thickness);
+    // Thick decks are not flat: a low-contrast second octave keeps overcast reading as cloud, not fog.
+    cloudCol *= 1.0 + (fbm(p * 2.7 + vec2(5.0, 3.0)) - 0.5) * 0.28 * thickness;
     cloudCol = mix(cloudCol, cloudCol * (0.35 + 0.65 * (1.0 - u_nightFactor)), u_nightFactor);
     cloudCol = mix(cloudCol, cloudCol * u_tint, 0.35 * (1.0 - thickness));
     color = mix(skyLit, cloudCol, cloud * u_cloudOpacity * (0.6 + 0.4 * thickness));
@@ -78,17 +82,28 @@ void main() {
     // astronomical night ends near black.
     float twilight = smoothstep(0.0, 1.0, u_nightFactor);
     color = mix(color, color * vec3(0.55, 0.68, 1.05), twilight * 0.8);
+    // Blue hour proper (sun −6°…0°): the dome is lit only by multiple scattering, which the
+    // single-scattering sky model cannot produce — restore the deep, saturated blue and a little
+    // of the luminance it loses. Peaks around −4°, gone by −12° (nautical twilight is dark).
+    float blueHour = (1.0 - smoothstep(-6.0, 0.5, u_sunElevation)) * smoothstep(-12.0, -6.0, u_sunElevation);
+    // The bright band where the sun set stays warm (forward scattering); only the dome goes blue.
+    float glowKeep = smoothstep(0.35, 0.8, dot(color, vec3(0.2126, 0.7152, 0.0722)));
+    color = mix(color, color * vec3(0.75, 0.9, 1.45) * 1.5 + vec3(0.0, 0.015, 0.06), blueHour * 0.85 * (1.0 - 0.75 * glowKeep));
+    color = mix(color, color * vec3(1.12, 0.93, 0.78), blueHour * glowKeep * 0.7);
     // Darken the atmospheric glow but keep bright point sources (stars, moon) readable.
     float lum = dot(color, vec3(0.2126, 0.7152, 0.0722));
     float keep = smoothstep(0.12, 0.5, lum);
     color = mix(color * mix(1.0, 0.06, twilight), color, keep);
   } else {
-    // Haze: lift toward a sky-ish colour with depth. Depth is non-linear; use a gentle curve.
+    // Aerial perspective: lift toward the sky colour with distance. Depth is non-linear; use a
+    // steep curve so only the far ground near the horizon is affected. Low sun lengthens the
+    // path through the air (u_horizonHaze), and the haze takes the light's colour.
     float d = clamp(depth, 0.0, 1.0);
     float dist = pow(d, 60.0);
     vec3 hazeCol = mix(vec3(0.72, 0.78, 0.86), vec3(0.6, 0.62, 0.66), u_cloudOpacity);
+    hazeCol = mix(hazeCol, hazeCol * u_tint, 0.5 * (1.0 - u_cloudOpacity));
     hazeCol = mix(hazeCol, vec3(0.05, 0.06, 0.1), u_nightFactor);
-    color = mix(color, hazeCol, clamp(u_haze * dist * 0.9, 0.0, 0.85));
+    color = mix(color, hazeCol, clamp(u_horizonHaze * dist * 0.9, 0.0, 0.85));
   }
 
   // Global grade.
@@ -121,6 +136,8 @@ export const GRADE_UNIFORM_NAMES = [
   'u_skyLuminance',
   'u_nightFactor',
   'u_precipitation',
+  'u_horizonHaze',
+  'u_sunElevation',
   'u_time',
   'u_sunScreen',
   'u_sunVisible',
