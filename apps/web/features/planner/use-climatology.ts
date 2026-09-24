@@ -16,7 +16,7 @@ export function useClimatology(location: LocationState | null, month: number, en
     enabled: enabled && location !== null && month >= 1 && month <= 12,
     queryFn: () =>
       fetchJson<ClimatologyResponse>(
-        `/api/climatology?lat=${location!.point.latitude.toFixed(4)}&lng=${location!.point.longitude.toFixed(4)}&month=${month}&tz=${encodeURIComponent(location!.timeZone)}`,
+        `/api/climatology?lat=${location!.point.latitude.toFixed(4)}&lng=${location!.point.longitude.toFixed(4)}&month=${month}&tz=${encodeURIComponent(location!.timeZone)}&v=2`,
       ),
     staleTime: 24 * 60 * 60_000,
     gcTime: 24 * 60 * 60_000,

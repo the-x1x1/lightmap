@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   aboveTerrain,
   elevationAngleDeg,
+  formatDeg,
   horizonElevationAt,
   horizonProfileFromSamples,
   horizonRingDistances,
@@ -119,5 +120,68 @@ describe('terrain horizon profile', () => {
     const ev2 = terrainSunEvents(flat, positionAt, { dayStart, dayEnd, sunrise, sunset });
     expect(ev2.differsFromAstronomical).toBe(false);
     expect(Math.abs(ev2.firstLight!.getTime() - sunrise.getTime())).toBeLessThan(3 * 60_000);
+  });
+});
+
+describe('terrain sun events at the edges of the day', () => {
+  const p = horizonProfileFromSamples(
+    origin,
+    0,
+    1.6,
+    ridgeSamples().map((s) => ({ ...s, heightM: 0 })),
+    source,
+  );
+  const dayStart = new Date('2026-06-21T00:00:00Z');
+  const dayEnd = new Date('2026-06-22T00:00:00Z');
+
+  it('polar summer: up all day is not a "first light" at 00:00, and matches astronomy', () => {
+    const ev = terrainSunEvents(p, () => ({ azimuthDeg: 180, elevationDeg: 10 }), {
+      dayStart,
+      dayEnd,
+      sunrise: null,
+      sunset: null,
+    });
+    expect(ev.visible).toEqual([{ from: dayStart, to: dayEnd }]);
+    expect(ev.startsVisible).toBe(true);
+    expect(ev.endsVisible).toBe(true);
+    expect(ev.firstLight).toBeNull();
+    expect(ev.lastLight).toBeNull();
+    expect(ev.differsFromAstronomical).toBe(false);
+  });
+
+  it('polar night: never visible, matches astronomy', () => {
+    const ev = terrainSunEvents(p, () => ({ azimuthDeg: 180, elevationDeg: -10 }), {
+      dayStart,
+      dayEnd,
+      sunrise: null,
+      sunset: null,
+    });
+    expect(ev.visible).toEqual([]);
+    expect(ev.firstLight).toBeNull();
+    expect(ev.differsFromAstronomical).toBe(false);
+  });
+
+  it('the day the Sun stops setting: rises normally, still up at the day end', () => {
+    // Rises through 0° at 03:00 and stays up.
+    const positionAt = (t: Date) => {
+      const h = (t.getTime() - dayStart.getTime()) / 3_600_000;
+      return { azimuthDeg: 90, elevationDeg: Math.min(5, -15 + 5 * h) };
+    };
+    const sunrise = new Date(dayStart.getTime() + ((15 - 0.833) / 5) * 3_600_000);
+    const ev = terrainSunEvents(p, positionAt, { dayStart, dayEnd, sunrise, sunset: null });
+    expect(ev.startsVisible).toBe(false);
+    expect(ev.endsVisible).toBe(true);
+    expect(ev.lastLight).toBeNull();
+    expect(Math.abs(ev.firstLight!.getTime() - sunrise.getTime())).toBeLessThan(3 * 60_000);
+    expect(ev.firstLightDiffers).toBe(false);
+    expect(ev.lastLightDiffers).toBe(false);
+    expect(ev.differsFromAstronomical).toBe(false);
+  });
+
+  it('formats small dips as 0.0, not -0.0', () => {
+    expect(formatDeg(-0.03)).toBe('0.0');
+    expect(formatDeg(-0.06)).toBe('-0.1');
+    expect(formatDeg(8.48)).toBe('8.5');
+    expect(formatDeg(0)).toBe('0.0');
   });
 });

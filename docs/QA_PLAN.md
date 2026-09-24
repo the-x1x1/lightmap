@@ -126,7 +126,7 @@ start`).
       to its window with the paywall reason; the search does not freeze the timeline (worker).
 - [ ] "This light" chip under the timeline: on a March afternoon it reads "Like this until
       <a day or two ahead> · Back <late September> (in ~186 days) <a time close to the current
-                      one>"; clicking "Back …" jumps date and time and the sun sits at the same place in the
+                          one>"; clicking "Back …" jumps date and time and the sun sits at the same place in the
       frame; at night the chip is absent; while scrubbing it dims and settles within a second;
       signed out / Free it reads "Beyond your date window · Pro" and opens the compact paywall.
 - [ ] Export card (Pro): PNG downloads; it shows the source badge, the forecast/scenario line, the

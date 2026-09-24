@@ -13,7 +13,7 @@ import { formatWallTime } from '@lightmap/astronomy';
 import { brand } from '@lightmap/config';
 import { compassLabel } from '@lightmap/geospatial';
 import { lightingFromScene } from '@lightmap/renderer';
-import { SOURCE_MODE_LABEL, type SceneState, type SourceMode } from '@lightmap/scene';
+import { SOURCE_MODE_LABEL, formatDeg, type SceneState, type SourceMode } from '@lightmap/scene';
 import { scenarioById } from '@lightmap/weather';
 
 export interface PlanningCardModel {
@@ -109,15 +109,19 @@ export function buildPlanningCard(
   });
   if (ev.polar !== 'normal') facts.push({ label: 'Note', value: ev.polar.replace('-', ' ') });
   const th = scene.terrainHorizon;
-  if (th?.sunEvents.differsFromAstronomical)
+  if (th?.sunEvents.differsFromAstronomical) {
+    const ev = th.sunEvents;
+    const first = ev.firstLight ? t(ev.firstLight) : ev.startsVisible ? 'up at midnight' : 'never';
+    const last = ev.lastLight ? t(ev.lastLight) : ev.endsVisible ? 'still up at midnight' : 'never';
     facts.push({
       label: 'Over the terrain',
-      value: `first light ${t(th.sunEvents.firstLight)} · last light ${t(th.sunEvents.lastLight)} (terrain only; trees and buildings not modelled)`,
+      value: `first light ${first} · last light ${last} (terrain only; trees and buildings not modelled)`,
     });
+  }
   if (th && scene.solar.isAboveHorizon && !th.sunAboveTerrain)
     facts.push({
       label: 'Right now',
-      value: `sun behind the terrain (ridge ${th.horizonAtSunDeg.toFixed(1)}°, sun ${scene.solar.elevationDegrees.toFixed(1)}°)`,
+      value: `sun behind the terrain (ridge ${formatDeg(th.horizonAtSunDeg)}°, sun's upper limb ${formatDeg(scene.solar.apparentElevationDegrees + 0.27)}°; terrain only, trees and buildings not modelled)`,
     });
 
   const confidence = [

@@ -548,18 +548,25 @@ export class CesiumSceneHost implements SceneHost {
     const C = this.C;
     await this.terrainReady;
     const tp = this.scene.terrainProvider;
-    if (tp instanceof C.EllipsoidTerrainProvider) return points.map(() => 0);
+    // No terrain (configured, or the real provider failed to load and the host fell back): the
+    // answer is "unknown", never "flat" — a flat profile would claim a terrain effect that was
+    // never measured.
+    if (tp instanceof C.EllipsoidTerrainProvider) return points.map(() => null);
     const out: Array<number | null> = new Array<number | null>(points.length).fill(null);
     // Chunked so one failed tile does not lose the whole profile.
-    const chunk = 256;
+    const chunk = 1024;
     for (let i = 0; i < points.length; i += chunk) {
       const slice = points.slice(i, i + chunk);
       try {
-        const res = await C.sampleTerrain(
-          tp,
-          Math.max(0, Math.min(15, Math.round(level))),
-          slice.map((p) => C.Cartographic.fromDegrees(p.longitude, p.latitude)),
-        );
+        const cartos = slice.map((p) => C.Cartographic.fromDegrees(p.longitude, p.latitude));
+        // Never ask for a level the provider does not have here (the tile would just be missing).
+        let lvl = Math.max(0, Math.min(15, Math.round(level)));
+        const first = cartos[0];
+        if (tp.availability && first) {
+          const max = tp.availability.computeMaximumLevelAtPosition(first);
+          if (Number.isFinite(max)) lvl = Math.min(lvl, max);
+        }
+        const res = await C.sampleTerrain(tp, lvl, cartos);
         res.forEach((c, j) => {
           out[i + j] = c && Number.isFinite(c.height) ? c.height : null;
         });

@@ -266,8 +266,10 @@ differ by as much); "First/Last light over terrain" and "Terrain horizon at sun"
 moon details; the preview-basis Terrain row names the sampled reach and the highest ridge; the
 light finder tags moments that are **behind terrain** and can hide them. Every surface carries the
 caveat: terrain only — trees, buildings and cloud on the ridge are not in the elevation model,
-and a sharp ridgeline can sit between samples. No profile is kept when fewer than 60 % of the
-samples answered, and none exists on the ellipsoid fallback.
+a sharp ridgeline can sit between samples, and terrain beyond the sampled reach was not sampled.
+In polar summer the rows read "up at midnight" rather than a time. No profile is kept when fewer
+than 60 % of the samples answered or the ground height at the pin is unknown, and none exists on
+the ellipsoid fallback (every sample answers "unknown", never "flat").
 
 Tests: elevation angle with curvature/refraction, sea-horizon dip, profile from a synthetic ridge
 (elevation and distance, interpolation, missing samples), above-terrain decision at the

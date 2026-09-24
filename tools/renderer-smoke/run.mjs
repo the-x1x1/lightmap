@@ -72,9 +72,16 @@ server.kill();
 // Shadow probe: the tower's shadow must be clearly darker than the Sun side and must end where
 // h / tan(el) says it ends (the point beyond it is as bright as the Sun side).
 const probe = smoke.shadowProbe;
-const mean = (xs) => xs.filter((v) => typeof v === 'number').reduce((a, b) => a + b, 0) / xs.length;
+const complete = (xs) => xs.every((v) => typeof v === 'number');
+const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
 let shadowOk = false;
-if (probe && probe.lum) {
+if (
+  probe &&
+  probe.lum &&
+  complete(probe.lum.inShadow) &&
+  complete(probe.lum.sunSide) &&
+  complete(probe.lum.beyond)
+) {
   const inShadow = mean(probe.lum.inShadow);
   const sunSide = mean(probe.lum.sunSide);
   const beyond = mean(probe.lum.beyond);
@@ -87,5 +94,5 @@ if (probe && probe.lum) {
     `shadow probe: el ${probe.el.toFixed(1)}°, length ${probe.lengthM.toFixed(0)} m, ` +
       `in-shadow ${inShadow.toFixed(2)} vs sun-side ${sunSide.toFixed(2)}, beyond ${beyond.toFixed(2)} → ${shadowOk ? 'ok' : 'FAIL'}`,
   );
-} else console.log('shadow probe: missing → FAIL');
+} else console.log('shadow probe: missing or a probe point was off-screen → FAIL');
 process.exit(smoke.errors.length === 0 && Object.keys(shots).length >= 10 && shadowOk ? 0 : 1);

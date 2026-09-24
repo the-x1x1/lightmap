@@ -1,5 +1,5 @@
 import type { SceneState } from '@lightmap/scene';
-import { SOURCE_MODE_DESCRIPTION } from '@lightmap/scene';
+import { SOURCE_MODE_DESCRIPTION, formatDeg } from '@lightmap/scene';
 import { PreviewSourceBadge } from './PreviewSourceBadge';
 
 const LEVEL_GLYPH: Record<string, string> = {
@@ -29,7 +29,7 @@ export function ConfidencePanel({ scene }: { scene: SceneState }) {
       c.terrain,
       c.terrain === 'HIGH'
         ? scene.terrainHorizon
-          ? `Real elevation data; terrain horizon sampled to ${Math.round(scene.terrainHorizon.profile.maxDistanceM / 1000)} km (highest ridge ${scene.terrainHorizon.profile.maxElevationDeg.toFixed(1)}°). ${scene.terrainHorizon.profile.caveat}`
+          ? `Real elevation data; terrain horizon sampled to ${Math.round(scene.terrainHorizon.profile.maxDistanceM / 1000)} km (highest ridge ${formatDeg(scene.terrainHorizon.profile.maxElevationDeg)}°). ${scene.terrainHorizon.profile.caveat}`
           : 'Real elevation data'
         : 'Flat ground assumed',
     ],

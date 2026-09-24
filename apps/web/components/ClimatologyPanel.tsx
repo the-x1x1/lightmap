@@ -119,12 +119,14 @@ export function ClimatologyPanel({
               );
             })}
           </ul>
-          <HourOfDay
-            byHour={q.data.summary.byHour}
-            window={q.data.summary.window}
-            selectedHour={selectedHour}
-            tableId={hourTableId}
-          />
+          {Array.isArray(q.data.summary.byHour) ? (
+            <HourOfDay
+              byHour={q.data.summary.byHour}
+              window={q.data.summary.window}
+              selectedHour={selectedHour}
+              tableId={hourTableId}
+            />
+          ) : null}
           <p className="text-xs text-[var(--lm-text-muted)]" data-testid="climatology-summary">
             Daylight hours ({q.data.summary.window.startHour}:00–{q.data.summary.window.endHour}
             :00), {q.data.summary.years.from}–{q.data.summary.years.to}, ~

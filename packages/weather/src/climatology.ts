@@ -223,8 +223,8 @@ export function summarizeClimatology(
 }
 
 /**
- * The clearest and the dullest three-hour stretch of the day, by mean cloud over a centred
- * 3-hour average, restricted to hours with samples and to `window` when given. Null when the
+ * The clearest and the dullest three-hour stretch of the day — consecutive blocks [h, h+3) by
+ * mean cloud — restricted to hours with samples and to `window` when given. Null when the
  * spread is under 8 percentage points — then the day has no meaningful pattern and the UI must
  * not invent one.
  */
