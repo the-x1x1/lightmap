@@ -22,7 +22,6 @@ export function SavedViewpointCard({
       data-testid="viewpoint-card"
     >
       {viewpoint.thumbnailDataUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={viewpoint.thumbnailDataUrl}
           alt=""

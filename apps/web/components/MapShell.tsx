@@ -4,8 +4,9 @@
  * that is a draggable bottom sheet on phones and a side panel on desktop. One primary workflow:
  * Location → Date → Time → Conditions → Preview → Save.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { brand, isEnabled } from '@lightmap/config';
+import { civilDateString, utcToWallClock } from '@lightmap/astronomy';
 import { DEFAULT_RENDER_SETTINGS } from '@lightmap/scene';
 import { usePlannerStore } from '@/features/planner/store';
 import { useScene } from '@/features/planner/use-scene';
@@ -45,22 +46,28 @@ export function MapShell() {
   const [rendererInfo, setRendererInfo] = useState<RendererInfo>({
     mode: 'loading',
     qualityLabel: '—',
-    stats: null,
+    getStats: () => null,
     error: null,
     capabilities: null,
     capture: () => Promise.resolve(null),
   });
   const [sheetOpen, setSheetOpen] = useState(true);
 
-  const render = { ...DEFAULT_RENDER_SETTINGS, reducedMotion };
+  const render = useMemo(() => ({ ...DEFAULT_RENDER_SETTINGS, reducedMotion }), [reducedMotion]);
   const bundle = useScene({
     render,
     includeLunar: account.can('moon_planning').allowed || !account.snapshot,
   });
   const { scene, dayEvents, capabilities, weather } = bundle;
 
-  // Free-plan date window (plan §38): explain, never block silently.
-  const today = new Date().toISOString().slice(0, 10);
+  // Free-plan date window (plan §38): explain, never block silently. "Today" is the location's
+  // civil date so the decision matches the server's.
+  const today = civilDateString(
+    utcToWallClock(
+      new Date(),
+      location?.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+    ),
+  );
   const dateDecision = account.snapshot
     ? account.can('future_date_planning', { targetDate: date, today })
     : { allowed: true, key: 'future_date_planning' as const };
@@ -271,7 +278,7 @@ export function MapShell() {
       {showPerf && scene ? (
         <PerfPanel
           scene={scene}
-          stats={rendererInfo.stats}
+          getStats={rendererInfo.getStats}
           qualityLabel={rendererInfo.qualityLabel}
           rendererMode={rendererInfo.mode}
           capabilities={rendererInfo.capabilities}

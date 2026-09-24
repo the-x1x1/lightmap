@@ -1,5 +1,5 @@
 import { auditRepo, projectsRepo } from '@lightmap/database';
-import { errorResponse, json, readJson, v } from '@/lib/server/http';
+import { errorResponse, json, readJson, requireSameOrigin, v } from '@/lib/server/http';
 import { requireDb, requireUser } from '@/lib/server/session';
 import { projectDto, viewpointDto } from '@/lib/server/dto';
 
@@ -49,8 +49,9 @@ export async function PATCH(req: Request, { params }: Params) {
   }
 }
 
-export async function DELETE(_req: Request, { params }: Params) {
+export async function DELETE(req: Request, { params }: Params) {
   try {
+    requireSameOrigin(req);
     const ctx = await requireUser();
     const db = requireDb();
     const { id } = await params;

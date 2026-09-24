@@ -1,46 +1,10 @@
 import type { NextConfig } from 'next';
 
 /**
- * Security headers and CSP (plan §29). Cesium needs `blob:` workers and `wasm-unsafe-eval`
- * (Draco/KTX decoders); it does NOT need `unsafe-eval` because we import @cesium/engine, not the
- * `cesium` meta-package (ADR-0002). Imagery/terrain hosts are allowed by `connect-src`/`img-src`.
+ * Security headers (plan §29). The Content-Security-Policy is set per request with a nonce in
+ * middleware.ts; everything else is static.
  */
-const dataHosts = [
-  'https://terrain.reearth.land',
-  'https://api.open-meteo.com',
-  'https://customer-api.open-meteo.com',
-  'https://api.cesium.com',
-  'https://assets.ion.cesium.com',
-  'https://*.virtualearth.net',
-  'https://dev.virtualearth.net',
-  ...(process.env['IMAGERY_XYZ_URL']
-    ? [
-        new URL(process.env['IMAGERY_XYZ_URL'].replace(/\{[^}]+\}/g, 'x')).origin.replace(
-          /^https?:\/\/[^.]+\./,
-          'https://*.',
-        ),
-      ]
-    : []),
-];
-
-const csp = [
-  "default-src 'self'",
-  `script-src 'self' 'wasm-unsafe-eval' blob:${process.env.NODE_ENV === 'development' ? " 'unsafe-eval' 'unsafe-inline'" : ''}`,
-  "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob: ${dataHosts.join(' ')}`,
-  `connect-src 'self' blob: data: ${dataHosts.join(' ')} https://api.stripe.com`,
-  "worker-src 'self' blob:",
-  "child-src 'self' blob:",
-  "font-src 'self' data:",
-  'frame-src https://js.stripe.com https://checkout.stripe.com',
-  "frame-ancestors 'none'",
-  "base-uri 'self'",
-  "form-action 'self' https://checkout.stripe.com https://billing.stripe.com",
-  'upgrade-insecure-requests',
-].join('; ');
-
 const securityHeaders = [
-  { key: 'Content-Security-Policy', value: csp },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'X-Frame-Options', value: 'DENY' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },

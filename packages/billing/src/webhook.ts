@@ -268,6 +268,13 @@ export async function processWebhookEvent(
   }
 
   userId ??= customerId ? await store.userIdForCustomer(customerId) : null;
+  // Stripe does not order events: subscription.created can arrive before checkout.session.completed
+  // has linked the customer. The subscription carries our userId in metadata from checkout.
+  const metaUser = sub?.metadata?.['userId'];
+  if (!userId && metaUser && customerId) {
+    userId = metaUser;
+    await deps.linkCustomer(userId, customerId);
+  }
   if (!userId) {
     await store.audit('billing.unmapped_event', null, {
       eventId: event.id,
@@ -290,6 +297,14 @@ export async function processWebhookEvent(
     };
   }
 
+  // Apply the effect FIRST, then record the event. If the upsert throws, Stripe's retry finds the
+  // event unrecorded and applies it again; the unique index still guards concurrent duplicates.
+  if (sub) {
+    await store.upsertSubscription(subscriptionToRecord(sub, userId, deps.priceMap));
+  } else if (event.type === 'checkout.session.completed' && customerId) {
+    // Checkout without a subscription object yet (subscription.created follows). Nothing to write.
+    detail = 'checkout completed; awaiting subscription event';
+  }
   const fresh = await store.recordEvent({
     providerEventId: event.id,
     type: event.type,
@@ -298,13 +313,6 @@ export async function processWebhookEvent(
     outcome: 'processed',
   });
   if (!fresh) return { eventId: event.id, type: event.type, outcome: 'duplicate', userId };
-
-  if (sub) {
-    await store.upsertSubscription(subscriptionToRecord(sub, userId, deps.priceMap));
-  } else if (event.type === 'checkout.session.completed' && customerId) {
-    // Checkout without a subscription object yet (subscription.created follows). Nothing to write.
-    detail = 'checkout completed; awaiting subscription event';
-  }
   await store.audit(`billing.${event.type}`, userId, {
     eventId: event.id,
     subscriptionId: sub?.id ?? null,

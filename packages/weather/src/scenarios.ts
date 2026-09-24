@@ -124,13 +124,13 @@ export function isScenarioId(v: unknown): v is WeatherScenarioId {
 export function scenarioForConditions(
   cloudCoverPercent: number,
   opts: {
-    precipitationMm?: number | null;
+    precipitationAmount?: number | null;
     precipitationProbability?: number | null;
     weatherCode?: number | null;
   } = {},
 ): WeatherScenarioId {
   const rain =
-    (opts.precipitationMm ?? 0) >= 0.5 ||
+    (opts.precipitationAmount ?? 0) >= 0.5 ||
     (opts.precipitationProbability ?? 0) >= 60 ||
     (opts.weatherCode !== null && opts.weatherCode !== undefined && opts.weatherCode >= 61);
   if (rain) return 'storm';

@@ -43,6 +43,8 @@ export interface UseRendererOptions {
     shadows: boolean;
   }) => void;
   enabled: boolean;
+  /** Public, domain-scoped Cesium ion token when an ion-backed provider is configured. */
+  ionToken?: string | undefined;
 }
 
 export function useRenderer(opts: UseRendererOptions): RendererHandle {
@@ -86,6 +88,7 @@ export function useRenderer(opts: UseRendererOptions): RendererHandle {
           container: opts.container.current,
           creditContainer: opts.credits.current,
           requestRenderMode: true,
+          ...(opts.ionToken ? { ionToken: opts.ionToken } : {}),
           onError: (message, error) => {
             console.warn('[renderer]', message, error);
             setState((s) => ({ ...s, error: message }));
@@ -119,8 +122,8 @@ export function useRenderer(opts: UseRendererOptions): RendererHandle {
         disposers.push(host.onPick((p) => onPickRef.current(p)));
         disposers.push(
           host.onFrameSample((fps) => {
+            // Governor only; stats are polled by the perf panel so a sample never re-renders React.
             if (governor.sample({ fps })) emitQuality();
-            setState((s) => ({ ...s, stats: host.stats() }));
           }),
         );
         const ro = new ResizeObserver(() => host.resize());

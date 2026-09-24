@@ -34,6 +34,8 @@ export interface SceneBundle {
   environment: EnvironmentState;
 }
 
+const EMPTY_FRAMES: readonly WeatherFrame[] = [];
+
 const FALLBACK_ENV: EnvironmentState = {
   terrainAvailable: false,
   terrainProviderId: 'ellipsoid',
@@ -118,7 +120,7 @@ export function useScene(
     [caps.data, location?.point.elevationM],
   );
 
-  const frames: readonly WeatherFrame[] = weatherQuery.data?.frames ?? [];
+  const frames: readonly WeatherFrame[] = weatherQuery.data?.frames ?? EMPTY_FRAMES;
   const providerFailed = Boolean(horizon?.fetchWorthwhile && weatherQuery.isError);
 
   const scene = useMemo(() => {

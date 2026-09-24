@@ -31,6 +31,8 @@ export interface ControllerOptions {
   aspect?: () => number;
   /** Radius of the sun-path overlay sphere. */
   overlayRadiusM?: number;
+  /** Injected clock for tests. */
+  now?: () => number;
 }
 
 export class SceneController {
@@ -51,6 +53,10 @@ export class SceneController {
   private groundHeightKey: string | null = null;
   private orbit: OrbitView = defaultOrbit();
   private lastScene: SceneState | null = null;
+  /** While a fly-to is in progress, non-fly orbit updates are suppressed so they do not cut it short. */
+  private flyUntil = 0;
+  private pendingCameraRetry: unknown = null;
+  private readonly now: () => number;
   private lastLighting: LightingParameters | null = null;
 
   constructor(host: SceneHost, options: ControllerOptions = {}) {
@@ -61,6 +67,7 @@ export class SceneController {
       options.clearTimeoutImpl ?? ((h) => clearTimeout(h as ReturnType<typeof setTimeout>));
     this.aspect = options.aspect ?? (() => 16 / 9);
     this.overlayRadiusM = options.overlayRadiusM ?? 400;
+    this.now = options.now ?? (() => Date.now());
   }
 
   get lighting(): LightingParameters | null {
@@ -200,6 +207,21 @@ export class SceneController {
         fovDeg: cesiumFovDeg(cam.fovDeg, this.aspect()),
       };
     } else {
+      if (fly) this.flyUntil = this.now() + 1400;
+      else if (this.now() < this.flyUntil) {
+        // Let the flight finish, then apply the (possibly corrected) orbit once.
+        if (this.pendingCameraRetry === null) {
+          this.pendingCameraRetry = this.setTimeoutImpl(
+            () => {
+              this.pendingCameraRetry = null;
+              if (this.lastScene) this.applyCamera(this.lastScene, false);
+              this.host.requestRender();
+            },
+            Math.max(0, this.flyUntil - this.now()),
+          );
+        }
+        return;
+      }
       hostCam = {
         kind: 'orbit',
         target: p,
@@ -266,6 +288,7 @@ export class SceneController {
 
   destroy(): void {
     if (this.pendingExpensive !== null) this.clearTimeoutImpl(this.pendingExpensive);
+    if (this.pendingCameraRetry !== null) this.clearTimeoutImpl(this.pendingCameraRetry);
     this.host.destroy();
   }
 }

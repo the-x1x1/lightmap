@@ -8,8 +8,11 @@ export const dynamic = 'force-dynamic';
 /** What the client may render with: credential-free descriptors, provider attributions, flags. */
 export async function GET() {
   const s = getServices();
+  const providers = publicDescriptors(s.geo);
+  const usesIon =
+    providers.terrain.kind === 'cesium-ion' || providers.basemap.kind === 'cesium-ion';
   const body: CapabilitiesResponse = {
-    providers: publicDescriptors(s.geo),
+    providers,
     weather: s.weather.getCapabilities(),
     fixtureMode:
       s.capabilities.fixtureMode ||
@@ -18,6 +21,7 @@ export async function GET() {
     devBanner: s.env.LIGHTMAP_SHOW_DEV_BANNER,
     flags: { ...s.flags },
     billingConfigured: s.billing.configured,
+    ...(usesIon && s.env.CESIUM_ION_TOKEN ? { ionToken: s.env.CESIUM_ION_TOKEN } : {}),
     authMethods: s.db ? s.authMethods : { email: false, google: false, devLogin: false },
   };
   return json(body, { headers: { 'Cache-Control': 'private, max-age=300' } });

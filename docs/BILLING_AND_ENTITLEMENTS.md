@@ -50,13 +50,13 @@ Studio is a plan definition only: it has no Stripe price and no team features ye
 `deriveEntitlements(subscription, now)` produces the snapshot. `plan` is what the user bought;
 `effectivePlan` is what applies after status rules.
 
-| Stripe status                                          | Effective plan                                                               | Notes                                                        |
-| ------------------------------------------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| `active`, `trialing`                                   | the plan                                                                     | If `cancelAtPeriodEnd`, `accessEndsAt = periodEnd`           |
-| `past_due`                                             | the plan for **7 days** after `periodEnd` (`PAST_DUE_GRACE_DAYS`), then free | `grace: true`; UI shows a fix-payment nudge but keeps access |
-| `canceled`                                             | the plan until `periodEnd`, then free                                        | Access continues to the end of the paid period               |
-| `paused`, `unpaid`, `incomplete`, `incomplete_expired` | free                                                                         |                                                              |
-| no record                                              | free, `status: 'none'`                                                       |                                                              |
+| Stripe status                                          | Effective plan                                                               | Notes                                                                                                                                                                    |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `active`, `trialing`                                   | the plan                                                                     | If `cancelAtPeriodEnd`, `accessEndsAt = periodEnd`                                                                                                                       |
+| `past_due`                                             | the plan for **7 days** after `periodEnd` (`PAST_DUE_GRACE_DAYS`), then free | `grace: true`; UI shows a fix-payment nudge but keeps access                                                                                                             |
+| `canceled`                                             | free immediately                                                             | Stripe emits `canceled` when access has ended: at period end for `cancel_at_period_end` (which stays `active` until then), or at once for an operator/fraud cancellation |
+| `paused`, `unpaid`, `incomplete`, `incomplete_expired` | free                                                                         |                                                                                                                                                                          |
+| no record                                              | free, `status: 'none'`                                                       |                                                                                                                                                                          |
 
 The snapshot also carries `entitlements[]`, `limits`, `accessEndsAt` and `computedAt`.
 
@@ -65,14 +65,18 @@ The snapshot also carries `entitlements[]`, `limits`, `accessEndsAt` and `comput
 ```
 Stripe → POST /api/webhooks/stripe
   1. verify signature            Stripe SDK constructEvent(rawBody, sig, STRIPE_WEBHOOK_SECRET); 400 on failure
-  2. idempotency                 event id recorded in subscription_events with ON CONFLICT DO NOTHING;
-                                 a replay returns 'duplicate' and touches nothing
+  2. idempotency check           already in subscription_events? → 'duplicate', touches nothing
   3. resolve user                checkout: client_reference_id / metadata.userId → link customer ↔ user
                                  (a placeholder `free`/`incomplete` subscriptions row holds the mapping)
-                                 otherwise: customer id → subscriptions.provider_customer_id → user_id
+                                 otherwise: customer id → subscriptions.provider_customer_id → user_id;
+                                 last resort: the subscription's own metadata.userId (events can arrive
+                                 out of order)
   4. upsert subscription         status, plan_key (from price id), price id, period, cancel_at_period_end
-  5. derive entitlements         on the next GET /api/account/entitlements (no cached tier anywhere else)
-  6. audit                       audit_events row per processed event (no PII)
+  5. record event                subscription_events row with ON CONFLICT DO NOTHING — written AFTER the
+                                 effect, so a failed upsert leaves the event unrecorded and Stripe's
+                                 retry applies it; the unique index guards concurrent duplicates
+  6. derive entitlements         on the next GET /api/account/entitlements (no cached tier anywhere else)
+  7. audit                       audit_events row per processed event (no PII)
 ```
 
 `processWebhookEvent()` is pure over the `BillingStore` interface, so the whole pipeline is unit

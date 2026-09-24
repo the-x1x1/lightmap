@@ -159,7 +159,12 @@ describe('SceneController', () => {
 
   it('shadow toggling follows direct light; provider swaps are diffed and refresh ground height', async () => {
     const { host, calls } = fakeHost();
-    const c = new SceneController(host, { setTimeoutImpl: () => 0, clearTimeoutImpl: () => {} });
+    let t = 0;
+    const c = new SceneController(host, {
+      setTimeoutImpl: () => 0,
+      clearTimeoutImpl: () => {},
+      now: () => t,
+    });
     c.apply(scene({ scenario: 'storm' }));
     expect((calls['setShadows']![0]![0] as { enabled: boolean }).enabled).toBe(false);
     c.apply(scene({ scenario: 'clear' }));
@@ -170,6 +175,7 @@ describe('SceneController', () => {
       attribution: 'x',
     };
     const basemap = { kind: 'cesium-natural-earth' as const, attribution: 'ne' };
+    t = 5000; // the initial fly-to has finished
     await c.setProviders(terrain, basemap);
     await c.setProviders(terrain, basemap);
     expect(calls['setTerrain']).toHaveLength(1);
@@ -179,6 +185,31 @@ describe('SceneController', () => {
     expect(cam.targetHeightM).toBe(42);
     c.destroy();
     expect(calls['destroy']).toHaveLength(1);
+  });
+
+  it('does not cut a fly-to short: orbit updates during the flight are deferred until it ends', () => {
+    const { host, calls } = fakeHost();
+    const timers: Array<{ fn: () => void; ms: number }> = [];
+    let t = 0;
+    const c = new SceneController(host, {
+      setTimeoutImpl: (fn, ms) => {
+        timers.push({ fn, ms });
+        return timers.length;
+      },
+      clearTimeoutImpl: () => {},
+      now: () => t,
+    });
+    c.apply(scene());
+    expect((calls['setCamera']![0]![0] as { fly: boolean }).fly).toBe(true);
+    t = 500;
+    c.setOrbit({ headingDeg: 90 }); // during the flight: deferred, not applied
+    expect(calls['setCamera']).toHaveLength(1);
+    const retry = timers.find((x) => x.ms === 900)!; // 1400 ms flight − 500 ms elapsed (the 250 ms one is the expensive-work debounce)
+    expect(retry).toBeDefined();
+    t = 1500;
+    retry.fn();
+    expect(calls['setCamera']).toHaveLength(2);
+    expect(calls['setCamera']![1]![0]).toMatchObject({ kind: 'orbit', fly: false, headingDeg: 90 });
   });
 
   it('cesiumFovDeg converts horizontal to vertical fov in portrait only', () => {

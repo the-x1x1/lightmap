@@ -1,4 +1,5 @@
 import { can } from '@lightmap/entitlements';
+import { civilDateString, utcToWallClock } from '@lightmap/astronomy';
 import { auditRepo, viewpointsRepo, type ViewpointInput } from '@lightmap/database';
 import { HttpError, errorResponse, forbidByEntitlement, json, readJson } from '@/lib/server/http';
 import { requireDb, requireUser } from '@/lib/server/session';
@@ -25,12 +26,12 @@ export async function POST(req: Request, { params }: Params) {
     });
     if (!decision.allowed) throw forbidByEntitlement(decision);
     const { input, snapshot } = await readJson(req, (b) => parseViewpoint(b, 'create'));
-    // Free users may only save dates inside their planning window (plan §38: the paid value is future dates).
-    const civil = input.selectedDatetimeUtc!.toISOString().slice(0, 10);
-    const today = new Date().toISOString().slice(0, 10);
+    // Free users may only save dates inside their planning window (plan §38: the paid value is
+    // future dates), evaluated as civil dates in the viewpoint's own zone.
+    const tz = input.timezone ?? 'Etc/UTC';
     const dateDecision = can(ctx.entitlements, 'future_date_planning', {
-      targetDate: civil,
-      today,
+      targetDate: civilDateString(utcToWallClock(input.selectedDatetimeUtc!, tz)),
+      today: civilDateString(utcToWallClock(new Date(), tz)),
     });
     if (!dateDecision.allowed) throw forbidByEntitlement(dateDecision);
     if (!isComplete(input)) throw new HttpError(400, 'bad_request', 'Missing viewpoint fields');

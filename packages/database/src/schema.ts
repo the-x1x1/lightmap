@@ -28,7 +28,8 @@ export const users = pgTable(
     id: text('id').primaryKey(),
     email: text('email').notNull(),
     emailVerified: timestamp('email_verified', { withTimezone: true }),
-    displayName: text('display_name'),
+    /** Auth.js adapter writes `name`; the column is `display_name`. */
+    name: text('display_name'),
     image: text('image'),
     deletionRequestedAt: timestamp('deletion_requested_at', { withTimezone: true }),
     ...timestamps,
@@ -40,19 +41,20 @@ export const users = pgTable(
 export const accounts = pgTable(
   'accounts',
   {
+    // Property names are the snake_case keys @auth/drizzle-adapter writes.
     userId: text('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     type: text('type').notNull(),
     provider: text('provider').notNull(),
     providerAccountId: text('provider_account_id').notNull(),
-    refreshToken: text('refresh_token'),
-    accessToken: text('access_token'),
-    expiresAt: integer('expires_at'),
-    tokenType: text('token_type'),
+    refresh_token: text('refresh_token'),
+    access_token: text('access_token'),
+    expires_at: integer('expires_at'),
+    token_type: text('token_type'),
     scope: text('scope'),
-    idToken: text('id_token'),
-    sessionState: text('session_state'),
+    id_token: text('id_token'),
+    session_state: text('session_state'),
   },
   (t) => [primaryKey({ columns: [t.provider, t.providerAccountId] })],
 );

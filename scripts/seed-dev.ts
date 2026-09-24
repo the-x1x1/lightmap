@@ -22,7 +22,7 @@ try {
   const email = 'dev@lightmap.local';
   const [user] = await db
     .insert(schema.users)
-    .values({ id: ulid(), email, emailVerified: new Date(), displayName: 'Dev' })
+    .values({ id: ulid(), email, emailVerified: new Date(), name: 'Dev' })
     .onConflictDoNothing()
     .returning();
   const u = user ?? (await db.query.users.findFirst({ where: (t, { eq }) => eq(t.email, email) }));

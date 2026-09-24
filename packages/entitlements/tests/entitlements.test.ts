@@ -24,11 +24,13 @@ describe('deriveEntitlements', () => {
       now,
     );
     expect(ended.effectivePlan).toBe('free');
-    const stillCancelling = deriveEntitlements(
+    // `canceled` means Stripe has ended access, even if the old period end is in the future
+    // (immediate cancellation by the operator or fraud review).
+    const immediate = deriveEntitlements(
       { planKey: 'pro', status: 'canceled', periodEnd: future, cancelAtPeriodEnd: true },
       now,
     );
-    expect(stillCancelling.effectivePlan).toBe('pro');
+    expect(immediate.effectivePlan).toBe('free');
   });
   it('past_due keeps access for the grace window, then drops to free', () => {
     const inGrace = deriveEntitlements(

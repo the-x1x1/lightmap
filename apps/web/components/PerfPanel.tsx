@@ -8,22 +8,28 @@ import {
   type HostStats,
 } from '@lightmap/renderer';
 import type { SceneState } from '@lightmap/scene';
+import { useEffect, useState } from 'react';
 
 export function PerfPanel({
   scene,
-  stats,
+  getStats,
   qualityLabel,
   rendererMode,
   capabilities,
   weatherCached,
 }: {
   scene: SceneState | null;
-  stats: HostStats | null;
+  getStats: () => HostStats | null;
   qualityLabel: string;
   rendererMode: string;
   capabilities: { webgl2: boolean; gpu: string | undefined } | null;
   weatherCached: boolean | null;
 }) {
+  const [stats, setStats] = useState<HostStats | null>(null);
+  useEffect(() => {
+    const id = setInterval(() => setStats(getStats()), 1000);
+    return () => clearInterval(id);
+  }, [getStats]);
   let sunCheck = '—';
   if (scene && stats?.cesiumSunDirectionEcef) {
     const ours = enuToEcef(
