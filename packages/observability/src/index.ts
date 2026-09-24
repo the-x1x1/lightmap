@@ -25,8 +25,13 @@ export interface LoggerOptions {
 const REDACT_KEYS = /token|secret|password|authorization|cookie|apikey|api_key|email/i;
 
 /** Redact obvious secrets and PII keys before they reach a log line. */
-export function redact(meta: Record<string, unknown>): Record<string, unknown> {
+export function redact(
+  meta: Record<string, unknown>,
+  seen: WeakSet<object> = new WeakSet(),
+  depth = 0,
+): Record<string, unknown> {
   const out: Record<string, unknown> = {};
+  seen.add(meta);
   for (const [k, v] of Object.entries(meta)) {
     if (REDACT_KEYS.test(k)) out[k] = '[redacted]';
     else if (
@@ -35,9 +40,13 @@ export function redact(meta: Record<string, unknown>): Record<string, unknown> {
       !Array.isArray(v) &&
       !(v instanceof Date) &&
       !(v instanceof Error)
-    )
-      out[k] = redact(v as Record<string, unknown>);
-    else if (v instanceof Error) out[k] = { name: v.name, message: v.message };
+    ) {
+      // Metadata is caller-supplied: a cycle or a deep graph must not take the logger down.
+      if (seen.has(v)) out[k] = '[circular]';
+      else if (depth >= 8) out[k] = '[nested]';
+      else out[k] = redact(v as Record<string, unknown>, seen, depth + 1);
+    } else if (v instanceof Error) out[k] = { name: v.name, message: v.message };
+    else if (typeof v === 'bigint') out[k] = v.toString();
     else out[k] = v;
   }
   return out;
@@ -70,13 +79,21 @@ export function createLogger(opts: LoggerOptions = {}): Logger {
 }
 
 export interface ErrorReporter {
-  capture(error: unknown, context?: Record<string, unknown>): void;
+  /**
+   * Report an error. Never throws. Returns a promise that settles when the report has been sent
+   * (or given up on), so a serverless route can keep the function alive with `after()`; the
+   * logging reporter resolves immediately.
+   */
+  capture(error: unknown, context?: Record<string, unknown>): Promise<void>;
 }
 
 /** Default reporter: logs. Replace with a Sentry-backed implementation when SENTRY_DSN is set (docs/ARCHITECTURE.md). */
 export function loggingErrorReporter(log: Logger): ErrorReporter {
   return {
-    capture: (error, context) => log.error('unhandled error', { error, ...(context ?? {}) }),
+    capture: (error, context) => {
+      log.error('unhandled error', { error, ...(context ?? {}) });
+      return Promise.resolve();
+    },
   };
 }
 

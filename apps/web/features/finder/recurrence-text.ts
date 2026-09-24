@@ -3,7 +3,7 @@
  * are formatted as UTC calendar days: no zone arithmetic, so the label is right for every
  * location including UTC+13/+14, where "noon UTC" would already be tomorrow.
  */
-import { civilDateString, formatWallTime, utcToWallClock } from '@lightmap/astronomy';
+import { formatWallTime } from '@lightmap/astronomy';
 import type { Recurrence } from './use-next-occurrence.ts';
 
 const fmtCache = new Map<string, Intl.DateTimeFormat>();
@@ -30,8 +30,11 @@ export function formatCivilDay(date: string, sceneDate: string, locale?: string)
 }
 
 export interface RecurrenceText {
-  /** "Like this until Sat 21 Mar", "Like this until at least Sat 21 Mar" (range ran out) or "Last day for this light". */
-  lasts: string;
+  /**
+   * "Like this until Sat 21 Mar", "Like this until at least Sat 21 Mar" (range ran out) or
+   * "Last day for this light"; null when nothing past today was searched (nothing is known).
+   */
+  lasts: string | null;
   /** "Thu 9 Sep 2027 (in 168 days)" or null when nothing is in range. */
   back: string | null;
   /** Wall-clock time of the return, "HH:MM". */
@@ -46,11 +49,14 @@ export function describeRecurrence(
 ): RecurrenceText {
   const lasts =
     r.runEnds === null
-      ? 'Last day for this light'
+      ? r.runClipped
+        ? null
+        : 'Last day for this light'
       : `Like this until ${r.runClipped ? 'at least ' : ''}${formatCivilDay(r.runEnds, sceneDate, locale)}`;
   if (!r.next) return { lasts, back: null, backTime: null };
   const at = new Date(r.next.timestampUtc);
-  const backDate = civilDateString(utcToWallClock(at, timeZone));
+  // The solver's civil-date key is the one `daysUntilNext` was computed from; use it here too.
+  const backDate = r.next.date;
   const inDays =
     r.daysUntilNext === null
       ? ''

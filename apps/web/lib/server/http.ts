@@ -1,5 +1,5 @@
 import 'server-only';
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { NotFoundError } from '@lightmap/database';
 import type { EntitlementDecision } from '@lightmap/entitlements';
 import { getServices } from './services.ts';
@@ -20,6 +20,20 @@ export function json<T>(body: T, init?: ResponseInit): NextResponse {
   return NextResponse.json(body, init);
 }
 
+/**
+ * Report an error without holding the response back. On serverless hosts the function is frozen
+ * once the response is sent, so the report is handed to Next's `after()` to keep the invocation
+ * alive until it has been delivered; outside a request scope (unit tests, scripts) it just runs.
+ */
+export function reportError(error: unknown, context: Record<string, unknown>): void {
+  const done = getServices().errors.capture(error, context);
+  try {
+    after(done);
+  } catch {
+    // Not inside a request: nothing to keep alive.
+  }
+}
+
 export function errorResponse(error: unknown): NextResponse {
   if (error instanceof HttpError)
     return NextResponse.json(
@@ -32,7 +46,7 @@ export function errorResponse(error: unknown): NextResponse {
       { status: 404 },
     );
   // The reporter logs (and forwards to the DSN when configured); nothing else touches the error.
-  getServices().errors.capture(error, { where: 'api' });
+  reportError(error, { where: 'api' });
   return NextResponse.json(
     {
       error: {

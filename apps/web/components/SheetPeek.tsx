@@ -7,6 +7,7 @@
  */
 import type { SceneState } from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
+import { VisuallyHidden } from '@lightmap/ui';
 
 const PHASE_LABEL: Record<SceneState['solar']['phase'], string> = {
   night: 'Night',
@@ -21,10 +22,11 @@ const PHASE_LABEL: Record<SceneState['solar']['phase'], string> = {
 function weatherWord(scene: SceneState): string {
   switch (scene.atmosphere.mode) {
     case 'FORECAST':
-    case 'RECENT_PAST':
       return `${Math.round(scene.atmosphere.parameters.cloudCover * 100)} % cloud · forecast`;
+    case 'RECENT_PAST':
+      return `${Math.round(scene.atmosphere.parameters.cloudCover * 100)} % cloud · recent conditions`;
     case 'EXTENDED_FORECAST':
-      return `${Math.round(scene.atmosphere.parameters.cloudCover * 100)} % cloud · extended`;
+      return `${Math.round(scene.atmosphere.parameters.cloudCover * 100)} % cloud · extended · low confidence`;
     case 'SCENARIO':
     case 'PAST':
       return 'scenario';
@@ -37,9 +39,9 @@ export function SheetPeek({ scene, onOpen }: { scene: SceneState | null; onOpen:
       type="button"
       onClick={onOpen}
       className="flex h-11 w-full items-center justify-between gap-3 px-4 text-left lg:hidden"
-      aria-label="Open the planning panel"
       data-testid="sheet-peek"
     >
+      <VisuallyHidden>Open the planning panel. </VisuallyHidden>
       {scene ? (
         <span className="flex min-w-0 items-baseline gap-2">
           <span className="font-mono text-lg tabular-nums">{scene.localTime.time}</span>

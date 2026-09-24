@@ -1,5 +1,6 @@
 import { databaseBillingStore, priceMapFromEnv, processWebhookEvent } from '@lightmap/billing';
 import { getServices } from '@/lib/server/services';
+import { reportError } from '@/lib/server/http';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,7 +38,7 @@ export async function POST(req: Request) {
     });
     return Response.json({ received: true, outcome: outcome.outcome });
   } catch (error) {
-    s.errors.capture(error, { eventId: event.id, type: event.type });
+    reportError(error, { eventId: event.id, type: event.type });
     return new Response('processing failed', { status: 500 });
   }
 }

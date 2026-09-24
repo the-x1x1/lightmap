@@ -30,6 +30,10 @@ describe('logger', () => {
       err: { message: 'boom' },
     });
     expect(redact({ Authorization: 'Bearer x' })).toEqual({ Authorization: '[redacted]' });
+    // Cycles and BigInts are caller mistakes the logger survives.
+    const cyclic: Record<string, unknown> = { n: 1n };
+    cyclic['self'] = cyclic;
+    expect(redact(cyclic)).toEqual({ n: '1', self: '[circular]' });
   });
 });
 

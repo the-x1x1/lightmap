@@ -8,7 +8,7 @@
  * otherwise (plan §38: explain, never block silently, never leak the Pro answer).
  */
 import { useId, useState } from 'react';
-import { civilDateString, utcToWallClock } from '@lightmap/astronomy';
+import { utcToLocalSelection } from '@lightmap/astronomy';
 import type { SceneState } from '@lightmap/scene';
 import { cx } from '@lightmap/ui';
 import { usePlannerStore } from '@/features/planner/store';
@@ -63,9 +63,9 @@ export function NextOccurrence({
   const text = describeRecurrence(value, tz, scene.localTime.date);
   const jump = () => {
     if (!value.next) return;
-    const w = utcToWallClock(new Date(value.next.timestampUtc), tz);
-    setDate(civilDateString(w));
-    setMinutes(w.hour * 60 + w.minute);
+    const sel = utcToLocalSelection(new Date(value.next.timestampUtc), tz);
+    setDate(sel.date);
+    setMinutes(sel.minutes);
   };
 
   return (
@@ -80,12 +80,14 @@ export function NextOccurrence({
           busy && 'opacity-60',
         )}
       >
-        <span className="text-[var(--lm-text-muted)]" data-testid="next-occurrence-lasts">
-          <span aria-hidden className="mr-1 text-[var(--lm-sun)]">
-            ↻
+        {text.lasts ? (
+          <span className="text-[var(--lm-text-muted)]" data-testid="next-occurrence-lasts">
+            <span aria-hidden className="mr-1 text-[var(--lm-sun)]">
+              ↻
+            </span>
+            {text.lasts}
           </span>
-          {text.lasts}
-        </span>
+        ) : null}
         {text.back ? (
           <button
             type="button"
@@ -110,6 +112,11 @@ export function NextOccurrence({
               value.runClipped
                 ? "How long this light lasts, and when it returns, lie beyond your plan's date window."
                 : "When this light comes back lies beyond your plan's date window."
+            }
+            aria-label={
+              text.lasts
+                ? undefined
+                : 'This light: beyond your date window. Pro plans see how long it lasts and when it returns.'
             }
             className="inline-flex min-h-9 items-center gap-1 rounded-full bg-[color:rgba(245,179,66,0.12)] px-3 py-1.5 font-medium text-[color:#ffd27a] ring-1 ring-inset ring-[color:rgba(245,179,66,0.3)] hover:bg-[color:rgba(245,179,66,0.2)] focus-visible:outline-none focus-visible:[box-shadow:var(--lm-focus)]"
             data-testid="next-occurrence-locked"

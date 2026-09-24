@@ -6,7 +6,7 @@
  * until the user explicitly saves a viewpoint.
  */
 import { create } from 'zustand';
-import { localSelectionToUtc, parseCivilDate, utcToWallClock } from '@lightmap/astronomy';
+import { localSelectionToUtc, parseCivilDate, utcToLocalSelection } from '@lightmap/astronomy';
 import {
   defaultCamera,
   equivalentFocalLengthMm,
@@ -83,9 +83,7 @@ export interface PlannerActions {
 export type PlannerStore = PlannerState & PlannerActions;
 
 function todayIn(timeZone: string): { date: string; minutes: number } {
-  const w = utcToWallClock(new Date(), timeZone);
-  const date = `${w.year.toString().padStart(4, '0')}-${w.month.toString().padStart(2, '0')}-${w.day.toString().padStart(2, '0')}`;
-  return { date, minutes: w.hour * 60 + w.minute };
+  return utcToLocalSelection(new Date(), timeZone);
 }
 
 const initialToday = todayIn(
@@ -210,11 +208,11 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
     );
   },
   restore(v) {
-    const w = utcToWallClock(v.utc, v.location.timeZone);
+    const sel = utcToLocalSelection(v.utc, v.location.timeZone);
     set({
       location: v.location,
-      date: `${w.year.toString().padStart(4, '0')}-${w.month.toString().padStart(2, '0')}-${w.day.toString().padStart(2, '0')}`,
-      minutes: w.hour * 60 + w.minute,
+      date: sel.date,
+      minutes: sel.minutes,
       camera: v.camera,
       scenario: v.scenario ?? get().scenario,
       forceScenario: v.scenario !== null,

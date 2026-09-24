@@ -28,7 +28,10 @@ const DEBOUNCE_MS = 350;
 export interface Recurrence {
   /** Last civil date the light still matches (inclusive), or null when it ends with the current day. */
   runEnds: string | null;
-  /** The run reached the end of the searched range, so `runEnds` is a lower bound, not the end. */
+  /**
+   * The run reached the end of the searched range, so `runEnds` is a lower bound, not the end;
+   * with `runEnds === null` it means nothing past today was searched at all.
+   */
   runClipped: boolean;
   next: SerializedMatch | null;
   /** Civil days from the scene date to `next`. */
@@ -112,10 +115,11 @@ export function useNextOccurrence(
         }
       }
       if (civilDateString(from) > civilDateString(to)) {
-        // Nothing searchable inside the window (e.g. the scene is already on the window's last day).
+        // Nothing searchable inside the window (the scene is already on the window's last day):
+        // nothing is known about tomorrow, so the run is marked clipped rather than ended.
         const value: Recurrence = {
           runEnds: null,
-          runClipped: false,
+          runClipped: true,
           next: null,
           daysUntilNext: null,
           clipped: true,
@@ -156,9 +160,11 @@ export function useNextOccurrence(
           setState({ status: 'ready', value });
         })
         .catch(() => {
-          // Superseded by a newer search, or the worker failed and the sync fallback threw: keep
-          // whatever was shown; the next change re-runs.
-          if (!cancelled && last.current) setState({ status: 'ready', value: last.current });
+          // Superseded by a newer search, or the solver rejected the input: keep whatever was
+          // shown, or show nothing rather than a placeholder that never resolves.
+          if (cancelled) return;
+          if (last.current) setState({ status: 'ready', value: last.current });
+          else setState({ status: 'off' });
         });
     }, DEBOUNCE_MS);
     return () => {

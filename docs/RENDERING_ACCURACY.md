@@ -92,8 +92,9 @@ noise, not a forecast of where clouds will be.
 forecast's own layer (`cloud_cover_low/mid/high`, `AtmosphereParameters.cloudLayers`,
 `layersObserved: true`) or, for a scenario or a provider without layers, the scenario's
 representative split. Each deck is lit from the true Sun elevation: a cloud at height _h_ stays
-sunlit until the Sun is `acos(R/(R+h))` (+ refraction) below the horizon — ≈1° for a 1 km base,
-≈2° at 4 km, ≈3.5–4° at 10–12 km — so at the same minute after sunset a low deck is in shadow
+sunlit until the Sun is `acos(R/(R+h))` below the horizon — 1.0° for a 1 km base, 2.0° at 4 km,
+3.2–3.5° at 10–12 km — plus ≈0.5° of refraction (≈1.5° / 2.5° / 3.7–4.0°), so at the same minute
+after sunset a low deck is in shadow
 (dark blue-grey) while cirrus is still lit, and pink; direct light on any deck is warm from the
 golden hour down. A sky that is mostly thin high cloud keeps 55–85 % of the direct beam
 (`parametersForForecast`), so shadows survive under cirrus and vanish under stratus. **Claim:** the

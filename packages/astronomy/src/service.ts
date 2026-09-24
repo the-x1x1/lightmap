@@ -16,6 +16,7 @@ import {
 import { moonPosition, moonRiseSet, type MoonPhaseName } from './lunar.ts';
 import { sunPosition } from './solar.ts';
 import {
+  civilDateString,
   localDayBounds,
   utcToWallClock,
   wallClockToUtc,
@@ -177,6 +178,25 @@ export function localSelectionToUtc(
 ): Date {
   const start = wallClockToUtc({ ...date, hour: 0, minute: 0, second: 0 }, timeZone);
   return new Date(start.getTime() + minutesSinceMidnight * 60_000);
+}
+
+/**
+ * Inverse of `localSelectionToUtc`: the civil date at the location and the minutes elapsed since
+ * that day's local midnight. On a DST day this differs from `hour * 60 + minute` by the shift
+ * (03:30 on a spring-forward morning is 150 minutes into the day, not 210), which is what the
+ * planner's timeline scale needs so a jump lands on the instant that was promised.
+ */
+export function utcToLocalSelection(
+  instant: Date,
+  timeZone: string,
+): { date: string; minutes: number } {
+  const w = utcToWallClock(instant, timeZone);
+  const civil = { year: w.year, month: w.month, day: w.day };
+  const start = localDayBounds(civil, timeZone).start;
+  return {
+    date: civilDateString(civil),
+    minutes: Math.max(0, Math.round((instant.getTime() - start.getTime()) / 60_000)),
+  };
 }
 
 export const astronomy: AstronomyService = new MeeusAstronomyService();

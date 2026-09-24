@@ -145,6 +145,9 @@ describe('cloud layers', () => {
     expect(cirrus.sunTransmittance).toBeGreaterThan(stratus.sunTransmittance + 0.25);
     expect(cirrus.sunTransmittance).toBeLessThan(1);
     expect(stratus.cloudDensity).toBeGreaterThan(cirrus.cloudDensity);
+    // Shadows survive under the veil: the diffuse share is capped by the surviving beam.
+    expect(cirrus.diffuseFraction).toBeLessThanOrEqual(1 - 0.6 * cirrus.sunTransmittance + 1e-9);
+    expect(cirrus.diffuseFraction).toBeLessThan(stratus.diffuseFraction);
   });
   it('rain pushes an unobserved split toward the storm deck but leaves observed layers alone', () => {
     const rainy = parametersForForecast({ cloudCoverTotal: 80, precipitationAmount: 3 });

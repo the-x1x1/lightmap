@@ -33,6 +33,7 @@ export {
   astronomy,
   compassFromAzimuth,
   localSelectionToUtc,
+  utcToLocalSelection,
   LUNAR_ACCURACY_NOTE,
   type AstronomyService,
   type SolarInput,
