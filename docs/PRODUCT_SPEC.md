@@ -105,7 +105,9 @@ block with the paywall reason.
 
 **Typical for this month** (Pro, entitlement `climatology`). Under the scenario buttons: the share
 of daylight hours in this calendar month over the last ten years that fell in each scenario class,
-from ERA5 reanalysis via Open-Meteo's archive, plus mean cloud cover and the fraction of wet days.
+from ERA5 reanalysis via Open-Meteo's archive, plus mean cloud cover and the fraction of wet days,
+and **typical cloud by hour of day** — 24 bars with the selected hour marked and a one-line
+pattern ("clearest 07–10, cloudiest 14–17") only when the month has one.
 Badge: **Climatology · not a forecast**. Each class is a button that compares that scenario; the
 most common one is marked, nothing is selected silently. Free plans see the locked block with the
 paywall reason. Rules and method in `WEATHER_AND_FORECAST_MODEL.md` §8.

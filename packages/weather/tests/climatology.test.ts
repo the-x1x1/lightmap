@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildMonthlyClimatology,
   climatologyCacheKey,
+  daylightPattern,
   suggestedScenario,
   summarizeClimatology,
   type ClimatologyHour,
@@ -76,11 +77,46 @@ describe('summarizeClimatology', () => {
     expect(JSON.stringify(s).toLowerCase()).not.toContain('forecast');
   });
 
+  it('breaks the month down by local hour of day, over the whole day, and names the pattern', () => {
+    // Trade-wind mornings: clear until 10:00 HST, building to overcast by mid-afternoon, then
+    // clearing again after sunset. Local hour = (UTC − 10) mod 24.
+    const cloudAt = (local: number) =>
+      local < 10 ? 10 : local < 13 ? 45 : local < 17 ? 90 : local < 20 ? 60 : 20;
+    const hours = hoursFor(2020, (hUtc) => cloudAt((hUtc - 10 + 24) % 24));
+    const s = summarizeClimatology(hours, meta);
+    expect(s.byHour).toHaveLength(24);
+    for (const b of s.byHour) expect(b.samples).toBe(31);
+    expect(s.byHour[8]!.meanCloudCover).toBeCloseTo(10, 5);
+    expect(s.byHour[8]!.clearShare).toBeCloseTo(1, 5);
+    expect(s.byHour[15]!.meanCloudCover).toBeCloseTo(90, 5);
+    expect(s.byHour[15]!.dullShare).toBeCloseTo(1, 5);
+    expect(s.byHour[22]!.meanCloudCover).toBeCloseTo(20, 5); // night hours are kept here …
+    expect(s.sampleHours).toBe(31 * 14); // … but not in the headline window
+    const p = daylightPattern(s);
+    expect(p).not.toBeNull();
+    expect(p!.clearest.from).toBeGreaterThanOrEqual(6);
+    expect(p!.clearest.to).toBeLessThanOrEqual(10);
+    expect(p!.dullest.from).toBeGreaterThanOrEqual(13);
+    expect(p!.dullest.to).toBeLessThanOrEqual(17);
+  });
+
+  it('reports no daily pattern when the spread is small', () => {
+    const s = summarizeClimatology(
+      hoursFor(2020, (h) => 50 + (h % 2) * 4),
+      meta,
+    );
+    expect(daylightPattern(s)).toBeNull();
+    // Hours without samples are zero, never NaN.
+    const sparse = summarizeClimatology([], meta);
+    expect(sparse.byHour.every((b) => b.samples === 0 && b.meanCloudCover === 0)).toBe(true);
+    expect(daylightPattern(sparse)).toBeNull();
+  });
+
   it('cache key uses a 0.5° cell so nearby pins share one summary', () => {
     const a = climatologyCacheKey('p', 21.41, -157.72, 5, { from: 2015, to: 2024 });
     const b = climatologyCacheKey('p', 21.38, -157.68, 5, { from: 2015, to: 2024 });
     expect(a).toBe(b);
-    expect(a).toBe('p:21.5,-157.5:m5:2015-2024:h6-20:UTC');
+    expect(a).toBe('v2:p:21.5,-157.5:m5:2015-2024:h6-20:UTC');
     expect(
       climatologyCacheKey(
         'p',

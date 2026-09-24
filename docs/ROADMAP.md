@@ -119,8 +119,9 @@ Next: DOF and horizon levelling remain future.
 daylight hours across the last ten years (ERA5 via Open-Meteo's archive, `ClimatologyProvider`
 abstraction with a fixture), mean cloud and wet-day fraction, tap-to-compare, most-common marker.
 Never labelled a forecast, never above SCENARIO confidence (`WEATHER_AND_FORECAST_MODEL.md` §8).
-Pro entitlement `climatology`; cached 30 days per 0.5° cell. Future: per-hour-of-day breakdown and
-haze/visibility climatology once a source with those fields is licensed.
+Pro entitlement `climatology`; cached 30 days per 0.5° cell. Also delivered: the **hour-of-day
+breakdown** (24 bars, clearest/cloudiest stretch, table alternative). Future: haze/visibility
+climatology once a source with those fields is licensed.
 
 ## Phase 8 — High-fidelity environment reconstruction (future)
 
