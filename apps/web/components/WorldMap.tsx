@@ -254,7 +254,12 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
         </p>
       ) : null}
       {finderTarget && camera.mode === 'viewpoint' && !overlayMode ? (
-        <FinderReticle target={finderTarget} camera={camera} container={container} />
+        <FinderReticle
+          target={finderTarget}
+          camera={camera}
+          container={container}
+          onChange={setFinderTarget}
+        />
       ) : null}
       {renderer.mode === 'loading' ? (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-[var(--lm-chrome)]/60">
@@ -290,28 +295,77 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
   );
 }
 
-/** Marks the picked "sun here" direction in the viewpoint frame; re-projects as the camera moves. */
+/**
+ * Marks the picked "sun here" direction in the viewpoint frame; re-projects as the camera moves and
+ * can be dragged to refine the target (plan §26 "drags the desired sun marker onto the composition").
+ * Keyboard: arrow keys nudge by 0.5° (Shift: 5°).
+ */
 function FinderReticle({
   target,
   camera,
   container,
+  onChange,
 }: {
   target: { azimuthDeg: number; elevationDeg: number };
   camera: { headingDeg: number; pitchDeg: number; fovDeg: number };
   container: React.RefObject<HTMLDivElement | null>;
+  onChange: (t: { azimuthDeg: number; elevationDeg: number }) => void;
 }) {
   const el = container.current;
   const aspect = el && el.clientHeight > 0 ? el.clientWidth / el.clientHeight : 16 / 9;
   const f = frameCoordinates(camera, target.azimuthDeg, target.elevationDeg, aspect);
+  const dragging = useRef<number | null>(null);
   if (!f || Math.abs(f.x) > 1 || Math.abs(f.y) > 1) return null;
+  const fromEvent = (e: React.PointerEvent) => {
+    const host = container.current;
+    if (!host) return null;
+    const rect = host.getBoundingClientRect();
+    if (rect.width < 2 || rect.height < 2) return null;
+    const x = Math.max(-1, Math.min(1, ((e.clientX - rect.left) / rect.width) * 2 - 1));
+    const y = Math.max(-1, Math.min(1, 1 - ((e.clientY - rect.top) / rect.height) * 2));
+    return directionFromFrame(camera, x, y, rect.width / rect.height);
+  };
   return (
-    <div
-      aria-hidden
-      className="pointer-events-none absolute z-10 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--lm-sun)] shadow-[0_0_0_2px_rgba(0,0,0,0.5)]"
+    <button
+      type="button"
+      className="absolute z-10 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-full border-2 border-[var(--lm-sun)] bg-transparent shadow-[0_0_0_2px_rgba(0,0,0,0.5)] focus-visible:outline-none focus-visible:[box-shadow:var(--lm-focus)] active:cursor-grabbing"
       style={{ left: `${((f.x + 1) / 2) * 100}%`, top: `${((1 - f.y) / 2) * 100}%` }}
+      aria-label={`Light-finder target: bearing ${Math.round(target.azimuthDeg)}°, ${target.elevationDeg.toFixed(1)}° up. Drag or use arrow keys to move it.`}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        dragging.current = e.pointerId;
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      }}
+      onPointerMove={(e) => {
+        if (dragging.current !== e.pointerId) return;
+        const d = fromEvent(e);
+        if (d) onChange(d);
+      }}
+      onPointerUp={(e) => {
+        if (dragging.current === e.pointerId) dragging.current = null;
+      }}
+      onPointerCancel={() => {
+        dragging.current = null;
+      }}
+      onKeyDown={(e) => {
+        const step = e.shiftKey ? 5 : 0.5;
+        let az = target.azimuthDeg;
+        let elv = target.elevationDeg;
+        if (e.key === 'ArrowLeft') az -= step;
+        else if (e.key === 'ArrowRight') az += step;
+        else if (e.key === 'ArrowUp') elv += step;
+        else if (e.key === 'ArrowDown') elv -= step;
+        else return;
+        e.preventDefault();
+        e.stopPropagation();
+        onChange({
+          azimuthDeg: ((az % 360) + 360) % 360,
+          elevationDeg: Math.max(-89, Math.min(89, elv)),
+        });
+      }}
       data-testid="finder-reticle"
     >
-      <span className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--lm-sun)]" />
-    </div>
+      <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[var(--lm-sun)]" />
+    </button>
   );
 }

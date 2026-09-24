@@ -4,6 +4,7 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- Light finder: the target ring can be dragged or nudged with the arrow keys.
 - `pnpm usage:report`: daily per-resource totals from `usage_counters` (aggregates only).
 - **Sensor formats** (Pro camera tools): pick your sensor and type your lens's focal length.
 - Light finder searches run in a Web Worker (main-thread fallback).

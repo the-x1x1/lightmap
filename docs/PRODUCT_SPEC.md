@@ -201,7 +201,8 @@ No lens optical simulation (distortion, depth of field) in v1.
 
 - **Target**: a point clicked in the viewpoint view ("Point in the view": the click's frame
   coordinates are inverted through `directionFromFrame()` to a bearing and elevation, and a ring
-  marks it, re-projected as the camera moves), the centre of the camera's frame (heading →
+  marks it, re-projected as the camera moves; the ring can be dragged, or nudged with the arrow
+  keys by 0.5°/5°, to refine the target), the centre of the camera's frame (heading →
   azimuth, pitch → elevation), the body's current position, or typed azimuth/elevation. Elevation
   matching can be switched off ("any elevation above the horizon"). Picking switches the camera to
   viewpoint mode; a new place clears the pick.

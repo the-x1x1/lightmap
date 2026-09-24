@@ -103,7 +103,9 @@ toward limits; `PRODUCT_SPEC.md` §9).
 
 Also delivered: **sensor formats** ("Your camera": sensor preset + the lens number as printed).
 
-Next: drag the ring to refine the target and a "next occurrence" chip on the timeline.
+Also delivered: the ring is draggable / keyboard-nudgeable.
+
+Next: a "next occurrence" chip on the timeline; DOF and horizon levelling remain future.
 
 ## Phase 7 — Long-range climatology (delivered, unreleased)
 
