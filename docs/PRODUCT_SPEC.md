@@ -90,6 +90,15 @@ scenario: Overcast (forecast: Partly Cloudy)" so the forecast is never hidden. U
 the forecast. Outside the forecast window there is nothing to compare against; the scenario is
 simply the atmosphere and is labelled as such.
 
+**Hour by hour** (Pro, entitlement `forecast_detail`). Under the timeline whenever frames exist for
+the day (forecast, extended forecast or recent past — never on a scenario day): one bar per local
+hour, height = direct-light share from cloud (`parametersForForecast`), colour = scenario class,
+a drop for likely rain (≥ 40 % probability or ≥ 0.5 mm); the selected hour is outlined; clicking a
+bar moves the timeline to that hour. "Best light: 07:00–11:00 (92 % direct)" lists contiguous runs
+≥ 60 % direct. The same numbers are available as a table. Hours the provider did not cover are
+absent; DST gaps produce no duplicate rows (`hourlyOutlook`, tested). Free plans see the locked
+block with the paywall reason.
+
 **Typical for this month** (Pro, entitlement `climatology`). Under the scenario buttons: the share
 of daylight hours in this calendar month over the last ten years that fell in each scenario class,
 from ERA5 reanalysis via Open-Meteo's archive, plus mean cloud cover and the fraction of wet days.
