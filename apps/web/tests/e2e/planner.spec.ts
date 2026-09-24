@@ -120,7 +120,8 @@ test('light finder: sunset due west from Kailua exists and jumps the planner to 
 }) => {
   await page.goto('/');
   await pickKailua(page);
-  await page.getByTestId('details-light-finder').locator('summary').click();
+  // `:scope > summary`: the finder has a nested <details> (Tolerances) with its own summary.
+  await page.getByTestId('details-light-finder').locator(':scope > summary').click();
   await page.getByTestId('finder-mode-manual').click();
   await page.getByTestId('finder-azimuth').fill('270');
   await page.getByTestId('finder-elevation').fill('-0.8');
@@ -144,12 +145,15 @@ test('sign in (dev), create a project, save the viewpoint, reload and reopen it'
   page,
 }) => {
   await page.goto('/');
-  await pickKailua(page);
-  await setDateTime(page, new Date().toISOString().slice(0, 10), 9 * 60);
+  // Sign in first: dev sign-in finishes with a full page load, which would drop a picked place.
   await page.getByTestId('panel-tab-account').click();
   await page.getByTestId('dev-login-email').fill(`e2e-${Date.now()}@example.com`);
   await page.getByTestId('dev-login-submit').click();
-  await page.waitForURL(/\//);
+  await page.getByTestId('panel-tab-account').click();
+  await expect(page.getByTestId('account-panel')).toBeVisible();
+  await page.getByTestId('panel-tab-plan').click();
+  await pickKailua(page);
+  await setDateTime(page, new Date().toISOString().slice(0, 10), 9 * 60);
   await page.getByTestId('panel-tab-projects').click();
   await page.getByTestId('project-name').fill('Kailua sunrise');
   await page.getByTestId('project-create').click();

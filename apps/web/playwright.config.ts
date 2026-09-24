@@ -7,6 +7,10 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './tests/e2e',
   timeout: 90_000,
+  // `next dev` answers slowly on a cold CI runner; 5 s per assertion was too tight.
+  expect: { timeout: 15_000 },
+  // Compile every route before the first test (see warmup.ts). Skipped against a deployed app.
+  ...(process.env['E2E_BASE_URL'] ? {} : { globalSetup: './tests/e2e/warmup.ts' }),
   retries: process.env['CI'] ? 1 : 0,
   reporter: process.env['CI'] ? [['github'], ['html', { open: 'never' }]] : 'list',
   use: {
