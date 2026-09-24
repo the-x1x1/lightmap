@@ -6,12 +6,12 @@
 export const featureFlags = {
   /** Phase 5. Requires a licensed imagery contract. */
   realReferenceImagery: false,
-  /** Phase 6/§26. Reverse planning solver. */
-  reversePlanning: false,
+  /** Phase 6/§26. Reverse planning solver (Light finder). */
+  reversePlanning: true,
   /** Phase 7. Climatology "typical for this month". */
-  climatology: false,
+  climatology: true,
   /** Phase 4. PNG export of a planning card. */
-  exportPreview: false,
+  exportPreview: true,
   /** Moon planning panel (Pro). Shipping in v0.1 as read-only lunar state. */
   moonPlanning: true,
   /** Development-only performance panel (plan §27). */

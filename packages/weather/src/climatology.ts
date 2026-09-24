@@ -91,16 +91,23 @@ const SCENARIO_IDS: WeatherScenarioId[] = [
   'storm',
 ];
 
+const dtfCache = new Map<string, Intl.DateTimeFormat>();
+
 /** Local hour (0–23) and civil date key for a UTC instant in `timeZone`, via Intl (no library). */
 function localParts(iso: string, timeZone: string): { hour: number; dateKey: string } {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    hourCycle: 'h23',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-  }).formatToParts(new Date(iso));
+  let dtf = dtfCache.get(timeZone);
+  if (!dtf) {
+    dtf = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hourCycle: 'h23',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+    });
+    dtfCache.set(timeZone, dtf);
+  }
+  const parts = dtf.formatToParts(new Date(iso));
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '00';
   return {
     hour: Number(get('hour')) % 24,
@@ -189,7 +196,10 @@ export function suggestedScenario(summary: ClimatologySummary): WeatherScenarioI
   return best;
 }
 
-/** Cache key: provider, ~0.5° cell (climatology is smooth), month, year span, window. */
+/**
+ * Cache key: provider, ~0.5° cell (climatology is smooth), month, year span, window and the zone
+ * (the daylight window is local, so a cell straddling a zone boundary needs one row per zone).
+ */
 export function climatologyCacheKey(
   providerId: string,
   lat: number,
@@ -197,9 +207,10 @@ export function climatologyCacheKey(
   month: number,
   years: { from: number; to: number },
   window: ClimatologyWindow = DAYLIGHT_WINDOW,
+  timeZone = 'UTC',
 ): string {
   const cell = `${(Math.round(lat * 2) / 2).toFixed(1)},${(Math.round(lng * 2) / 2).toFixed(1)}`;
-  return `${providerId}:${cell}:m${month}:${years.from}-${years.to}:h${window.startHour}-${window.endHour}`;
+  return `${providerId}:${cell}:m${month}:${years.from}-${years.to}:h${window.startHour}-${window.endHour}:${timeZone}`;
 }
 
 /** Fetch the same month for several years and summarise. Concurrency-limited; partial years are dropped. */

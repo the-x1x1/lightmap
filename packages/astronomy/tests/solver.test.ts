@@ -30,13 +30,20 @@ describe('reverse planning solver', () => {
       target: { azimuthDegrees: 90, elevationDegrees: -0.833, elevationToleranceDegrees: 0.5 },
       minElevationDegrees: -1.5,
     });
-    // Near the equinox the rising sun sits at azimuth 90° for a few consecutive days (the azimuth
-    // drifts ~0.6°/day at London, refraction/semidiameter shift the horizon crossing slightly).
-    const dates = r.matches.map((m) => m.date);
-    expect(dates.length).toBeGreaterThanOrEqual(1);
-    expect(dates.length).toBeLessThanOrEqual(6);
-    for (const d of dates) expect(d >= '2026-03-15' && d <= '2026-03-25').toBe(true);
-    for (const m of r.matches) expect(m.trend).toBe('rising');
+    // Near the equinox the rising sun sits within ±2° of azimuth 90° for about a week (the
+    // sunrise azimuth drifts ~0.6°/day at London). Both detectors contribute: the bearing crossing
+    // (elevation checked) and the horizon crossing (bearing checked).
+    const dates = new Set(r.matches.map((m) => m.date));
+    expect(dates.size).toBeGreaterThanOrEqual(4);
+    expect(dates.size).toBeLessThanOrEqual(9);
+    for (const d of dates) expect(d >= '2026-03-13' && d <= '2026-03-25').toBe(true);
+    for (const m of r.matches) {
+      expect(m.trend).toBe('rising');
+      expect(Math.abs(wrapDelta(m.azimuthDegrees - 90))).toBeLessThanOrEqual(2);
+      expect(Math.abs(m.elevationDegrees + 0.833)).toBeLessThanOrEqual(0.5);
+    }
+    expect(r.matches.some((m) => m.via === 'azimuth')).toBe(true);
+    expect(r.matches.some((m) => m.via === 'elevation')).toBe(true);
   });
 
   it('solar-noon elevation on the June solstice at London ≈ 90 − φ + δ (61.9°)', () => {
@@ -104,21 +111,44 @@ describe('reverse planning solver', () => {
     expect(r.scannedDays).toBe(365);
     expect(r.truncated).toBe(false);
     // At 21.4° N the sunset azimuth only reaches 285° from late April to mid-August, so the sun
-    // passes that bearing above the horizon on roughly 160 days, not every day.
+    // passes that bearing above the horizon on roughly 160 days (plus the near-zenith sweeps in
+    // late May / July), not every day.
     expect(r.alignments.length).toBeGreaterThanOrEqual(120);
-    expect(r.alignments.length).toBeLessThanOrEqual(200);
+    expect(r.alignments.length).toBeLessThanOrEqual(230);
     for (const a of r.alignments)
       expect(a.date >= '2026-04-15' && a.date <= '2026-08-31').toBe(true);
-    // It sits at 8° on that bearing only in two short windows (before and after the solstice).
-    expect(r.matches.length).toBeGreaterThanOrEqual(2);
-    expect(r.matches.length).toBeLessThanOrEqual(8);
+    // It sits within ±2° of that bearing at 8° ± 0.75° in two windows of about two weeks (before
+    // and after the solstice); the exact-bearing days are the azimuth-detected ones.
+    expect(r.matches.length).toBeGreaterThanOrEqual(10);
+    expect(r.matches.length).toBeLessThanOrEqual(40);
     for (const m of r.matches) {
       expect(Math.abs(m.elevationErrorDegrees!)).toBeLessThanOrEqual(0.75);
-      expect(Math.abs(wrapDelta(m.azimuthDegrees - 285))).toBeLessThan(0.01);
+      expect(Math.abs(wrapDelta(m.azimuthDegrees - 285))).toBeLessThanOrEqual(2);
       expect(m.trend).toBe('setting');
     }
+    expect(r.matches.filter((m) => m.via === 'azimuth').length).toBeGreaterThanOrEqual(2);
     const months = new Set(r.matches.map((m) => m.date.slice(5, 7)));
     expect(months.size).toBeGreaterThanOrEqual(2);
+  });
+
+  it('tropics: the meridian crossing is never lost, even on near-zenith days', () => {
+    // Every day the sun crosses the meridian exactly once at transit: at azimuth 180° when it
+    // culminates south of the zenith, at 0° when north. Around 27 May the declination equals the
+    // latitude of Kailua and the azimuth sweeps ~180° within minutes — the case a naive
+    // "small step" filter drops.
+    const range = {
+      from: { year: 2026, month: 5, day: 15 },
+      to: { year: 2026, month: 6, day: 15 },
+    };
+    const south = findDirectionMatches({ ...KAILUA, ...range, target: { azimuthDegrees: 180 } });
+    const north = findDirectionMatches({ ...KAILUA, ...range, target: { azimuthDegrees: 0 } });
+    const days = 32;
+    const southDates = new Set(south.alignments.map((a) => a.date));
+    const northDates = new Set(north.alignments.map((a) => a.date));
+    expect(southDates.size + northDates.size).toBe(days);
+    for (const d of southDates) expect(northDates.has(d)).toBe(false);
+    for (const a of [...south.alignments, ...north.alignments])
+      expect(a.elevationDegrees).toBeGreaterThan(85);
   });
 
   it('tropics: multiple same-day alignments are all reported and sorted in time', () => {

@@ -35,6 +35,8 @@ export interface LightFinderProps {
   /** Free-plan window (days) used to clip the range when not allowed. */
   windowDays: { ahead: number | null; back: number | null };
   moonAllowed: boolean;
+  /** Entitlements still loading: searching is deferred so a Pro user is never clipped by mistake. */
+  planLoading?: boolean;
 }
 
 const MAX_RESULTS = 80;
@@ -43,7 +45,14 @@ function todayAt(timeZone: string): string {
   return civilDateString(utcToWallClock(new Date(), timeZone));
 }
 
-export function LightFinder({ scene, allowed, reason, windowDays, moonAllowed }: LightFinderProps) {
+export function LightFinder({
+  scene,
+  allowed,
+  reason,
+  windowDays,
+  moonAllowed,
+  planLoading = false,
+}: LightFinderProps) {
   const setDate = usePlannerStore((s) => s.setDate);
   const setMinutes = usePlannerStore((s) => s.setMinutes);
   const camera = usePlannerStore((s) => s.camera);
@@ -284,8 +293,14 @@ export function LightFinder({ scene, allowed, reason, windowDays, moonAllowed }:
               step={0.5}
               value={azTol}
               className="lm-range mt-1 w-full"
+              disabled={!useElevation}
               onChange={(e) => setAzTol(Number(e.target.value))}
             />
+            {!useElevation ? (
+              <span className="block normal-case">
+                Applies when elevation is matched: “anywhere within ± this bearing at that height”.
+              </span>
+            ) : null}
           </label>
           <label className="text-xs text-[var(--lm-text-muted)]">
             Elevation ± {elTol}°
@@ -317,8 +332,14 @@ export function LightFinder({ scene, allowed, reason, windowDays, moonAllowed }:
         </div>
       </details>
 
-      <Button variant="primary" className="w-full" onClick={run} data-testid="finder-run">
-        Find dates
+      <Button
+        variant="primary"
+        className="w-full"
+        onClick={run}
+        disabled={planLoading}
+        data-testid="finder-run"
+      >
+        {planLoading ? 'Checking your plan…' : 'Find dates'}
       </Button>
 
       {error ? (

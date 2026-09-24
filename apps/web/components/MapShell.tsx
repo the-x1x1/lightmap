@@ -49,7 +49,8 @@ export function MapShell() {
   const setSheetOpen = usePlannerStore((s) => s.setSheetOpen);
   const panelBodyRef = useRef<HTMLDivElement>(null);
   const expandButtonRef = useRef<HTMLButtonElement>(null);
-  const firstRender = useRef(true);
+  const prevPanel = useRef(panel);
+  const prevExpanded = useRef(previewExpanded);
   const [desktop, setDesktop] = useState(false);
   const account = useAccount();
   const [rendererInfo, setRendererInfo] = useState<RendererInfo>({
@@ -79,6 +80,9 @@ export function MapShell() {
   const dateDecision = account.snapshot
     ? account.can('future_date_planning', { targetDate: date, today })
     : { allowed: true, key: 'future_date_planning' as const };
+  // While the entitlement snapshot loads, `can()` answers "not allowed — loading"; the Pro panels
+  // must not flash a paywall in that window, so they get an explicit loading flag.
+  const planLoading = account.isLoading && !account.snapshot;
   // Signed-out visitors get the free window; the server never sees these searches anyway.
   const finderDecision = account.snapshot
     ? account.can('reverse_planning')
@@ -108,15 +112,15 @@ export function MapShell() {
   // Panel swaps unmount the control that had focus (e.g. "Save to project" → Projects). Move focus
   // to the panel body so keyboard and screen-reader users are not dropped on <body> (plan §28).
   useEffect(() => {
-    if (firstRender.current) {
-      firstRender.current = false;
-      return;
-    }
+    if (prevPanel.current === panel) return; // mount (and StrictMode's re-run): nothing changed
+    prevPanel.current = panel;
     panelBodyRef.current?.focus({ preventScroll: true });
   }, [panel]);
   // Collapsing the preview restores focus to the control that expands it.
   useEffect(() => {
-    if (!previewExpanded && !firstRender.current) expandButtonRef.current?.focus();
+    if (prevExpanded.current === previewExpanded) return;
+    prevExpanded.current = previewExpanded;
+    if (!previewExpanded) expandButtonRef.current?.focus();
   }, [previewExpanded]);
 
   const captureThumbnail = useCallback(() => rendererInfo.capture(), [rendererInfo]);
@@ -251,7 +255,7 @@ export function MapShell() {
                   timeZone={location?.timeZone ?? 'UTC'}
                   phase={scene?.solar.phase}
                 />
-                {scene ? (
+                {scene && !planLoading ? (
                   <HourlyOutlook
                     scene={scene}
                     frames={weather.frames}
@@ -270,18 +274,20 @@ export function MapShell() {
                 {scene ? (
                   <>
                     <WeatherScenarioPicker scene={scene} weatherLoading={weather.loading} />
-                    <ClimatologyPanel
-                      scene={scene}
-                      decision={
-                        account.snapshot
-                          ? account.can('climatology')
-                          : {
-                              allowed: false,
-                              key: 'climatology',
-                              reason: 'Sign in with Pro to see typical conditions for any month.',
-                            }
-                      }
-                    />
+                    {isEnabled('climatology') && !planLoading ? (
+                      <ClimatologyPanel
+                        scene={scene}
+                        decision={
+                          account.snapshot
+                            ? account.can('climatology')
+                            : {
+                                allowed: false,
+                                key: 'climatology',
+                                reason: 'Sign in with Pro to see typical conditions for any month.',
+                              }
+                        }
+                      />
+                    ) : null}
                     {weather.providerFailed ? (
                       <ErrorState
                         live="status"
@@ -293,7 +299,11 @@ export function MapShell() {
                       scene={scene}
                       rendererMode={rendererInfo.mode}
                       capture={rendererInfo.capture}
-                      exportDecision={account.can('export_preview')}
+                      exportDecision={
+                        isEnabled('exportPreview') && !planLoading
+                          ? account.can('export_preview')
+                          : undefined
+                      }
                       expandButtonRef={expandButtonRef}
                     />
                     {rendererInfo.error && rendererInfo.mode !== 'OVERLAY' ? (
@@ -303,24 +313,28 @@ export function MapShell() {
                       advancedAllowed={account.can('advanced_camera_tools').allowed}
                     />
                     <ConfidencePanel scene={scene} />
-                    <details data-testid="details-light-finder">
-                      <summary className="cursor-pointer text-xs uppercase tracking-wide text-[var(--lm-text-muted)]">
-                        Light finder — when is the sun{' '}
-                        <em className="not-italic normal-case">there</em>?
-                      </summary>
-                      <div className="mt-2">
-                        <LightFinder
-                          scene={scene}
-                          allowed={finderDecision.allowed}
-                          reason={finderDecision.allowed ? null : (finderDecision.reason ?? null)}
-                          windowDays={{
-                            ahead: account.snapshot?.limits.futureDateWindowDays ?? 14,
-                            back: account.snapshot?.limits.pastDateWindowDays ?? 7,
-                          }}
-                          moonAllowed={account.can('moon_planning').allowed || !account.snapshot}
-                        />
-                      </div>
-                    </details>
+                    {isEnabled('reversePlanning') ? (
+                      <details data-testid="details-light-finder">
+                        <summary className="cursor-pointer text-xs uppercase tracking-wide text-[var(--lm-text-muted)]">
+                          Light finder — when is the sun{' '}
+                          <em className="not-italic normal-case">there</em>?
+                        </summary>
+                        <div className="mt-2">
+                          <LightFinder
+                            key={`${scene.location.point.latitude},${scene.location.point.longitude}`}
+                            scene={scene}
+                            planLoading={planLoading}
+                            allowed={finderDecision.allowed}
+                            reason={finderDecision.allowed ? null : (finderDecision.reason ?? null)}
+                            windowDays={{
+                              ahead: account.snapshot?.limits.futureDateWindowDays ?? 14,
+                              back: account.snapshot?.limits.pastDateWindowDays ?? 7,
+                            }}
+                            moonAllowed={account.can('moon_planning').allowed || !account.snapshot}
+                          />
+                        </div>
+                      </details>
+                    ) : null}
                     <details data-testid="details-astronomy">
                       <summary className="cursor-pointer text-xs uppercase tracking-wide text-[var(--lm-text-muted)]">
                         Sun &amp; moon details

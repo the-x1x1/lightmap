@@ -17,7 +17,8 @@ export function AccountMenu() {
   // body on change) instead of Radix returning it to the trigger.
   const movedFocus = useRef(false);
   const openPanel = (p: 'account' | 'projects') => {
-    movedFocus.current = true;
+    // The shell only moves focus when the panel actually changes; otherwise let Radix return it.
+    movedFocus.current = usePlannerStore.getState().panel !== p;
     setPanel(p);
   };
   return (

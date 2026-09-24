@@ -47,7 +47,15 @@ export async function GET(req: Request) {
     // Cell centre so nearby pins share one upstream fetch (and one cache row).
     const clat = Math.round(lat * 2) / 2;
     const clng = Math.round(lng * 2) / 2;
-    const cacheKey = climatologyCacheKey(caps.providerId, lat, lng, month, years, DAYLIGHT_WINDOW);
+    const cacheKey = climatologyCacheKey(
+      caps.providerId,
+      lat,
+      lng,
+      month,
+      years,
+      DAYLIGHT_WINDOW,
+      tz,
+    );
     const cache = s.db ? cacheRepo(s.db.db) : null;
     let summary = cache ? await cache.get<ClimatologySummary>('climatology', cacheKey) : null;
     const cached = summary !== null;

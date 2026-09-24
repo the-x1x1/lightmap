@@ -44,23 +44,27 @@ export function ConfidencePanel({ scene }: { scene: SceneState }) {
         {SOURCE_MODE_DESCRIPTION[scene.sourceMode]}
       </p>
       <dl className="space-y-1 text-sm">
+        {/* dt/dd are direct children of each div (a valid <dl> group); grid does the layout. */}
         {rows.map(([label, level, note]) => (
-          <div key={label} className="border-b border-white/5 py-1">
-            <div className="flex items-start justify-between gap-3">
-              <dt className="text-[var(--lm-text-muted)]">{label}</dt>
-              <dd
-                className="text-right"
-                data-testid={`confidence-${label.toLowerCase().replace(/\s+/g, '-')}`}
-                data-value={level}
-              >
-                <span aria-hidden className="mr-1.5 font-mono text-xs text-[var(--lm-text-faint)]">
-                  {LEVEL_GLYPH[level] ?? ''}
-                </span>
-                {LEVEL_TEXT[level] ?? level}
-              </dd>
-            </div>
+          <div
+            key={label}
+            className="grid grid-cols-[1fr_auto] gap-x-3 border-b border-white/5 py-1"
+          >
+            <dt className="text-[var(--lm-text-muted)]">{label}</dt>
+            <dd
+              className="text-right"
+              data-testid={`confidence-${label.toLowerCase().replace(/\s+/g, '-')}`}
+              data-value={level}
+            >
+              <span aria-hidden className="mr-1.5 font-mono text-xs text-[var(--lm-text-faint)]">
+                {LEVEL_GLYPH[level] ?? ''}
+              </span>
+              {LEVEL_TEXT[level] ?? level}
+            </dd>
             {/* The reason is content, not a tooltip: touch and keyboard users never see `title`. */}
-            {note ? <dd className="text-xs text-[var(--lm-text-muted)]">{note}</dd> : null}
+            {note ? (
+              <dd className="col-span-2 text-xs text-[var(--lm-text-muted)]">{note}</dd>
+            ) : null}
           </div>
         ))}
       </dl>
