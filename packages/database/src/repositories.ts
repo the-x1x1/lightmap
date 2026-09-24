@@ -239,3 +239,14 @@ export function auditRepo(db: Db) {
     },
   };
 }
+
+/** Retention job support (docs/PRIVACY.md): accounts whose deletion request is older than the window. */
+export function retentionRepo(db: Db) {
+  return {
+    async usersDueForErasure(windowDays = 14, now: Date = new Date()): Promise<Array<{ id: string; requestedAt: Date }>> {
+      const cutoff = new Date(now.getTime() - windowDays * 86_400_000);
+      const rows = await db.select({ id: users.id, requestedAt: users.deletionRequestedAt }).from(users).where(lt(users.deletionRequestedAt, cutoff));
+      return rows.filter((r): r is { id: string; requestedAt: Date } => r.requestedAt !== null);
+    },
+  };
+}

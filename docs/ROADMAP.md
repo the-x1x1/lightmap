@@ -1,0 +1,115 @@
+# Roadmap
+
+Phases follow the master plan (§25). Status as of v0.1.0. A phase is "delivered" when its listed
+items exist, are tested and are documented; "plumbing" means the code paths work end to end in test
+mode but production configuration is still outstanding.
+
+| Phase | Goal | Status |
+|---|---|---|
+| 0 | Foundation | **Delivered in v0.1.0** |
+| 1 | Lighting MVP | **Delivered in v0.1.0** |
+| 2 | Weather | **Delivered in v0.1.0** |
+| 3 | Accounts, projects, billing | **Delivered as plumbing in v0.1.0**; production configuration outstanding |
+| 4 | Visual quality | Future |
+| 5 | Real references | Future — blocked on licensing |
+| 6 | Advanced camera planning / reverse planning | Future |
+| 7 | Long-range climatology | Future |
+| 8 | High-fidelity environment reconstruction | Future |
+| 9 | Native mobile | Future — only after PWA demand is proven |
+
+## Phase 0 — Foundation (delivered)
+
+pnpm workspaces + Turborepo monorepo; Next.js app shell; ESLint, Prettier, TypeScript strict
+(`erasableSyntaxOnly`, `verbatimModuleSyntax`); Vitest, Playwright; GitHub Actions CI, security and
+release workflows; dependency-free env validation; SQL migration runner with checksums; licence
+allowlist and `THIRD_PARTY_NOTICES.md` generation; secrets scan; bundle budget; core documentation;
+WorldView reuse audit (`WORLDVIEW_REUSE_AUDIT.md`).
+
+## Phase 1 — Lighting MVP (delivered)
+
+Cesium globe via `@cesium/engine`; location search, map click, coordinate paste, device location;
+time-zone resolution; date and timeline controls with day-event markers and keyboard support;
+`packages/astronomy` (sun, moon, twilight, golden/blue hour) validated against USNO; sun and shadow
+direction overlays; camera heading/pitch/lens presets in map and viewpoint modes; terrain preview
+with `DirectionalLight` driven by `SolarState`; Clear / Mostly Clear / Partly Cloudy / Overcast /
+Storm scenarios through a post-process grade; responsive mobile sheet; source and confidence labels;
+Quality-0 overlay fallback; dev performance panel.
+
+Acceptance: Kailua Beach, 31 May 2026, 12:30 HST shows sun ≈ 89.3°, sunrise 05:48, sunset 19:09,
+scenario-labelled weather, and visibly different scenarios (E2E `planner.spec.ts`).
+
+## Phase 2 — Weather (delivered)
+
+`WeatherProvider` abstraction with capabilities; normalised `WeatherFrame`; Open-Meteo adapter
+(hourly cloud layers, visibility, precipitation, irradiance, 16-day horizon, 92-day archive);
+horizon decision (`FORECAST` / `EXTENDED_FORECAST` / `SCENARIO` / `RECENT_PAST` / `PAST`);
+forecast badge with confidence; one fetch per 0.05° grid cell per civil day cached in
+`provider_cache`; client-side interpolation while scrubbing; scenario fallback outside the horizon
+and on provider failure; "compare scenario" pinning inside the window; fixture provider for
+development and tests, refused in production.
+
+## Phase 3 — Accounts, projects, billing (plumbing delivered)
+
+Delivered: Auth.js with magic-link email, optional Google, dev sign-in (non-production only);
+projects and viewpoints with owner-scoped repositories and entitlement-checked limits; Stripe
+Checkout and Customer Portal routes; idempotent webhook pipeline; central entitlement derivation
+and `GET /api/account/entitlements`; usage counters and daily budgets; account-deletion request;
+legal placeholders wired into the app.
+
+Outstanding before commercial beta (plan §43):
+
+- production Auth.js configuration (email server or Google credentials, `AUTH_SECRET`, `AUTH_URL`);
+- Stripe live keys, live prices, webhook endpoint registered on the production URL;
+- Open-Meteo commercial API subscription (or another approved provider);
+- commercial geocoder contract (Nominatim is development-only);
+- terrain/imagery licensing sign-off and complete attribution UI review;
+- error monitoring DSN, cost telemetry dashboards;
+- scheduled retention job and the sign-in-cancels-deletion path (`PRIVACY.md` §8);
+- privacy policy and terms text; accessibility and mobile usability passes; backups verified;
+  incident runbooks.
+
+## Phase 4 — Visual quality (future, 2+ releases)
+
+Improved terrain texture; detailed buildings where licensed; atmospheric scattering; water shader;
+layered clouds; shadow quality; horizon haze; preview export (planning card); better device
+performance adaptation. Everything stays grounded: geometry and light direction are never altered
+for looks.
+
+## Phase 5 — Real references (future, requires licensing work)
+
+`ImageryProvider` interface already exists in shape (`REFERENCE_IMAGERY_PROVIDER=none`). Deliver a
+licensed provider integration, near-coordinate lookup, capture metadata, attribution, and a
+side-by-side real vs simulated view. Does not start until commercial rights are documented in
+`DATA_SOURCES_AND_LICENSING.md`.
+
+## Phase 6 — Advanced camera planning (future)
+
+Composition frame, saved shot variants, sensor formats, and the **reverse-planning solver**: place
+the desired sun position in frame and search the calendar for matching azimuth/elevation (plan §26).
+`frameCoordinates()` and `SolarState` are already designed for this.
+
+## Phase 7 — Long-range climatology (future)
+
+Historical distributions of cloudiness, haze and rain by month and hour, shown as "Typical for this
+month" beside the scenario buttons. Never labelled as a forecast, never given a confidence above
+SCENARIO (`WEATHER_AND_FORECAST_MODEL.md` §8).
+
+## Phase 8 — High-fidelity environment reconstruction (future)
+
+Commercial 3D tiles, photogrammetry, Gaussian splats, NeRF-derived assets, physically based
+atmosphere, and controlled generative enhancement that may denoise, upscale and add micro-detail but
+must not relocate terrain, change horizon geometry, invent buildings, move the sun, change shadow
+direction or erase uncertainty labels.
+
+## Phase 9 — Native mobile (future)
+
+Capacitor or React Native wrapper only after PWA usage proves demand: native install, offline
+project cache, compass, device orientation, AR sun alignment, field mode.
+
+## Not on the roadmap (plan §37)
+
+Social feed · follower system · likes · comments · user photo uploads · public photo submissions ·
+crowdsourced image ingestion · generic AI chat · photographer marketplace · equipment marketplace ·
+location recommendation feed · "find me a cool waterfall" discovery engine · complex team admin ·
+desktop native wrapper · separate iOS and Android codebases · server GPU render farm · custom
+weather model · custom global map tile infrastructure · ads.
