@@ -48,10 +48,30 @@ export interface ClimatologySummary {
   wetHourShare: number;
   /** Fraction of days (any hour in the window) with ≥ 1 mm precipitation. */
   wetDayShare: number;
+  /**
+   * The same statistics per local hour of day, 0–23, over the whole day (not only the window),
+   * so "mornings are clearer than afternoons here" is visible. Hours with no samples have
+   * `samples: 0` and zeros elsewhere.
+   */
+  byHour: ClimatologyHourOfDay[];
   attribution: string;
   license: string;
   /** Wording the UI must use; never "forecast". */
   label: 'Typical for this month';
+}
+
+export interface ClimatologyHourOfDay {
+  /** Local hour of day, 0–23. */
+  hour: number;
+  samples: number;
+  /** Mean total cloud cover in this hour, %. */
+  meanCloudCover: number;
+  /** Fraction of sampled hours classed clear or mostly clear. */
+  clearShare: number;
+  /** Fraction of sampled hours classed overcast or storm. */
+  dullShare: number;
+  /** Fraction with ≥ 0.1 mm precipitation. */
+  wetShare: number;
 }
 
 export interface ClimatologyCapabilities {
@@ -141,9 +161,21 @@ export function summarizeClimatology(
   let cloudSum = 0;
   let wetHours = 0;
   const dayRain = new Map<string, number>();
+  const hod = Array.from({ length: 24 }, () => ({ n: 0, cloud: 0, clear: 0, dull: 0, wet: 0 }));
   for (const h of hours) {
     if (!Number.isFinite(h.cloudCoverTotal)) continue;
     const { hour, dateKey } = localParts(h.timestamp, meta.timeZone);
+    {
+      // Hour-of-day statistics cover the whole day; the window applies to the headline shares.
+      const slot = hod[hour]!;
+      const rainH = h.precipitationAmount ?? 0;
+      const cls = scenarioForConditions(h.cloudCoverTotal, { precipitationAmount: rainH });
+      slot.n++;
+      slot.cloud += h.cloudCoverTotal;
+      if (cls === 'clear' || cls === 'mostly-clear') slot.clear++;
+      if (cls === 'overcast' || cls === 'storm') slot.dull++;
+      if (rainH >= 0.1) slot.wet++;
+    }
     if (hour < window.startHour || hour >= window.endHour) continue;
     n++;
     cloudSum += h.cloudCoverTotal;
@@ -176,9 +208,51 @@ export function summarizeClimatology(
     meanCloudCover: n > 0 ? cloudSum / n : 0,
     wetHourShare: n > 0 ? wetHours / n : 0,
     wetDayShare: dayRain.size > 0 ? wetDays / dayRain.size : 0,
+    byHour: hod.map((s, hour) => ({
+      hour,
+      samples: s.n,
+      meanCloudCover: s.n > 0 ? s.cloud / s.n : 0,
+      clearShare: s.n > 0 ? s.clear / s.n : 0,
+      dullShare: s.n > 0 ? s.dull / s.n : 0,
+      wetShare: s.n > 0 ? s.wet / s.n : 0,
+    })),
     attribution: meta.attribution,
     license: meta.license,
     label: 'Typical for this month',
+  };
+}
+
+/**
+ * The clearest and the dullest three-hour stretch of the day, by mean cloud over a centred
+ * 3-hour average, restricted to hours with samples and to `window` when given. Null when the
+ * spread is under 8 percentage points — then the day has no meaningful pattern and the UI must
+ * not invent one.
+ */
+export function daylightPattern(
+  summary: Pick<ClimatologySummary, 'byHour'>,
+  window: ClimatologyWindow = DAYLIGHT_WINDOW,
+): {
+  clearest: { from: number; to: number; meanCloudCover: number };
+  dullest: { from: number; to: number; meanCloudCover: number };
+} | null {
+  const candidates: Array<{ from: number; to: number; mean: number }> = [];
+  for (let h = window.startHour; h + 3 <= window.endHour; h++) {
+    const slots = [h, h + 1, h + 2].map((k) => summary.byHour[k]);
+    if (slots.some((s) => !s || s.samples === 0)) continue;
+    const mean = slots.reduce((acc, s) => acc + s!.meanCloudCover, 0) / 3;
+    candidates.push({ from: h, to: h + 3, mean });
+  }
+  if (candidates.length < 2) return null;
+  let lo = candidates[0]!;
+  let hi = candidates[0]!;
+  for (const c of candidates) {
+    if (c.mean < lo.mean) lo = c;
+    if (c.mean > hi.mean) hi = c;
+  }
+  if (hi.mean - lo.mean < 8) return null;
+  return {
+    clearest: { from: lo.from, to: lo.to, meanCloudCover: lo.mean },
+    dullest: { from: hi.from, to: hi.to, meanCloudCover: hi.mean },
   };
 }
 
@@ -210,7 +284,8 @@ export function climatologyCacheKey(
   timeZone = 'UTC',
 ): string {
   const cell = `${(Math.round(lat * 2) / 2).toFixed(1)},${(Math.round(lng * 2) / 2).toFixed(1)}`;
-  return `${providerId}:${cell}:m${month}:${years.from}-${years.to}:h${window.startHour}-${window.endHour}:${timeZone}`;
+  // `v2`: the summary gained `byHour`; rows written before that must not be served.
+  return `v2:${providerId}:${cell}:m${month}:${years.from}-${years.to}:h${window.startHour}-${window.endHour}:${timeZone}`;
 }
 
 /** Fetch the same month for several years and summarise. Concurrency-limited; partial years are dropped. */

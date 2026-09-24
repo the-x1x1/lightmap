@@ -10,7 +10,7 @@ How LightMap turns "what will the sky do?" into something honest and renderable.
 | --------------- | -------------------------------------------------------------- | ------------------------------------------------------------- | ----------------------------------------------------------- |
 | **Forecast**    | A numerical weather model's prediction for a specific hour     | The configured `WeatherProvider`, inside its declared horizon | "Forecast" / "Extended forecast — low confidence"           |
 | **Scenario**    | A user-chosen, deterministic set of atmosphere parameters      | `SCENARIOS` constants                                         | "Scenario: Overcast", "Forecast unavailable this far ahead" |
-| **Climatology** | Historical frequency of conditions for a place, month and hour | Phase 7, not implemented                                      | "Typical for this month" — never "Forecast"                 |
+| **Climatology** | Historical frequency of conditions for a place, month and hour | Phase 7, delivered (§8)                                       | "Typical for this month" — never "Forecast"                 |
 
 Rules (plan §1, §9): do not pretend weather is known beyond the forecast horizon; do not silently
 use historical weather as a future forecast; label scenarios as scenarios.
@@ -150,11 +150,20 @@ forecast nor a scenario.
   forecast uses (cloud cover < 12 % clear, < 40 % mostly clear, < 80 % partly cloudy, else overcast;
   ≥ 0.5 mm/h → storm), restricted to local daylight hours 06:00–20:00 in the location's zone;
   shares, mean cloud cover, wet-hour and wet-day fractions are reported with the year span and
-  sample size.
+  sample size. The same statistics are also kept **per local hour of day** (`byHour`, all 24 hours,
+  not only the window): mean cloud, share of clear/mostly-clear hours, share of overcast/storm
+  hours, wet share, sample count. `daylightPattern()` names the clearest and the cloudiest
+  three-hour stretch inside the window when they differ by ≥ 8 percentage points of mean cloud,
+  and returns null otherwise — the UI then says there is no strong pattern rather than inventing
+  one.
 - **Presentation**: a small "Typical for {month}" block under the scenario buttons with the badge
   **Climatology · not a forecast**; each class is a button that _compares_ that scenario (explicit
   user action — nothing is selected silently); the most common class is marked "most common".
   The summary line names the hours, the years and "history, not a prediction for your date".
+  Under the class buttons, 24 bars show typical cloud by local hour (height = mean cloud, tone =
+  share of clear hours, night hours dimmed, the selected hour ringed) with a table for assistive
+  tech and the one-line pattern ("Typically clearest 07:00–10:00 (~15 % cloud), cloudiest
+  14:00–17:00 (~70 %)").
 - **Never**: rendered with a Forecast badge, given a confidence above SCENARIO, or turned into a
   deterministic prediction (plan §4, §25 Phase 7). `ClimatologySummary.kind` is `'CLIMATOLOGY'` and
   its `label` is fixed to "Typical for this month" so the wording cannot drift.

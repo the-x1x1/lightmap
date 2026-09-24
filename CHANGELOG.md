@@ -4,6 +4,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Climatology by hour of day**: "Typical for this month" now includes 24 hour-of-day bars
+  (mean cloud, clear share, wet share; night dimmed; selected hour ringed; table for assistive
+  tech) and a pattern line naming the clearest and cloudiest three-hour stretch when the month
+  has one (`byHour`, `daylightPattern()`, tested). Cache key bumped to `v2`.
 - **Mobile pass**: fields are 16 px on touch devices (no iOS focus zoom); the sheet and top bar
   clear the safe-area insets; the sheet handle takes a swipe; a collapsed sheet shows a glance
   line (time · phase · sun bearing · weather basis) that opens it; taps in the viewpoint view
