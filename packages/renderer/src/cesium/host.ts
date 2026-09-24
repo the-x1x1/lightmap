@@ -37,6 +37,9 @@ export interface HostGradeUniforms {
   u_cloudCoverage: number;
   u_cloudDensity: number;
   u_cloudOpacity: number;
+  u_cloudLow: number;
+  u_cloudMid: number;
+  u_cloudHigh: number;
   u_skyLuminance: number;
   u_nightFactor: number;
   u_precipitation: number;

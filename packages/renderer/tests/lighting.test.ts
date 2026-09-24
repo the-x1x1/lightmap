@@ -76,6 +76,48 @@ describe('lightingFromScene', () => {
     expect(storm.grade.precipitation).toBe(1);
   });
 
+  it('cloud decks: scenario split for scenarios, the forecast layers when a frame is in force', () => {
+    const clear = lightingFromScene(scene(12.5, 'clear'));
+    expect(clear.grade.cloudLow).toBe(0);
+    expect(clear.grade.cloudHigh).toBeLessThan(0.1);
+    const over = lightingFromScene(scene(12.5, 'overcast'));
+    expect(over.grade.cloudLow).toBeGreaterThan(0.6);
+    expect(over.grade.cloudMid).toBeGreaterThan(0.6);
+    // A forecast frame with only cirrus: the decks follow the frame, direct light largely survives.
+    const utc = localSelectionToUtc({ year: 2026, month: 5, day: 31 }, 12.5 * 60, kailua.timeZone);
+    const cirrus = lightingFromScene(
+      scene(12.5, 'clear', {
+        now: new Date('2026-05-30T00:00:00Z'),
+        forceScenario: false,
+        weather: {
+          capabilities: OPEN_METEO_CAPABILITIES,
+          providerFailed: false,
+          frames: [
+            {
+              timestamp: utc.toISOString(),
+              cloudCoverTotal: 85,
+              cloudCoverLow: 0,
+              cloudCoverMid: 5,
+              cloudCoverHigh: 85,
+              precipitationProbability: 0,
+              precipitationAmount: 0,
+              humidity: 60,
+              visibility: 40000,
+              windSpeed: 3,
+              windDirection: 90,
+              weatherCode: 2,
+            },
+          ],
+        },
+      }),
+    );
+    expect(cirrus.grade.cloudHigh).toBeCloseTo(0.85, 6);
+    expect(cirrus.grade.cloudLow).toBe(0);
+    expect(cirrus.directLightPresent).toBe(true);
+    expect(cirrus.shadowsEnabled).toBe(true);
+    expect(cirrus.sunIntensity).toBeGreaterThan(over.sunIntensity * 2);
+  });
+
   it('aerial perspective grows toward the horizon at low sun and the shader gets the elevation', () => {
     const noon = lightingFromScene(scene(12.5, 'clear'));
     const golden = lightingFromScene(scene(18.75, 'clear'));

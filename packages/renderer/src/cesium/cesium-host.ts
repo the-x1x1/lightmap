@@ -150,6 +150,9 @@ export class CesiumSceneHost implements SceneHost {
       u_cloudCoverage: 0,
       u_cloudDensity: 0.3,
       u_cloudOpacity: 0,
+      u_cloudLow: 0,
+      u_cloudMid: 0,
+      u_cloudHigh: 0,
       u_skyLuminance: 1,
       u_nightFactor: 0,
       u_precipitation: 0,
@@ -241,6 +244,9 @@ export class CesiumSceneHost implements SceneHost {
     g['u_cloudCoverage'] = u.u_cloudCoverage;
     g['u_cloudDensity'] = u.u_cloudDensity;
     g['u_cloudOpacity'] = u.u_cloudOpacity;
+    g['u_cloudLow'] = u.u_cloudLow;
+    g['u_cloudMid'] = u.u_cloudMid;
+    g['u_cloudHigh'] = u.u_cloudHigh;
     g['u_skyLuminance'] = u.u_skyLuminance;
     g['u_nightFactor'] = u.u_nightFactor;
     g['u_precipitation'] = u.u_precipitation;

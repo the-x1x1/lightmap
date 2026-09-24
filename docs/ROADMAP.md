@@ -10,7 +10,7 @@ mode but production configuration is still outstanding.
 | 1     | Lighting MVP                                | **Delivered in v0.1.0**                                                                     |
 | 2     | Weather                                     | **Delivered in v0.1.0**                                                                     |
 | 3     | Accounts, projects, billing                 | **Delivered as plumbing in v0.1.0**; production configuration outstanding                   |
-| 4     | Visual quality                              | Started: preview export delivered (unreleased)                                              |
+| 4     | Visual quality                              | Started: export, twilight/haze, layered clouds delivered (unreleased)                       |
 | 5     | Real references                             | Future — blocked on licensing                                                               |
 | 6     | Advanced camera planning / reverse planning | **Solver, Light finder, point-in-view, variants, "this light" chip delivered (unreleased)** |
 | 7     | Long-range climatology                      | **Delivered (unreleased)** — Open-Meteo/ERA5, Pro entitlement                               |

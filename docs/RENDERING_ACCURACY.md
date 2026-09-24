@@ -75,7 +75,7 @@ grade shader restores the real darkening (`nightFactor`) and the deep blue of ci
 (`blueHour` term, −6°…0°, warm glow preserved where the Sun set); (2) **aerial perspective** — far
 ground is lifted toward the sky colour by depth, more strongly at low Sun (`horizonHaze`), tinted
 by the light's colour. The light direction and terrain shading are untouched by either. Verified in
-`tools/renderer-smoke` (contact sheet `docs/media/renderer-smoke-2026-09-24b.png`).
+`tools/renderer-smoke` (contact sheet `docs/media/renderer-smoke-2026-09-24c.png`).
 
 ### Weather scenarios
 
@@ -85,6 +85,23 @@ the parameters and adjusts contrast/saturation/haze globally. **Claim:** Clear v
 Overcast are visibly and consistently different in the ways that matter to a photographer (direct
 light 100 % / 70 % / 20 %, contrast 1.0 / 0.9 / 0.75, sky luminance). **Caveat:** cloud placement is
 noise, not a forecast of where clouds will be.
+
+**Cloud decks.** The sky is three decks, composited far to near over the corrected dome: high
+(cirrus — fibrous, thin, brightens more than it hides), mid (alto- — a grey-white sheet) and low
+(stratus/cumulus — dark bases, thickness from the scenario density). Each deck's cover is the
+forecast's own layer (`cloud_cover_low/mid/high`, `AtmosphereParameters.cloudLayers`,
+`layersObserved: true`) or, for a scenario or a provider without layers, the scenario's
+representative split. Each deck is lit from the true Sun elevation: a cloud at height _h_ stays
+sunlit until the Sun is `acos(R/(R+h))` (+ refraction) below the horizon — ≈1° for a 1 km base,
+≈2° at 4 km, ≈3.5–4° at 10–12 km — so at the same minute after sunset a low deck is in shadow
+(dark blue-grey) while cirrus is still lit, and pink; direct light on any deck is warm from the
+golden hour down. A sky that is mostly thin high cloud keeps 55–85 % of the direct beam
+(`parametersForForecast`), so shadows survive under cirrus and vanish under stratus. **Claim:** the
+_kind_ of cloud the forecast reports changes the light and the sky the way it does outdoors.
+**Caveat:** deck heights are the band's typical heights, not the forecast's cloud base; the sunlit
+/ shadowed transition is applied uniformly across the sky (a real deck stays lit longer toward the
+Sun); cirrus optical depth is not forecast, so its brightness is a fixed typical value. Verified
+in `tools/renderer-smoke` (`cirrus-sunset` vs `stratus-sunset` at 19:18, Sun −2.7°).
 
 ### Geometry
 

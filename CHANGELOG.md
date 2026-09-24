@@ -4,6 +4,12 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Layered clouds (Phase 4)**: the sky is three decks — low, mid, high — with cover from the
+  forecast's own `cloud_cover_low/mid/high` (`AtmosphereParameters.cloudLayers`,
+  `layersObserved`) or the scenario's split, each lit by the true Sun elevation (a 1 km base is
+  in shadow at sunset; cirrus at 10 km stays lit, and pink, until ≈ −3.5°). A thin high veil keeps
+  55–85 % of the direct beam. Smoke harness gained `cirrus-sunset` / `stratus-sunset`; new
+  contact sheet.
 - **"This light" chip** under the timeline: how long the sun keeps returning to its current
   position and when it comes back after that ("Like this until … · Back … 17:47"); one click
   jumps there. `summarizeRecurrence()` in `@lightmap/astronomy` (tested at equinox/solstice);
