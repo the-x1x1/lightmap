@@ -9,6 +9,9 @@ import {
 } from '@lightmap/scene';
 import { OPEN_METEO_CAPABILITIES, type WeatherScenarioId } from '@lightmap/weather';
 import { lightingFromScene, skyGradientFor } from '../src/lighting.ts';
+import { azElFromEcefToward, type Vec3 } from '../src/sun-vector.ts';
+
+const neg = (v: Vec3): Vec3 => ({ x: -v.x, y: -v.y, z: -v.z });
 
 const kailua = {
   point: { latitude: 21.397, longitude: -157.727 },
@@ -86,6 +89,19 @@ describe('lightingFromScene', () => {
     const night = lightingFromScene(scene(23, 'clear'));
     expect(night.grade.nightFactor).toBeCloseTo(1, 3);
     expect(night.sunIntensity).toBe(0);
+    expect(night.starsVisible).toBe(true);
+    expect(blue.starsVisible).toBe(false);
+    // Blue hour keeps a dim, cool ambient and lifts the atmosphere light to a grazing angle.
+    expect(blue.sunIntensity).toBeGreaterThan(0.1);
+    expect(blue.sunIntensity).toBeLessThan(0.5);
+    expect(blue.sunColor[2]).toBeGreaterThan(blue.sunColor[0]);
+    const trueEl = azElFromEcefToward(neg(blue.sunDirectionEcef), 21.397, -157.727).elevationDeg;
+    const litEl = azElFromEcefToward(neg(blue.lightDirectionEcef), 21.397, -157.727).elevationDeg;
+    expect(trueEl).toBeLessThan(-4);
+    expect(litEl).toBeCloseTo(-1.5, 6);
+    expect(lightingFromScene(scene(12.5)).lightDirectionEcef).toEqual(
+      lightingFromScene(scene(12.5)).sunDirectionEcef,
+    );
   });
 
   it('light direction follows the sun across the day', () => {
@@ -117,5 +133,22 @@ describe('lightingFromScene', () => {
     const [, , horizonSunset] = skyGradientFor(-2, 0.05, 0.9, 1);
     const h = rgb(horizonSunset);
     expect(h[0]).toBeGreaterThan(h[2]); // warm glow at the horizon
+  });
+});
+
+describe('moonlight', () => {
+  it('lights the night scene from the Moon when it is up and the Sun is below −12°', () => {
+    // Kailua, 31 May 2026 23:00 HST: full moon high in the sky, sun ≈ −33°.
+    const night = lightingFromScene(scene(23, 'clear', { includeLunar: true }));
+    expect(night.moonlit).toBe(true);
+    expect(night.sunIntensity).toBeGreaterThan(0.08);
+    expect(night.sunIntensity).toBeLessThan(0.2);
+    expect(night.sunColor[2]).toBeGreaterThan(night.sunColor[0]); // cool
+    const dir = azElFromEcefToward(neg(night.lightDirectionEcef), 21.397, -157.727);
+    expect(dir.elevationDeg).toBeGreaterThan(2);
+    expect(night.starsVisible).toBe(true);
+    const noMoon = lightingFromScene(scene(23, 'clear', { includeLunar: false }));
+    expect(noMoon.moonlit).toBe(false);
+    expect(noMoon.sunIntensity).toBe(0);
   });
 });

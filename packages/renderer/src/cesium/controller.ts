@@ -47,7 +47,7 @@ export class SceneController {
   private lastBasemap: string | null = null;
   private lastShadowKey: string | null = null;
   private lastQualityKey: string | null = null;
-  private lastCelestial: boolean | null = null;
+  private lastCelestial: string | null = null;
   private lastDayKey: string | null = null;
   private groundHeightM = 0;
   private groundHeightKey: string | null = null;
@@ -112,7 +112,7 @@ export class SceneController {
     // --- cheap, every tick -----------------------------------------------------------------
     this.host.setTime(scene.utc);
     this.host.setLight({
-      directionEcef: lighting.sunDirectionEcef,
+      directionEcef: lighting.lightDirectionEcef,
       color: lighting.sunColor,
       intensity: lighting.sunIntensity,
     });
@@ -169,10 +169,17 @@ export class SceneController {
       });
     }
 
-    const celestial = scene.camera.mode === 'viewpoint';
-    if (celestial !== this.lastCelestial) {
-      this.lastCelestial = celestial;
-      this.host.setCelestialBodies(celestial);
+    const viewpoint = scene.camera.mode === 'viewpoint';
+    const celestialKey = `${viewpoint}|${lighting.starsVisible}|${scene.lunar?.isAboveHorizon ?? false}`;
+    if (celestialKey !== this.lastCelestial) {
+      this.lastCelestial = celestialKey;
+      this.host.setCelestialBodies({
+        sun: viewpoint && scene.solar.elevationDegrees > -1,
+        // Cesium's Moon mesh is lit by Cesium's own Sun, so at night it renders as a black disc;
+        // the moonlit atmosphere lobe (lighting.ts) marks the Moon's position instead. v0.1: off.
+        moon: false,
+        stars: viewpoint && lighting.starsVisible,
+      });
     }
 
     // --- expensive, debounced -------------------------------------------------------------

@@ -104,8 +104,8 @@ export interface SceneHost {
   setQuality(q: HostQuality): void;
   setTerrain(t: TerrainDescriptor): Promise<void>;
   setBasemap(b: BasemapDescriptor): Promise<void>;
-  /** Show the sun disc / moon / stars in the sky (viewpoint mode). */
-  setCelestialBodies(show: boolean): void;
+  /** Sun disc / moon / stars in the sky (viewpoint mode; stars only when dark). */
+  setCelestialBodies(v: { sun: boolean; moon: boolean; stars: boolean }): void;
   /** Screen position (0..1) of a world direction from the camera, or null when behind. */
   sunScreenPosition(directionTowardSunEcef: Vec3): [number, number] | null;
   /** Ground height at a point once terrain is loaded; null when unknown. */

@@ -65,14 +65,23 @@ void main() {
     float coverage = clamp(u_cloudCoverage, 0.0, 1.0);
     // Threshold the noise so coverage maps to the fraction of sky that is cloud.
     float cloud = smoothstep(1.0 - coverage - 0.15, 1.0 - coverage + 0.15, n);
-    float thickness = mix(0.35, 1.0, u_cloudDensity);
+    float thickness = clamp(u_cloudDensity * (0.5 + 0.5 * u_cloudOpacity), 0.0, 1.0);
     // Cloud colour: bright white lit by the sun when thin/scattered, grey when dense/overcast.
-    vec3 skyLit = color * (0.9 + 0.3 * u_skyLuminance);
-    vec3 cloudCol = mix(vec3(0.96, 0.96, 0.97), vec3(0.62, 0.64, 0.68), thickness);
+    vec3 skyLit = color * (0.95 + 0.15 * u_skyLuminance);
+    vec3 cloudCol = mix(vec3(1.0, 1.0, 1.0), vec3(0.55, 0.58, 0.62), thickness);
     cloudCol = mix(cloudCol, cloudCol * (0.35 + 0.65 * (1.0 - u_nightFactor)), u_nightFactor);
     cloudCol = mix(cloudCol, cloudCol * u_tint, 0.35 * (1.0 - thickness));
     color = mix(skyLit, cloudCol, cloud * u_cloudOpacity * (0.6 + 0.4 * thickness));
     color *= mix(1.0, u_skyLuminance, 0.6);
+    // Twilight → night: the atmosphere is lit at a grazing angle (see lighting.ts), so darken and
+    // cool the sky here as the real Sun sinks. Blue hour keeps ~65 % luminance with a blue cast;
+    // astronomical night ends near black.
+    float twilight = smoothstep(0.0, 1.0, u_nightFactor);
+    color = mix(color, color * vec3(0.55, 0.68, 1.05), twilight * 0.8);
+    // Darken the atmospheric glow but keep bright point sources (stars, moon) readable.
+    float lum = dot(color, vec3(0.2126, 0.7152, 0.0722));
+    float keep = smoothstep(0.12, 0.5, lum);
+    color = mix(color * mix(1.0, 0.06, twilight), color, keep);
   } else {
     // Haze: lift toward a sky-ish colour with depth. Depth is non-linear; use a gentle curve.
     float d = clamp(depth, 0.0, 1.0);
@@ -91,9 +100,9 @@ void main() {
 
   // Rain streaks.
   if (u_precipitation > 0.01) {
-    vec2 r = v_textureCoordinates * vec2(180.0, 24.0) + vec2(0.0, -u_time * 3.0);
-    float streak = smoothstep(0.985, 1.0, vnoise(r));
-    color = mix(color, color * 0.85 + vec3(0.12), streak * u_precipitation * 0.6);
+    vec2 r = v_textureCoordinates * vec2(220.0, 18.0) + vec2(0.0, -u_time * 3.0);
+    float streak = smoothstep(0.93, 1.0, vnoise(r)) * smoothstep(0.6, 1.0, vnoise(r * 0.37 + 11.0));
+    color = mix(color, color * 0.8 + vec3(0.18), streak * u_precipitation * 0.8);
   }
 
   out_FragColor = vec4(clamp(color, 0.0, 1.0), src.a);

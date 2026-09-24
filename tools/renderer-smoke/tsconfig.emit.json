@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": false,
+    "sourceMap": false,
+    "rootDir": "../../packages",
+    "outDir": "./www/dist",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ES2022",
+    "types": [],
+    "skipLibCheck": true
+  },
+  "include": [
+    "../../packages/config/src/**/*.ts",
+    "../../packages/geospatial/src/**/*.ts",
+    "../../packages/astronomy/src/**/*.ts",
+    "../../packages/weather/src/**/*.ts",
+    "../../packages/scene/src/**/*.ts",
+    "../../packages/renderer/src/**/*.ts"
+  ]
+}

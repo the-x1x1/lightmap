@@ -481,11 +481,11 @@ export class CesiumSceneHost implements SceneHost {
     this.scene.requestRender();
   }
 
-  setCelestialBodies(show: boolean): void {
+  setCelestialBodies(v: { sun: boolean; moon: boolean; stars: boolean }): void {
     const s = this.scene;
-    if (s.sun) s.sun.show = show;
-    if (s.moon) s.moon.show = show;
-    if (s.skyBox) s.skyBox.show = show;
+    if (s.sun) s.sun.show = v.sun;
+    if (s.moon) s.moon.show = v.moon;
+    if (s.skyBox) s.skyBox.show = v.stars;
   }
 
   sunScreenPosition(toward: Vec3): [number, number] | null {
