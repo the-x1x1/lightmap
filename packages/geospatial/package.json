@@ -1,0 +1,23 @@
+{
+  "name": "@lightmap/geospatial",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Coordinates, provider interfaces (geocoding, timezone, terrain, basemap, imagery) and the provider registry.",
+  "license": "SEE LICENSE IN ../../LICENSE",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@lightmap/config": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0",
+    "@types/node": "^22.15.0"
+  }
+}

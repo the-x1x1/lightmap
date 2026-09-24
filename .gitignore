@@ -1,0 +1,17 @@
+node_modules/
+.pnpm-store/
+dist/
+.next/
+out/
+coverage/
+.turbo/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+apps/web/public/cesium/
+apps/web/test-results/
+apps/web/playwright-report/
+.DS_Store
+*.log
+.vercel
