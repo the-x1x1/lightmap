@@ -104,6 +104,29 @@ main {
   box-shadow: var(--lm-focus);
 }
 
+/* Phones and tablets (plan §20 mobile pass).
+   - iOS Safari zooms the page when a focused field is set below 16px: keep every field at 1rem
+     on coarse pointers (the utility classes on the search box are overridden on purpose).
+   - The sheet and the top bar clear the notch / home indicator (viewport-fit=cover). */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 1rem !important;
+  }
+}
+@media (max-width: 1023px) {
+  .lm-safe-top {
+    padding-top: max(1.5rem, calc(env(safe-area-inset-top, 0px) + 0.5rem));
+  }
+  .lm-safe-bottom {
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  }
+  .lm-sheet-collapsed {
+    max-height: calc(92px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 .lm-scrollbar-none {
   scrollbar-width: none;
 }

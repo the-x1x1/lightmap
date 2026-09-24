@@ -66,7 +66,9 @@ Outstanding before commercial beta (plan §43):
 - ~~error monitoring DSN~~ (`SENTRY_DSN`, dependency-free envelope reporter); ~~cost telemetry~~ (`pnpm usage:report`, `COST_MODEL.md` §7) — a hosted dashboard when there is a host;
 - ~~scheduled retention job~~ (`retention.yml`, needs the production `DATABASE_URL` secret); the
   sign-in-cancels-deletion path exists;
-- privacy policy and terms text; mobile usability pass; backups verified on the host;
+- privacy policy and terms text; ~~mobile usability pass~~ (code pass done: 16 px fields, safe
+  areas, swipe handle, glance line, touch slop — device QA on real phones per `QA_PLAN.md`
+  still to run); backups verified on the host;
   ~~incident runbooks~~ (`RUNBOOKS.md`).
 
 ## Phase 4 — Visual quality (started, 2+ releases)

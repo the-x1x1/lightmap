@@ -182,7 +182,7 @@ export function Timeline({ dayEvents, timeZone, phase, className }: TimelineProp
                 title={`${mk.label} ${dayEvents ? formatWallTime(new Date(dayEvents.dayStart.getTime() + mk.minutes * 60_000), timeZone) : ''}`}
                 onClick={() => setMinutes(mk.minutes)}
                 className={cx(
-                  'absolute -translate-x-1/2 text-[10px] leading-tight',
+                  'absolute min-w-6 -translate-x-1/2 text-[10px] leading-tight',
                   mk.tone === 'sun'
                     ? 'text-[var(--lm-sun)]'
                     : mk.tone === 'twilight'

@@ -171,8 +171,19 @@ test('mobile: bottom sheet collapses and the map remains usable', async ({ page,
   test.skip(!isMobile, 'mobile project only');
   await page.goto('/');
   await pickKailua(page);
+  await setDateTime(page, '2026-05-31', 12 * 60 + 30);
   await page.getByRole('button', { name: 'Collapse panel' }).click();
   await expect(page.getByTestId('world-map')).toBeVisible();
+  // Collapsed, the sheet still shows the glance line (time · phase · sun · basis) …
+  const peek = page.getByTestId('sheet-peek');
+  await expect(peek).toBeVisible();
+  await expect(peek).toContainText('12:30');
+  await expect(peek).toContainText('Daylight');
+  // … and tapping it opens the sheet again, as does the handle.
+  await peek.click();
+  await expect(page.getByTestId('timeline')).toBeVisible();
+  await page.getByRole('button', { name: 'Collapse panel' }).click();
+  await expect(peek).toBeVisible();
   await page.getByRole('button', { name: 'Expand panel' }).click();
   await expect(page.getByTestId('timeline')).toBeVisible();
 });

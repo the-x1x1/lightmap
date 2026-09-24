@@ -4,6 +4,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Mobile pass**: fields are 16 px on touch devices (no iOS focus zoom); the sheet and top bar
+  clear the safe-area insets; the sheet handle takes a swipe; a collapsed sheet shows a glance
+  line (time · phase · sun bearing · weather basis) that opens it; taps in the viewpoint view
+  tolerate 10 px of finger wobble; larger touch targets for tabs, markers and the chip.
 - **Layered clouds (Phase 4)**: the sky is three decks — low, mid, high — with cover from the
   forecast's own `cloud_cover_low/mid/high` (`AtmosphereParameters.cloudLayers`,
   `layersObserved`) or the scenario's split, each lit by the true Sun elevation (a 1 km base is

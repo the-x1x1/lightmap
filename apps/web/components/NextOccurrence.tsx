@@ -91,7 +91,7 @@ export function NextOccurrence({
             type="button"
             onClick={jump}
             title={`${tolerance}. Jump the planner to that moment.`}
-            className="inline-flex items-center gap-1 rounded-full bg-white/8 px-2.5 py-1 font-medium text-[var(--lm-text)] ring-1 ring-inset ring-white/10 hover:bg-white/15 focus-visible:outline-none focus-visible:[box-shadow:var(--lm-focus)]"
+            className="inline-flex min-h-9 items-center gap-1 rounded-full bg-white/8 px-3 py-1.5 font-medium text-[var(--lm-text)] ring-1 ring-inset ring-white/10 hover:bg-white/15 focus-visible:outline-none focus-visible:[box-shadow:var(--lm-focus)]"
             data-testid="next-occurrence-jump"
           >
             <span className="text-[var(--lm-text-muted)]">Back</span>
@@ -111,7 +111,7 @@ export function NextOccurrence({
                 ? "How long this light lasts, and when it returns, lie beyond your plan's date window."
                 : "When this light comes back lies beyond your plan's date window."
             }
-            className="inline-flex items-center gap-1 rounded-full bg-[color:rgba(245,179,66,0.12)] px-2.5 py-1 font-medium text-[color:#ffd27a] ring-1 ring-inset ring-[color:rgba(245,179,66,0.3)] hover:bg-[color:rgba(245,179,66,0.2)] focus-visible:outline-none focus-visible:[box-shadow:var(--lm-focus)]"
+            className="inline-flex min-h-9 items-center gap-1 rounded-full bg-[color:rgba(245,179,66,0.12)] px-3 py-1.5 font-medium text-[color:#ffd27a] ring-1 ring-inset ring-[color:rgba(245,179,66,0.3)] hover:bg-[color:rgba(245,179,66,0.2)] focus-visible:outline-none focus-visible:[box-shadow:var(--lm-focus)]"
             data-testid="next-occurrence-locked"
           >
             Beyond your date window · Pro
