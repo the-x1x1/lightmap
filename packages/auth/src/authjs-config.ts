@@ -9,6 +9,7 @@
  *  - Database sessions (revocable), secure cookies, 30-day expiry with daily refresh.
  */
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
+import { eq } from 'drizzle-orm';
 import type { NextAuthConfig } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import Google from 'next-auth/providers/google';
@@ -101,6 +102,10 @@ export function buildAuthConfig({ env, db, log }: AuthConfigDeps): NextAuthConfi
     events: {
       async createUser({ user }) {
         if (user.id) await db.insert(schema.profiles).values({ userId: user.id }).onConflictDoNothing();
+      },
+      // Signing in cancels a pending deletion request (docs/PRIVACY.md: 14-day reversible window).
+      async signIn({ user }) {
+        if (user?.id) await db.update(schema.users).set({ deletionRequestedAt: null, updatedAt: new Date() }).where(eq(schema.users.id, user.id));
       },
     },
     logger: {

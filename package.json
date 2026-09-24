@@ -2,7 +2,7 @@
   "name": "lightmap",
   "version": "0.1.0",
   "private": true,
-  "description": "LightMap — a visual natural-light planner for photographers and filmmakers.",
+  "description": "LightMap \u2014 a visual natural-light planner for photographers and filmmakers.",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "packageManager": "pnpm@10.28.0",
@@ -18,14 +18,15 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "turbo run test",
-    "test:unit": "vitest run",
+    "test:unit": "vitest run --exclude \"**/tests/integration/**\"",
     "test:e2e": "pnpm --filter @lightmap/web test:e2e",
     "db:migrate": "pnpm --filter @lightmap/database migrate",
     "db:seed": "node --experimental-strip-types scripts/seed-dev.ts",
     "env:validate": "node --experimental-strip-types scripts/validate-env.ts",
     "licenses": "node --experimental-strip-types scripts/check-licenses.ts",
     "secrets:scan": "node --experimental-strip-types scripts/scan-secrets.ts",
-    "release": "node --experimental-strip-types scripts/release.ts"
+    "release": "node --experimental-strip-types scripts/release.ts",
+    "retention": "node --experimental-strip-types scripts/retention.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.30.0",
