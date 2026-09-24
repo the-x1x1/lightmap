@@ -4,6 +4,7 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Sensor formats** (Pro camera tools): pick your sensor and type your lens's focal length.
 - Light finder searches run in a Web Worker (main-thread fallback).
 - **Shot variants**: save the same viewpoint at other times/scenarios under one card
   (migration `0003_viewpoint_variants`, `parentViewpointId`, cascade, one level, counted toward

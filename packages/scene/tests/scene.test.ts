@@ -8,8 +8,11 @@ import {
 import { DEFAULT_RENDER_SETTINGS, buildSceneState, type SceneInputs } from '../src/build.ts';
 import { deriveConfidence, deriveSourceMode } from '../src/confidence.ts';
 import {
+  SENSOR_PRESETS,
+  actualFocalLengthMm,
   defaultCamera,
   directionFromFrame,
+  equivalentFocalLengthMm,
   focalLengthForFov,
   frameCoordinates,
   horizontalFovDeg,
@@ -354,5 +357,23 @@ describe('directionFromFrame', () => {
     expect(top.elevationDeg).toBeGreaterThan(10);
     const right = directionFromFrame(cam, 1, 0);
     expect(right.azimuthDeg).toBeGreaterThan(90);
+  });
+});
+
+describe('sensor formats', () => {
+  it('a 16 mm lens on APS-C frames like ~24.5 mm on full frame, and the conversion round-trips', () => {
+    const aps = SENSOR_PRESETS.find((s) => s.id === 'aps-c')!;
+    expect(equivalentFocalLengthMm(16, aps.widthMm)).toBeCloseTo(24.5, 1);
+    expect(actualFocalLengthMm(24, 36)).toBe(24);
+    for (const s of SENSOR_PRESETS)
+      expect(actualFocalLengthMm(equivalentFocalLengthMm(35, s.widthMm), s.widthMm)).toBeCloseTo(
+        35,
+        9,
+      );
+    // Same horizontal FOV by construction.
+    expect(horizontalFovDeg(16, aps.widthMm)).toBeCloseTo(
+      horizontalFovDeg(equivalentFocalLengthMm(16, aps.widthMm)),
+      9,
+    );
   });
 });

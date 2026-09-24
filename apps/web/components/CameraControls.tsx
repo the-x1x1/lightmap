@@ -1,6 +1,7 @@
 'use client';
-/** Viewpoint camera (plan §5): map/viewpoint toggle, heading dial, pitch, lens presets. */
-import { FOCAL_LENGTH_PRESETS_MM } from '@lightmap/scene';
+/** Viewpoint camera (plan §5): map/viewpoint toggle, heading dial, pitch, lens presets, sensor format. */
+import { useState } from 'react';
+import { FOCAL_LENGTH_PRESETS_MM, SENSOR_PRESETS, actualFocalLengthMm } from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
 import { usePlannerStore } from '@/features/planner/store';
 import { Button, cx, useRovingRadio } from '@lightmap/ui';
@@ -13,7 +14,12 @@ export function CameraControls({ advancedAllowed }: { advancedAllowed: boolean }
   const setHeading = usePlannerStore((s) => s.setHeading);
   const setPitch = usePlannerStore((s) => s.setPitch);
   const setFocalLength = usePlannerStore((s) => s.setFocalLength);
+  const sensorWidthMm = usePlannerStore((s) => s.sensorWidthMm);
+  const setSensorWidth = usePlannerStore((s) => s.setSensorWidth);
+  const setActualFocalLength = usePlannerStore((s) => s.setActualFocalLength);
   const isVp = camera.mode === 'viewpoint';
+  const sensor = SENSOR_PRESETS.find((x) => Math.abs(x.widthMm - sensorWidthMm) < 0.05);
+  const [lensText, setLensText] = useState('');
   const modeKeys = useRovingRadio(MODES.length, MODES.indexOf(camera.mode), (i) => {
     const m = MODES[i];
     if (m) setCameraMode(m);
@@ -153,6 +159,70 @@ export function CameraControls({ advancedAllowed }: { advancedAllowed: boolean }
           </p>
         ) : null}
       </div>
+      {advancedAllowed ? (
+        <details data-testid="sensor-format">
+          <summary className="cursor-pointer text-xs uppercase tracking-wide text-[var(--lm-text-muted)]">
+            Your camera
+            {sensor && sensor.id !== 'full-frame' ? (
+              <span className="ml-2 normal-case tracking-normal text-[var(--lm-text)]">
+                {sensor.label.split(' (')[0]}
+              </span>
+            ) : null}
+          </summary>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <label className="text-xs text-[var(--lm-text-muted)]">
+              Sensor
+              <select
+                className="lm-input mt-1 w-full"
+                value={sensor?.id ?? 'custom'}
+                onChange={(e) => {
+                  const p = SENSOR_PRESETS.find((x) => x.id === e.target.value);
+                  if (p) setSensorWidth(p.widthMm);
+                }}
+                data-testid="sensor-select"
+              >
+                {SENSOR_PRESETS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
+                  </option>
+                ))}
+                {!sensor ? <option value="custom">Custom ({sensorWidthMm} mm wide)</option> : null}
+              </select>
+            </label>
+            <label className="text-xs text-[var(--lm-text-muted)]">
+              Your lens (mm)
+              <input
+                type="number"
+                inputMode="decimal"
+                min={1}
+                max={2000}
+                step={1}
+                className="lm-input mt-1 w-full"
+                value={lensText}
+                placeholder={
+                  camera.focalLengthMm
+                    ? actualFocalLengthMm(camera.focalLengthMm, sensorWidthMm).toFixed(0)
+                    : ''
+                }
+                onChange={(e) => {
+                  setLensText(e.target.value);
+                  const mm = Number(e.target.value);
+                  if (Number.isFinite(mm) && mm >= 1 && mm <= 2000) setActualFocalLength(mm);
+                }}
+                data-testid="lens-actual"
+              />
+            </label>
+          </div>
+          <p className="mt-1 text-xs text-[var(--lm-text-muted)]">
+            Presets above are full-frame equivalents; type the number printed on your lens and the
+            frame matches it on your sensor
+            {camera.focalLengthMm && sensor && sensor.id !== 'full-frame'
+              ? ` (${camera.focalLengthMm} mm equiv. = ${actualFocalLengthMm(camera.focalLengthMm, sensorWidthMm).toFixed(0)} mm on ${sensor.label.split(' (')[0]})`
+              : ''}
+            .
+          </p>
+        </details>
+      ) : null}
     </div>
   );
 }
