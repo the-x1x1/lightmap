@@ -1,5 +1,6 @@
 'use client';
 /** Pro value explained plainly (plan §38). Never crippling: the map and today's light stay free. */
+import { useId } from 'react';
 import { PLANS } from '@lightmap/entitlements';
 import { brand } from '@lightmap/config';
 import { useAccount, useCheckout } from '@/features/account/use-account';
@@ -8,6 +9,7 @@ import { Button, cx } from '@lightmap/ui';
 import { SignInPrompt } from './AccountMenu';
 
 export function Paywall({ reason, compact }: { reason?: string; compact?: boolean }) {
+  const billingNoteId = useId();
   const account = useAccount();
   const caps = useCapabilities();
   const checkout = useCheckout();
@@ -43,21 +45,30 @@ export function Paywall({ reason, compact }: { reason?: string; compact?: boolea
           variant="primary"
           onClick={() => checkout.mutate('monthly')}
           disabled={!configured || checkout.isPending}
+          aria-describedby={!configured ? billingNoteId : undefined}
           data-testid="checkout-monthly"
         >
-          Monthly
+          {checkout.isPending && checkout.variables === 'monthly'
+            ? 'Opening checkout…'
+            : 'Subscribe monthly'}
         </Button>
         <Button
           variant="secondary"
           onClick={() => checkout.mutate('yearly')}
           disabled={!configured || checkout.isPending}
+          aria-describedby={!configured ? billingNoteId : undefined}
           data-testid="checkout-yearly"
         >
-          Yearly
+          {checkout.isPending && checkout.variables === 'yearly'
+            ? 'Opening checkout…'
+            : 'Subscribe yearly'}
         </Button>
       </div>
+      <span className="sr-only" role="status">
+        {checkout.isPending ? 'Opening Stripe checkout…' : ''}
+      </span>
       {!configured ? (
-        <p className="mt-2 text-xs text-[var(--lm-text-faint)]">
+        <p id={billingNoteId} className="mt-2 text-xs text-[var(--lm-text-muted)]">
           Billing is not set up on this server yet (Stripe keys missing).
         </p>
       ) : null}

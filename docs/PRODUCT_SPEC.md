@@ -264,13 +264,32 @@ Generic "Something went wrong" is not acceptable when a recovery message exists.
 
 ## 13. Accessibility (plan §28)
 
-- Timeline fully keyboard operable (section 3) with `aria-valuetext`.
-- Every control has a label; badges and scenario buttons carry text, not colour alone.
-- Weather mode and source state are conveyed with text and icon, never colour only.
-- `prefers-reduced-motion` disables camera fly-to animation and sky transitions; the renderer
-  receives `render.reducedMotion`.
-- Contrast meets WCAG AA on dark chrome.
-- Focus is trapped in dialogs and the mobile sheet; focus returns to the trigger on close.
+- **Keyboard**: a skip link ("Skip to planning controls") is the first focusable element; the
+  header (search, account) precedes the map in the DOM. The timeline is fully keyboard operable
+  (arrows, Page Up/Down, Home/End, `[`/`]` to the previous/next day event) with `aria-valuetext`.
+  Every single-choice group (view mode, lens, weather scenario, light-finder body and target) is a
+  WAI-ARIA radio group with one Tab stop and arrow-key selection (`useRovingRadio` /
+  `RadioGroup` in `@lightmap/ui`); locked options stay focusable and announce why ("Pro").
+  The map has a visible focus ring; `role="application"` is used only in viewpoint mode where the
+  arrow keys look around.
+- **Names**: every control has a label; visible text is always part of the accessible name; icon-
+  only buttons have `aria-label`s; result rows and cards name their subject ("Open Kailua Beach").
+- **Announcements**: permanent `role="status"` regions (mounted once, text changes) announce search
+  progress and result counts, pin placement, renderer loading, project/viewpoint saves and deletes,
+  export progress, forecast loading and finder results; failures use `role="alert"`; standing
+  notices ("Live forecast unavailable") use `status` so they are not re-announced on every mount.
+- **Focus management**: switching panel sections moves focus to the panel body; deleting a
+  project or viewpoint moves focus to the list heading; collapsing the expanded preview returns
+  focus to the expand button; the account menu (Radix) restores focus itself unless it opened a
+  panel. The collapsed mobile sheet is `inert`, so hidden controls cannot take focus. There are no
+  modal dialogs in v0.1 (the paywall and sign-in render inline).
+- **Not colour-only**: badges, confidence levels, selected cards and radio options carry text or a
+  glyph in addition to colour; timeline markers show glyphs on phones.
+- **Reduced motion**: CSS transitions are disabled globally under `prefers-reduced-motion`; the
+  renderer receives `render.reducedMotion` and jumps the camera instead of flying (tested); the
+  preference is tracked live, not read once.
+- **Contrast**: body and helper text use `--lm-text-muted` (≥ 4.5:1 on the panel); the faint tone
+  is reserved for decorative or duplicated text (coordinates under a search result, attribution).
 - Touch targets ≥ 44 px on the timeline thumb and scenario buttons.
 
 ## 14. Acceptance case (plan §25 Phase 1, §42)

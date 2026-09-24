@@ -5,14 +5,17 @@ export function ErrorState({
   title,
   body,
   action,
+  live = 'alert',
 }: {
   title: string;
   body?: string;
   action?: ReactNode;
+  /** 'alert' interrupts (new failure); 'status' for standing notices that re-mount with the panel. */
+  live?: 'alert' | 'status';
 }) {
   return (
     <div
-      role="alert"
+      role={live}
       className="rounded-[var(--lm-radius-sm)] border border-[color:rgba(242,109,109,0.4)] bg-[color:rgba(242,109,109,0.12)] p-3 text-sm"
     >
       <p className="font-medium text-[color:#ffb3b3]">{title}</p>

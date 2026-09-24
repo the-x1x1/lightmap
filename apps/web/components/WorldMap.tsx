@@ -189,17 +189,19 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
       <div
         ref={container}
         className={cx(
-          'absolute inset-0',
+          'absolute inset-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--lm-sun)]',
           camera.mode === 'viewpoint'
             ? 'cursor-grab active:cursor-grabbing touch-none'
             : 'cursor-crosshair',
           overlayMode && 'hidden',
         )}
-        role="application"
+        // `application` only where we really handle keys (viewpoint look-around); in map mode
+        // screen readers keep their browse keys and are told to use search instead.
+        role={camera.mode === 'viewpoint' ? 'application' : 'img'}
         aria-label={
           camera.mode === 'viewpoint'
-            ? 'Viewpoint. Drag or use arrow keys to look around.'
-            : 'World map. Click or tap to place the pin.'
+            ? 'Viewpoint. Drag or use arrow keys to look around; Shift for larger steps.'
+            : 'World map. Click or tap to place the pin, or use the search box.'
         }
         tabIndex={0}
         onPointerDown={onPointerDown}
@@ -222,20 +224,30 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
       ) : null}
       {scene ? <SunDirectionOverlay scene={scene} compact={!overlayMode} /> : null}
       {renderer.mode === 'loading' ? (
-        <div
-          className="pointer-events-none absolute inset-0 flex items-center justify-center bg-[var(--lm-chrome)]/60"
-          aria-live="polite"
-        >
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-[var(--lm-chrome)]/60">
           <span className="rounded-full bg-black/60 px-3 py-1.5 text-xs text-[var(--lm-text-muted)]">
             Loading globe…
           </span>
         </div>
       ) : null}
       {resolving ? (
-        <span className="pointer-events-none absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-xs text-[var(--lm-text-muted)]">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-xs text-[var(--lm-text-muted)]"
+        >
           Resolving place…
         </span>
       ) : null}
+      {/* One permanent status region: mounts once, so every change is announced (plan §28). */}
+      <span className="sr-only" role="status" data-testid="map-status">
+        {renderer.mode === 'loading'
+          ? 'Loading globe…'
+          : resolving
+            ? 'Resolving place…'
+            : location
+              ? `Pin at ${location.label}.`
+              : ''}
+      </span>
       <div
         ref={credits}
         className="pointer-events-none absolute bottom-1 right-1 text-[10px] text-white/50"

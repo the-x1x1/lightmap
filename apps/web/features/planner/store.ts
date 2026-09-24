@@ -29,6 +29,8 @@ export interface PlannerState {
   forceScenario: boolean;
   camera: CameraState;
   panel: 'plan' | 'projects' | 'account' | null;
+  /** Mobile bottom sheet expanded (desktop ignores it). In the store so any control can open it. */
+  sheetOpen: boolean;
   previewExpanded: boolean;
   qualityCeiling: 0 | 1 | 2 | 3;
   showPerfPanel: boolean;
@@ -51,6 +53,7 @@ export interface PlannerActions {
   setFocalLength: (mm: number) => void;
   setFov: (fovDeg: number) => void;
   setPanel: (panel: PlannerState['panel']) => void;
+  setSheetOpen: (v: boolean) => void;
   setPreviewExpanded: (v: boolean) => void;
   setQualityCeiling: (q: 0 | 1 | 2 | 3) => void;
   togglePerfPanel: () => void;
@@ -84,6 +87,7 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
   forceScenario: false,
   camera: defaultCamera({ latitude: 0, longitude: 0 }),
   panel: 'plan',
+  sheetOpen: true,
   previewExpanded: false,
   qualityCeiling: 1,
   showPerfPanel: false,
@@ -144,7 +148,10 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
     });
   },
   setPanel(panel) {
-    set({ panel });
+    set({ panel, sheetOpen: true });
+  },
+  setSheetOpen(v) {
+    set({ sheetOpen: v });
   },
   setPreviewExpanded(v) {
     set({ previewExpanded: v });

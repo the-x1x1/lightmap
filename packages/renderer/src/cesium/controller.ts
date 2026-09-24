@@ -214,6 +214,8 @@ export class SceneController {
         fovDeg: cesiumFovDeg(cam.fovDeg, this.aspect()),
       };
     } else {
+      // Reduced motion (plan §28): jump instead of flying; no pending-retry dance either.
+      if (scene.render.reducedMotion) fly = false;
       if (fly) this.flyUntil = this.now() + 1400;
       else if (this.now() < this.flyUntil) {
         // Let the flight finish, then apply the (possibly corrected) orbit once.

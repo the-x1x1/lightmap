@@ -24,6 +24,8 @@ interface Marker {
   minutes: number;
   label: string;
   short: string;
+  /** Single glyph for narrow screens (distinct per event kind, not colour-only). */
+  glyph: string;
   tone: 'sun' | 'twilight' | 'muted';
 }
 
@@ -38,19 +40,20 @@ export function dayMarkers(ev: DayEvents): Marker[] {
     d: Date | null,
     label: string,
     short: string,
+    glyph: string,
     tone: Marker['tone'],
   ): Marker | null => {
     const mins = minutesOf(d, ev.dayStart);
-    return mins === null ? null : { key, minutes: mins, label, short, tone };
+    return mins === null ? null : { key, minutes: mins, label, short, glyph, tone };
   };
   return [
-    m('dawn', ev.dawn, 'Civil dawn', 'Dawn', 'twilight'),
-    m('sunrise', ev.sunrise, 'Sunrise', 'Rise', 'sun'),
-    m('goldenEnd', ev.goldenHourMorningEnd, 'Golden hour ends', 'Golden', 'sun'),
-    m('noon', ev.solarNoon, 'Solar noon', 'Noon', 'muted'),
-    m('goldenStart', ev.goldenHourEveningStart, 'Golden hour begins', 'Golden', 'sun'),
-    m('sunset', ev.sunset, 'Sunset', 'Set', 'sun'),
-    m('dusk', ev.civilDusk, 'Civil dusk (blue hour ends)', 'Dusk', 'twilight'),
+    m('dawn', ev.dawn, 'Civil dawn', 'Dawn', '◐', 'twilight'),
+    m('sunrise', ev.sunrise, 'Sunrise', 'Rise', '↑', 'sun'),
+    m('goldenEnd', ev.goldenHourMorningEnd, 'Golden hour ends', 'Golden', '✦', 'sun'),
+    m('noon', ev.solarNoon, 'Solar noon', 'Noon', '☀', 'muted'),
+    m('goldenStart', ev.goldenHourEveningStart, 'Golden hour begins', 'Golden', '✦', 'sun'),
+    m('sunset', ev.sunset, 'Sunset', 'Set', '↓', 'sun'),
+    m('dusk', ev.civilDusk, 'Civil dusk (blue hour ends)', 'Dusk', '◑', 'twilight'),
   ].filter((x): x is Marker => x !== null);
 }
 
@@ -139,6 +142,18 @@ export function Timeline({ dayEvents, timeZone, phase, className }: TimelineProp
             } else if (e.key === 'End' && dayEvents?.sunset) {
               e.preventDefault();
               setMinutes(minutesOf(dayEvents.sunset, dayEvents.dayStart)!);
+            } else if (e.key === '[' || e.key === ']') {
+              // Jump to the previous / next day event (dawn, golden hour, noon, dusk…), so every
+              // marker is reachable from the keyboard, not only by mouse (plan §28).
+              const sorted = markers.map((m) => m.minutes).sort((a, b) => a - b);
+              const next =
+                e.key === ']'
+                  ? sorted.find((m) => m > minutes)
+                  : [...sorted].reverse().find((m) => m < minutes);
+              if (next !== undefined) {
+                e.preventDefault();
+                setMinutes(next);
+              }
             }
           }}
           aria-valuetext={`${timeLabel}${phase ? `, ${phase.replace('-', ' ')}` : ''}`}
@@ -146,8 +161,15 @@ export function Timeline({ dayEvents, timeZone, phase, className }: TimelineProp
           data-testid="timeline-range"
         />
         <p id={`${id}-desc`} className="sr-only">
-          Drag to scrub through the day. Arrow keys move one minute, Page Up and Page Down one hour,
-          Home jumps to sunrise, End to sunset.
+          Drag to scrub through the day. Arrow keys move one minute, Page Up and Page Down one hour
+          {dayEvents?.sunrise && dayEvents.sunset
+            ? ', Home jumps to sunrise, End to sunset'
+            : dayEvents?.polar === 'midnight-sun'
+              ? '; the sun is up all day here'
+              : dayEvents?.polar === 'polar-night'
+                ? '; the sun does not rise here today'
+                : ''}
+          {markers.length > 0 ? '. Square brackets jump to the previous or next event.' : '.'}
         </p>
         <div className="relative mt-0.5 h-8" aria-hidden>
           {markers.map((mk) => {
@@ -171,6 +193,7 @@ export function Timeline({ dayEvents, timeZone, phase, className }: TimelineProp
               >
                 <span className="mx-auto block h-1.5 w-px bg-current" />
                 <span className="hidden sm:block">{mk.short}</span>
+                <span className="block sm:hidden">{mk.glyph}</span>
               </button>
             );
           })}
