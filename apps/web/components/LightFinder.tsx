@@ -220,7 +220,7 @@ export function LightFinder({
               {finderPicking
                 ? 'Click the spot in the 3D view where the sun or moon should be.'
                 : finderTarget
-                  ? `Picked ${Math.round(finderTarget.azimuthDeg)}° ${compassLabel(finderTarget.azimuthDeg)}, ${finderTarget.elevationDeg.toFixed(1)}° up — the ring in the view marks it.`
+                  ? `Picked ${Math.round(finderTarget.azimuthDeg)}° ${compassLabel(finderTarget.azimuthDeg)}, ${finderTarget.elevationDeg.toFixed(1)}° up — drag the ring in the view to adjust.`
                   : 'Nothing picked yet.'}
             </span>
             <Button
