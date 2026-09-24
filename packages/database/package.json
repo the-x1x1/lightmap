@@ -1,0 +1,29 @@
+{
+  "name": "@lightmap/database",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Drizzle schema, SQL migrations and repositories for LightMap (PostgreSQL, optional PostGIS).",
+  "license": "SEE LICENSE IN ../../LICENSE",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests",
+    "migrate": "node --experimental-strip-types src/migrate-cli.ts",
+    "generate": "drizzle-kit generate"
+  },
+  "dependencies": {
+    "@lightmap/config": "workspace:*",
+    "drizzle-orm": "^0.44.0",
+    "postgres": "^3.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "drizzle-kit": "^0.31.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}

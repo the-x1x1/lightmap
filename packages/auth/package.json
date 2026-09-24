@@ -1,0 +1,33 @@
+{
+  "name": "@lightmap/auth",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Account service: Auth.js (passwordless email, optional Google, dev sign-in) behind a LightMap-owned interface.",
+  "license": "SEE LICENSE IN ../../LICENSE",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./config": "./src/authjs-config.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@auth/drizzle-adapter": "^1.9.0",
+    "@lightmap/config": "workspace:*",
+    "@lightmap/database": "workspace:*",
+    "next-auth": "5.0.0-beta.29",
+    "nodemailer": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "@types/nodemailer": "^6.4.17",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  },
+  "peerDependencies": {
+    "next": ">=15.3.0",
+    "react": ">=19.0.0"
+  }
+}
