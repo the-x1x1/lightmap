@@ -12,9 +12,9 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run --passWithNoTests --exclude \"tests/integration/**\"",
-    "migrate": "node --experimental-strip-types src/migrate-cli.ts",
+    "migrate": "node --env-file-if-exists=../../.env --env-file-if-exists=.env --experimental-strip-types src/migrate-cli.ts",
     "generate": "drizzle-kit generate",
-    "test:integration": "vitest run tests/integration"
+    "test:integration": "node --env-file-if-exists=../../.env ../../node_modules/vitest/vitest.mjs run tests/integration"
   },
   "dependencies": {
     "@lightmap/config": "workspace:*",
