@@ -82,8 +82,12 @@ export type HostCamera = HostViewpointCamera | HostOrbitCamera;
 
 export interface HostOverlay {
   pin: (GeoPoint & { heightM: number }) | null;
-  /** Points on the sun's path for the day, as az/el pairs; drawn on a sphere of `radiusM` around the pin. */
-  sunPath: Array<{ azimuthDeg: number; elevationDeg: number }>;
+  /**
+   * Points on the sun's path for the day, as az/el pairs; drawn on a sphere of `radiusM` around
+   * the pin. `behindTerrain` marks points below the sampled terrain horizon (drawn dashed-dark
+   * over the path); absent when no terrain horizon exists.
+   */
+  sunPath: Array<{ azimuthDeg: number; elevationDeg: number; behindTerrain?: boolean }>;
   sun: { azimuthDeg: number; elevationDeg: number } | null;
   shadowAzimuthDeg: number | null;
   radiusM: number;

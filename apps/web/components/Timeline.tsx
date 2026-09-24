@@ -9,6 +9,7 @@ import { useId, useMemo } from 'react';
 import type { DayEvents } from '@lightmap/astronomy';
 import { formatWallTime } from '@lightmap/astronomy';
 import { usePlannerStore } from '@/features/planner/store';
+import { terrainShade } from '@/features/planner/terrain-shade';
 import { cx } from '@lightmap/ui';
 
 export interface TimelineProps {
@@ -16,8 +17,13 @@ export interface TimelineProps {
   timeZone: string;
   /** Current phase label for the aria description. */
   phase?: string | undefined;
-  /** Terrain first/last light when they differ from sunrise/sunset (extra markers). */
+  /** Terrain first/last light, each only when it differs from sunrise/sunset (extra markers). */
   terrain?: { firstLight: Date | null; lastLight: Date | null } | null | undefined;
+  /**
+   * Spells (UTC) when the sun is above the terrain; daylight outside them is shaded on the track
+   * so the scrubber shows at a glance when the spot sits in the ridge's shadow.
+   */
+  terrainVisible?: ReadonlyArray<{ from: Date; to: Date }> | null | undefined;
   className?: string | undefined;
 }
 
@@ -103,7 +109,14 @@ export function dayGradient(ev: DayEvents): string {
   return `linear-gradient(90deg, ${stops.map(([c, p]) => `${c} ${p}`).join(', ')})`;
 }
 
-export function Timeline({ dayEvents, timeZone, phase, terrain, className }: TimelineProps) {
+export function Timeline({
+  dayEvents,
+  timeZone,
+  phase,
+  terrain,
+  terrainVisible,
+  className,
+}: TimelineProps) {
   const minutes = usePlannerStore((s) => s.minutes);
   const setMinutes = usePlannerStore((s) => s.setMinutes);
   const id = useId();
@@ -117,6 +130,10 @@ export function Timeline({ dayEvents, timeZone, phase, terrain, className }: Tim
   const gradient = useMemo(
     () => (dayEvents ? dayGradient(dayEvents) : 'rgba(255,255,255,0.15)'),
     [dayEvents],
+  );
+  const shade = useMemo(
+    () => (dayEvents && terrainVisible ? terrainShade(dayEvents, terrainVisible) : null),
+    [dayEvents, terrainVisible],
   );
   // `minutes` is elapsed time since local midnight; on a DST day that is not the wall clock, so
   // the label comes from the instant itself whenever the day's bounds are known.
@@ -145,7 +162,9 @@ export function Timeline({ dayEvents, timeZone, phase, terrain, className }: Tim
         <div
           aria-hidden
           className="pointer-events-none absolute left-0 right-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full opacity-90"
-          style={{ background: gradient }}
+          style={{ background: shade ? `${shade}, ${gradient}` : gradient }}
+          data-testid="timeline-track"
+          data-terrain-shade={shade ? 'true' : undefined}
         />
         <input
           id={id}

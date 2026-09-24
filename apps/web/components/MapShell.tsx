@@ -312,6 +312,7 @@ export function MapShell() {
                   timeZone={location?.timeZone ?? 'UTC'}
                   phase={scene?.solar.phase}
                   terrain={terrainMarkers}
+                  terrainVisible={scene?.terrainHorizon?.sunEvents.visible ?? null}
                 />
                 {scene && isEnabled('reversePlanning') ? (
                   <NextOccurrence

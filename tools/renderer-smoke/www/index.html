@@ -366,6 +366,63 @@
         await new Promise((r) => {
           window.__takeShot = r;
         });
+        // Terrain horizon overlay: a synthetic 600 m ridge on the ~2 km ring across the east (the
+        // ellipsoid has no terrain to sample, so the profile is built directly). The map-mode sun
+        // path must show the morning behind the ridge as dark dashes over the gold path.
+        const { horizonProfileFromSamples, horizonRingDistances, horizonSamplePoints } =
+          await import('@lightmap/scene');
+        const ridgeRing = horizonRingDistances().reduce((b, d) =>
+          Math.abs(d - 2000) < Math.abs(b - 2000) ? d : b,
+        );
+        const ridgeProfile = horizonProfileFromSamples(
+          kailua.point,
+          2,
+          1.6,
+          horizonSamplePoints(kailua.point).map((p) => ({
+            azimuthDeg: p.azimuthDeg,
+            distanceM: p.distanceM,
+            heightM:
+              p.azimuthDeg >= 30 && p.azimuthDeg <= 150 && p.distanceM === ridgeRing ? 600 : 0,
+          })),
+          { providerId: 'smoke-synthetic', resolutionM: 30 },
+        );
+        const ridgeScene = buildSceneState({
+          location: kailua,
+          utc: localSelectionToUtc({ year: 2026, month: 5, day: 31 }, 7 * 60, kailua.timeZone),
+          now: new Date('2026-05-01T00:00:00Z'),
+          camera: defaultCamera(kailua.point, 90),
+          environment: env,
+          scenario: 'clear',
+          forceScenario: true,
+          weather: { capabilities: OPEN_METEO_CAPABILITIES, frames: [], providerFailed: false },
+          render: DEFAULT_RENDER_SETTINGS,
+          includeLunar: true,
+          realReference: false,
+          horizonProfile: ridgeProfile,
+        });
+        controller.apply(ridgeScene);
+        controller.setOrbit({ headingDeg: 0, pitchDeg: -60, rangeM: 1500 });
+        const th = ridgeScene.terrainHorizon;
+        window.__smoke.terrain = th
+          ? {
+              sunAboveTerrain: th.sunAboveTerrain,
+              horizonAtSunDeg: th.horizonAtSunDeg,
+              firstLight: th.sunEvents.firstLight,
+              sunrise: ridgeScene.dayEvents.sunrise,
+              differs: th.sunEvents.differsFromAstronomical,
+            }
+          : null;
+        log(
+          'terrain horizon at 07:00: ' +
+            (th
+              ? `sun ${th.sunAboveTerrain ? 'above' : 'behind'} terrain (ridge ${th.horizonAtSunDeg.toFixed(1)}°), first light ${th.sunEvents.firstLight ? th.sunEvents.firstLight.toISOString() : 'none'} vs sunrise ${ridgeScene.dayEvents.sunrise.toISOString()}`
+              : 'missing'),
+        );
+        await wait(2500);
+        window.__smoke.shot = 'terrain-path';
+        await new Promise((r) => {
+          window.__takeShot = r;
+        });
         const thumb = await host.captureThumbnail(320);
         window.__smoke.thumbnail = thumb
           ? thumb.slice(0, 40) + '… (' + thumb.length + ' chars)'
