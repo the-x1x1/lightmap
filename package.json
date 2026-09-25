@@ -2,7 +2,7 @@
   "name": "lightmap",
   "version": "0.1.0",
   "private": true,
-  "description": "LightMap \u2014 a visual natural-light planner for photographers and filmmakers.",
+  "description": "LightMap — a visual natural-light planner for photographers and filmmakers.",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "packageManager": "pnpm@10.28.0",

@@ -2,7 +2,7 @@
 
 All notable changes. Versions follow semver; `pnpm release <version>` prepends entries from commits.
 
-## Unreleased
+## v0.1.0 — 2026-09-25
 
 - **Terrain horizon** ("when does the sun clear the ridge?"): the land horizon around the pin is
   sampled through the renderer from the DEM (curvature + refraction; `horizon.ts`, tested on a
