@@ -5,6 +5,7 @@ import { compassLabel } from '@lightmap/geospatial';
 import { Button } from '@lightmap/ui';
 import { useCapabilities } from '@/features/planner/use-scene';
 import { forecastNudge } from '@/features/projects/forecast-nudge';
+import { nightTag } from '@/features/projects/night-tag';
 import { PreviewSourceBadge } from './PreviewSourceBadge';
 
 export function SavedViewpointCard({
@@ -32,6 +33,7 @@ export function SavedViewpointCard({
   const w = utcToWallClock(utc, viewpoint.timezone);
   const caps = useCapabilities();
   const nudge = forecastNudge(viewpoint, caps.data?.weather ?? null, new Date());
+  const night = nightTag(viewpoint);
   const stamp = (d: Date, tz: string) => {
     const x = utcToWallClock(d, tz);
     return `${x.year}-${String(x.month).padStart(2, '0')}-${String(x.day).padStart(2, '0')} ${formatWallTime(d, tz)}`;
@@ -65,6 +67,19 @@ export function SavedViewpointCard({
             ? `Scenario: ${viewpoint.weatherScenario ?? '—'}`
             : viewpoint.weatherMode.toLowerCase().replace('_', ' ')}
         </p>
+        {night ? (
+          <p
+            className={
+              night.verdict === 'visible'
+                ? 'mt-1 text-xs text-[var(--lm-ok)]'
+                : 'mt-1 text-xs text-[var(--lm-text-muted)]'
+            }
+            data-testid="viewpoint-night"
+            data-verdict={night.verdict}
+          >
+            ✦ {night.text}
+          </p>
+        ) : null}
         {nudge ? (
           <p
             className={

@@ -176,7 +176,8 @@ from the current frame (captured at 1280 px from the renderer, or the sky-gradie
 elevation/azimuth, light phase and colour temperature, sunrise/sunset, golden and blue hour, solar
 noon, moon, camera heading/pitch/lens and — with the camera tools — the photographer's real lens,
 aperture, focus distance and sharp range ("Depth of field"), the "Milky Way core" line once the
-Sun is below −6°, and the year's envelope ("Across the year"). The card always shows the source label as a text badge, the
+Sun is below −6°, the next two dark windows ("Dark windows"), and the year's envelope ("Across
+the year"). The card always shows the source label as a text badge, the
 weather line prefixed **Forecast (provider)** / **Observed** / **Scenario (not a forecast)**, the
 five confidence dimensions, the honesty note for the source mode, provider attribution, and
 "Made with LightMap · URL · timestamp". Nothing on the card is generated; the file name is
@@ -399,7 +400,10 @@ and each saved viewpoint card compares the weather basis it was saved with again
 the provider can give today — "◉ Forecast available now — open to see it" once a scenario-saved
 date is inside the reliable horizon, "Extended forecast available (low confidence)" in days 8–16,
 "Date has passed — observed conditions on open" afterwards (`forecastNudge()`, from the same
-horizon rule as the planner).
+horizon rule as the planner). A viewpoint planned after civil dusk also carries a night line —
+"✦ Milky Way core 36° up SSW · dark sky", or "· Moon 97 % lit", "· twilight", "· low in haze",
+"core below the horizon" — the planner's own verdict from the saved place and instant
+(`nightTag()`), green when the sky is dark.
 
 **Shot variants** (plan §25 Phase 6): a viewpoint can hold variants — the same place and camera at
 other dates/times or scenarios ("07:10 vs 18:40 vs 4 August"). A variant is a viewpoint row with

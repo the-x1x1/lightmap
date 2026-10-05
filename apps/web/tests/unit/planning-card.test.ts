@@ -81,6 +81,10 @@ describe('buildPlanningCard', () => {
     const cam = card.facts.find((f) => f.label === 'Camera')!.value;
     expect(cam).toContain('Viewpoint · 270° W · pitch 5° · 24 mm');
     expect(card.facts.some((f) => f.label === 'Moon')).toBe(true);
+    // The next dark-sky nights from 31 May: the full Moon rules the first nights out.
+    expect(card.facts.find((f) => f.label === 'Dark windows')!.value).toMatch(
+      /^3 Jun 21:\d\d–22:\d\d \(core to 2\d°\) · 4 Jun 21:\d\d–22:\d\d \(core to 2\d°\) · \d+ more in 45 nights$/,
+    );
     expect(card.facts.find((f) => f.label === 'Across the year')!.value).toBe(
       'Sunrise 64°–115° (ENE–ESE), sunset 245°–296° (WSW–WNW), noon 45°–88°',
     );
