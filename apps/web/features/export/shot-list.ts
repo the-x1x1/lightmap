@@ -37,7 +37,7 @@ function weatherLine(v: ViewpointDto): string {
     case 'RECENT_PAST':
     case 'PAST':
       return 'Observed conditions';
-    default:
+    case 'SCENARIO':
       return `Scenario (not a forecast): ${v.weatherScenario ?? 'none chosen'}`;
   }
 }
