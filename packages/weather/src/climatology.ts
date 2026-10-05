@@ -256,6 +256,55 @@ export function daylightPattern(
   };
 }
 
+/**
+ * The statistics of a set of local hours — e.g. the dark hours of a night, which wrap midnight —
+ * from the per-hour breakdown, weighted by sample count. Null when no listed hour has samples.
+ * Shares are fractions of the sampled hours, like `byHour`'s.
+ */
+export function hoursShare(
+  summary: Pick<ClimatologySummary, 'byHour'>,
+  hours: readonly number[],
+): {
+  samples: number;
+  meanCloudCover: number;
+  clearShare: number;
+  dullShare: number;
+  wetShare: number;
+} | null {
+  let samples = 0;
+  let cloud = 0;
+  let clear = 0;
+  let dull = 0;
+  let wet = 0;
+  for (const h of new Set(hours)) {
+    const b = summary.byHour[((h % 24) + 24) % 24];
+    if (!b || b.samples === 0) continue;
+    samples += b.samples;
+    cloud += b.meanCloudCover * b.samples;
+    clear += b.clearShare * b.samples;
+    dull += b.dullShare * b.samples;
+    wet += b.wetShare * b.samples;
+  }
+  if (samples === 0) return null;
+  return {
+    samples,
+    meanCloudCover: cloud / samples,
+    clearShare: clear / samples,
+    dullShare: dull / samples,
+    wetShare: wet / samples,
+  };
+}
+
+/** The local hours from `startHour` to `endHour` (exclusive), wrapping midnight: 21→4 is 21,22,23,0,1,2,3. */
+export function hoursBetween(startHour: number, endHour: number): number[] {
+  const out: number[] = [];
+  const a = ((Math.floor(startHour) % 24) + 24) % 24;
+  const b = ((Math.floor(endHour) % 24) + 24) % 24;
+  if (a === b) return out;
+  for (let h = a; h !== b; h = (h + 1) % 24) out.push(h);
+  return out;
+}
+
 /** The scenario the distribution suggests looking at first (largest share). Never applied silently. */
 export function suggestedScenario(summary: ClimatologySummary): WeatherScenarioId {
   let best: WeatherScenarioId = 'partly-cloudy';

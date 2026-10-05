@@ -176,7 +176,11 @@ forecast nor a scenario.
   Under the class buttons, 24 bars show typical cloud by local hour (height = mean cloud, tone =
   share of clear hours, night hours dimmed, the selected hour ringed) with a table for assistive
   tech and the one-line pattern ("Typically clearest 07:00–10:00 (~15 % cloud), cloudiest
-  14:00–17:00 (~70 %)").
+  14:00–17:00 (~70 %)"). For night planning a further line aggregates the **dark hours** of the
+  selected night — astronomical dusk to dawn, in the place's zone, wrapping midnight
+  (`hoursBetween()`, `hoursShare()`: sample-weighted means of the per-hour statistics): "Dark
+  hours (21:00–04:00): clear 41 % of the time, ~32 % mean cloud, overcast or storm 18 %"; absent
+  where there is no astronomical night (polar summer).
 - **Never**: rendered with a Forecast badge, given a confidence above SCENARIO, or turned into a
   deterministic prediction (plan §4, §25 Phase 7). `ClimatologySummary.kind` is `'CLIMATOLOGY'` and
   its `label` is fixed to "Typical for this month" so the wording cannot drift.

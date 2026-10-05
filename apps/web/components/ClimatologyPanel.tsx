@@ -8,10 +8,13 @@
 import {
   SCENARIOS,
   daylightPattern,
+  hoursBetween,
+  hoursShare,
   suggestedScenario,
   type ClimatologySummary,
 } from '@lightmap/weather';
 import { useId } from 'react';
+import { utcToWallClock } from '@lightmap/astronomy';
 import type { SceneState } from '@lightmap/scene';
 import type { EntitlementDecision } from '@lightmap/entitlements';
 import { Badge, cx } from '@lightmap/ui';
@@ -47,6 +50,9 @@ export function ClimatologyPanel({
   const monthName = MONTHS[month - 1] ?? '';
   const hourTableId = useId();
   const selectedHour = Number(scene.localTime.time.slice(0, 2));
+  // The dark hours of the selected night (astronomical dusk → dawn, local to the place) for the
+  // night shooter's question: how often are nights here clear this month? Null in polar summer.
+  const nightHours = darkHours(scene);
 
   if (!decision.allowed)
     return (
@@ -126,6 +132,9 @@ export function ClimatologyPanel({
               selectedHour={selectedHour}
               tableId={hourTableId}
             />
+          ) : null}
+          {Array.isArray(q.data.summary.byHour) && nightHours ? (
+            <NightHours byHour={q.data.summary.byHour} hours={nightHours} />
           ) : null}
           <p className="text-xs text-[var(--lm-text-muted)]" data-testid="climatology-summary">
             Daylight hours ({q.data.summary.window.startHour}:00–{q.data.summary.window.endHour}
@@ -234,5 +243,36 @@ function HourOfDay({
         </tbody>
       </table>
     </div>
+  );
+}
+
+/** Local hours of astronomical night around the selected day, in the place's own zone. */
+function darkHours(scene: SceneState): { hours: number[]; from: number; to: number } | null {
+  const dusk = scene.dayEvents.astronomicalDusk;
+  const dawn = scene.dayEvents.astronomicalDawn;
+  if (!dusk || !dawn) return null;
+  const tz = scene.location.timeZone;
+  const from = utcToWallClock(dusk, tz).hour;
+  const to = utcToWallClock(dawn, tz).hour;
+  const hours = hoursBetween(from, to);
+  return hours.length ? { hours, from, to } : null;
+}
+
+/** "Dark hours (21–04): clear 41 % of the time, ~32 % mean cloud" — the night's climatology. */
+function NightHours({
+  byHour,
+  hours,
+}: {
+  byHour: ClimatologySummary['byHour'];
+  hours: { hours: number[]; from: number; to: number };
+}) {
+  const share = hoursShare({ byHour }, hours.hours);
+  if (!share) return null;
+  return (
+    <p className="text-xs text-[var(--lm-text-muted)]" data-testid="climatology-night">
+      Dark hours ({two(hours.from)}–{two(hours.to)}): clear {Math.round(share.clearShare * 100)} %
+      of the time, ~{Math.round(share.meanCloudCover)} % mean cloud, overcast or storm{' '}
+      {Math.round(share.dullShare * 100)} % — history for night planning, not a forecast.
+    </p>
   );
 }

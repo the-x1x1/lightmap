@@ -3,6 +3,8 @@ import {
   buildMonthlyClimatology,
   climatologyCacheKey,
   daylightPattern,
+  hoursBetween,
+  hoursShare,
   suggestedScenario,
   summarizeClimatology,
   type ClimatologyHour,
@@ -98,6 +100,28 @@ describe('summarizeClimatology', () => {
     expect(p!.clearest.to).toBeLessThanOrEqual(10);
     expect(p!.dullest.from).toBeGreaterThanOrEqual(13);
     expect(p!.dullest.to).toBeLessThanOrEqual(17);
+  });
+
+  it('aggregates a set of local hours — the dark hours wrap midnight', () => {
+    // Clear mornings (hours 6–10 at 10 % cloud), dull afternoons (13–17 at 90 %), 20 % at night.
+    const cloudAt = (local: number) =>
+      local < 10 ? 10 : local < 13 ? 45 : local < 17 ? 90 : local < 20 ? 60 : 20;
+    const hours = hoursFor(2020, (hUtc) => cloudAt((hUtc - 10 + 24) % 24));
+    const s = summarizeClimatology(hours, meta);
+    expect(hoursBetween(21, 4)).toEqual([21, 22, 23, 0, 1, 2, 3]);
+    expect(hoursBetween(4, 4)).toEqual([]);
+    expect(hoursBetween(23, 1)).toEqual([23, 0]);
+    const night = hoursShare(s, hoursBetween(21, 4))!;
+    expect(night.samples).toBe(31 * 7);
+    // 21–23 h at 20 %, 0–3 h at 10 %: (3 × 20 + 4 × 10) / 7.
+    expect(night.meanCloudCover).toBeCloseTo(100 / 7, 5);
+    expect(night.clearShare).toBeCloseTo(1, 5);
+    const morning = hoursShare(s, [6, 7, 8, 9]);
+    expect(morning!.meanCloudCover).toBeCloseTo(10, 5);
+    // Duplicates count once; an empty set or hours without samples give null.
+    expect(hoursShare(s, [22, 22])!.samples).toBe(31);
+    expect(hoursShare(s, [])).toBeNull();
+    expect(hoursShare(summarizeClimatology([], meta), [1, 2])).toBeNull();
   });
 
   it('reports no daily pattern when the spread is small', () => {
