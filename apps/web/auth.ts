@@ -8,22 +8,24 @@ import { getServices } from '@/lib/server/services';
  */
 const services = getServices();
 
+const unavailable = () =>
+  new Response(
+    JSON.stringify({
+      error: { code: 'auth_disabled', message: 'Accounts need a database (DATABASE_URL).' },
+    }),
+    { status: 503, headers: { 'content-type': 'application/json' } },
+  );
+
 const disabled = {
   handlers: {
-    GET: async () =>
-      new Response(
-        JSON.stringify({
-          error: { code: 'auth_disabled', message: 'Accounts need a database (DATABASE_URL).' },
-        }),
-        { status: 503, headers: { 'content-type': 'application/json' } },
-      ),
-    POST: async () =>
-      new Response(
-        JSON.stringify({
-          error: { code: 'auth_disabled', message: 'Accounts need a database (DATABASE_URL).' },
-        }),
-        { status: 503, headers: { 'content-type': 'application/json' } },
-      ),
+    // The session endpoint answers the way Auth.js does for a visitor who is not signed in —
+    // `null`, 200 — so the client's SessionProvider settles on "unauthenticated" instead of
+    // logging a ClientFetchError on every page load; everything else says accounts are off.
+    GET: async (request: Request) =>
+      new URL(request.url).pathname.endsWith('/session')
+        ? new Response('null', { status: 200, headers: { 'content-type': 'application/json' } })
+        : unavailable(),
+    POST: async () => unavailable(),
   },
   auth: async () => null,
   signIn: async () => {
