@@ -141,7 +141,9 @@ Always visible when a location is selected:
 Expandable "Why does it look like this?" section: light geometry relative to the camera (front-lit,
 side-lit, back-lit, top-lit, below horizon), colour temperature (K), twilight band, golden/blue
 hour windows, moon altitude/azimuth/phase, active atmosphere parameters, and a one-line reason per
-confidence dimension. The Moon section also lists the next four principal phases from the
+confidence dimension; at night (Sun below −6°) the Moon as the only direct light ("97 % lit, 40°
+up in the SE — the only direct light" / "below the horizon — no moonlight") and the Milky Way
+core with its verdict. The Moon section also lists the next four principal phases from the
 selected day ("Next: Last quarter 8 Jun · New 14 Jun · First quarter 21 Jun · Full 29 Jun", in
 the planning zone) — `nextMoonPhases()` from the same lunar series as the positions, within a
 couple of minutes of the almanac.

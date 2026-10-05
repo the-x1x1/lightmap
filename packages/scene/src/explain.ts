@@ -43,6 +43,26 @@ export function explainScene(s: SceneState): ExplanationLine[] {
       basis: 'astronomy',
     });
   }
+  // At night the Moon is the light, and the sky's darkness is what the night shooter asks about.
+  if (el <= -6 && s.lunar) {
+    lines.push({
+      label: 'Moon',
+      value: s.lunar.isAboveHorizon
+        ? `${Math.round(s.lunar.illuminatedFraction * 100)} % lit, ${s.lunar.elevationDegrees.toFixed(0)}° up in the ${compassLabel(s.lunar.azimuthDegrees)} — the only direct light`
+        : `below the horizon — no moonlight`,
+      basis: 'astronomy',
+    });
+  }
+  if (el <= -6 && s.nightSky) {
+    lines.push({
+      label: 'Milky Way core',
+      value:
+        s.nightSky.elevationDeg > 0
+          ? `${Math.round(s.nightSky.elevationDeg)}° up in the ${compassLabel(s.nightSky.azimuthDeg)} — ${s.nightSky.reason.toLowerCase()}`
+          : s.nightSky.reason.toLowerCase(),
+      basis: 'astronomy',
+    });
+  }
   const geo = lightingGeometry(s.camera, s.solar.azimuthDegrees, el);
   lines.push({ label: 'Relative to camera', value: geo.replace('-', ' '), basis: 'camera' });
   const scenarioLabel = scenarioById(s.atmosphere.scenario).label;

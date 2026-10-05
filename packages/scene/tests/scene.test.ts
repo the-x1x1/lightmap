@@ -390,6 +390,16 @@ describe('explanation', () => {
     expect(lines.find((l) => l.label === 'Weather scenario')?.value).toContain('not a forecast');
     expect(lines.find((l) => l.label === 'Confidence')?.value).toContain('scenario-only');
     expect(lines.find((l) => l.label === 'Scene source')?.value).toContain('Simulated Lighting');
+    // By day there is no Moon or Milky Way line; on the new-Moon night (02:00 HST, 15 June) both.
+    expect(labels).not.toContain('Moon');
+    expect(labels).not.toContain('Milky Way core');
+    const night = explainScene(
+      buildSceneState(inputs({ utc: new Date('2026-06-15T12:00:00Z'), includeLunar: true })),
+    );
+    expect(night.find((l) => l.label === 'Moon')?.value).toBe('below the horizon — no moonlight');
+    expect(night.find((l) => l.label === 'Milky Way core')?.value).toMatch(
+      /^3\d° up in the S(SW|W) — astronomical night, core 3\d° up, moon down$/,
+    );
   });
 });
 
