@@ -14,7 +14,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   rule-of-thirds grid, the true-level line and the modelled terrain skyline (dotted, "terrain
   only"), with buttons that pitch the camera so level sits on the low third, the centre or the
   high third. `levelLineY()`, `pitchForHorizonAt()`, `skylinePath()` in `@lightmap/scene`.
-- **Security**: nodemailer 10.0.9+ across the workspace (GHSA-v53p-9fqp-m79j and
+- **Security**: Vitest 4.1.11+ (GHSA-82fw-gwwq-j7x9, moderate: path traversal via
+  `@vitest/mocker` redirect mocks — dev-only, closed anyway); nodemailer 10.0.9+ across the workspace (GHSA-v53p-9fqp-m79j and
   GHSA-prgh-xp8r-p3m5, high: address-parser denial of service; plus three moderate advisories).
   Only `createTransport`/`sendMail` are used, unchanged across the major.
 - **Field view (Phase 9 AR sun alignment)**: on a phone in viewpoint mode, "Field view (camera)"
