@@ -125,6 +125,15 @@ ground is lifted toward the sky colour by depth, more strongly at low Sun (`hori
 by the light's colour. The light direction and terrain shading are untouched by either. Verified in
 `tools/renderer-smoke` (contact sheet `docs/media/renderer-smoke-2026-09-24c.png`).
 
+**Night sky.** Below a Sun elevation of −8° the dome shows Cesium's star field (its Tycho-2 sky
+box), which Cesium orients in the celestial (ICRF) frame for the scene's instant when its
+IAU-2006 orientation data is loadable — so the Milky Way's band in the 3D preview stands where
+the planner's own Galactic Centre says (`milkyWayCore`, Meeus precession, ≈ 0.1°), and the
+"Milky Way core" line, the rose star and the dark windows are the authority when the two
+disagree (an offline or asset-less build leaves the star field unrotated). The star field is a
+texture: no sky-brightness, light-pollution or airglow model, and it is faint under software GL
+(`README.md` "Known limitations").
+
 ### Water
 
 Where the terrain tiles carry a water mask (Cesium World Terrain does; a provider without one
