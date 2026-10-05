@@ -29,7 +29,12 @@ export async function PATCH(req: Request, { params }: Params) {
     const { id } = await params;
     const patch = await readJson(req, (b) => {
       const o = v.obj(b);
-      const out: { name?: string; description?: string | null; shootDate?: string | null } = {};
+      const out: {
+        name?: string;
+        description?: string | null;
+        shootDate?: string | null;
+        archived?: boolean;
+      } = {};
       const name = v.string(o['name'], 'name', { min: 1, max: 120, optional: true });
       if (name) out.name = name;
       const description = v.string(o['description'], 'description', {
@@ -40,6 +45,10 @@ export async function PATCH(req: Request, { params }: Params) {
       if (description !== undefined) out.description = description;
       const shootDate = v.isoDate(o['shootDate'], 'shootDate', { optional: true, nullable: true });
       if (shootDate !== undefined) out.shootDate = shootDate;
+      if (o['archived'] !== undefined) {
+        if (typeof o['archived'] !== 'boolean') throw new Error('archived must be a boolean');
+        out.archived = o['archived'];
+      }
       return out;
     });
     const p = await projectsRepo(requireDb()).update(ctx.user.id, id, patch);

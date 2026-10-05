@@ -140,6 +140,24 @@ run('repositories (integration)', () => {
     const full = await projects.get(alice, p.id);
     expect(full.viewpoints).toHaveLength(1);
     expect(full.viewpoints[0]!.id).toBe(v2.id);
+    // Archiving keeps the project and its viewpoints, hides it from the active list and the
+    // count (the plan's project slot is freed), lists it under archived, and is reversible;
+    // bob can neither archive nor restore it.
+    const before = await projects.count(alice);
+    const archived = await projects.update(alice, p.id, { archived: true });
+    expect(archived.archivedAt).not.toBeNull();
+    expect((await projects.list(alice)).some((x) => x.id === p.id)).toBe(false);
+    expect(await projects.count(alice)).toBe(before - 1);
+    const shelf = await projects.list(alice, undefined, { archived: true });
+    expect(shelf.find((x) => x.id === p.id)?.viewpointCount).toBe(1);
+    expect((await projects.get(alice, p.id)).viewpoints).toHaveLength(1);
+    await expect(projects.update(bob, p.id, { archived: false })).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
+    const restored = await projects.update(alice, p.id, { archived: false });
+    expect(restored.archivedAt).toBeNull();
+    expect((await projects.list(alice)).some((x) => x.id === p.id)).toBe(true);
+    expect(await projects.count(alice)).toBe(before);
     await projects.remove(alice, p.id);
     await expect(vps.get(alice, v2.id)).rejects.toBeInstanceOf(NotFoundError); // cascade
   });

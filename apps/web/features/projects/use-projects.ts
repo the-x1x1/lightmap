@@ -13,6 +13,16 @@ export function useProjects(enabled: boolean) {
   });
 }
 
+/** The archived projects (kept, hidden from the active list), fetched only when asked for. */
+export function useArchivedProjects(enabled: boolean) {
+  return useQuery({
+    queryKey: ['projects', 'archived'],
+    queryFn: () => api.get<{ projects: ProjectDto[] }>('/api/projects?archived=1'),
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
 export function useProject(id: string | null) {
   return useQuery({
     queryKey: ['projects', id],
@@ -46,6 +56,7 @@ export function useProjectMutations() {
         name?: string;
         description?: string | null;
         shootDate?: string | null;
+        archived?: boolean;
       }) => api.patch<{ project: ProjectDto }>(`/api/projects/${id}`, patch),
       onSuccess: invalidate,
     }),

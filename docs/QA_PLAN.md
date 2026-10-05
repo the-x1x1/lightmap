@@ -76,7 +76,9 @@ the E2E suite with the fixture providers.
   `profilesRepo` and `retentionRepo` against the live database: owner scoping (a second user
   cannot read, update or delete), cascade on project and user erase, newest-snapshot-only, webhook
   idempotency, cache TTL, counter upsert, profile defaults and per-user patch merging,
-  deletion-request due dates. Skipped automatically when `DATABASE_URL` is unset.
+  deletion-request due dates, archive/restore (hidden from the active list and the count, listed
+  under archived with its viewpoints, owner-scoped, reversible). Skipped automatically when
+  `DATABASE_URL` is unset.
 - Subscription → entitlement is covered by the webhook unit tests plus the E2E dev-sign-in flow
   reading `/api/account/entitlements`.
 

@@ -271,6 +271,19 @@ test('sign in (dev), create a project, save the viewpoint, reload and reopen it'
   await expect(page.getByTestId('timeline-time')).toHaveText('09:00');
   await expect(page).toHaveURL(/^(?!.*viewpoint=)/);
 
+  // Archive keeps the project out of the way and frees the Free plan's one slot; restore brings
+  // it back selected.
+  await page.getByTestId('panel-tab-projects').click();
+  await page.getByTestId('project-card').click();
+  await page.getByTestId('project-archive').click();
+  await expect(page.getByTestId('project-card')).toHaveCount(0);
+  await expect(page.getByTestId('project-name')).toBeEnabled();
+  await page.getByTestId('archived-projects').locator('summary').click();
+  await expect(page.getByTestId('archived-project')).toContainText('Kailua sunrise');
+  await page.getByTestId('archived-project-restore').click();
+  await expect(page.getByTestId('project-card')).toContainText('Kailua sunrise');
+  await expect(page.getByTestId('viewpoint-card')).toContainText('Beach, 9am');
+
   // Preferences live in the profile once signed in: wipe the device copy and they come back
   // from the account (GET /api/account/profile) on the next load.
   await page.getByTestId('panel-tab-account').click();

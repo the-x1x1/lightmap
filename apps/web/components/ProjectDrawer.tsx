@@ -7,7 +7,12 @@ import { useState } from 'react';
 import type { SceneState } from '@lightmap/scene';
 import { usePlannerStore } from '@/features/planner/store';
 import { useAccount } from '@/features/account/use-account';
-import { useProject, useProjectMutations, useProjects } from '@/features/projects/use-projects';
+import {
+  useArchivedProjects,
+  useProject,
+  useProjectMutations,
+  useProjects,
+} from '@/features/projects/use-projects';
 import { viewpointPayload } from '@/features/projects/viewpoint-payload';
 import { buildShotList } from '@/features/export/shot-list';
 import { downloadBlob, fileStem } from '@/features/export/download';
@@ -285,6 +290,17 @@ export function ProjectDrawer({
         {!projectDecision.allowed ? (
           <Paywall compact reason={projectDecision.reason ?? ''} />
         ) : null}
+        <ArchivedProjects
+          onRestore={(id) =>
+            m.update
+              .mutateAsync({ id, archived: false })
+              .then(() => {
+                setSelectedId(id);
+                setStatus('Project restored and selected.');
+              })
+              .catch(handle)
+          }
+        />
       </section>
 
       {selectedId ? (
@@ -297,6 +313,25 @@ export function ProjectDrawer({
             >
               Saved viewpoints
             </h3>
+            <Button
+              size="sm"
+              variant="ghost"
+              title="Keep the project and its viewpoints out of the way; it frees the plan's project slot"
+              disabled={m.update.isPending}
+              onClick={() => {
+                void m.update
+                  .mutateAsync({ id: selectedId, archived: true })
+                  .then(() => {
+                    setSelectedId(null);
+                    setStatus('Project archived. Find it under “Archived projects”.');
+                    focusHeading('lm-projects-h');
+                  })
+                  .catch(handle);
+              }}
+              data-testid="project-archive"
+            >
+              Archive
+            </Button>
             <Button
               size="sm"
               variant="ghost"
@@ -413,5 +448,59 @@ export function ProjectDrawer({
         </section>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Archived projects, fetched only when the list is opened: each can be restored (it comes back
+ * to the active list, selected). Archiving is reversible; deleting is not.
+ */
+function ArchivedProjects({ onRestore }: { onRestore: (id: string) => Promise<unknown> }) {
+  const [open, setOpen] = useState(false);
+  const archived = useArchivedProjects(open);
+  const list = archived.data?.projects ?? [];
+  return (
+    <details
+      className="mt-3"
+      data-testid="archived-projects"
+      onToggle={(e) => setOpen(e.currentTarget.open)}
+    >
+      <summary className="cursor-pointer text-xs uppercase tracking-wide text-[var(--lm-text-muted)]">
+        Archived projects{archived.data ? ` (${list.length})` : ''}
+      </summary>
+      <div className="mt-2 space-y-1">
+        {archived.isLoading ? (
+          <p className="text-xs text-[var(--lm-text-muted)]" role="status">
+            Loading…
+          </p>
+        ) : null}
+        {archived.data && list.length === 0 ? (
+          <p className="text-xs text-[var(--lm-text-muted)]">Nothing archived.</p>
+        ) : null}
+        {list.map((p) => (
+          <div
+            key={p.id}
+            className="flex items-center justify-between gap-2 rounded-[var(--lm-radius-sm)] border border-[var(--lm-panel-border)] px-3 py-2 text-sm"
+            data-testid="archived-project"
+          >
+            <span className="min-w-0 truncate">
+              {p.name}
+              <span className="ml-2 text-xs text-[var(--lm-text-muted)]">
+                {p.viewpointCount} viewpoint{p.viewpointCount === 1 ? '' : 's'}
+              </span>
+            </span>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => void onRestore(p.id)}
+              aria-label={`Restore ${p.name}`}
+              data-testid="archived-project-restore"
+            >
+              Restore
+            </Button>
+          </div>
+        ))}
+      </div>
+    </details>
   );
 }

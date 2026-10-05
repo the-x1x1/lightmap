@@ -3,7 +3,20 @@
  * able to access another user's project by changing an ID"). Ownership is a WHERE clause here,
  * not a check the API route might forget.
  */
-import { and, asc, count, desc, eq, gte, inArray, isNull, lt, lte, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  lte,
+  sql,
+} from 'drizzle-orm';
 import type { Db } from './client.ts';
 import { ulid } from './ids.ts';
 import {
@@ -35,15 +48,20 @@ export interface ProjectInput {
   shootDate?: string | null;
 }
 
+/** What `update` may change: the fields, and whether the project is archived (`archivedAt`). */
+export type ProjectPatch = Partial<ProjectInput> & { archived?: boolean };
+
 export function projectsRepo(db: Db) {
   return {
     /**
      * The user's projects with their viewpoint counts; with `upcoming`, also how many viewpoints
      * sit inside that window (the forecast horizon: "a shoot is close enough to forecast now").
+     * Active projects by default; `archived: true` lists the archived ones instead.
      */
     async list(
       userId: string,
       upcoming?: { from: Date; to: Date },
+      opts: { archived?: boolean } = {},
     ): Promise<Array<Project & { viewpointCount: number; upcomingViewpointCount: number }>> {
       const from = upcoming?.from ?? new Date(0);
       const to = upcoming?.to ?? new Date(0);
@@ -55,7 +73,12 @@ export function projectsRepo(db: Db) {
         })
         .from(projects)
         .leftJoin(viewpoints, eq(viewpoints.projectId, projects.id))
-        .where(and(eq(projects.userId, userId), isNull(projects.archivedAt)))
+        .where(
+          and(
+            eq(projects.userId, userId),
+            opts.archived ? isNotNull(projects.archivedAt) : isNull(projects.archivedAt),
+          ),
+        )
         .groupBy(projects.id)
         .orderBy(desc(projects.updatedAt));
       return rows.map((r) => ({
@@ -118,13 +141,17 @@ export function projectsRepo(db: Db) {
       const [p] = await db.insert(projects).values(row).returning();
       return p!;
     },
-    async update(userId: string, id: string, patch: Partial<ProjectInput>): Promise<Project> {
+    async update(userId: string, id: string, patch: ProjectPatch): Promise<Project> {
       const [p] = await db
         .update(projects)
         .set({
           ...(patch.name !== undefined ? { name: patch.name.trim() } : {}),
           ...(patch.description !== undefined ? { description: patch.description } : {}),
           ...(patch.shootDate !== undefined ? { shootDate: patch.shootDate } : {}),
+          // Archiving keeps everything and frees the plan's project slot; restoring undoes it.
+          ...(patch.archived !== undefined
+            ? { archivedAt: patch.archived ? new Date() : null }
+            : {}),
           updatedAt: new Date(),
         })
         .where(and(eq(projects.id, id), eq(projects.userId, userId)))

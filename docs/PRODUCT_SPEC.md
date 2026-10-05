@@ -401,6 +401,11 @@ input emits a value per keystroke); saves are chained so the last edit wins, and
 judged against what was last sent (the API trims notes); the status under the field says unsaved / saving /
 saved / not saved, and the project card shows the shoot date.
 
+**Archive**: a project can be archived (kept with its viewpoints, hidden from the active list,
+listed under "Archived projects" with a Restore button) — reversible, unlike delete. Archived
+projects do not count toward the plan's project limit, so a Free account can shelve a finished
+shoot and start the next; their viewpoints still count toward the viewpoint totals.
+
 **Shot list** (Pro, entitlement `export_preview`): the selected project as plain text to copy or
 download (`<name>-shot-list.txt`) — the call sheet for the day: one block per viewpoint in time
 order (variants indented under their parent) with when (the place's zone), where, the camera

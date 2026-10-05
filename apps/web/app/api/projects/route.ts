@@ -7,16 +7,19 @@ import { projectDto } from '@/lib/server/dto';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const ctx = await requireUser();
+    // `?archived=1` lists the archived projects instead of the active ones.
+    const archived = new URL(req.url).searchParams.get('archived') === '1';
     // "Return later as the shoot approaches": count the viewpoints a forecast now covers.
     const now = new Date();
     const horizonHours = getServices().weather.getCapabilities().reliableHorizonHours;
-    const list = await projectsRepo(requireDb()).list(ctx.user.id, {
-      from: now,
-      to: new Date(now.getTime() + horizonHours * 3_600_000),
-    });
+    const list = await projectsRepo(requireDb()).list(
+      ctx.user.id,
+      { from: now, to: new Date(now.getTime() + horizonHours * 3_600_000) },
+      { archived },
+    );
     return json({ projects: list.map(projectDto) });
   } catch (e) {
     return errorResponse(e);

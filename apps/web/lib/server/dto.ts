@@ -10,6 +10,7 @@ export function projectDto(
     name: p.name,
     description: p.description,
     shootDate: p.shootDate,
+    archivedAt: p.archivedAt ? p.archivedAt.toISOString() : null,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
     viewpointCount: p.viewpointCount ?? 0,

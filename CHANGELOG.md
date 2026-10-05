@@ -28,6 +28,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   ("✦ Milky Way core 36° up SSW · dark sky", `nightTag()`, tested). The **Light finder** takes the core as a third body: "when does the
   core stand over that peak?" — bearing/elevation matches like the Sun's, kept only in a dark
   sky by default (`darkSkyOnly`; each match says `dark`, `daylight`, `twilight` or `moonlit`).
+- **Archive projects**: a project can be archived and restored (`archivedAt`, `PATCH
+/api/projects/:id {archived}`, `GET /api/projects?archived=1`); archived projects are kept
+  with their viewpoints, hidden from the active list and not counted toward the plan's project
+  limit — a Free account can shelve a finished shoot and start the next. Integration-tested; E2E.
 - **Shot list**: a project exported as plain text to copy or download — the call sheet for the
   day, one block per viewpoint in time order (variants under their parent) with the camera, the
   Sun, the day's sunrise/sunset, the Moon and the Milky Way core for night shots, the weather

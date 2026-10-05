@@ -40,7 +40,8 @@ Studio is a plan definition only: it has no Stripe price and no team features ye
 - `future_date_planning` for a free user checks the date window: denied with
   "Free plans can plan up to 14 days ahead. This date is N days away." or "Free plans can look
   back 7 days."
-- `saved_projects` / `saved_viewpoints` compare the current counts passed in context against the
+- `saved_projects` / `saved_viewpoints` compare the current counts passed in context (active
+  projects only — archived ones are kept but not counted; viewpoints count wherever they are) against the
   limits; the denial reason and `upgradeTo: 'pro'` feed the paywall.
 - `high_quality_preview` allows any request at or below the plan's quality ceiling; above it, only
   plans holding the key.
