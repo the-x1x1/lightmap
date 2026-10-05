@@ -1,15 +1,17 @@
 'use client';
-import { M_PER_MI, type SceneState } from '@lightmap/scene';
+import { fieldConditions, formatVisibility, type SceneState } from '@lightmap/scene';
 import { describeWeatherCode } from '@lightmap/weather';
+import { useMemo } from 'react';
 import { usePlannerStore } from '@/features/planner/store';
-
-const MPH_PER_MPS = 3600 / M_PER_MI;
 
 export function WeatherDetails({ scene }: { scene: SceneState }) {
   const a = scene.atmosphere;
   const f = a.frame;
   const p = a.parameters;
-  const imperial = usePlannerStore((s) => s.units) === 'imperial';
+  const units = usePlannerStore((s) => s.units);
+  const sunEl = scene.solar.elevationDegrees;
+  // Wind on the tripod, dew or fog on the glass — from the frame's own fields (none for a scenario).
+  const field = useMemo(() => fieldConditions(f, sunEl, units), [f, sunEl, units]);
   return (
     <div className="space-y-2 text-sm" data-testid="weather-details">
       <p className="text-[var(--lm-text-muted)]">{a.summary}</p>
@@ -23,26 +25,23 @@ export function WeatherDetails({ scene }: { scene: SceneState }) {
           <Row label="Rain chance" value={`${Math.round(f.precipitationProbability)} %`} />
         ) : null}
         {f?.visibility !== null && f?.visibility !== undefined ? (
-          <Row
-            label="Visibility"
-            value={
-              imperial
-                ? `${(f.visibility / M_PER_MI).toFixed(0)} mi`
-                : `${(f.visibility / 1000).toFixed(0)} km`
-            }
-          />
+          <Row label="Visibility" value={formatVisibility(f.visibility, units)} />
         ) : null}
-        {f?.windSpeed !== null && f?.windSpeed !== undefined ? (
-          <Row
-            label="Wind"
-            value={
-              imperial
-                ? `${(f.windSpeed * MPH_PER_MPS).toFixed(0)} mph`
-                : `${f.windSpeed.toFixed(0)} m/s`
-            }
-          />
-        ) : null}
+        {field.map((line) => (
+          <Row key={line.label} label={line.label} value={line.value} />
+        ))}
       </dl>
+      {field.some((line) => line.note) ? (
+        <ul className="space-y-1 text-xs text-[var(--lm-text-muted)]" data-testid="field-notes">
+          {field.map((line) =>
+            line.note ? (
+              <li key={line.label}>
+                <span className="text-[var(--lm-text)]">{line.label}:</span> {line.note}
+              </li>
+            ) : null,
+          )}
+        </ul>
+      ) : null}
       {a.providerAttribution ? (
         <p className="text-xs text-[var(--lm-text-faint)]">{a.providerAttribution}</p>
       ) : null}

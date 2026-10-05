@@ -121,6 +121,18 @@ covers none of them). The same numbers are available as a table. Hours the provi
 cover are absent; DST gaps produce no duplicate rows (`hourlyOutlook`, tested). Free plans see
 the locked block with the paywall reason.
 
+**Weather details** (any plan). The details drawer lists what the frame says beyond the light:
+cloud cover, the direct and diffuse shares, haze, the WMO conditions, rain chance, visibility
+("600 m", "4.5 km", "24 km"; feet and miles on imperial), **wind** with the quarter it blows from
+("4 m/s from the ENE"; "calm" below 0.5 m/s) and **humidity**. Two field notes follow when there is
+something to act on (plan §1 B's humidity, fog and wind): from a fresh breeze up (Beaufort 5,
+8 m/s) the wind line says so — "weigh the tripod down; clouds streak in a long exposure", then
+"tripod shake likely; find a lee", then "hand-held only" from a gale — and the humidity line calls
+**fog** (visibility under 1 km or a fog code: "lenses mist within minutes"), **dew likely** at
+≥ 95 % whatever the sky, or **dew possible** on a calm (Beaufort ≤ 2), mostly clear (≤ 50 %) night
+at ≥ 85 %, since cloud and wind both keep a surface from cooling below the dew point
+(`fieldConditions()` in `@lightmap/scene`, tested). Scenario days carry no frame and no notes.
+
 **Typical for this month** (Pro, entitlement `climatology`). Under the scenario buttons: the share
 of daylight hours in this calendar month over the last ten years that fell in each scenario class,
 from ERA5 reanalysis via Open-Meteo's archive, plus mean cloud cover and the fraction of wet days,

@@ -61,6 +61,13 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   02:54 UTC) come out within two minutes.
 - **"Tonight"** beside "Now": today at the start of astronomical night at the place (`setTonight`,
   tested).
+- **Field conditions in the weather details**: the wind with the quarter it blows from ("4 m/s
+  from the ENE", "calm"), the humidity, and visibility in sensible units ("600 m", "4.5 km",
+  "24 km"); notes when there is something to act on — a fresh breeze and up ("weigh the tripod
+  down; clouds streak in a long exposure" → "tripod shake likely" → "hand-held only"), fog
+  ("lenses mist within minutes"), dew likely at ≥ 95 % humidity, dew possible on a calm, mostly
+  clear night from 85 % (`fieldConditions()`, Beaufort bands and the WMO fog threshold, tested).
+  Scenario days say nothing: there is no frame.
 - **Dark-sky cloud in the hourly outlook**: a line with the forecast cloud over the night's
   dark-sky spells and the clearest hour — "is the core window going to be clear?"
   (`cloudOverSpells`, tested).

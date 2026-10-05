@@ -94,6 +94,17 @@ Colour temperature of direct light comes from solar elevation, not weather
 (`DEFAULT_COLOR_TEMPERATURE_CURVE`: 2900 K at the horizon, 3800 K at 5°, 5400 K at 20°, 5600 K
 overhead, cooling through 7800–9000 K in twilight). The curve is configurable.
 
+### 4a. Field conditions from the frame
+
+Beside the light, the weather details read the frame for the shoot itself (`fieldConditions()` in
+`@lightmap/scene`, pure, tested): the **wind** in Beaufort's bands (calm < 0.5 m/s, light < 3.4,
+moderate < 8, fresh < 13.9, strong < 17.2, gale above) with the quarter it blows from, warning
+from fresh up; and the **humidity** with a moisture call for the glass — fog when visibility is
+under the WMO kilometre or the code is 45/48, dew likely at ≥ 95 % relative humidity (within
+about a degree of the dew point), dew possible at ≥ 85 % only after sunset with the wind under
+Beaufort 3 and no more than half cloud, the conditions under which a surface radiates below the
+dew point. Nothing is said when the frame lacks the field, and nothing at all for a scenario.
+
 ## 5. Scenario parameter table
 
 From `SCENARIOS` in `scenarios.ts`. Deterministic; the same scenario always yields the same numbers.

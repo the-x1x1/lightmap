@@ -425,8 +425,12 @@ test.describe('preferences', () => {
     await setDateTime(page, soon.toISOString().slice(0, 10), 14 * 60);
     await page.getByTestId('details-weather').locator('summary').click();
     const weather = page.getByTestId('weather-details');
-    await expect(weather).toContainText(/\d+ mph/);
+    // The fixture blows 4 m/s from 60°: "9 mph from the ENE" (moderate — no field note).
+    await expect(weather).toContainText(/\d+ mph from the ENE/);
     await expect(weather).not.toContainText('m/s');
+    await expect(weather).toContainText(/\d+ mi/);
+    await expect(weather).toContainText('Humidity');
+    await expect(page.getByTestId('field-notes')).toHaveCount(0);
 
     // Kept on this device: the choice is still there after a reload.
     await page.reload();
