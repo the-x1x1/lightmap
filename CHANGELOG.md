@@ -10,8 +10,11 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   horizon that pale further with the scenario's haze and a lower Sun, and a sunrise/sunset glow
   whose hue follows the Sun's elevation and the haze. Blended into the hand-set colours (60 % by
   day, none near the horizon; twilight and night unchanged) since single scattering has no
-  multiple scattering or ozone. Cesium's own dome is unchanged. Eight tests pin the physics (Rayleigh ordering, horizon
-  paling, sunset reddening, haze, Earth shadow, symmetry, exposure anchor).
+  multiple scattering or ozone. Cesium's own dome is unchanged by default; behind the new
+  `physicalSkyDome` feature flag its aerosol density follows the scenario's haze through the
+  model's Mie coefficient, with a `storm-physical-dome` shot in the renderer smoke harness to
+  judge it. Eight tests pin the physics (Rayleigh ordering, horizon paling, sunset reddening,
+  haze, Earth shadow, symmetry, exposure anchor).
 - **Dev perf panel** completes plan §27: draw commands (Cesium's per-frame command list) and the
   WebGPU API flag beside FPS, terrain tiles, WebGL2/GPU and the weather-cache state.
 - **Preferences (plan §17)**: an "Account & plan" section — signed in or not — for distances
