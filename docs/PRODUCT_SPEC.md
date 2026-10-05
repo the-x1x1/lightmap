@@ -463,7 +463,11 @@ saves on its own; if the save fails the previous setting comes back and the pane
 
 A Studio plan exists as a definition only (no Stripe price). The paywall shows the denial reason
 from the entitlement decision; a subscription unlocks the current plan immediately after the
-webhook lands. Details in `BILLING_AND_ENTITLEMENTS.md`.
+webhook lands — the return page from Checkout (`/account?checkout=success`) re-reads the
+entitlement snapshot every two seconds until the effective plan is no longer Free, then says
+"You're on Photographer Pro — everything is unlocked" with a link back to the map; after a
+minute without confirmation it says so plainly and what to do (plan §38, step 7). Details in
+`BILLING_AND_ENTITLEMENTS.md`.
 
 ## 12. Error handling (plan §34)
 

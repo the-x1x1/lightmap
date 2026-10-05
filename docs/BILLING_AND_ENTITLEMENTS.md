@@ -109,7 +109,10 @@ Any other type is recorded as `ignored` and acknowledged with 200 so Stripe stop
 ## 5. Checkout and portal
 
 - `POST /api/billing/checkout` creates a Stripe Checkout session (subscription mode) with
-  `client_reference_id = userId`, success/cancel URLs from `NEXT_PUBLIC_APP_URL`.
+  `client_reference_id = userId`, success/cancel URLs from `NEXT_PUBLIC_APP_URL`. The success
+  page (`/account?checkout=success`, `CheckoutReturn`) polls `GET /api/account/entitlements`
+  every two seconds for up to a minute until the effective plan is no longer Free — the webhook
+  is the only thing that grants it — then confirms and links back to the map.
 - `POST /api/billing/portal` opens the Stripe Customer Portal for cancellation, payment method
   changes and invoices.
 - The paywall shows the denial reason from `can()` and the target plan's `highlights`.

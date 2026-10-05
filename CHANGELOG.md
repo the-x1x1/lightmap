@@ -20,6 +20,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   and the grazing cases. The **Light finder** takes the core as a third body: "when does the
   core stand over that peak?" — bearing/elevation matches like the Sun's, kept only in a dark
   sky by default (`darkSkyOnly`, `skyDark` on each match).
+- **Checkout return**: `/account?checkout=success` now watches for Stripe's confirmation (the
+  entitlement snapshot is re-read every two seconds for up to a minute) and switches from "being
+  activated" to "You're on Pro — everything is unlocked" with a link back to the map, or says
+  plainly that confirmation has not arrived (plan §38: the existing plan unlocks at once).
 - **Moon phase calendar**: the Moon details list the next four principal phases from the selected
   day (New, First quarter, Full, Last quarter, as dates in the planning zone). `nextMoonPhases()`
   in `@lightmap/astronomy` bisects the elongation from the same Meeus series as the positions —
