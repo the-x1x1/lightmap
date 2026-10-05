@@ -9,11 +9,11 @@ master implementation plan.
 Full-screen map with the planning controls in a bottom sheet (mobile) or a compact side panel
 (desktop). The map and preview are the hero; the screen must not read as a GIS workstation.
 
-| Region        | Contents                                                                                                                                                                             |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Top           | Brand mark (from the central brand config, never a hard-coded string), location search, account button                                                                               |
-| Centre        | Interactive globe (Cesium) or, when WebGL is unavailable, the Quality-0 map lighting overlay; a dropped pin; sun-direction and shadow-direction overlays once a location is selected |
-| Sheet / panel | Selected location label, date control, time readout, timeline scrubber, weather mode/scenario controls, preview panel, "Save to project"                                             |
+| Region        | Contents                                                                                                                                                                                                                                                                                           |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Top           | Brand mark (from the central brand config, never a hard-coded string), location search, account button                                                                                                                                                                                             |
+| Centre        | Interactive globe (Cesium) or, when WebGL is unavailable, the Quality-0 map lighting overlay; a dropped pin; sun-direction and shadow-direction overlays once a location is selected (the compass rose also carries the day's sun path, the year's sunrise/sunset arcs and the Moon when it is up) |
+| Sheet / panel | Selected location label, date control, time readout, timeline scrubber, weather mode/scenario controls, preview panel, "Save to project"                                                                                                                                                           |
 
 The sheet can be dragged up for details (the handle takes a swipe or a tap; collapsed, a glance
 line shows local time · light phase · sun bearing · weather basis and opens the sheet when

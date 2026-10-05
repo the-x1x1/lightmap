@@ -1,6 +1,7 @@
 'use client';
 /**
- * Quality-0 overlay (plan §6): compass rose with sun arrow, shadow arrow and the day's sun path.
+ * Quality-0 overlay (plan §6): compass rose with sun arrow, shadow arrow, the day's sun path, the
+ * year's sunrise/sunset arcs and the Moon when it is up.
  * Always correct, always available, driven by SceneState only. In 3D mode it shrinks to a corner
  * compass; in overlay mode it is the hero.
  */
@@ -66,10 +67,19 @@ export function SunDirectionOverlay({ scene, compact }: { scene: SceneState; com
   const shx = c + shadowLen * Math.cos(rad(shadowAz));
   const shy = c + shadowLen * Math.sin(rad(shadowAz));
   const camHeading = scene.camera.headingDeg;
+  // The Moon when it is up (moon planning): a grey disc on the same dome, no ray or shadow.
+  const moon = scene.lunar && scene.lunar.isAboveHorizon ? scene.lunar : null;
+  const moonR = moon ? r * Math.cos(Math.max(0, moon.elevationDegrees) * (Math.PI / 180)) : 0;
+  const mx = moon ? c + moonR * Math.cos(rad(moon.azimuthDegrees)) : 0;
+  const my = moon ? c + moonR * Math.sin(rad(moon.azimuthDegrees)) : 0;
 
-  const label = up
-    ? `Sun at ${Math.round(el)}° elevation, bearing ${Math.round(az)}° (${compassLabel(az)}). Shadows fall toward ${compassLabel(shadowAz)}.`
-    : `Sun ${Math.abs(Math.round(el))}° below the horizon (${scene.solar.phase.replace('-', ' ')}).`;
+  const label =
+    (up
+      ? `Sun at ${Math.round(el)}° elevation, bearing ${Math.round(az)}° (${compassLabel(az)}). Shadows fall toward ${compassLabel(shadowAz)}.`
+      : `Sun ${Math.abs(Math.round(el))}° below the horizon (${scene.solar.phase.replace('-', ' ')}).`) +
+    (moon
+      ? ` Moon at ${Math.round(moon.elevationDegrees)}° elevation, bearing ${Math.round(moon.azimuthDegrees)}° (${compassLabel(moon.azimuthDegrees)}), ${Math.round(moon.illuminatedFraction * 100)} % lit.`
+      : '');
 
   return (
     <figure
@@ -181,6 +191,18 @@ export function SunDirectionOverlay({ scene, compact }: { scene: SceneState; com
         ) : (
           <circle cx={c} cy={c} r={compact ? 5 : 10} fill="var(--lm-twilight)" opacity={0.8} />
         )}
+        {moon ? (
+          <circle
+            cx={mx}
+            cy={my}
+            r={compact ? 4 : 8}
+            fill="#d8dde6"
+            fillOpacity={0.35 + 0.65 * moon.illuminatedFraction}
+            stroke="#1f2430"
+            strokeWidth={1.5}
+            data-testid="rose-moon"
+          />
+        ) : null}
         <circle cx={c} cy={c} r={compact ? 3 : 5} fill="#fff" stroke="#000" strokeWidth={1.5} />
       </svg>
       {!compact ? (

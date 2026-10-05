@@ -4,6 +4,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Moon on the compass rose**: when the Moon is up, the sun-direction overlay marks it as a grey
+  disc (brighter the fuller it is) on the same dome, and the overlay's description names its
+  bearing, elevation and illumination.
 - **Seasonal envelope** (plan §1 "seasonal path"): the compass rose shows where sunrise and
   sunset swing to across the year as rim arcs (June to December solstice), the 3D map draws the
   two solstice sun paths faintly beside the day's arc, the planning card carries the line, and
