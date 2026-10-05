@@ -15,7 +15,7 @@ sunset with a cirrus deck (still sunlit) and a stratus deck (in shadow) from a f
 the shadow probe (a 20 m tower at Sun 11°, shadow measured against `h / tan(el)`) — Kailua Beach,
 31 May 2026, flat ellipsoid terrain, software GL. App screenshots follow the first deployed build._
 
-## What it does (v0.1)
+## What it does
 
 - World globe with real terrain; tap, search a place, paste coordinates or use device location.
 - Date and continuous timeline with sunrise, golden hour, solar noon, sunset, blue hour and night
@@ -31,8 +31,19 @@ the shadow probe (a 20 m tower at Sun 11°, shadow measured against `h / tan(el)
 - Every preview carries a source label (Real Reference / Simulated Lighting / Estimated Preview)
   and a confidence breakdown (astronomy, terrain, scene detail, weather, real reference), plus a
   "why does it look like this?" explanation.
-- Viewpoint camera: map orbit or eye-level first person; heading, pitch, full-frame lens presets.
-- Accounts (passwordless email, optional Google), projects, saved viewpoints with thumbnails.
+- Viewpoint camera: map orbit or eye-level first person; heading, pitch, full-frame lens presets;
+  your own sensor and lens, depth of field, a level & thirds guide.
+- Light finder (reverse planning): "I want the sun _there_" — click the spot in the view, or ask
+  for the sun on a ridge, and get every date and time it happens; a "this light" chip says how
+  long the current light lasts and when it comes back.
+- Terrain horizon: when the sun actually clears or drops behind the ridge, with the caveat that
+  trees and buildings are not in the elevation model.
+- Climatology: "typical for this month" from ten years of ERA5, by hour of day — never a forecast.
+- In the field: point the phone and the camera follows the compass; the field view puts the
+  planned sun, its path, true level and the ridge over the live camera; saved projects open
+  offline; installable as a PWA.
+- Accounts (passwordless email, optional Google), projects, saved viewpoints with thumbnails,
+  planning-card export.
 - Subscription plumbing in Stripe test mode with a central entitlement service (Free / Pro).
 - No uploads, no social feed, no location-discovery engine. It is a planning instrument.
 
@@ -160,7 +171,7 @@ daily account-erasure / cache-purge job once the production database secret exis
 | [WORLDVIEW_REUSE_AUDIT](docs/WORLDVIEW_REUSE_AUDIT.md)                                                                                                                 | What was (and was not) reused from WorldView           |
 | [ADR/](docs/ADR)                                                                                                                                                       | Architecture decisions                                 |
 
-## Known limitations (v0.1)
+## Known limitations
 
 - **Imagery is coarse by default.** Without an imagery key the globe shows Natural Earth II, so
   scenes are labelled _Estimated Preview_. Terrain relief and light direction are still real.
@@ -172,7 +183,8 @@ daily account-erasure / cache-purge job once the production database secret exis
   night); a moonlit atmosphere halo marks the Moon's position and lights the scene instead. Stars
   are faint under software GL.
 - **Open-Meteo and Nominatim are development-tier** until commercial arrangements are made.
-- **Legal pages are placeholders**; `docs/PRIVACY.md` is the engineering behaviour they will describe.
+- **Legal pages are drafts** pending counsel review; `docs/PRIVACY.md` is the engineering behaviour
+  they describe.
 - Not yet run: Playwright E2E on a deployed environment (CI wiring is in place).
 
 ## Licence
