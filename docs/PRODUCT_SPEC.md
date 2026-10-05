@@ -418,7 +418,8 @@ saved / not saved, and the project card shows the shoot date.
 listed under "Archived projects" with a Restore button) — reversible, unlike delete. Archived
 projects and their viewpoints do not count toward the plan's limits, so a Free account can
 shelve a finished shoot and start the next; an archived project takes no new viewpoints until it
-is restored (`409 project_archived`), and archive/restore are audited.
+is restored (`409 project_archived`), restoring runs the plan's project and viewpoint checks (a
+Free account must first make room), and archive/restore are audited.
 
 **Shot list** (Pro, entitlement `export_preview`): the selected project as plain text to copy or
 download (`<name>-shot-list.txt`) — the call sheet for the day: one block per viewpoint in time

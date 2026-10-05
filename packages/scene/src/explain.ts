@@ -48,7 +48,7 @@ export function explainScene(s: SceneState): ExplanationLine[] {
     lines.push({
       label: 'Moon',
       value: s.lunar.isAboveHorizon
-        ? `${Math.round(s.lunar.illuminatedFraction * 100)} % lit, ${s.lunar.elevationDegrees.toFixed(0)}° up in the ${compassLabel(s.lunar.azimuthDegrees)} — ${s.terrainHorizon?.moonAboveTerrain === false ? 'behind the terrain here' : 'the only direct light'}`
+        ? `${Math.round(s.lunar.illuminatedFraction * 100)} % lit, ${Math.max(0, Math.round(s.lunar.elevationDegrees))}° up in the ${compassLabel(s.lunar.azimuthDegrees)} — ${s.terrainHorizon?.moonAboveTerrain === false ? 'behind the terrain here' : 'the only direct light'}`
         : `below the horizon — no moonlight`,
       basis: 'astronomy',
     });
@@ -58,8 +58,8 @@ export function explainScene(s: SceneState): ExplanationLine[] {
       label: 'Milky Way core',
       value:
         s.nightSky.elevationDeg > 0
-          ? `${Math.round(s.nightSky.elevationDeg)}° up in the ${compassLabel(s.nightSky.azimuthDeg)} — ${s.nightSky.reason.toLowerCase()}`
-          : s.nightSky.reason.toLowerCase(),
+          ? `${Math.round(s.nightSky.elevationDeg)}° up in the ${compassLabel(s.nightSky.azimuthDeg)} — ${lowerFirst(s.nightSky.reason)}`
+          : lowerFirst(s.nightSky.reason),
       basis: 'astronomy',
     });
   }
@@ -90,6 +90,11 @@ export function explainScene(s: SceneState): ExplanationLine[] {
     basis: 'imagery',
   });
   return lines;
+}
+
+/** "Astronomical night, core 36° up, Moon down" → "astronomical night, core 36° up, Moon down". */
+function lowerFirst(text: string): string {
+  return text.charAt(0).toLowerCase() + text.slice(1);
 }
 
 function shadowLengthText(elevationDeg: number): string {

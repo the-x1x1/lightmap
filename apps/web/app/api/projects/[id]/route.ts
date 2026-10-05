@@ -1,5 +1,13 @@
-import { auditRepo, projectsRepo } from '@lightmap/database';
-import { errorResponse, json, readJson, requireSameOrigin, v } from '@/lib/server/http';
+import { auditRepo, projectsRepo, viewpointsRepo } from '@lightmap/database';
+import { can } from '@lightmap/entitlements';
+import {
+  errorResponse,
+  forbidByEntitlement,
+  json,
+  readJson,
+  requireSameOrigin,
+  v,
+} from '@/lib/server/http';
 import { requireDb, requireUser } from '@/lib/server/session';
 import { projectDto, viewpointDto } from '@/lib/server/dto';
 
@@ -52,6 +60,30 @@ export async function PATCH(req: Request, { params }: Params) {
       return out;
     });
     const db = requireDb();
+    // Restoring brings a project and its viewpoints back under the plan's limits: the same checks
+    // as creating them, so archive → create → restore cannot grow past the plan.
+    if (patch.archived === false) {
+      const [active, shelved, activeViewpoints] = await Promise.all([
+        projectsRepo(db).count(ctx.user.id),
+        projectsRepo(db).get(ctx.user.id, id),
+        viewpointsRepo(db).countTotal(ctx.user.id),
+      ]);
+      if (shelved.archivedAt) {
+        const projectDecision = can(ctx.entitlements, 'saved_projects', {
+          projectCount: active,
+        });
+        if (!projectDecision.allowed) throw forbidByEntitlement(projectDecision);
+        const n = shelved.viewpoints.length;
+        if (n > 0) {
+          // "Would the restored viewpoints fit?": the counts as they stand once all but one are in.
+          const viewpointDecision = can(ctx.entitlements, 'saved_viewpoints', {
+            viewpointCountInProject: n - 1,
+            viewpointCountTotal: activeViewpoints + n - 1,
+          });
+          if (!viewpointDecision.allowed) throw forbidByEntitlement(viewpointDecision);
+        }
+      }
+    }
     const p = await projectsRepo(db).update(ctx.user.id, id, patch);
     if (patch.archived !== undefined)
       await auditRepo(db).record(

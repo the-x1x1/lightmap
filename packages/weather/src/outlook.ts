@@ -120,7 +120,8 @@ export function cloudOverSpells(
   let clearestCloud = Number.POSITIVE_INFINITY;
   for (const h of hours) {
     const t = Date.parse(h.timestampUtc);
-    if (!spells.some((s) => s.from.getTime() <= t && t <= s.to.getTime())) continue;
+    // Half-open: an hour starting exactly when the spell ends has no dark minutes in it.
+    if (!spells.some((s) => s.from.getTime() <= t && t < s.to.getTime())) continue;
     n++;
     sum += h.cloudCoverTotal;
     if (h.cloudCoverTotal < clearestCloud) {

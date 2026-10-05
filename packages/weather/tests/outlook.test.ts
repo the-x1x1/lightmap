@@ -113,8 +113,9 @@ describe('cloudOverSpells', () => {
     expect(c.meanCloudCover).toBeCloseTo((80 * 4 + 10 + 30 + 50) / 7, 5);
     expect(c.clearestHour).toBe(21);
     expect(c.clearestCloud).toBe(10);
-    // Spell edges are inclusive at the hour's start; no hours inside → null.
-    expect(cloudOverSpells(hours, [{ from: hst(21), to: hst(21) }])!.hours).toBe(1);
+    // Half-open spells: an hour starting at the spell's end is out; one starting at its start is in.
+    expect(cloudOverSpells(hours, [{ from: hst(21), to: hst(21) }])).toBeNull();
+    expect(cloudOverSpells(hours, [{ from: hst(21), to: hst(22) }])!.hours).toBe(1);
     expect(cloudOverSpells(hours, [])).toBeNull();
     expect(cloudOverSpells([], spells)).toBeNull();
   });

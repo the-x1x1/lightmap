@@ -41,8 +41,10 @@ Studio is a plan definition only: it has no Stripe price and no team features ye
   "Free plans can plan up to 14 days ahead. This date is N days away." or "Free plans can look
   back 7 days."
 - `saved_projects` / `saved_viewpoints` compare the current counts passed in context (active
-  projects and the viewpoints inside them — an archived shoot is kept but uses no plan, and takes
-  no new viewpoints until restored: `409 project_archived`) against the
+  projects and the viewpoints inside them — an archived shoot is kept but uses no plan, takes
+  no new viewpoints until restored (`409 project_archived`), and restoring it runs the same
+  project and viewpoint checks as creating them, so archive → create → restore cannot grow
+  past the plan) against the
   limits; the denial reason and `upgradeTo: 'pro'` feed the paywall.
 - `high_quality_preview` allows any request at or below the plan's quality ceiling; above it, only
   plans holding the key.

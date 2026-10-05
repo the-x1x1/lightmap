@@ -398,7 +398,7 @@ describe('explanation', () => {
     );
     expect(night.find((l) => l.label === 'Moon')?.value).toBe('below the horizon — no moonlight');
     expect(night.find((l) => l.label === 'Milky Way core')?.value).toMatch(
-      /^3\d° up in the S(SW|W) — astronomical night, core 3\d° up, moon down$/,
+      /^3\d° up in the S(SW|W) — astronomical night, core 3\d° up, Moon down$/,
     );
   });
 });

@@ -2,10 +2,11 @@
  * The photographer's windows of the civil day with their lengths (pure, unit-tested) — golden
  * hour (Sun −4°…+6°) and blue hour (−6°…−4°), the bands `@lightmap/astronomy` defines:
  * "Golden hour 05:33–06:20 (47 min) · 18:37–19:24 (47 min); blue hour 05:23–05:33 (10 min) ·
- * 19:24–19:33 (9 min)". The day is sampled every five minutes so a window that straddles
+ * 19:24–19:33 (10 min)". The day is sampled every five minutes so a window that straddles
  * midnight (the midnight-sun golden light) or never crosses an edge inside the day is still
  * listed, clamped to the day's bounds ("00:00" / "24:00"); edges snap to the exact crossing
- * instants the day events already hold. Nothing at all gives null.
+ * instants the day events already hold — each band only to its own entries and exits, since near
+ * the equator the blue band is under ten minutes wide and the other band's edge is closer. Nothing at all gives null.
  */
 import { THRESHOLDS, formatWallTime, sunPosition, type DayEvents } from '@lightmap/astronomy';
 
@@ -42,7 +43,9 @@ function windows(
   ev: Pick<DayEvents, 'dayStart' | 'dayEnd'>,
   point: { latitude: number; longitude: number },
   inBand: (elevationDeg: number) => boolean,
-  crossings: readonly (Date | null)[],
+  /** The crossings at which the band is entered / left — each edge snaps only to its own kind. */
+  entries: readonly (Date | null)[],
+  exits: readonly (Date | null)[],
 ): LightWindow[] {
   const start = ev.dayStart.getTime();
   const end = ev.dayEnd.getTime();
@@ -51,9 +54,9 @@ function windows(
   let prev = start;
   for (let t = start; t <= end; t += STEP_MS) {
     const inside = inBand(sunPosition(new Date(t), point.latitude, point.longitude).elevationDeg);
-    if (inside && open === null) open = t === start ? start : snap(t, crossings);
+    if (inside && open === null) open = t === start ? start : snap(t, entries);
     else if (!inside && open !== null) {
-      const close = snap(t, crossings);
+      const close = snap(t, exits);
       if (close > open) out.push({ start: new Date(open), end: new Date(close), minutes: 0 });
       open = null;
     }
@@ -81,22 +84,23 @@ export function lightWindows(
   >,
   point: { latitude: number; longitude: number },
 ): LightWindows {
-  const edges = [
-    ev.dawn,
-    ev.civilDusk,
-    ev.goldenHourMorningStart,
-    ev.goldenHourMorningEnd,
-    ev.goldenHourEveningStart,
-    ev.goldenHourEveningEnd,
-  ];
   return {
+    // Golden: entered at −4° going up (morning) or +6° going down (evening); left the other way.
     golden: windows(
       ev,
       point,
       (el) => el >= THRESHOLDS.goldenLow && el < THRESHOLDS.goldenHigh,
-      edges,
+      [ev.goldenHourMorningStart, ev.goldenHourEveningStart],
+      [ev.goldenHourMorningEnd, ev.goldenHourEveningEnd],
     ),
-    blue: windows(ev, point, (el) => el >= THRESHOLDS.civil && el < THRESHOLDS.goldenLow, edges),
+    // Blue: entered at −6° going up (dawn) or −4° going down; left at −4° up or −6° down.
+    blue: windows(
+      ev,
+      point,
+      (el) => el >= THRESHOLDS.civil && el < THRESHOLDS.goldenLow,
+      [ev.dawn, ev.goldenHourEveningEnd],
+      [ev.goldenHourMorningStart, ev.civilDusk],
+    ),
   };
 }
 

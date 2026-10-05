@@ -27,6 +27,33 @@ describe('light windows', () => {
     expect(w.blue[1]!.end.getTime()).toBe(k.ev.civilDusk!.getTime());
   });
 
+  it('snaps each band to its own edges where the blue band is narrower than the sampling step', () => {
+    // Kailua in January: dawn → golden-hour start is 9 minutes; the evening blue hour must not
+    // vanish into the golden hour's close.
+    const k = day(21.397, -157.727, 'Pacific/Honolulu', 2026, 1, 16);
+    const w = lightWindows(k.ev, k.point);
+    expect(w.blue).toHaveLength(2);
+    expect(w.golden).toHaveLength(2);
+    expect(w.blue[0]!.start.getTime()).toBe(k.ev.dawn!.getTime());
+    expect(w.blue[0]!.end.getTime()).toBe(k.ev.goldenHourMorningStart!.getTime());
+    expect(w.golden[1]!.end.getTime()).toBe(k.ev.goldenHourEveningEnd!.getTime());
+    expect(w.blue[1]!.start.getTime()).toBe(k.ev.goldenHourEveningEnd!.getTime());
+    expect(w.blue[1]!.end.getTime()).toBe(k.ev.civilDusk!.getTime());
+    // The same holds every day of the year at the equator, where the bands are narrowest.
+    for (let m = 1; m <= 12; m++) {
+      const e = day(0, 0, 'Africa/Accra', 2026, m, 15);
+      const ww = lightWindows(e.ev, e.point);
+      expect(ww.blue.map((x) => [x.start.getTime(), x.end.getTime()])).toEqual([
+        [e.ev.dawn!.getTime(), e.ev.goldenHourMorningStart!.getTime()],
+        [e.ev.goldenHourEveningEnd!.getTime(), e.ev.civilDusk!.getTime()],
+      ]);
+      expect(ww.golden.map((x) => [x.start.getTime(), x.end.getTime()])).toEqual([
+        [e.ev.goldenHourMorningStart!.getTime(), e.ev.goldenHourMorningEnd!.getTime()],
+        [e.ev.goldenHourEveningStart!.getTime(), e.ev.goldenHourEveningEnd!.getTime()],
+      ]);
+    }
+  });
+
   it('keeps windows that straddle midnight or never cross an edge inside the day', () => {
     // Midnight sun at Tromsø: the Sun dips to 3° — golden light runs through midnight, no blue hour.
     const t = day(69.6492, 18.9553, 'Europe/Oslo', 2026, 6, 21);
