@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { computeDayEvents } from '@lightmap/astronomy';
-import { rangeWidthDeg, seasonalEnvelope } from '../src/seasonal.ts';
+import { describeSeasonalEnvelope, rangeWidthDeg, seasonalEnvelope } from '../src/seasonal.ts';
 
 describe('seasonal envelope (plan §1 "seasonal path")', () => {
   it('London: sunrise swings from the north-east in June to the south-east in December', () => {
@@ -47,5 +47,15 @@ describe('seasonal envelope (plan §1 "seasonal path")', () => {
     expect(e.sunriseRange).toBeNull();
     expect(e.sunsetRange).toBeNull();
     expect(e.december.noonElevationDeg).toBeLessThan(0);
+    expect(describeSeasonalEnvelope(e)).toBe(
+      'June: midnight sun, December: polar night; noon -3°–44°',
+    );
+  });
+
+  it('reads out as one line with compass names', () => {
+    const e = seasonalEnvelope({ latitude: 21.397, longitude: -157.727 }, 'Pacific/Honolulu', 2026);
+    expect(describeSeasonalEnvelope(e)).toBe(
+      'Sunrise 64°–115° (ENE–ESE), sunset 245°–296° (WSW–WNW), noon 45°–88°',
+    );
   });
 });

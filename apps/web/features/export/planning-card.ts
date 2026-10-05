@@ -18,9 +18,11 @@ import {
   circleOfConfusionMm,
   depthOfField,
   focalLengthForFov,
+  describeSeasonalEnvelope,
   formatDeg,
   formatDistance,
   formatHeight,
+  seasonalEnvelope,
   type DistanceUnits,
   type SceneState,
   type SourceMode,
@@ -151,6 +153,17 @@ export function buildPlanningCard(
       value: `${lensMm.toFixed(lensMm < 10 ? 1 : 0)} mm f/${opts.camera.aperture} at ${dist(opts.camera.focusDistanceM)}: sharp ${dist(dof.nearM)}–${dist(dof.farM)}${dof.infinitySharp ? '' : ` · hyperfocal ${dist(dof.hyperfocalM)}`}`,
     });
   }
+  // The year's envelope: where sunrise and sunset can fall here at all (plan §1 "seasonal path").
+  facts.push({
+    label: 'Across the year',
+    value: describeSeasonalEnvelope(
+      seasonalEnvelope(
+        scene.location.point,
+        scene.location.timeZone,
+        Number(scene.localTime.date.slice(0, 4)),
+      ),
+    ),
+  });
   if (ev.polar !== 'normal') facts.push({ label: 'Note', value: ev.polar.replace('-', ' ') });
   const th = scene.terrainHorizon;
   if (th?.sunEvents.differsFromAstronomical) {

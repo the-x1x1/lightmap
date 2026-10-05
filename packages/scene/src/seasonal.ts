@@ -5,6 +5,7 @@
  * can be drawn on the compass rose and read in the details panel for any place, any year.
  */
 import { computeDayEvents, sunPosition } from '@lightmap/astronomy';
+import { compassLabel } from '@lightmap/geospatial';
 
 export interface SolsticeDay {
   /** Civil date, YYYY-MM-DD. */
@@ -89,4 +90,24 @@ export function seasonalEnvelope(
 /** Clockwise angular width of a range, degrees. */
 export function rangeWidthDeg(r: [number, number]): number {
   return (((r[1] - r[0]) % 360) + 360) % 360;
+}
+
+/** "64°–115° (ENE–ESE)" for a clockwise bearing range. */
+export function formatBearingRange(r: [number, number]): string {
+  return `${Math.round(r[0])}°–${Math.round(r[1])}° (${compassLabel(r[0])}–${compassLabel(r[1])})`;
+}
+
+/** One line on where sunrise and sunset swing to over the year, and how high noon gets. */
+export function describeSeasonalEnvelope(e: SeasonalEnvelope): string {
+  const noon = `noon ${e.noonRange[0].toFixed(0)}°–${e.noonRange[1].toFixed(0)}°`;
+  if (!e.sunriseRange || !e.sunsetRange) {
+    const polar = [
+      e.june.polar !== 'normal' ? `June: ${e.june.polar.replace('-', ' ')}` : null,
+      e.december.polar !== 'normal' ? `December: ${e.december.polar.replace('-', ' ')}` : null,
+    ]
+      .filter((x) => x !== null)
+      .join(', ');
+    return `${polar}; ${noon}`;
+  }
+  return `Sunrise ${formatBearingRange(e.sunriseRange)}, sunset ${formatBearingRange(e.sunsetRange)}, ${noon}`;
 }
