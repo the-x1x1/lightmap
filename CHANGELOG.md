@@ -9,8 +9,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   Astronomical night, core 36° up, Moon down" — with one verdict (daylight, twilight, below the
   horizon, moonlit, low, visible) in the order a photographer rules things out; the compass rose
   and the field view mark the core as a four-point star on a dark sky (the field view adds an
-  edge arrow when it is out of frame and the core's dotted track over the night's dark hours,
-  `corePathInFrame()`, tested). `milkyWayCore()`
+  edge arrow when it is out of frame, the core's dotted track over the night's dark hours and
+  the Moon's path while it is up — `sampleTrack()`/`projectTrack()`: positions sampled once per
+  place and day, projected per frame as the phone turns; tested). `milkyWayCore()`
   / `milkyWayCoreFrom()` in `@lightmap/astronomy`: Sgr A\* precessed from J2000 (Meeus ch. 21),
   the observer's sidereal time, the scene's own Sun and Moon. Not a sky-brightness model (light
   pollution and airglow are not modelled), and the docs say so. **Dark windows ahead**: the Moon

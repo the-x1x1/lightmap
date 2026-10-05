@@ -4,7 +4,11 @@ import {
   corePathInFrame,
   defaultCameraFeedFovDeg,
   edgeIndicator,
+  moonPathInFrame,
+  projectTrack,
+  sampleTrack,
   sunPathInFrame,
+  sunTrackPosition,
 } from '../src/frame-marks.ts';
 import { frameCoordinates } from '../src/camera.ts';
 
@@ -39,6 +43,31 @@ describe('sun path in the frame', () => {
     const runs = sunPathInFrame(cam, kailua, at(5), at(20), { stepMinutes: 5, aspect: 4 / 3 });
     expect(runs.length).toBeGreaterThanOrEqual(1);
     for (const run of runs) expect(run.length).toBeGreaterThan(0);
+  });
+});
+
+describe('moon path in the frame', () => {
+  it('the full Moon of 31 May 2026 rises into an east-facing frame at Kailua in the evening', () => {
+    const cam = { headingDeg: 110, pitchDeg: 20, fovDeg: 90 };
+    const runs = moonPathInFrame(cam, kailua, at(17), at(23, 59), {
+      stepMinutes: 10,
+      aspect: 4 / 3,
+    });
+    const all = runs.flat();
+    expect(all.length).toBeGreaterThan(5);
+    // Nothing before moonrise (~19:3x HST = 05:3x UTC on 1 June); the Moon climbs (y grows).
+    for (const p of all) expect(p.at.getTime()).toBeGreaterThan(Date.parse('2026-06-01T05:00:00Z'));
+    expect(all.at(-1)!.y).toBeGreaterThan(all[0]!.y);
+    // Facing west there is no Moon path that evening.
+    expect(moonPathInFrame({ ...cam, headingDeg: 270 }, kailua, at(17), at(23, 59))).toEqual([]);
+  });
+  it('sampling and projection compose to the same path as the one-shot helper', () => {
+    const cam = { headingDeg: 285, pitchDeg: 10, fovDeg: 60 };
+    const samples = sampleTrack(at(5), at(20), sunTrackPosition(kailua), 10);
+    expect(samples).toHaveLength(91);
+    expect(projectTrack(cam, samples, { aspect: 4 / 3 })).toEqual(
+      sunPathInFrame(cam, kailua, at(5), at(20), { stepMinutes: 10, aspect: 4 / 3 }),
+    );
   });
 });
 

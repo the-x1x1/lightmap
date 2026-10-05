@@ -8,16 +8,19 @@
  * Heading and pitch come from the compass (`useCompass`); the feed's field of view starts at a
  * sensible default for a phone's main camera and can be nudged until the frame matches the eye.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatWallTime } from '@lightmap/astronomy';
 import {
-  corePathInFrame,
+  coreTrackPosition,
   defaultCameraFeedFovDeg,
   edgeIndicator,
   frameCoordinates,
   levelLineSegment,
+  moonTrackPosition,
+  projectTrack,
+  sampleTrack,
   skylinePath,
-  sunPathInFrame,
+  sunTrackPosition,
 } from '@lightmap/scene';
 import type { SceneState } from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
@@ -49,6 +52,23 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
   const [video, setVideo] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
   const [host, setHost] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
   const [fovDeg, setFovDeg] = useState<number | null>(null);
+  // Sky tracks for the civil day, sampled once per place and day (the Moon's 144 positions are
+  // a few milliseconds) and projected into the frame on every render as the phone turns.
+  const lat = scene.location.point.latitude;
+  const lng = scene.location.point.longitude;
+  const dayStartMs = scene.dayEvents.dayStart.getTime();
+  const dayEndMs = scene.dayEvents.dayEnd.getTime();
+  const hasLunar = scene.lunar !== null;
+  const tracks = useMemo(() => {
+    const point = { latitude: lat, longitude: lng };
+    const start = new Date(dayStartMs);
+    const end = new Date(dayEndMs);
+    return {
+      sun: sampleTrack(start, end, sunTrackPosition(point), 10),
+      moon: hasLunar ? sampleTrack(start, end, moonTrackPosition(point), 10) : [],
+      core: hasLunar ? sampleTrack(start, end, coreTrackPosition(point), 10) : [],
+    };
+  }, [lat, lng, dayStartMs, dayEndMs, hasLunar]);
 
   // The camera feed: back camera, no audio, released on close.
   useEffect(() => {
@@ -185,24 +205,11 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
     : null;
   const coreEdge =
     core && !sunUp ? edgeIndicator(frame, core.azimuthDeg, core.elevationDeg, aspect, roll) : null;
-  const path = sunPathInFrame(
-    frame,
-    scene.location.point,
-    scene.dayEvents.dayStart,
-    scene.dayEvents.dayEnd,
-    { stepMinutes: 10, aspect, rollDeg: roll },
-  );
-  // The core's track over the dark hours of this civil day (with the lunar state), for composing
-  // before it rises; the marker above says whether the sky can show it.
-  const coreTrack = scene.nightSky
-    ? corePathInFrame(
-        frame,
-        scene.location.point,
-        scene.dayEvents.dayStart,
-        scene.dayEvents.dayEnd,
-        { stepMinutes: 10, aspect, rollDeg: roll },
-      )
-    : [];
+  const path = projectTrack(frame, tracks.sun, { aspect, rollDeg: roll });
+  // The Moon's path while it is up, and the core's track over the dark hours (both with the
+  // lunar state) — for composing before they rise; the markers say what is up now.
+  const moonTrack = projectTrack(frame, tracks.moon, { aspect, rollDeg: roll });
+  const coreTrack = projectTrack(frame, tracks.core, { aspect, rollDeg: roll });
   const level = levelLineSegment(frame, aspect, roll);
   const sky = profile ? skylinePath(frame, profile, aspect, 48, roll) : [];
   const tz = scene.timeZone;
@@ -316,6 +323,18 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
                 vectorEffect="non-scaling-stroke"
               />
             ) : null}
+            {moonTrack.map((run, i) => (
+              <polyline
+                key={`moon-${i}`}
+                points={pts(run)}
+                fill="none"
+                stroke="rgba(230,235,255,0.75)"
+                strokeWidth={1.5}
+                strokeDasharray="1 3"
+                vectorEffect="non-scaling-stroke"
+                data-testid="field-view-moon-track"
+              />
+            ))}
             {coreTrack.map((run, i) => (
               <polyline
                 key={`core-${i}`}

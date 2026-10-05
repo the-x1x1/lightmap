@@ -23,6 +23,7 @@ export {
   moonPosition,
   moonRiseSet,
   moonPhaseName,
+  moonHorizonThresholdDeg,
   lunarEquatorial,
   SYNODIC_MONTH_DAYS,
   type MoonPosition,

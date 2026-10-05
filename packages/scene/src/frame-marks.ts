@@ -4,7 +4,12 @@
  * arrow when a body is outside it. Pure frame
  * maths on top of `frameCoordinates`; the field view draws the results over the live camera feed.
  */
-import { galacticCentrePosition, sunPosition } from '@lightmap/astronomy';
+import {
+  galacticCentrePosition,
+  moonHorizonThresholdDeg,
+  moonPosition,
+  sunPosition,
+} from '@lightmap/astronomy';
 import type { CameraState } from './types.ts';
 import { frameCoordinates, relativeBearing } from './camera.ts';
 
@@ -24,31 +29,59 @@ export interface PathOptions {
   rollDeg?: number;
 }
 
+/** A sampled sky position of a body: what the frame projection consumes. */
+export interface TrackSample {
+  at: Date;
+  azimuthDeg: number;
+  elevationDeg: number;
+}
+
 /**
- * A body's path between two instants as a polyline in frame coordinates, sampled every
- * `stepMinutes` from `positionAt` (null = not drawn at that instant). Samples behind the camera or
- * outside the frame are dropped, so the result may be several runs; `frameMargin` keeps a little
- * of the path past the edges so it reads as continuous.
+ * Sample a body's position every `stepMinutes` between two instants; `positionAt` returns null
+ * where the body is not to be drawn (below the horizon, daylight for the core). Pure astronomy,
+ * no camera: callers memoise this per place and day and project it per frame.
  */
-export function bodyPathInFrame(
-  camera: FrameCamera,
+export function sampleTrack(
   start: Date,
   end: Date,
   positionAt: (at: Date) => { azimuthDeg: number; elevationDeg: number } | null,
-  opts: PathOptions = {},
+  stepMinutes = 10,
+): TrackSample[] {
+  const step = Math.max(1, stepMinutes) * 60_000;
+  const out: TrackSample[] = [];
+  for (let t = start.getTime(); t <= end.getTime(); t += step) {
+    const at = new Date(t);
+    const p = positionAt(at);
+    out.push(
+      p
+        ? { at, azimuthDeg: p.azimuthDeg, elevationDeg: p.elevationDeg }
+        : { at, azimuthDeg: Number.NaN, elevationDeg: Number.NaN },
+    );
+  }
+  return out;
+}
+
+/**
+ * Project sampled positions into frame coordinates as a polyline. Samples behind the camera,
+ * outside the frame or not drawn (NaN) break the line, so the result may be several runs;
+ * `frameMargin` keeps a little of the path past the edges so it reads as continuous.
+ */
+export function projectTrack(
+  camera: FrameCamera,
+  samples: readonly TrackSample[],
+  opts: Omit<PathOptions, 'stepMinutes'> = {},
 ): FramePathPoint[][] {
-  const step = Math.max(1, opts.stepMinutes ?? 10) * 60_000;
   const aspect = opts.aspect ?? 3 / 2;
   const margin = opts.frameMargin ?? 0.3;
   const roll = opts.rollDeg ?? 0;
   const runs: FramePathPoint[][] = [];
   let run: FramePathPoint[] = [];
-  for (let t = start.getTime(); t <= end.getTime(); t += step) {
-    const at = new Date(t);
-    const p = positionAt(at);
-    const f = p ? frameCoordinates(camera, p.azimuthDeg, p.elevationDeg, aspect, roll) : null;
+  for (const s of samples) {
+    const f = Number.isFinite(s.elevationDeg)
+      ? frameCoordinates(camera, s.azimuthDeg, s.elevationDeg, aspect, roll)
+      : null;
     if (f && Math.abs(f.x) <= 1 + margin && Math.abs(f.y) <= 1 + margin) {
-      run.push({ x: f.x, y: f.y, at });
+      run.push({ x: f.x, y: f.y, at: s.at });
     } else if (run.length) {
       runs.push(run);
       run = [];
@@ -59,9 +92,62 @@ export function bodyPathInFrame(
 }
 
 /**
- * The sun's path between two instants (apparent elevation, so the marker sits on it), dropped
- * below −1°.
+ * A body's path between two instants as a polyline in frame coordinates, sampled every
+ * `stepMinutes` from `positionAt` (null = not drawn at that instant).
  */
+export function bodyPathInFrame(
+  camera: FrameCamera,
+  start: Date,
+  end: Date,
+  positionAt: (at: Date) => { azimuthDeg: number; elevationDeg: number } | null,
+  opts: PathOptions = {},
+): FramePathPoint[][] {
+  return projectTrack(camera, sampleTrack(start, end, positionAt, opts.stepMinutes), opts);
+}
+
+/** The sun where it is drawn: apparent elevation, dropped below −1°. */
+export function sunTrackPosition(point: {
+  latitude: number;
+  longitude: number;
+}): (at: Date) => { azimuthDeg: number; elevationDeg: number } | null {
+  return (at) => {
+    const p = sunPosition(at, point.latitude, point.longitude);
+    return p.elevationDeg >= -1
+      ? { azimuthDeg: p.azimuthDeg, elevationDeg: p.apparentElevationDeg }
+      : null;
+  };
+}
+
+/** The Moon where it is drawn: topocentric elevation, while above its rise/set threshold. */
+export function moonTrackPosition(point: {
+  latitude: number;
+  longitude: number;
+}): (at: Date) => { azimuthDeg: number; elevationDeg: number } | null {
+  return (at) => {
+    const m = moonPosition(at, point.latitude, point.longitude);
+    return m.elevationDeg > moonHorizonThresholdDeg(m.distanceKm)
+      ? { azimuthDeg: m.azimuthDeg, elevationDeg: m.elevationDeg }
+      : null;
+  };
+}
+
+/**
+ * The Milky Way core where it is drawn (night planning): the Galactic Centre while the Sun is
+ * below −18° and the core above the horizon — where the band stands through the dark hours, for
+ * composing before it rises. Not a visibility verdict (the Moon is not consulted).
+ */
+export function coreTrackPosition(point: {
+  latitude: number;
+  longitude: number;
+}): (at: Date) => { azimuthDeg: number; elevationDeg: number } | null {
+  return (at) => {
+    if (sunPosition(at, point.latitude, point.longitude).elevationDeg > -18) return null;
+    const c = galacticCentrePosition(at, point.latitude, point.longitude);
+    return c.elevationDeg > 0 ? { azimuthDeg: c.azimuthDeg, elevationDeg: c.elevationDeg } : null;
+  };
+}
+
+/** The sun's path between two instants (apparent elevation, so the marker sits on it). */
 export function sunPathInFrame(
   camera: FrameCamera,
   point: { latitude: number; longitude: number },
@@ -69,25 +155,21 @@ export function sunPathInFrame(
   end: Date,
   opts: PathOptions = {},
 ): FramePathPoint[][] {
-  return bodyPathInFrame(
-    camera,
-    start,
-    end,
-    (at) => {
-      const p = sunPosition(at, point.latitude, point.longitude);
-      return p.elevationDeg >= -1
-        ? { azimuthDeg: p.azimuthDeg, elevationDeg: p.apparentElevationDeg }
-        : null;
-    },
-    opts,
-  );
+  return bodyPathInFrame(camera, start, end, sunTrackPosition(point), opts);
 }
 
-/**
- * The Milky Way core's track over the night (night planning): the Galactic Centre's path while
- * the Sun is below −18° and the core above the horizon — where the band will stand through the
- * dark hours, for composing before it rises. Not a visibility verdict (the Moon is not consulted).
- */
+/** The Moon's path between two instants while it is up. */
+export function moonPathInFrame(
+  camera: FrameCamera,
+  point: { latitude: number; longitude: number },
+  start: Date,
+  end: Date,
+  opts: PathOptions = {},
+): FramePathPoint[][] {
+  return bodyPathInFrame(camera, start, end, moonTrackPosition(point), opts);
+}
+
+/** The Milky Way core's track over the night (see `coreTrackPosition`). */
 export function corePathInFrame(
   camera: FrameCamera,
   point: { latitude: number; longitude: number },
@@ -95,17 +177,7 @@ export function corePathInFrame(
   end: Date,
   opts: PathOptions = {},
 ): FramePathPoint[][] {
-  return bodyPathInFrame(
-    camera,
-    start,
-    end,
-    (at) => {
-      if (sunPosition(at, point.latitude, point.longitude).elevationDeg > -18) return null;
-      const c = galacticCentrePosition(at, point.latitude, point.longitude);
-      return c.elevationDeg > 0 ? { azimuthDeg: c.azimuthDeg, elevationDeg: c.elevationDeg } : null;
-    },
-    opts,
-  );
+  return bodyPathInFrame(camera, start, end, coreTrackPosition(point), opts);
 }
 
 export interface EdgeIndicator {

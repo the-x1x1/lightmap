@@ -274,7 +274,8 @@ focal-length preset, and mode.
   place or hiding the page stops it. Devices without a compass reference are told so instead of
   being pointed somewhere arbitrary.
 - **Field view** (viewpoint mode, phones with a camera, HTTPS): the live back-camera feed with
-  the planned sun (and moon) marked on it, the sun's path for the day as a dotted arc, true level
+  the planned sun (and moon) marked on it, the sun's path for the day as a dotted arc (and the
+  Moon's while it is up, in grey), true level
   and the modelled ridge, and an edge arrow with the turn needed when the sun is out of frame
   ("sun 40° right, 12° up"). On a dark sky (Sun below −6°, core up) the Milky Way core is marked
   the same way — a four-point star in the frame, full on _visible_, faint otherwise, or an edge
