@@ -60,6 +60,9 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
   // The year's sunrise/sunset swing (solstice bounds): arcs on the rose, numbers in the details.
   await expect(overlay.getByTestId('seasonal-sunrise-arc')).toBeAttached();
   await page.getByTestId('details-astronomy').locator('summary').click();
+  await expect(page.getByTestId('light-windows')).toContainText(
+    /blue hour \d\d:\d\d–05:48 \(\d+ min\) · 19:09–/,
+  );
   await expect(page.getByTestId('seasonal-envelope')).toContainText('Sunrise 64°–115°');
   await expect(page.getByTestId('seasonal-envelope')).toContainText('noon 45°–88°');
   // Moon planning: the full Moon of 31 May 2026 rises and sets inside the day — grey markers.

@@ -146,6 +146,10 @@ selected day ("Next: Last quarter 8 Jun · New 14 Jun · First quarter 21 Jun ·
 the planning zone) — `nextMoonPhases()` from the same lunar series as the positions, within a
 couple of minutes of the almanac.
 
+Under the Sun rows, one line gives the day's windows with their lengths — "Golden hour
+05:48–06:36 (48 min) · 18:21–19:09 (48 min); blue hour 05:23–05:48 (25 min) · 19:09–19:33 (24
+min)" (`describeLightWindows()`; a window that does not occur is left out).
+
 The Moon section ends with the **Milky Way core** line (plan §38 night planning): where the
 Galactic Centre stands for the selected instant and whether the sky can show it — "36° up SSW —
 Astronomical night, core 36° up, Moon down" — with one verdict in the order a photographer rules

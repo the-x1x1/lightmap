@@ -21,6 +21,7 @@ import {
   describeNextPhases,
 } from '@/features/planner/night-text';
 import { useSeasonalEnvelope } from '@/features/planner/use-seasonal';
+import { describeLightWindows } from '@/features/planner/light-windows';
 import { DayEventMarkers } from './Timeline';
 
 /**
@@ -175,6 +176,7 @@ export function AstronomyDetails({ scene, windowEnd = null }: AstronomyDetailsPr
   const s = scene.solar;
   const tz = scene.timeZone;
   const seasons = useSeasonalEnvelope(scene);
+  const lightWindows = describeLightWindows(scene.dayEvents, tz);
   return (
     <div className="space-y-3" data-testid="astronomy-details">
       <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
@@ -246,6 +248,11 @@ export function AstronomyDetails({ scene, windowEnd = null }: AstronomyDetailsPr
           value={`${Math.floor(scene.dayEvents.daylightMinutes / 60)} h ${Math.round(scene.dayEvents.daylightMinutes % 60)} min`}
         />
       </dl>
+      {lightWindows ? (
+        <p className="text-xs text-[var(--lm-text-muted)]" data-testid="light-windows">
+          {lightWindows}
+        </p>
+      ) : null}
       {scene.terrainHorizon ? (
         <p className="text-xs text-[var(--lm-text-muted)]" data-testid="terrain-caveat">
           {scene.terrainHorizon.profile.caveat}
