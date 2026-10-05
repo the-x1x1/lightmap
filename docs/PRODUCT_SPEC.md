@@ -112,9 +112,12 @@ the day (forecast, extended forecast or recent past — never on a scenario day)
 hour, height = direct-light share from cloud (`parametersForForecast`), colour = scenario class,
 a drop for likely rain (≥ 40 % probability or ≥ 0.5 mm); the selected hour is outlined; clicking a
 bar moves the timeline to that hour. "Best light: 07:00–11:00 (92 % direct)" lists contiguous runs
-≥ 60 % direct. The same numbers are available as a table. Hours the provider did not cover are
-absent; DST gaps produce no duplicate rows (`hourlyOutlook`, tested). Free plans see the locked
-block with the paywall reason.
+≥ 60 % direct. With moon planning, a second line answers the night shooter — "Dark sky (Milky
+Way core up): 20 % cloud over 7 h, clearest 23:00 (10 %)" — from the hours inside the day's
+dark-sky spells (`cloudOverSpells`, tested; green at ≤ 30 % mean cloud; absent when the outlook
+covers none of them). The same numbers are available as a table. Hours the provider did not
+cover are absent; DST gaps produce no duplicate rows (`hourlyOutlook`, tested). Free plans see
+the locked block with the paywall reason.
 
 **Typical for this month** (Pro, entitlement `climatology`). Under the scenario buttons: the share
 of daylight hours in this calendar month over the last ten years that fell in each scenario class,

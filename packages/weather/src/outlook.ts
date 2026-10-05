@@ -103,3 +103,31 @@ export function brightWindows(
   if (cur) runs.push({ fromHour: cur.fromHour, toHour: cur.toHour, meanDirect: cur.sum / cur.n });
   return runs;
 }
+
+/**
+ * The cloud over a set of spells (night planning: the dark hours the Milky Way core can be shot),
+ * from the hours whose start lies inside one of them — mean total cloud, the clearest hour, and
+ * how many hours the outlook covers. Null when no hour of the outlook falls in a spell: nothing
+ * is said about hours the provider did not give.
+ */
+export function cloudOverSpells(
+  hours: readonly OutlookHour[],
+  spells: ReadonlyArray<{ from: Date; to: Date }>,
+): { hours: number; meanCloudCover: number; clearestHour: number; clearestCloud: number } | null {
+  let n = 0;
+  let sum = 0;
+  let clearestHour = -1;
+  let clearestCloud = Number.POSITIVE_INFINITY;
+  for (const h of hours) {
+    const t = Date.parse(h.timestampUtc);
+    if (!spells.some((s) => s.from.getTime() <= t && t <= s.to.getTime())) continue;
+    n++;
+    sum += h.cloudCoverTotal;
+    if (h.cloudCoverTotal < clearestCloud) {
+      clearestCloud = h.cloudCoverTotal;
+      clearestHour = h.hour;
+    }
+  }
+  if (n === 0) return null;
+  return { hours: n, meanCloudCover: sum / n, clearestHour, clearestCloud };
+}

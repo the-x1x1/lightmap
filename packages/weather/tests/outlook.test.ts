@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { WeatherFrame } from '../src/model.ts';
-import { brightWindows, hourlyOutlook } from '../src/outlook.ts';
+import { brightWindows, cloudOverSpells, hourlyOutlook } from '../src/outlook.ts';
 
 function frame(hourUtc: number, cloud: number, over: Partial<WeatherFrame> = {}): WeatherFrame {
   return {
@@ -92,5 +92,30 @@ describe('brightWindows', () => {
       [15, 16],
     ]);
     expect(runs[0]!.meanDirect).toBeGreaterThan(runs[1]!.meanDirect);
+  });
+});
+
+describe('cloudOverSpells', () => {
+  it('averages the hours inside the dark-sky spells and names the clearest', () => {
+    const frames: WeatherFrame[] = [];
+    for (let u = 10; u <= 34; u++) {
+      const local = u - 10;
+      frames.push(frame(u, local >= 21 ? 10 + (local - 21) * 20 : local <= 3 ? 80 : 40));
+    }
+    const hours = hourlyOutlook(frames, hst);
+    // Two spells: 00:00–03:30 (cloud 80) and 21:00–23:59 (10, 30, 50).
+    const spells = [
+      { from: hst(0), to: new Date(hst(3).getTime() + 30 * 60_000) },
+      { from: hst(21), to: new Date(hst(23).getTime() + 59 * 60_000) },
+    ];
+    const c = cloudOverSpells(hours, spells)!;
+    expect(c.hours).toBe(7);
+    expect(c.meanCloudCover).toBeCloseTo((80 * 4 + 10 + 30 + 50) / 7, 5);
+    expect(c.clearestHour).toBe(21);
+    expect(c.clearestCloud).toBe(10);
+    // Spell edges are inclusive at the hour's start; no hours inside → null.
+    expect(cloudOverSpells(hours, [{ from: hst(21), to: hst(21) }])!.hours).toBe(1);
+    expect(cloudOverSpells(hours, [])).toBeNull();
+    expect(cloudOverSpells([], spells)).toBeNull();
   });
 });

@@ -12,6 +12,7 @@ import type { EntitlementDecision } from '@lightmap/entitlements';
 import type { SceneState } from '@lightmap/scene';
 import {
   brightWindows,
+  cloudOverSpells,
   hourlyOutlook,
   scenarioById,
   type OutlookHour,
@@ -35,11 +36,14 @@ export function HourlyOutlook({
   frames,
   mode,
   decision,
+  darkSky,
 }: {
   scene: SceneState;
   frames: readonly WeatherFrame[];
   mode: WeatherMode | null;
   decision: EntitlementDecision;
+  /** The day's dark-sky spells (night planning): the cloud over them gets its own line. */
+  darkSky?: ReadonlyArray<{ from: Date; to: Date }> | null | undefined;
 }) {
   const minutes = usePlannerStore((s) => s.minutes);
   const setMinutes = usePlannerStore((s) => s.setMinutes);
@@ -55,6 +59,10 @@ export function HourlyOutlook({
     });
   }, [civil, frames, tz]);
   const windows = useMemo(() => brightWindows(hours), [hours]);
+  const darkCloud = useMemo(
+    () => (darkSky && darkSky.length ? cloudOverSpells(hours, darkSky) : null),
+    [hours, darkSky],
+  );
 
   if (frames.length === 0 || hours.length === 0) return null;
 
@@ -146,6 +154,17 @@ export function HourlyOutlook({
               )
               .join(', ')}. Cloud only — the sun's own height is on the timeline.`}
       </p>
+      {darkCloud ? (
+        <p
+          className={cx(
+            'text-xs',
+            darkCloud.meanCloudCover <= 30 ? 'text-[var(--lm-ok)]' : 'text-[var(--lm-text-muted)]',
+          )}
+          data-testid="dark-sky-cloud"
+        >
+          {`Dark sky (Milky Way core up): ${Math.round(darkCloud.meanCloudCover)} % cloud over ${darkCloud.hours} h, clearest ${fmt(darkCloud.clearestHour)} (${Math.round(darkCloud.clearestCloud)} %).`}
+        </p>
+      ) : null}
       {/* Same numbers for assistive tech and for anyone who prefers a table. */}
       <details>
         <summary className="cursor-pointer text-xs text-[var(--lm-text-muted)]">

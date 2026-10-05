@@ -59,6 +59,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   in `@lightmap/astronomy` bisects the elongation from the same Meeus series as the positions —
   the published 2026 instants (3 Jan full 10:03, 18 Jan new 19:52, 31 May full 08:45, 15 Jun new
   02:54 UTC) come out within two minutes.
+- **Dark-sky cloud in the hourly outlook**: a line with the forecast cloud over the night's
+  dark-sky spells and the clearest hour — "is the core window going to be clear?"
+  (`cloudOverSpells`, tested).
 - **"Why does it look like this?" at night** names the Moon as the only direct light (or its
   absence) and the Milky Way core with its verdict (`explainScene`, tested).
 - **Light windows with their lengths** in the Sun & moon details: "Golden hour 05:33–06:20 (47

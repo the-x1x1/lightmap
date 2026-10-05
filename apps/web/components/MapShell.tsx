@@ -404,6 +404,7 @@ export function MapShell() {
                     scene={scene}
                     frames={weather.frames}
                     mode={weather.mode}
+                    darkSky={darkSky}
                     decision={
                       account.snapshot
                         ? account.can('forecast_detail')
