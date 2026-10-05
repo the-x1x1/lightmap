@@ -127,9 +127,12 @@ bar moves the timeline to that hour. "Best light: 07:00–11:00 (92 % direct)" l
 ≥ 60 % direct. With moon planning, a second line answers the night shooter — "Dark sky (Milky
 Way core up): 20 % cloud over 7 h, clearest 23:00 (10 %)" — from the hours inside the day's
 dark-sky spells (`cloudOverSpells`, tested; green at ≤ 30 % mean cloud; absent when the outlook
-covers none of them). The same numbers are available as a table. Hours the provider did not
-cover are absent; DST gaps produce no duplicate rows (`hourlyOutlook`, tested). Free plans see
-the locked block with the paywall reason.
+covers none of them). A third line names the hours that matter to the glass and the tripod —
+"Humidity ≥ 95 % 02:00–06:00 (dew or mist on the glass) · wind ≥ 8 m/s 13:00–17:00 (weigh the
+tripod)" — as runs of consecutive hours (`humidHours`, `windyHours`, tested; absent when no hour
+qualifies). The same numbers are available as a table. Hours the provider did not cover are
+absent; DST gaps produce no duplicate rows (`hourlyOutlook`, tested). Free plans see the locked
+block with the paywall reason.
 
 **Weather details** (any plan). The details drawer lists what the frame says beyond the light:
 cloud cover, the direct and diffuse shares, haze, the WMO conditions, rain chance, visibility

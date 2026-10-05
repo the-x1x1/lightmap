@@ -25,6 +25,12 @@ export interface OutlookHour {
   directLightShare: number;
   scenario: WeatherScenarioId;
   weatherCode: number | null;
+  /** The field conditions of the hour (wind on the tripod, moisture on the glass). */
+  humidity: number | null;
+  /** m/s. */
+  windSpeed: number | null;
+  /** metres. */
+  visibility: number | null;
 }
 
 /**
@@ -70,9 +76,58 @@ export function hourlyOutlook(
         weatherCode: f.weatherCode,
       }),
       weatherCode: f.weatherCode,
+      humidity: f.humidity,
+      windSpeed: f.windSpeed,
+      visibility: f.visibility,
     });
   }
   return out;
+}
+
+export interface HourRun {
+  fromHour: number;
+  toHour: number;
+}
+
+/**
+ * Contiguous runs of consecutive hours for which `pick` holds — "humidity at or over 95 %
+ * 02:00–06:00", "wind at or over 8 m/s 13:00–16:00". Each run is [fromHour, toHour] inclusive;
+ * a missing hour (the provider did not cover it) breaks a run. Hours whose field is unknown
+ * never qualify.
+ */
+export function hourRuns(
+  hours: readonly OutlookHour[],
+  pick: (hour: OutlookHour) => boolean,
+): HourRun[] {
+  const runs: HourRun[] = [];
+  let cur: HourRun | null = null;
+  for (const h of hours) {
+    if (pick(h) && cur && h.hour === cur.toHour + 1) cur.toHour = h.hour;
+    else if (pick(h)) {
+      if (cur) runs.push(cur);
+      cur = { fromHour: h.hour, toHour: h.hour };
+    } else if (cur) {
+      runs.push(cur);
+      cur = null;
+    }
+  }
+  if (cur) runs.push(cur);
+  return runs;
+}
+
+/** Relative humidity from which dew (at night) or mist (by day) is likely on the glass. */
+export const HUMID_HOUR_THRESHOLD = 95;
+/** Beaufort 5, a fresh breeze: the wind starts to matter to a tripod. */
+export const WINDY_HOUR_MPS = 8;
+
+/** The hours at or over `HUMID_HOUR_THRESHOLD` % relative humidity, as runs. */
+export function humidHours(hours: readonly OutlookHour[], threshold = HUMID_HOUR_THRESHOLD) {
+  return hourRuns(hours, (h) => h.humidity !== null && h.humidity >= threshold);
+}
+
+/** The hours at or over `WINDY_HOUR_MPS`, as runs. */
+export function windyHours(hours: readonly OutlookHour[], mps = WINDY_HOUR_MPS) {
+  return hourRuns(hours, (h) => h.windSpeed !== null && h.windSpeed >= mps);
 }
 
 /**

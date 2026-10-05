@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { WeatherFrame } from '../src/model.ts';
-import { brightWindows, cloudOverSpells, hourlyOutlook } from '../src/outlook.ts';
+import {
+  brightWindows,
+  cloudOverSpells,
+  hourRuns,
+  hourlyOutlook,
+  humidHours,
+  windyHours,
+} from '../src/outlook.ts';
 
 function frame(hourUtc: number, cloud: number, over: Partial<WeatherFrame> = {}): WeatherFrame {
   return {
@@ -50,6 +57,8 @@ describe('hourlyOutlook', () => {
     expect(rows[17]!.scenario).toBe('storm');
     // Start of the local hour, in UTC (where the frame is valid).
     expect(rows[6]!.timestampUtc).toBe('2026-05-31T16:00:00.000Z');
+    // The field conditions ride along for the hour.
+    expect(rows[6]).toMatchObject({ humidity: 60, windSpeed: 3, visibility: 30_000 });
   });
 
   it('skips hours the provider did not cover instead of extrapolating', () => {
@@ -118,5 +127,40 @@ describe('cloudOverSpells', () => {
     expect(cloudOverSpells(hours, [{ from: hst(21), to: hst(22) }])!.hours).toBe(1);
     expect(cloudOverSpells(hours, [])).toBeNull();
     expect(cloudOverSpells([], spells)).toBeNull();
+  });
+});
+
+describe('hourRuns / humidHours / windyHours', () => {
+  it('groups consecutive qualifying hours; a miss or an unknown value breaks a run', () => {
+    const frames: WeatherFrame[] = [];
+    for (let u = 10; u <= 33; u++) {
+      // Local 00..23; the provider's range ends at 23:00, so the last run is a single hour.
+      const local = u - 10;
+      frames.push(
+        frame(u, 20, {
+          humidity: local <= 5 || local >= 22 ? 96 : local === 8 || local === 10 ? 95 : 70,
+          // 18:00 and 19:00 unknown: the blend leaves an hour null only when both frames around
+          // it are (18:00); at 19:00 the value is taken from 20:00.
+          windSpeed: local >= 12 && local <= 16 ? 9 : local === 18 || local === 19 ? null : 3,
+        }),
+      );
+    }
+    const hours = hourlyOutlook(frames, hst);
+    expect(hours).toHaveLength(24);
+    expect(humidHours(hours)).toEqual([
+      { fromHour: 0, toHour: 5 },
+      { fromHour: 8, toHour: 8 },
+      { fromHour: 10, toHour: 10 },
+      { fromHour: 22, toHour: 23 },
+    ]);
+    expect(windyHours(hours)).toEqual([{ fromHour: 12, toHour: 16 }]);
+    // At 3 m/s every known hour qualifies; the unknown 18:00 breaks the run in two.
+    expect(hours[18]!.windSpeed).toBeNull();
+    expect(windyHours(hours, 3)).toEqual([
+      { fromHour: 0, toHour: 17 },
+      { fromHour: 19, toHour: 23 },
+    ]);
+    expect(hourRuns(hours, () => false)).toEqual([]);
+    expect(hourRuns([], () => true)).toEqual([]);
   });
 });

@@ -9,12 +9,16 @@
 import { useMemo } from 'react';
 import { parseCivilDate, wallClockToUtc } from '@lightmap/astronomy';
 import type { EntitlementDecision } from '@lightmap/entitlements';
-import type { SceneState } from '@lightmap/scene';
+import { formatWindSpeed, type SceneState } from '@lightmap/scene';
 import {
+  HUMID_HOUR_THRESHOLD,
+  WINDY_HOUR_MPS,
   brightWindows,
   cloudOverSpells,
   hourlyOutlook,
+  humidHours,
   scenarioById,
+  windyHours,
   type OutlookHour,
   type WeatherFrame,
   type WeatherMode,
@@ -47,6 +51,7 @@ export function HourlyOutlook({
 }) {
   const minutes = usePlannerStore((s) => s.minutes);
   const setMinutes = usePlannerStore((s) => s.setMinutes);
+  const units = usePlannerStore((s) => s.units);
   const tz = scene.timeZone;
   const civil = parseCivilDate(scene.localTime.date);
 
@@ -63,6 +68,9 @@ export function HourlyOutlook({
     () => (darkSky && darkSky.length ? cloudOverSpells(hours, darkSky) : null),
     [hours, darkSky],
   );
+  // The hours that matter to the glass and the tripod, as runs.
+  const humid = useMemo(() => humidHours(hours), [hours]);
+  const windy = useMemo(() => windyHours(hours), [hours]);
 
   if (frames.length === 0 || hours.length === 0) return null;
 
@@ -93,6 +101,8 @@ export function HourlyOutlook({
 
   const selectedHour = Math.floor(minutes / 60);
   const fmt = (h: number) => `${String(h).padStart(2, '0')}:00`;
+  const runs = (r: ReadonlyArray<{ fromHour: number; toHour: number }>) =>
+    r.map((x) => `${fmt(x.fromHour)}–${fmt(x.toHour + 1)}`).join(', ');
 
   return (
     <div className="space-y-1.5" data-testid="hourly-outlook">
@@ -163,6 +173,22 @@ export function HourlyOutlook({
           data-testid="dark-sky-cloud"
         >
           {`Dark sky (Milky Way core up): ${Math.round(darkCloud.meanCloudCover)} % cloud over ${darkCloud.hours} h, clearest ${fmt(darkCloud.clearestHour)} (${Math.round(darkCloud.clearestCloud)} %).`}
+        </p>
+      ) : null}
+      {humid.length || windy.length ? (
+        <p className="text-xs text-[var(--lm-text-muted)]" data-testid="field-hours">
+          {[
+            humid.length
+              ? `humidity ≥ ${HUMID_HOUR_THRESHOLD} % ${runs(humid)} (dew or mist on the glass)`
+              : null,
+            windy.length
+              ? `wind ≥ ${formatWindSpeed(WINDY_HOUR_MPS, units)} ${runs(windy)} (weigh the tripod)`
+              : null,
+          ]
+            .filter((x) => x !== null)
+            .join(' · ')
+            .replace(/^./, (c) => c.toUpperCase())}
+          .
         </p>
       ) : null}
       {/* Same numbers for assistive tech and for anyone who prefers a table. */}
