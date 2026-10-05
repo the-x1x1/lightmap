@@ -4,7 +4,9 @@
  *
  * Pure maths on the W3C DeviceOrientation angles. The device frame is fixed to the phone in its
  * natural (portrait) orientation — x to the right, y to the top, z out of the screen — whatever
- * the screen rotation, so this needs no screen-orientation fix-up. The rotation from Earth frame
+ * the screen rotation, so heading and pitch need no screen-orientation fix-up; roll is about the
+ * device's own axes, so a consumer drawing on the (rotated) screen adds the screen angle. The
+ * rotation from Earth frame
  * (x East, y North, z Up) to device frame is Rz(alpha) · Rx(beta) · Ry(gamma); the back camera
  * looks along the device's −z.
  */

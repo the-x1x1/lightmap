@@ -9,7 +9,7 @@
  * solver runs client-side in `@lightmap/astronomy` (a year of Sun alignments is a few ms), so no
  * request leaves the browser. Free plans search inside their date window; Pro searches years.
  */
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import {
   addCivilDays,
   civilDateString,
@@ -92,6 +92,10 @@ export function LightFinder({
 
   const bodyState = body === 'moon' ? scene.lunar : scene.solar;
   const profile = scene.terrainHorizon?.profile ?? null;
+  // A new place clears the sampled horizon; ridge mode cannot outlive it.
+  useEffect(() => {
+    if (mode === 'ridge' && !profile) setMode('frame');
+  }, [mode, profile]);
   const target = useMemo(() => {
     if (mode === 'pick' && finderTarget)
       return { az: finderTarget.azimuthDeg, el: finderTarget.elevationDeg };
@@ -164,10 +168,13 @@ export function LightFinder({
         target: {
           azimuthDegrees: target.az,
           azimuthToleranceDegrees: azTol,
-          ...(useElevation
+          ...(useElevation || mode === 'ridge'
             ? { elevationDegrees: target.el, elevationToleranceDegrees: elTol }
             : {}),
         },
+        // A low skyline (sea, plain) puts the contact elevation below the solver's default
+        // horizon floor (−0.833°); the ridge target must still be reachable.
+        ...(mode === 'ridge' ? { minElevationDegrees: target.el - elTol - 1 } : {}),
         ...(body === 'moon' ? { minIlluminatedFraction: minIllum / 100 } : {}),
         maxDays: 1100,
       });
@@ -189,9 +196,9 @@ export function LightFinder({
   const behindTerrain = (m: SerializedMatch) =>
     profile !== null && !aboveTerrain(profile, m.azimuthDegrees, m.elevationDegrees);
   const allMatches = result?.res.matches ?? [];
-  const hidden = profile && hideBehindTerrain ? allMatches.filter(behindTerrain).length : 0;
-  const matches =
-    profile && hideBehindTerrain ? allMatches.filter((m) => !behindTerrain(m)) : allMatches;
+  const terrainFilter = Boolean(profile) && hideBehindTerrain && mode !== 'ridge';
+  const hidden = terrainFilter ? allMatches.filter(behindTerrain).length : 0;
+  const matches = terrainFilter ? allMatches.filter((m) => !behindTerrain(m)) : allMatches;
   const shown = matches.slice(0, MAX_RESULTS);
   const dates = new Set(matches.map((m) => m.date)).size;
 
@@ -235,8 +242,9 @@ export function LightFinder({
           value={mode}
           onChange={(m) => {
             setMode(m);
-            // Ridge mode starts from the camera heading so "the ridge I'm looking at" is one tap.
-            if (m === 'ridge') setManualAz(camera.headingDeg.toFixed(0));
+            // Ridge mode starts from the camera heading so "the ridge I'm looking at" is one tap
+            // (a bearing typed in manual mode is kept).
+            if (m === 'ridge' && mode !== 'manual') setManualAz(camera.headingDeg.toFixed(0));
             if (m === 'pick') {
               if (!finderTarget) setFinderPicking(true);
             } else {
@@ -334,7 +342,8 @@ export function LightFinder({
               <label className="flex items-center gap-1 normal-case">
                 <input
                   type="checkbox"
-                  checked={useElevation}
+                  checked={useElevation || mode === 'ridge'}
+                  disabled={mode === 'ridge'}
                   onChange={(e) => setUseElevation(e.target.checked)}
                 />
                 match
@@ -350,7 +359,7 @@ export function LightFinder({
               className="lm-input mt-1 w-full disabled:opacity-50"
               value={mode === 'manual' ? manualEl : target.el.toFixed(1)}
               readOnly={mode !== 'manual'}
-              disabled={!useElevation}
+              disabled={!useElevation && mode !== 'ridge'}
               onChange={(e) => setManualEl(e.target.value)}
               data-testid="finder-elevation"
             />
@@ -471,7 +480,7 @@ export function LightFinder({
           </p>
         ) : null}
       </div>
-      {profile ? (
+      {profile && mode !== 'ridge' ? (
         <label className="flex items-center gap-2 text-xs text-[var(--lm-text-muted)]">
           <input
             type="checkbox"
@@ -517,7 +526,7 @@ export function LightFinder({
                       {m.illuminatedFraction !== null
                         ? ` · ${Math.round(m.illuminatedFraction * 100)} % lit`
                         : ''}
-                      {behindTerrain(m) ? (
+                      {mode !== 'ridge' && behindTerrain(m) ? (
                         <span className="ml-1 text-[color:#ffd27a]" title={profile?.caveat}>
                           · behind terrain
                         </span>
@@ -535,7 +544,9 @@ export function LightFinder({
           )}
           <p className="text-xs text-[var(--lm-text-muted)]">
             Times are local ({tz}). Geometry only: terrain occlusion, clouds and refraction near the
-            horizon are not part of this search — use the preview to check the actual scene.
+            horizon are not part of this search
+            {mode === 'ridge' ? ' (the ridge target itself includes refraction)' : ''} — use the
+            preview to check the actual scene.
           </p>
         </div>
       ) : null}

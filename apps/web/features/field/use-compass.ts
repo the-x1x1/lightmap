@@ -51,7 +51,7 @@ let writing = false;
 let pausedByHide = false;
 let generation = 0;
 let last: { t: number; heading: number; pitch: number; roll: number } | null = null;
-/** Smoothed roll of the phone about its line of sight (field view only; the planner camera has no roll). */
+/** Smoothed roll of the picture on screen about the line of sight (field view only; the planner camera has no roll). */
 let rollDeg = 0;
 let silence: ReturnType<typeof setTimeout> | null = null;
 let detach: () => void = () => {};
@@ -115,7 +115,11 @@ function onReading(e: Event): void {
   const pitch = prev
     ? prev.pitch + (pointing.pitchDeg - prev.pitch) * SMOOTHING
     : pointing.pitchDeg;
-  const roll = prev ? blendRoll(prev.roll, pointing.rollDeg, SMOOTHING) : pointing.rollDeg;
+  // Device roll is about the phone's own axes; the marks live on the screen, which the browser
+  // rotates with the phone. Landscape (device roll ±90°) is level on screen once the screen's
+  // own angle is added.
+  const screenRoll = wrap180(pointing.rollDeg + screenAngleDeg());
+  const roll = prev ? blendRoll(prev.roll, screenRoll, SMOOTHING) : screenRoll;
   last = { t: now, heading, pitch, roll };
   const store = usePlannerStore.getState();
   writing = true;
@@ -132,10 +136,26 @@ function onReading(e: Event): void {
   setState('active');
 }
 
+function wrap180(deg: number): number {
+  const h = ((deg % 360) + 360) % 360;
+  return h > 180 ? h - 360 : h;
+}
+
 /** Roll is −180…180: blend on the circle so −179 → 179 does not swing through 0. */
 function blendRoll(prevDeg: number, nextDeg: number, weight: number): number {
-  const h = blendHeading(prevDeg, nextDeg, weight);
-  return h > 180 ? h - 360 : h;
+  return wrap180(blendHeading(prevDeg, nextDeg, weight));
+}
+
+/** The screen's rotation relative to the device's natural orientation, 0/90/180/270. */
+function screenAngleDeg(): number {
+  if (
+    typeof screen !== 'undefined' &&
+    screen.orientation &&
+    typeof screen.orientation.angle === 'number'
+  )
+    return screen.orientation.angle;
+  const legacy = (window as { orientation?: unknown }).orientation;
+  return typeof legacy === 'number' ? ((legacy % 360) + 360) % 360 : 0;
 }
 
 function attach(): void {
@@ -174,6 +194,12 @@ function watchStore(): void {
 function installPageHooks(): void {
   if (pageHooksInstalled || typeof document === 'undefined') return;
   pageHooksInstalled = true;
+  // A rotation changes how device roll maps to the screen; the next reading picks it up, but the
+  // smoothing history must not blend across the jump.
+  if (typeof screen !== 'undefined' && screen.orientation)
+    screen.orientation.addEventListener('change', () => {
+      last = null;
+    });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       if (active) {

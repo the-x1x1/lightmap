@@ -161,7 +161,14 @@ start`).
       desktop browser the button is absent or reports "no compass heading".
 - [ ] Light finder "On the ridge": at a mountain location in the 3D view, choose "On the ridge",
       keep the camera bearing, search a month — results cluster at the terrain sunset/sunrise
-      times (compare with the "last light over terrain" row), none are tagged behind terrain.
+      times (compare with the "last light over terrain" row); at a beach facing the sea the
+      results are the sunset instants (the contact elevation sits below the flat horizon).
+- [ ] Field view roll: with the view open, tilt the phone 20° left and right — the level line
+      tilts the opposite way and the sun marker stays on the real sun; rotate to landscape — the
+      marks stay upright on screen (no 90° jump) and the feed is not stretched.
+- [ ] Install: in Chrome on Android/desktop the account menu shows "Install app" and the prompt
+      installs the PWA (the entry disappears when running installed); on iOS Safari the menu shows
+      the Share → Add to Home Screen hint.
 - [ ] Field view (phone, HTTPS): in viewpoint mode tap "Field view (camera)", allow the camera —
       the live feed appears with the sun marker where the sun actually is when the planner is set
       to "Now" (nudge the field of view until a distant landmark sits where it does in the feed);

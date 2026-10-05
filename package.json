@@ -52,7 +52,8 @@
     "overrides": {
       "postcss@<8.5.18": "^8.5.18",
       "@auth/core@<0.41.3": "0.41.3",
-      "nodemailer": "^10.0.9"
+      "nodemailer": "^10.0.9",
+      "vitest": "^4.1.11"
     },
     "peerDependencyRules": {
       "allowedVersions": {

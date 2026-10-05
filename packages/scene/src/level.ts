@@ -83,8 +83,12 @@ export function skylinePath(
   rollDeg = 0,
 ): Array<{ x: number; y: number }> {
   const out: Array<{ x: number; y: number }> = [];
-  // Sweep a little past the edges in bearing so the line reaches both sides of the frame.
-  const half = Math.min(89, camera.fovDeg / 2 + 2);
+  // Sweep a little past the edges in bearing so the line reaches both sides of the frame; a
+  // rolled frame's corners reach out to the diagonal half-angle.
+  const DEG = Math.PI / 180;
+  const halfW = Math.tan((camera.fovDeg / 2) * DEG);
+  const diagHalf = Math.atan(halfW * Math.sqrt(1 + 1 / (aspect * aspect))) / DEG;
+  const half = Math.min(89, (rollDeg ? diagHalf : camera.fovDeg / 2) + 2);
   for (let i = 0; i <= steps; i++) {
     const rel = -half + (2 * half * i) / steps;
     const az = (((camera.headingDeg + rel) % 360) + 360) % 360;

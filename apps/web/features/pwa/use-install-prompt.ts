@@ -70,6 +70,10 @@ function getState(): InstallState {
 
 const getServerState = (): InstallState => 'none';
 
+// Chromium fires `beforeinstallprompt` once, shortly after load: the listener must exist before
+// any component asks, so it is attached when this client module is evaluated.
+hook();
+
 function subscribe(listener: () => void): () => void {
   hook();
   listeners.add(listener);

@@ -5,7 +5,7 @@ import { signIn, signOut } from 'next-auth/react';
 import { useAccount, useDeleteAccount } from '@/features/account/use-account';
 import { useCapabilities } from '@/features/planner/use-scene';
 import { usePlannerStore } from '@/features/planner/store';
-import { useInstallPrompt } from '@/features/pwa/use-install-prompt';
+import { useInstallPrompt, type InstallState } from '@/features/pwa/use-install-prompt';
 import { Button, cx } from '@lightmap/ui';
 import { SubscriptionStatus } from './SubscriptionStatus';
 import { Paywall } from './Paywall';
@@ -14,6 +14,8 @@ export function AccountMenu() {
   const account = useAccount();
   const setPanel = usePlannerStore((s) => s.setPanel);
   const initial = account.user?.email?.[0]?.toUpperCase() ?? '?';
+  // Subscribed here, in the always-mounted menu button: the dropdown's content only exists while open.
+  const install = useInstallPrompt();
   // When an item opens a panel, keep focus moving into that panel (MapShell focuses the panel
   // body on change) instead of Radix returning it to the trigger.
   const movedFocus = useRef(false);
@@ -78,7 +80,7 @@ export function AccountMenu() {
               <Item onSelect={() => openPanel('account')}>About Pro</Item>
             </>
           )}
-          <InstallItem />
+          <InstallItem state={install.state} install={install.install} />
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
@@ -86,8 +88,7 @@ export function AccountMenu() {
 }
 
 /** "Install app" when the browser offers a prompt; the iOS hint when it does not. */
-function InstallItem() {
-  const { state, install } = useInstallPrompt();
+function InstallItem({ state, install }: { state: InstallState; install: () => Promise<boolean> }) {
   if (state === 'none' || state === 'installed') return null;
   return (
     <>
