@@ -38,12 +38,18 @@ the shadow probe (a 20 m tower at Sun 11°, shadow measured against `h / tan(el)
   long the current light lasts and when it comes back.
 - Terrain horizon: when the sun actually clears or drops behind the ridge, with the caveat that
   trees and buildings are not in the elevation model.
+- Seasons: a day-of-year slider scrubs the year with the time of day kept; the compass rose shows
+  where sunrise and sunset swing to between the solstices.
+- Night planning: the Moon on the rose and the timeline, its phase calendar, and the Milky Way
+  core — where it stands, whether the sky can show it, the dark windows ahead (each a click
+  away), a dark-sky band on the timeline, the core as a Light-finder body, its track over the
+  live camera, and how often this month's nights were clear.
 - Climatology: "typical for this month" from ten years of ERA5, by hour of day — never a forecast.
 - In the field: point the phone and the camera follows the compass; the field view puts the
   planned sun, its path, true level and the ridge over the live camera; saved projects open
   offline; installable as a PWA.
-- Accounts (passwordless email, optional Google), projects, saved viewpoints with thumbnails,
-  planning-card export; preferences (metric or imperial, times in the place's zone or your own,
+- Accounts (passwordless email, optional Google), projects with notes and a shoot date, saved
+  viewpoints with thumbnails, planning-card and shot-list export; preferences (metric or imperial, times in the place's zone or your own,
   the lens a new place starts with) kept on the device and in the profile.
 - Subscription plumbing in Stripe test mode with a central entitlement service (Free / Pro).
 - No uploads, no social feed, no location-discovery engine. It is a planning instrument.
