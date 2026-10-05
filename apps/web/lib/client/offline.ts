@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react';
 
 export const SERVED_FROM_CACHE = 'lightmap:served-from-cache';
+export const FRESH = 'lightmap:fresh';
 
 /** Production, secure context, supporting browser only — dev keeps the network honest. */
 export function registerServiceWorker(): void {
@@ -29,7 +30,11 @@ export interface OfflineStatus {
   cachedAt: string | null;
 }
 
-/** "Offline" from the browser, plus the age of anything the service worker served from cache. */
+/**
+ * "Offline" from the browser, plus the age of anything the service worker served from cache.
+ * `cachedAt` clears as soon as the browser comes back online or the worker reports a fresh
+ * response, so a single slow request never leaves the banner up for the session.
+ */
 export function useOfflineStatus(): OfflineStatus {
   const [offline, setOffline] = useState(false);
   const [cachedAt, setCachedAt] = useState<string | null>(null);
@@ -44,6 +49,10 @@ export function useOfflineStatus(): OfflineStatus {
     const sw = 'serviceWorker' in navigator ? navigator.serviceWorker : null;
     const onMessage = (e: MessageEvent) => {
       const d = e.data as { type?: unknown; cachedAt?: unknown } | null;
+      if (d?.type === FRESH) {
+        setCachedAt(null);
+        return;
+      }
       if (d?.type !== SERVED_FROM_CACHE) return;
       const at = typeof d.cachedAt === 'string' ? d.cachedAt : null;
       // Keep the oldest timestamp: the banner must not overstate how fresh the screen is.
@@ -59,7 +68,7 @@ export function useOfflineStatus(): OfflineStatus {
   return { offline, cachedAt };
 }
 
-/** "Saved data from 14:05" / "from 3 Oct, 14:05" — in the viewer's own clock. */
+/** "saved data from 14:05" / "saved data from 3 Oct, 14:05" — in the viewer's own clock. */
 export function describeCachedAt(iso: string | null, now = new Date()): string | null {
   if (!iso) return null;
   const t = new Date(iso);

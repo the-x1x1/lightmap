@@ -22,7 +22,8 @@ export function DepthOfField() {
   const focusDistanceM = usePlannerStore((s) => s.focusDistanceM);
   const setAperture = usePlannerStore((s) => s.setAperture);
   const setFocusDistance = usePlannerStore((s) => s.setFocusDistance);
-  // Typed text survives only while it still means the stored distance (same pattern as the lens box).
+  // While the box has focus it shows exactly what was typed (so "0." on the way to "0.5", or an
+  // empty box, is not snapped back); on blur it settles on the stored distance.
   const [focusText, setFocusText] = useState<string | null>(null);
 
   const sensor = SENSOR_PRESETS.find((x) => Math.abs(x.widthMm - sensorWidthMm) < 0.05);
@@ -32,10 +33,7 @@ export function DepthOfField() {
   const dof = depthOfField({ focalLengthMm: lensMm, aperture, focusDistanceM, cocMm: coc });
 
   const derivedFocus = String(Math.round(focusDistanceM * 10) / 10);
-  const focusValue =
-    focusText !== null && Math.abs(Number(focusText) - focusDistanceM) < 0.05
-      ? focusText
-      : derivedFocus;
+  const focusValue = focusText ?? derivedFocus;
   const stops: readonly number[] = APERTURE_STOPS;
   const apertureOptions = stops.includes(aperture)
     ? stops
@@ -76,6 +74,7 @@ export function DepthOfField() {
               const m = Number(e.target.value);
               if (e.target.value !== '' && Number.isFinite(m) && m >= 0.1) setFocusDistance(m);
             }}
+            onBlur={() => setFocusText(null)}
             data-testid="dof-focus"
           />
         </label>
@@ -93,7 +92,8 @@ export function DepthOfField() {
           variant="secondary"
           onClick={() => {
             setFocusText(null);
-            setFocusDistance(Math.round(dof.hyperfocalM * 10) / 10 + 0.1);
+            // Rounded up to the next 0.1 m so the rounded figure still reaches infinity.
+            setFocusDistance(Math.ceil(dof.hyperfocalM * 10 + 1e-9) / 10);
           }}
           data-testid="dof-hyperfocal"
         >

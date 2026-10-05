@@ -51,6 +51,19 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
   const finderTarget = usePlannerStore((s) => s.finderTarget);
   const setFinderTarget = usePlannerStore((s) => s.setFinderTarget);
   const showLevelGuide = usePlannerStore((s) => s.showLevelGuide);
+  const setViewportAspect = usePlannerStore((s) => s.setViewportAspect);
+  // The panel's frame maths (level guide placements) need the viewport's aspect ratio.
+  useEffect(() => {
+    const el = container.current;
+    if (!el) return;
+    const update = () => {
+      if (el.clientHeight > 0) setViewportAspect(el.clientWidth / el.clientHeight);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [setViewportAspect]);
   const setQualityFromGovernor = useRef<
     (q: {
       shadowMapSize: 1024 | 2048 | 4096;
@@ -295,7 +308,7 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
         </p>
       ) : null}
       {showLevelGuide && camera.mode === 'viewpoint' && !overlayMode && location ? (
-        <LevelGuide container={container} />
+        <LevelGuide />
       ) : null}
       {finderTarget && camera.mode === 'viewpoint' && !overlayMode ? (
         <FinderReticle

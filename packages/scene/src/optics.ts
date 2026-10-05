@@ -1,7 +1,8 @@
 /**
  * Depth of field (Phase 6 "DOF"). Thin-lens geometry for the photographer's own lens and
  * sensor — no rendering: the preview stays pin-sharp, these numbers tell you what the photo will
- * hold in focus. Distances are from the focal plane, in metres; lens figures in millimetres.
+ * hold in focus. Distances are measured from the lens (thin-lens convention), in metres; lens figures in
+ * millimetres.
  *
  * Circle of confusion follows the usual print-viewing convention: the sensor diagonal / 1500
  * (full frame ≈ 0.029 mm). It is a convention, not physics, so the UI says so.

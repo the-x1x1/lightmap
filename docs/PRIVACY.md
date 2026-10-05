@@ -134,5 +134,6 @@ use `localStorage`; they never contain coordinates.
 **Offline cache.** In production a service worker keeps a copy of the signed-in user's own
 projects and viewpoints (which do contain coordinates), their session and entitlements in the
 browser's Cache Storage on that device, so saved plans open without a network. Nothing is sent
-anywhere by it. The copy is deleted on sign-out, on an account-deletion request and when the
-session is found signed out; clearing the site's data in the browser removes it too.
+anywhere by it. The copy is deleted on sign-out, on an account-deletion request, when the
+session is found signed out and when a different account signs in on the same browser; clearing
+the site's data in the browser removes it too.

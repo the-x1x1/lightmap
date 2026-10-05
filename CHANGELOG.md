@@ -18,9 +18,11 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   planner page, its chunks and the signed-in user's own projects, viewpoints, session and
   entitlements, so saved plans open in the field with no signal — astronomy, the light finder,
   DOF and the level guide work offline; weather falls back to scenarios. Third-party
-  map/terrain/weather data is never cached; user data is dropped on sign-out, account deletion
-  or a signed-out session. An offline banner shows the age of cached data. Unit-tested in a VM
-  sandbox (`sw.test.ts`).
+  map/terrain/weather data is never cached; live responses are handed over before they are
+  stored; user data is dropped on sign-out, account deletion, a signed-out session or a change of
+  user, and project/viewpoint writes drop the cached project list. The network banner shows the
+  age of cached data and clears on the next live response. Unit-tested in a VM sandbox
+  (`sw.test.ts`).
 
 ## v0.1.0 — 2026-09-25
 

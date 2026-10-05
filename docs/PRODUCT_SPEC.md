@@ -210,8 +210,8 @@ focal-length preset, and mode.
   (elevation 0; with no roll it is straight, at `y = −tan(pitch) / tan(½·vFOV)`) and the modelled
   terrain skyline — the same sampled ridge the "behind terrain" timings use, labelled "terrain
   only". One click pitches the camera so level sits on the low third, the centre or the high
-  third (`pitchForHorizonAt`). The status line says where level is ("Level on the low third",
-  "Level is below the frame").
+  third (`pitchForHorizonAt`); the buttons and a status line ("Level on the low third", "Level is
+  below the frame") sit in the camera panel under the toggle, so the map carries only the lines.
 
 No lens optical simulation (distortion, rendered blur) in v1.
 
@@ -315,11 +315,15 @@ worker (`public/sw.js`) keeps the planner page, its hashed chunks and the signed
 projects, viewpoints, session, entitlements and capabilities as last fetched. Offline, saved
 projects open and reopening a viewpoint works; sun and moon positions, the timeline, the light
 finder, depth of field and the level guide all run in the browser; weather falls back to
-scenarios and the 3D globe to the overlay. Saving, editing and deleting need a connection. A
-banner says "Offline · saved data from 14:05 · …" whenever cached data is on screen. Third-party
-map, terrain and weather responses are never cached (licences and freshness). The cache of
-user data is dropped on sign-out, on account deletion and whenever the session comes back signed
-out.
+scenarios and the 3D globe to the overlay. Saving, editing and deleting need a connection. The
+network banner at the top reads "Offline · saved data from 14:05" (or "Connection problem · …"
+when the network timed out but the browser thinks it is online) whenever cached data is on
+screen, and clears as soon as a live response arrives. Third-party map, terrain and weather
+responses are never cached (licences and freshness); live responses are handed to the page
+before they are stored, so the worker never slows the app. The cache of user data is dropped on
+sign-out, on account deletion, whenever the session comes back signed out and when a different
+user signs in on the same browser; project and viewpoint writes drop the cached project list and
+details so a deleted project cannot be reopened offline.
 
 No collaboration or sharing in v0.1.
 

@@ -150,13 +150,19 @@ direction or erase uncertainty labels.
 
 The PWA baseline exists (unreleased): a complete manifest (`id`, scope, 192/512 PNG icons plus a
 maskable variant, `display_override`), an apple-touch-icon, `start_url=/?source=pwa` so installed
-launches can be counted. No service worker yet — the app needs the network for terrain and weather;
-an offline project cache is the first Phase 9 deliverable — **delivered (unreleased)**: a
-hand-written service worker keeps the planner shell and the user's own projects/viewpoints for
-offline use, never caches third-party map/terrain/weather data, clears user data on sign-out and
-account deletion, and an offline banner says when cached data is on screen. Capacitor or React Native wrapper only
-after PWA usage proves demand: native install, offline project cache, compass, device orientation,
-AR sun alignment, field mode.
+launches can be counted.
+
+**Offline project cache — delivered (unreleased)**, the first Phase 9 deliverable: a hand-written
+service worker (`public/sw.js`, production only) keeps the planner page, its hashed chunks, the
+icons and the signed-in user's own projects, viewpoints, session and entitlements, so saved plans
+open in the field with no signal. It never caches third-party map, terrain or weather data, never
+delays a live response (caching happens after the page has it), and drops user data on sign-out,
+account deletion, a signed-out session or a change of user. The network banner says when cached
+data is on screen and how old it is. Terrain and weather still need the network; offline, weather
+falls back to scenarios and the globe to the overlay.
+
+Capacitor or React Native wrapper only after PWA usage proves demand: native install, compass,
+device orientation, AR sun alignment, field mode.
 
 ## Not on the roadmap (plan §37)
 

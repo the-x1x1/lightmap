@@ -31,7 +31,6 @@ import { EmptyState } from './states/EmptyState';
 import { ErrorState } from './states/ErrorState';
 import { Paywall } from './Paywall';
 import { AttributionFooter } from './AttributionFooter';
-import { OfflineBanner } from './OfflineBanner';
 
 // Below-the-fold panels load as separate chunks so the first paint stays inside the bundle
 // budget (scripts/check-bundle.ts, plan §27). Each renders nothing while its chunk loads.
@@ -201,7 +200,6 @@ export function MapShell() {
           </div>
         </header>
         <WorldMap scene={scene} capabilities={capabilities} onRendererInfo={onRendererInfo} />
-        <OfflineBanner />
         {!location ? (
           <div className="pointer-events-none absolute inset-x-0 bottom-[42%] z-10 flex justify-center px-4 lg:bottom-auto lg:top-1/2 lg:-translate-y-1/2">
             <div className="pointer-events-auto">

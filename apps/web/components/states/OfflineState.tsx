@@ -1,26 +1,35 @@
 'use client';
-import { useEffect, useState } from 'react';
+/**
+ * One banner for the network: offline, or online but showing data the service worker served from
+ * its cache (Phase 9 offline project cache). Always mounted so the status region announces changes
+ * (plan §28); the visible pill appears only when there is something to say.
+ */
+import { describeCachedAt, useOfflineStatus } from '@/lib/client/offline';
 
-/** Shown when the browser is offline: astronomy keeps working; forecasts and saving pause. */
 export function OfflineState() {
-  const [offline, setOffline] = useState(false);
-  useEffect(() => {
-    const update = () => setOffline(!navigator.onLine);
-    update();
-    window.addEventListener('online', update);
-    window.addEventListener('offline', update);
-    return () => {
-      window.removeEventListener('online', update);
-      window.removeEventListener('offline', update);
-    };
-  }, []);
-  if (!offline) return null;
+  const { offline, cachedAt } = useOfflineStatus();
+  const age = describeCachedAt(cachedAt);
+  const show = offline || age !== null;
   return (
     <div
       role="status"
-      className="fixed left-1/2 top-2 z-50 -translate-x-1/2 rounded-full bg-[var(--lm-panel-raised)] px-3 py-1.5 text-xs text-[var(--lm-text)] ring-1 ring-white/15"
+      aria-live="polite"
+      className="pointer-events-none fixed inset-x-0 top-2 z-50 flex justify-center px-4"
+      data-testid="offline-status"
     >
-      Offline — sun and moon still work; forecasts and saving will resume when you reconnect.
+      {show ? (
+        <p
+          className="max-w-full rounded-2xl bg-[var(--lm-panel-raised)] px-3 py-1.5 text-center text-xs text-[var(--lm-text)] ring-1 ring-white/15"
+          data-testid="offline-banner"
+        >
+          {offline ? 'Offline' : 'Connection problem'}
+          {age ? ` · ${age}` : ''}
+          <span className="hidden sm:inline">
+            {' '}
+            — sun and moon still work; forecasts and saving resume when you reconnect.
+          </span>
+        </p>
+      ) : null}
     </div>
   );
 }

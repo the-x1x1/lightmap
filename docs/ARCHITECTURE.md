@@ -150,8 +150,11 @@ sub-millisecond and weather is interpolated from cached frames.
 In production `public/sw.js` (plain JS, no build step, unit-tested in a VM sandbox) adds an
 offline layer underneath: network-first for the planner page and the user's own API reads,
 cache-first for `/_next/static`, pass-through for everything else. Responses served from the
-cache carry `x-lightmap-cached-at` and the worker posts `lightmap:served-from-cache` to the page,
-which `useOfflineStatus()` turns into the offline banner.
+cache carry `x-lightmap-cached-at` and the worker posts `lightmap:served-from-cache` (or
+`lightmap:fresh` after a live response) to the page, which `useOfflineStatus()` turns into the
+network banner (`OfflineState`). Live responses are returned before they are stored (`waitUntil`),
+navigations never time out (a slow network must not serve a previous deploy's HTML), and TanStack
+Query runs with `networkMode: 'offlineFirst'` so paused queries do not defeat the cache.
 
 ## Provider abstraction
 

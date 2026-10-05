@@ -10,6 +10,7 @@ import {
 import { compassLabel } from '@lightmap/geospatial';
 import { usePlannerStore } from '@/features/planner/store';
 import { DepthOfField } from '@/components/DepthOfField';
+import { LevelControls } from '@/components/LevelGuide';
 import { Button, cx, useRovingRadio } from '@lightmap/ui';
 
 const MODES = ['map', 'viewpoint'] as const;
@@ -143,6 +144,7 @@ export function CameraControls({ advancedAllowed }: { advancedAllowed: boolean }
             />
             Level &amp; thirds guide
           </label>
+          {showLevelGuide ? <LevelControls /> : null}
         </div>
       ) : null}
       <div>

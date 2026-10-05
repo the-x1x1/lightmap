@@ -58,6 +58,8 @@ function boot(fetchImpl: (req: Request | string) => Promise<Response>) {
     skipWaiting: async () => {},
     clients: {
       claim: async () => {},
+      get: async (id: string) =>
+        id === 'client-1' ? { postMessage: (m: unknown) => messages.push(m) } : null,
       matchAll: async () => [{ postMessage: (m: unknown) => messages.push(m) }],
     },
   } as Record<string, unknown>;
@@ -83,9 +85,13 @@ function boot(fetchImpl: (req: Request | string) => Promise<Response>) {
     SHELL: string;
     STATIC: string;
     USER: string;
+    SESSION_USER_KEY: string;
   };
 
-  /** Dispatch a fetch event; resolves to the worker's response, or null when it passes through. */
+  /**
+   * Dispatch a fetch event; resolves to the worker's response (null when it passes through) once
+   * the response is in hand AND every `waitUntil` promise (background caching) has settled.
+   */
   async function dispatch(url: string, init: { method?: string; mode?: string } = {}) {
     let responded: Promise<Response> | null = null;
     const waits: Promise<unknown>[] = [];
@@ -96,11 +102,14 @@ function boot(fetchImpl: (req: Request | string) => Promise<Response>) {
     };
     listeners.get('fetch')!({
       request,
+      clientId: 'client-1',
       respondWith: (p: Promise<Response>) => (responded = p),
       waitUntil: (p: Promise<unknown>) => waits.push(p),
     });
-    await Promise.all(waits);
-    return responded ? await responded : null;
+    const res = responded ? await responded : null;
+    // waitUntil may be called while the response promise is still running.
+    while (waits.length) await waits.splice(0).reduce((a, b) => a.then(() => b), Promise.resolve());
+    return res;
   }
 
   async function lifecycle(type: 'install' | 'activate') {
@@ -142,7 +151,8 @@ describe('service worker — offline project cache', () => {
       sw.classify({ url: new URL(url, ORIGIN).href, method, mode }, ORIGIN);
     expect(c('/', 'GET', 'navigate')).toBe('navigate');
     expect(c('/_next/static/chunks/app-abc123.js')).toBe('static');
-    expect(c('/icon-192.png')).toBe('static');
+    expect(c('/icon-192.png')).toBe('shell');
+    expect(c('/manifest.webmanifest')).toBe('shell');
     // Next's RSC fetches to '/' must never be served stale.
     expect(c('/?_rsc=1x2y')).toBeNull();
     expect(c('/api/projects')).toBe('user');
@@ -151,7 +161,11 @@ describe('service worker — offline project cache', () => {
     expect(c('/api/account/entitlements')).toBe('user');
     // Not cached: weather/terrain (licences, freshness), other APIs, writes, other origins.
     expect(c('/api/weather?lat=1&lng=2')).toBeNull();
-    expect(c('/api/projects/abc/viewpoints', 'POST')).toBeNull();
+    expect(c('/api/billing/checkout', 'POST')).toBeNull();
+    // Project and viewpoint writes make the cached list/details stale.
+    expect(c('/api/projects/abc/viewpoints', 'POST')).toBe('invalidate-projects');
+    expect(c('/api/projects/abc', 'DELETE')).toBe('invalidate-projects');
+    expect(c('/api/viewpoints/v1', 'PATCH')).toBe('invalidate-projects');
     expect(c('https://terrain.reearth.land/tiles/1/2/3.terrain')).toBeNull();
     expect(c('/cesium/Assets/foo.json')).toBeNull();
     // Sign-out and account deletion clear the user's cached data.
@@ -175,6 +189,46 @@ describe('service worker — offline project cache', () => {
       url: `${ORIGIN}/api/projects`,
       cachedAt: at,
     });
+    // The live response earlier was announced as fresh, so the page can drop a stale banner.
+    expect(w.messages).toContainEqual({ type: 'lightmap:fresh', url: `${ORIGIN}/api/projects` });
+  });
+
+  it('hands the live response over before caching it (no buffering of the body)', async () => {
+    let release: (() => void) | null = null;
+    const slowBody = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('{"projects":'));
+        release = () => {
+          controller.enqueue(new TextEncoder().encode('[]}'));
+          controller.close();
+        };
+      },
+    });
+    const w = boot(async () => new Response(slowBody, { status: 200 }));
+    let responded: Promise<Response> | null = null;
+    const waits: Promise<unknown>[] = [];
+    w.listeners.get('fetch')!({
+      request: { url: `${ORIGIN}/api/projects`, method: 'GET', mode: 'cors' },
+      clientId: 'client-1',
+      respondWith: (p: Promise<Response>) => (responded = p),
+      waitUntil: (p: Promise<unknown>) => waits.push(p),
+    });
+    // The response (headers) arrives while the body is still streaming.
+    const res = await responded!;
+    expect(res.status).toBe(200);
+    release!();
+    await Promise.all(waits);
+    expect((await w.caches.open(w.sw.USER)).store.has(`${ORIGIN}/api/projects`)).toBe(true);
+  });
+
+  it('a project or viewpoint write drops the cached project list and details only', async () => {
+    const w = boot(network);
+    await w.dispatch('/api/projects');
+    await w.dispatch('/api/projects/p1');
+    await w.dispatch('/api/account/entitlements');
+    expect(await w.dispatch('/api/viewpoints/v1', { method: 'DELETE' })).toBeNull();
+    const user = await w.caches.open(w.sw.USER);
+    expect([...user.store.keys()]).toEqual([`${ORIGIN}/api/account/entitlements`]);
   });
 
   it('with nothing cached, an offline request fails as it would without the worker', async () => {
@@ -223,10 +277,41 @@ describe('service worker — offline project cache', () => {
     });
     await w.dispatch('/api/projects');
     await w.dispatch('/api/auth/session');
-    expect((await w.caches.open(w.sw.USER)).store.size).toBe(2);
+    const user = await w.caches.open(w.sw.USER);
+    expect(user.store.has(`${ORIGIN}/api/projects`)).toBe(true);
+    expect(user.store.has(`${ORIGIN}/api/auth/session`)).toBe(true);
+    expect(await (await user.match(w.sw.SESSION_USER_KEY))!.text()).toBe('u1');
     signedIn = false;
     await w.dispatch('/api/auth/session');
     expect(w.caches.map.has(w.sw.USER)).toBe(false);
+  });
+
+  it("another user's session drops the previous user's cached projects", async () => {
+    let userId = 'u1';
+    const w = boot(async (req) => {
+      const url = new URL(typeof req === 'string' ? req : req.url, ORIGIN);
+      if (url.pathname === '/api/auth/session') return json({ user: { id: userId } });
+      return network(req);
+    });
+    await w.dispatch('/api/auth/session');
+    await w.dispatch('/api/projects');
+    userId = 'u2';
+    await w.dispatch('/api/auth/session');
+    const user = await w.caches.open(w.sw.USER);
+    expect(user.store.has(`${ORIGIN}/api/projects`)).toBe(false);
+    expect(await (await user.match(w.sw.SESSION_USER_KEY))!.text()).toBe('u2');
+  });
+
+  it('icons and the manifest are served from the shell cache offline and refreshed online', async () => {
+    const w = boot(network);
+    await w.lifecycle('install');
+    online = false;
+    const res = await w.dispatch('/icon-192.png');
+    expect(res!.status).toBe(200);
+    online = true;
+    served = [];
+    await w.dispatch('/icon-192.png');
+    expect(served).toContain('/icon-192.png'); // revalidated in the background
   });
 
   it('install precaches the shell best-effort; activate deletes old versions only', async () => {

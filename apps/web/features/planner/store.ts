@@ -43,6 +43,8 @@ export interface PlannerState {
   sensorWidthMm: number;
   /** Viewpoint overlay: true level, rule-of-thirds grid and the modelled skyline (Phase 6 levelling). */
   showLevelGuide: boolean;
+  /** Width / height of the map viewport, kept current by WorldMap; frame maths in the panel use it. */
+  viewportAspect: number;
   /** Depth-of-field inputs (Phase 6): f-number and focus distance from the focal plane, metres. */
   aperture: number;
   focusDistanceM: number;
@@ -75,6 +77,7 @@ export interface PlannerActions {
   /** A lens on the chosen sensor ("my 16 mm"), converted to FOV and full-frame equivalent. */
   setActualFocalLength: (mm: number) => void;
   setShowLevelGuide: (v: boolean) => void;
+  setViewportAspect: (aspect: number) => void;
   setAperture: (n: number) => void;
   setFocusDistance: (m: number) => void;
   setPanel: (panel: PlannerState['panel']) => void;
@@ -116,6 +119,7 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
   sheetOpen: true,
   sensorWidthMm: 36,
   showLevelGuide: false,
+  viewportAspect: 16 / 9,
   aperture: 8,
   focusDistanceM: 10,
   finderTarget: null,
@@ -202,6 +206,9 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
   },
   setShowLevelGuide(v) {
     set({ showLevelGuide: v });
+  },
+  setViewportAspect(aspect) {
+    if (Number.isFinite(aspect) && aspect > 0.2 && aspect < 5) set({ viewportAspect: aspect });
   },
   setAperture(n) {
     if (Number.isFinite(n)) set({ aperture: Math.max(0.95, Math.min(64, n)) });
