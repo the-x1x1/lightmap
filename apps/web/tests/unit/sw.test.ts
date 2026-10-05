@@ -93,7 +93,8 @@ function boot(fetchImpl: (req: Request | string) => Promise<Response>) {
    * the response is in hand AND every `waitUntil` promise (background caching) has settled.
    */
   async function dispatch(url: string, init: { method?: string; mode?: string } = {}) {
-    let responded: Promise<Response> | null = null;
+    // Holders, not `let`s: TypeScript narrows a `let` assigned inside a callback to its initial null.
+    const slot: { responded: Promise<Response> | null } = { responded: null };
     const waits: Promise<unknown>[] = [];
     const request = {
       url: new URL(url, ORIGIN).href,
@@ -103,10 +104,10 @@ function boot(fetchImpl: (req: Request | string) => Promise<Response>) {
     listeners.get('fetch')!({
       request,
       clientId: 'client-1',
-      respondWith: (p: Promise<Response>) => (responded = p),
+      respondWith: (p: Promise<Response>) => (slot.responded = p),
       waitUntil: (p: Promise<unknown>) => waits.push(p),
     });
-    const res = responded ? await responded : null;
+    const res = slot.responded ? await slot.responded : null;
     // waitUntil may be called while the response promise is still running.
     while (waits.length) await waits.splice(0).reduce((a, b) => a.then(() => b), Promise.resolve());
     return res;
@@ -194,29 +195,29 @@ describe('service worker — offline project cache', () => {
   });
 
   it('hands the live response over before caching it (no buffering of the body)', async () => {
-    let release: (() => void) | null = null;
+    const gate: { release: (() => void) | null } = { release: null };
     const slowBody = new ReadableStream<Uint8Array>({
       start(controller) {
         controller.enqueue(new TextEncoder().encode('{"projects":'));
-        release = () => {
+        gate.release = () => {
           controller.enqueue(new TextEncoder().encode('[]}'));
           controller.close();
         };
       },
     });
     const w = boot(async () => new Response(slowBody, { status: 200 }));
-    let responded: Promise<Response> | null = null;
+    const slot: { responded: Promise<Response> | null } = { responded: null };
     const waits: Promise<unknown>[] = [];
     w.listeners.get('fetch')!({
       request: { url: `${ORIGIN}/api/projects`, method: 'GET', mode: 'cors' },
       clientId: 'client-1',
-      respondWith: (p: Promise<Response>) => (responded = p),
+      respondWith: (p: Promise<Response>) => (slot.responded = p),
       waitUntil: (p: Promise<unknown>) => waits.push(p),
     });
     // The response (headers) arrives while the body is still streaming.
-    const res = await responded!;
+    const res = await slot.responded!;
     expect(res.status).toBe(200);
-    release!();
+    gate.release!();
     await Promise.all(waits);
     expect((await w.caches.open(w.sw.USER)).store.has(`${ORIGIN}/api/projects`)).toBe(true);
   });

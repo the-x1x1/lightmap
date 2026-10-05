@@ -11,7 +11,12 @@ import { usePlannerStore } from '@/features/planner/store';
 
 /** 'no-compass': events arrive but carry no compass reference (desktop browsers, some Android builds). */
 export type CompassState =
-  'unsupported' | 'idle' | 'requesting' | 'active' | 'denied' | 'no-compass';
+  | 'unsupported'
+  | 'idle'
+  | 'requesting'
+  | 'active'
+  | 'denied'
+  | 'no-compass';
 
 interface OrientationEventLike extends Event {
   alpha: number | null;
@@ -21,7 +26,7 @@ interface OrientationEventLike extends Event {
   webkitCompassHeading?: number | null;
 }
 
-type RequestPermission = () => Promise<'granted' | 'denied' | string>;
+type RequestPermission = () => Promise<string>;
 
 /** Secure context + the event exists. Whether readings carry a compass is only known once they arrive. */
 export function compassSupported(): boolean {

@@ -51,7 +51,10 @@ export function buildAuthConfig({ env, db, log }: AuthConfigDeps): NextAuthConfi
           log('info', `[dev] magic link for ${identifier}: ${url}`);
           return;
         }
-        const transport = createTransport(provider.server);
+        // Our own connection string, not `provider.server`: Auth.js types that field through
+        // nodemailer's deep `lib/*/index.js` paths, which nodemailer 10's exports map no longer
+        // exposes, so its type resolves to an error type.
+        const transport = createTransport(env.EMAIL_SERVER);
         await transport.sendMail({
           to: identifier,
           from: provider.from,
