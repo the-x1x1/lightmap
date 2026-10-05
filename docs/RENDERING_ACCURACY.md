@@ -178,6 +178,16 @@ and imagery from the `MapTileProvider`. With the default bundled Natural Earth I
 is coarse and the label drops to Estimated Preview. **Claim:** ridgelines and horizon shape relative
 to the Sun. **Caveat:** DEM resolution (≈30 m globally, better in some regions); no buildings.
 
+### The map view at night
+
+The overhead map is a chart, not a photograph. Once the Sun is under the horizon and nothing
+else lights the ground, real lighting would leave the chart black, so the map view shows the
+basemap flat and dimmed — 90 % brightness just after sunset down to 45 % in astronomical night
+(`globeShadingFor()`, tested) — while the sun overlay, the sky backdrop and the night-sky
+markers carry the hour. Nothing about the light is claimed by this: the viewpoint view keeps
+true lighting at every hour, and the planning card and the preview facts come from the scene,
+not from the chart's brightness.
+
 ## Exports carry the same labels
 
 The planning-card export (`apps/web/features/export/planning-card.ts`) is built from the same

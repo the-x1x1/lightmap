@@ -13,6 +13,18 @@ export interface HostLight {
   intensity: number;
 }
 
+/**
+ * How the globe itself is shaded. In the map view at night the real lighting leaves the chart
+ * black, so the map falls back to a dimmed, unlit basemap: a chart the photographer can still
+ * read, with the sun and sky overlays carrying the hour. The viewpoint view keeps true lighting.
+ */
+export interface HostGlobeShading {
+  /** Shade the terrain with the scene light (true) or show the basemap flat (false). */
+  lit: boolean;
+  /** Basemap brightness, 1 by day; the unlit night chart is dimmed below it. */
+  basemapBrightness: number;
+}
+
 export interface HostShadows {
   enabled: boolean;
   darkness: number;
@@ -132,6 +144,7 @@ export interface HostStats {
 export interface SceneHost {
   setTime(utc: Date): void;
   setLight(light: HostLight): void;
+  setGlobeShading(shading: HostGlobeShading): void;
   setShadows(s: HostShadows): void;
   setAtmosphere(a: HostAtmosphere): void;
   setGrade(u: HostGradeUniforms): void;

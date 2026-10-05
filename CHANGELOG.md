@@ -61,6 +61,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   02:54 UTC) come out within two minutes.
 - **"Tonight"** beside "Now": today at the start of astronomical night at the place (`setTonight`,
   tested).
+- **The map stays readable at night**: the overhead map is a chart, so once the Sun is down it is
+  shown flat and dimmed (90 % at dusk → 45 % in astronomical night) instead of lit by a light
+  that is below the horizon, which left it black; the viewpoint view keeps true lighting
+  (`globeShadingFor()`, tested; `RENDERING_ACCURACY.md`).
 - **Timeline marker labels no longer pile up**: dawn, sunrise and golden hour (or golden hour,
   sunset and dusk) sit minutes apart and their words overlapped in the panel; labels now fit the
   measured track — words where they clear each other, glyphs on a second row where they do not,

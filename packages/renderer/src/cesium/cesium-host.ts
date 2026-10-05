@@ -17,6 +17,7 @@ import type { Vec3 } from '../sun-vector.ts';
 import type {
   HostAtmosphere,
   HostCamera,
+  HostGlobeShading,
   HostGradeUniforms,
   HostLight,
   HostOverlay,
@@ -229,6 +230,19 @@ export class CesiumSceneHost implements SceneHost {
     C.Cartesian3.normalize(new C.Cartesian3(d.x, d.y, d.z), this.light.direction);
     this.light.color = new C.Color(light.color[0], light.color[1], light.color[2], 1);
     this.light.intensity = light.intensity;
+  }
+
+  setGlobeShading(shading: HostGlobeShading): void {
+    const globe = this.scene.globe as Cesium.Globe | undefined;
+    if (!globe) return;
+    globe.enableLighting = shading.lit;
+    // Every imagery layer dims together, so a provider basemap and the Natural Earth fallback
+    // underneath it read as one chart.
+    const layers = this.widget.imageryLayers;
+    for (let i = 0; i < layers.length; i++) {
+      const layer = layers.get(i);
+      layer.brightness = shading.basemapBrightness;
+    }
   }
 
   setShadows(s: HostShadows): void {

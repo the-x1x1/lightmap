@@ -15,7 +15,13 @@ import {
 import type { BasemapDescriptor, TerrainDescriptor } from '@lightmap/geospatial';
 import { lightingFromScene, type LightingParameters } from '../lighting.ts';
 import { enuTowardSun, enuToEcef } from '../sun-vector.ts';
-import type { HostCamera, HostGradeUniforms, HostOverlay, SceneHost } from './host.ts';
+import type {
+  HostCamera,
+  HostGlobeShading,
+  HostGradeUniforms,
+  HostOverlay,
+  SceneHost,
+} from './host.ts';
 import type { OrbitView } from '../camera-math.ts';
 import { clampOrbit, defaultOrbit } from '../camera-math.ts';
 
@@ -53,6 +59,7 @@ export class SceneController {
   private lastTerrain: string | null = null;
   private lastBasemap: string | null = null;
   private lastShadowKey: string | null = null;
+  private lastShadingKey: string | null = null;
   private lastQualityKey: string | null = null;
   private lastCelestial: string | null = null;
   private lastDayKey: string | null = null;
@@ -127,6 +134,12 @@ export class SceneController {
       intensity: lighting.sunIntensity,
     });
     this.host.setAtmosphere({ ...lighting.atmosphere, fogDensity: lighting.fogDensity });
+    const shading = globeShadingFor(scene, lighting);
+    const shadingKey = `${shading.lit}|${shading.basemapBrightness.toFixed(2)}`;
+    if (shadingKey !== this.lastShadingKey) {
+      this.lastShadingKey = shadingKey;
+      this.host.setGlobeShading(shading);
+    }
     const toward = enuToEcef(
       enuTowardSun(scene.solar.azimuthDegrees, scene.solar.elevationDegrees),
       scene.location.point.latitude,
@@ -342,6 +355,24 @@ export class SceneController {
     if (this.pendingCameraRetry !== null) this.clearTimeoutImpl(this.pendingCameraRetry);
     this.host.destroy();
   }
+}
+
+/**
+ * The map view is a chart: once the Sun is under the horizon and nothing else lights the
+ * ground, real lighting would leave it black, so the basemap is shown flat and dimmed (the
+ * darker the sky, the dimmer the chart — down to 45 % in astronomical night) while the sun,
+ * sky and night overlays carry the hour. The viewpoint view always keeps true lighting.
+ */
+export function globeShadingFor(
+  scene: Pick<SceneState, 'camera' | 'solar'>,
+  lighting: Pick<LightingParameters, 'sunIntensity'>,
+): HostGlobeShading {
+  if (scene.camera.mode === 'viewpoint') return { lit: true, basemapBrightness: 1 };
+  const el = scene.solar.elevationDegrees;
+  if (el > -0.833 && lighting.sunIntensity > 0.05) return { lit: true, basemapBrightness: 1 };
+  // −0.833° → 0.9, −18° and below → 0.45.
+  const t = Math.min(1, Math.max(0, (-0.833 - el) / (18 - 0.833)));
+  return { lit: false, basemapBrightness: 0.9 - 0.45 * t };
 }
 
 /** Sun positions through the civil day, every 10 minutes while above the horizon. */

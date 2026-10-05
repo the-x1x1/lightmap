@@ -15,6 +15,7 @@ import { OPEN_METEO_CAPABILITIES } from '@lightmap/weather';
 import {
   SceneController,
   cesiumFovDeg,
+  globeShadingFor,
   shadowReachM,
   nightPathsForDay,
   sunPathForDay,
@@ -65,6 +66,7 @@ function fakeHost() {
   const host: SceneHost = {
     setTime: rec('setTime'),
     setLight: rec('setLight'),
+    setGlobeShading: rec('setGlobeShading'),
     setShadows: rec('setShadows'),
     setAtmosphere: rec('setAtmosphere'),
     setGrade: rec('setGrade'),
@@ -301,5 +303,39 @@ describe('SceneController', () => {
     expect(cesiumFovDeg(74, 16 / 9)).toBe(74);
     expect(cesiumFovDeg(74, 9 / 16)).toBeGreaterThan(100);
     expect(cesiumFovDeg(74, 1)).toBe(74);
+  });
+});
+
+describe('globeShadingFor (the map stays a readable chart at night)', () => {
+  const at = (mode: 'map' | 'viewpoint', el: number, sunIntensity: number) =>
+    globeShadingFor(
+      {
+        camera: { mode } as SceneState['camera'],
+        solar: { elevationDegrees: el } as SceneState['solar'],
+      },
+      { sunIntensity },
+    );
+  it('lights the globe by day in the map view and always in the viewpoint view', () => {
+    expect(at('map', 40, 2)).toEqual({ lit: true, basemapBrightness: 1 });
+    expect(at('viewpoint', -30, 0)).toEqual({ lit: true, basemapBrightness: 1 });
+  });
+  it('shows the map flat and dimmed once the Sun is down, darker as the night deepens', () => {
+    const dusk = at('map', -3, 0.2);
+    const night = at('map', -25, 0);
+    expect(dusk.lit).toBe(false);
+    expect(dusk.basemapBrightness).toBeGreaterThan(0.8);
+    expect(night).toEqual({ lit: false, basemapBrightness: 0.45 });
+    expect(at('map', -10, 0).basemapBrightness).toBeCloseTo(
+      0.9 - 0.45 * ((10 - 0.833) / (18 - 0.833)),
+      6,
+    );
+  });
+  it('the controller tells the host once per change, not every tick', () => {
+    const { host, calls } = fakeHost();
+    const c = new SceneController(host, { setTimeoutImpl: () => 0, clearTimeoutImpl: () => {} });
+    c.apply(scene({ scenario: 'clear' }));
+    c.apply(scene({ scenario: 'clear' }));
+    expect(calls['setGlobeShading']).toHaveLength(1);
+    expect((calls['setGlobeShading']![0]![0] as { lit: boolean }).lit).toBe(true);
   });
 });
