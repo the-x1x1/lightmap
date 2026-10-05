@@ -17,6 +17,15 @@ describe('timeline markers', () => {
     for (let i = 1; i < m.length; i++) expect(m[i]!.minutes).toBeGreaterThan(m[i - 1]!.minutes);
     expect(m.find((x) => x.key === 'sunrise')!.minutes).toBeCloseTo(5 * 60 + 48, 0);
   });
+  it('adds moonrise/moonset as grey markers when given, within the day only', () => {
+    const inDay = new Date(ev.dayStart.getTime() + 20 * 3_600_000);
+    const outside = new Date(ev.dayStart.getTime() - 3_600_000);
+    const m = dayMarkers(ev, null, { moonrise: inDay, moonset: outside });
+    const moon = m.filter((x) => x.tone === 'moon');
+    expect(moon.map((x) => x.key)).toEqual(['moonrise']);
+    expect(moon[0]!.minutes).toBe(20 * 60);
+    expect(dayMarkers(ev, null, null).some((x) => x.tone === 'moon')).toBe(false);
+  });
   it('builds a gradient with night at both ends', () => {
     const g = dayGradient(ev);
     expect(g.startsWith('linear-gradient(90deg, #0c1230 0%')).toBe(true);

@@ -4,6 +4,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Moonrise and moonset on the timeline** (moon planning): grey ☾ / ☽ markers beside the sun's,
+  clickable like them; only instants inside the civil day are placed.
 - **Forecast nudges on saved viewpoints**: a card whose date has come inside the forecast horizon
   since it was saved says "◉ Forecast available now — open to see it" (or the extended-range
   wording), and a passed date says observed conditions are there — the North Star's "return later

@@ -49,8 +49,9 @@ The most important interaction. The timeline is a range input over the civil day
 (0–1439 minutes since local midnight).
 
 Markers drawn along the track: dawn (civil), sunrise, morning golden hour, solar noon, evening
-golden hour, sunset, blue hour, civil/nautical/astronomical dusk, night. Markers move when the date
-or location changes.
+golden hour, sunset, blue hour, civil/nautical/astronomical dusk, night; with moon planning,
+moonrise and moonset in grey (☾ / ☽); with a terrain horizon, ▲ / ▽ Ridge. Markers move when
+the date or location changes.
 
 Scrubbing updates the astronomical state synchronously on every tick (target < 16 ms); expensive
 visual refresh (terrain re-light, shadow map) is debounced.

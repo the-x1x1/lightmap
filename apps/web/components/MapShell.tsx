@@ -115,6 +115,11 @@ export function MapShell() {
       lastLight: ev.lastLightDiffers ? ev.lastLight : null,
     };
   }, [scene?.terrainHorizon?.sunEvents]);
+  // Moonrise/moonset on the timeline (moon planning): stable per day thanks to the scene memo.
+  const moonMarkers = useMemo(() => {
+    const l = scene?.lunar;
+    return l ? { moonrise: l.moonrise, moonset: l.moonset } : null;
+  }, [scene?.lunar]);
   // Terrain horizon around the pin (sampled through the renderer; nothing on the ellipsoid).
   useTerrainHorizon({
     sampleHeights: rendererInfo.sampleHeights,
@@ -342,6 +347,7 @@ export function MapShell() {
                   phase={scene?.solar.phase}
                   terrain={terrainMarkers}
                   terrainVisible={scene?.terrainHorizon?.sunEvents.visible ?? null}
+                  moon={moonMarkers}
                 />
                 {scene && isEnabled('reversePlanning') ? (
                   <NextOccurrence

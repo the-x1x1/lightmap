@@ -24,6 +24,8 @@ export interface TimelineProps {
    * so the scrubber shows at a glance when the spot sits in the ridge's shadow.
    */
   terrainVisible?: ReadonlyArray<{ from: Date; to: Date }> | null | undefined;
+  /** Moonrise / moonset for the day (moon planning), as extra grey markers. */
+  moon?: { moonrise: Date | null; moonset: Date | null } | null | undefined;
   className?: string | undefined;
 }
 
@@ -34,7 +36,7 @@ interface Marker {
   short: string;
   /** Single glyph for narrow screens (distinct per event kind, not colour-only). */
   glyph: string;
-  tone: 'sun' | 'twilight' | 'muted';
+  tone: 'sun' | 'twilight' | 'muted' | 'moon';
 }
 
 function minutesOf(d: Date | null, dayStart: Date): number | null {
@@ -42,7 +44,12 @@ function minutesOf(d: Date | null, dayStart: Date): number | null {
   return (d.getTime() - dayStart.getTime()) / 60_000;
 }
 
-export function dayMarkers(ev: DayEvents, terrain?: TimelineProps['terrain']): Marker[] {
+export function dayMarkers(
+  ev: DayEvents,
+  terrain?: TimelineProps['terrain'],
+  moon?: TimelineProps['moon'],
+): Marker[] {
+  const dayLength = (ev.dayEnd.getTime() - ev.dayStart.getTime()) / 60_000;
   const m = (
     key: string,
     d: Date | null,
@@ -52,7 +59,9 @@ export function dayMarkers(ev: DayEvents, terrain?: TimelineProps['terrain']): M
     tone: Marker['tone'],
   ): Marker | null => {
     const mins = minutesOf(d, ev.dayStart);
-    return mins === null ? null : { key, minutes: mins, label, short, glyph, tone };
+    // Only instants inside this civil day sit on the track.
+    if (mins === null || mins < 0 || mins > dayLength) return null;
+    return { key, minutes: mins, label, short, glyph, tone };
   };
   return [
     m('dawn', ev.dawn, 'Civil dawn', 'Dawn', '◐', 'twilight'),
@@ -82,6 +91,8 @@ export function dayMarkers(ev: DayEvents, terrain?: TimelineProps['terrain']): M
           'sun',
         )
       : null,
+    moon ? m('moonrise', moon.moonrise, 'Moonrise', 'Moon ↑', '☾', 'moon') : null,
+    moon ? m('moonset', moon.moonset, 'Moonset', 'Moon ↓', '☽', 'moon') : null,
   ].filter((x): x is Marker => x !== null);
 }
 
@@ -115,6 +126,7 @@ export function Timeline({
   phase,
   terrain,
   terrainVisible,
+  moon,
   className,
 }: TimelineProps) {
   const minutes = usePlannerStore((s) => s.minutes);
@@ -124,8 +136,8 @@ export function Timeline({
     ? Math.round((dayEvents.dayEnd.getTime() - dayEvents.dayStart.getTime()) / 60_000)
     : 1440;
   const markers = useMemo(
-    () => (dayEvents ? dayMarkers(dayEvents, terrain) : []),
-    [dayEvents, terrain],
+    () => (dayEvents ? dayMarkers(dayEvents, terrain, moon) : []),
+    [dayEvents, terrain, moon],
   );
   const gradient = useMemo(
     () => (dayEvents ? dayGradient(dayEvents) : 'rgba(255,255,255,0.15)'),
@@ -235,7 +247,9 @@ export function Timeline({
                     ? 'text-[var(--lm-sun)]'
                     : mk.tone === 'twilight'
                       ? 'text-[color:#9dbcff]'
-                      : 'text-[var(--lm-text-faint)]',
+                      : mk.tone === 'moon'
+                        ? 'text-[color:#d8dde6]'
+                        : 'text-[var(--lm-text-faint)]',
                 )}
                 style={{ left }}
               >
