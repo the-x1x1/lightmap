@@ -88,6 +88,10 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
   // the night's dark-sky band (none on the full-Moon day of 31 May).
   await expect(overlay.getByTestId('rose-core')).toHaveAttribute('data-verdict', 'visible');
   await expect(page.getByTestId('timeline-track')).toHaveAttribute('data-dark-sky', 'true');
+  await expect(page.getByTestId('timeline-range')).toHaveAttribute(
+    'aria-valuetext',
+    /dark sky: Milky Way core up$/,
+  );
   await setDateTime(page, '2026-05-31', 12 * 60 + 30);
   await expect(overlay.getByTestId('rose-core')).toHaveCount(0);
   await expect(page.getByTestId('timeline-track')).not.toHaveAttribute('data-dark-sky', 'true');

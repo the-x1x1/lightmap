@@ -55,7 +55,8 @@ moonrise and moonset in grey (☾ / ☽); with a terrain horizon, ▲ / ▽ Ridg
 the date or location changes. With moon planning the night portions of the track carry a faint
 violet **dark-sky band** over the spells when the Milky Way core can be shot (astronomical night,
 core 10° up, no bright Moon — the same rule as the dark windows), so the scrubber shows the
-shootable hours at a glance.
+shootable hours at a glance; inside a spell the thumb's `aria-valuetext` ends ", dark sky: Milky
+Way core up".
 
 Scrubbing updates the astronomical state synchronously on every tick (target < 16 ms); expensive
 visual refresh (terrain re-light, shadow map) is debounced.

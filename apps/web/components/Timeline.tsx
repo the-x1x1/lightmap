@@ -165,6 +165,11 @@ export function Timeline({
     [dayEvents, darkSky],
   );
   const track = [band, shade, gradient].filter((l) => l !== null).join(', ');
+  // The band is colour; the thumb's value text says it too (plan §28 "non-colour-only states").
+  const atMs = dayEvents ? dayEvents.dayStart.getTime() + minutes * 60_000 : null;
+  const inDarkSky =
+    atMs !== null &&
+    (darkSky ?? []).some((s) => s.from.getTime() <= atMs && atMs <= s.to.getTime());
   // `minutes` is elapsed time since local midnight; on a DST day that is not the wall clock, so
   // the label comes from the instant itself whenever the day's bounds are known.
   const timeLabel = dayEvents
@@ -235,7 +240,7 @@ export function Timeline({
               }
             }
           }}
-          aria-valuetext={`${timeLabel}${phase ? `, ${phase.replace('-', ' ')}` : ''}`}
+          aria-valuetext={`${timeLabel}${phase ? `, ${phase.replace('-', ' ')}` : ''}${inDarkSky ? ', dark sky: Milky Way core up' : ''}`}
           aria-describedby={`${id}-desc`}
           data-testid="timeline-range"
         />
