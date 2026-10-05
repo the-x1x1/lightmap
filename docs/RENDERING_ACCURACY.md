@@ -31,6 +31,7 @@ validated against the US Naval Observatory (`packages/astronomy/tests/fixtures/u
 | Moon azimuth/elevation                           | ±0.02°                                                                              | Meeus ch. 47 (abbreviated ELP-2000/82), nutation, topocentric parallax     |
 | Moon illumination and phase name                 | ±1 %; USNO naming convention                                                        | Principal phase named from its instant for ~1 day                          |
 | Moonrise/set                                     | ±1 min                                                                              |                                                                            |
+| Principal phase instants (New/Quarter/Full)      | ±2 min against the almanac                                                          | Elongation bisected on the same series (`nextMoonPhases`)                  |
 | Time zone conversion                             | Exact for IANA zones via `Intl`; DST gap → shift forward, overlap → earlier instant | Zone lookup from coordinates is geo-tz (ODbL boundaries)                   |
 
 ## What is simulated
