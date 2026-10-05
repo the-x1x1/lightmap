@@ -135,7 +135,7 @@ export function milkyWayCore(
 
 /** A stretch of one night in which the core verdict stays `visible`. */
 export interface MilkyWayWindow {
-  /** UTC, to the minute. */
+  /** UTC, to the minute, both inside the stretch (`milkyWayCore` is `visible` at each). */
   start: Date;
   end: Date;
   /** Highest the core stands inside the window, and when. */
@@ -145,10 +145,17 @@ export interface MilkyWayWindow {
   withThinMoon: boolean;
 }
 
+export type MilkyWayWindowsReason =
+  'none' | 'no-astronomical-night' | 'core-never-up' | 'moon' | 'too-short';
+
 export interface MilkyWayWindows {
   windows: MilkyWayWindow[];
-  /** When there are none: the first thing that rules every night out, in verdict order. */
-  reason: 'none' | 'no-astronomical-night' | 'core-never-up' | 'moon';
+  /**
+   * When there are none, the first thing that rules every night out, in verdict order: no
+   * astronomical night at all; the core never 10° up in the dark; the Moon over every dark hour
+   * the core is up; or the core shootable only in runs shorter than the minimum.
+   */
+  reason: MilkyWayWindowsReason;
   /** The scan's extent. */
   from: Date;
   days: number;
@@ -156,9 +163,11 @@ export interface MilkyWayWindows {
 
 /**
  * The nights ahead on which the core can be photographed: every stretch (≥ `minMinutes`) of
- * `visible` verdicts in `days` days from `from`, with the edges found to the minute. The scan
- * takes the Sun first (cheap) and asks for the Moon only inside astronomical night with the core
- * high enough, so 45 nights cost a few thousand Sun positions and a few hundred Moon positions.
+ * `visible` verdicts in `days` × 24 h from `from`, with the edges found to the minute and kept
+ * inside the stretch. Start the scan at local noon so no night is split by a boundary (a window
+ * cut by the scan's edges is reported as far as the scan saw it). The scan takes the Sun first
+ * (cheap) and asks for the Moon only inside astronomical night with the core high enough, so 45
+ * nights cost a few thousand Sun positions and a few hundred Moon positions.
  */
 export function milkyWayWindows(
   from: Date,
@@ -167,12 +176,14 @@ export function milkyWayWindows(
   longitudeDeg: number,
   opts: { stepMinutes?: number; minMinutes?: number } = {},
 ): MilkyWayWindows {
-  const stepMs = (opts.stepMinutes ?? 10) * 60_000;
-  const minMs = (opts.minMinutes ?? 30) * 60_000;
+  const MINUTE = 60_000;
+  const stepMs = (opts.stepMinutes ?? 10) * MINUTE;
+  const minMs = (opts.minMinutes ?? 30) * MINUTE;
   const t0 = from.getTime();
   const t1 = t0 + days * 86_400_000;
   let anyNight = false;
   let anyCoreUp = false;
+  let anyVisible = false;
   const visibleAt = (t: number): { ok: boolean; core: number; moonUp: boolean } => {
     const d = new Date(t);
     const sunEl = sunPosition(d, latitudeDeg, longitudeDeg).elevationDeg;
@@ -185,13 +196,14 @@ export function milkyWayWindows(
     const moon = moonPosition(d, latitudeDeg, longitudeDeg);
     const moonUp = moon.elevationDeg > moonHorizonThresholdDeg(moon.distanceKm);
     const ok = !(moonUp && moon.illuminatedFraction > MILKY_WAY_MOON_LIMIT);
+    if (ok) anyVisible = true;
     return { ok, core: core.elevationDeg, moonUp };
   };
-  // Bisect the visible/not-visible edge between two instants to the minute.
+  // Bisect the edge between a not-visible and a visible instant; the result is on the visible side.
   const edge = (bad: number, good: number): number => {
     let lo = bad;
     let hi = good;
-    while (Math.abs(hi - lo) > 60_000) {
+    while (Math.abs(hi - lo) > MINUTE) {
       const mid = (lo + hi) / 2;
       if (visibleAt(mid).ok) hi = mid;
       else lo = mid;
@@ -200,6 +212,19 @@ export function milkyWayWindows(
   };
   const windows: MilkyWayWindow[] = [];
   let open: { start: number; peak: number; peakAt: number; thinMoon: boolean } | null = null;
+  const close = (o: NonNullable<typeof open>, endEdge: number) => {
+    // Printed minutes stay inside the stretch: the start rounds up, the end rounds down.
+    const start = Math.ceil(o.start / MINUTE) * MINUTE;
+    const end = Math.floor(endEdge / MINUTE) * MINUTE;
+    if (end - start >= minMs)
+      windows.push({
+        start: new Date(start),
+        end: new Date(end),
+        peakElevationDeg: o.peak,
+        peakAt: new Date(o.peakAt),
+        withThinMoon: o.thinMoon,
+      });
+  };
   let prev = t0;
   for (let t = t0; t <= t1; t += stepMs) {
     const v = visibleAt(t);
@@ -213,34 +238,21 @@ export function milkyWayWindows(
       }
       if (v.moonUp) open.thinMoon = true;
     } else if (open) {
-      const end = edge(t, prev);
-      if (end - open.start >= minMs)
-        windows.push({
-          start: new Date(Math.round(open.start / 60_000) * 60_000),
-          end: new Date(Math.round(end / 60_000) * 60_000),
-          peakElevationDeg: open.peak,
-          peakAt: new Date(open.peakAt),
-          withThinMoon: open.thinMoon,
-        });
+      close(open, edge(t, prev));
       open = null;
     }
     prev = t;
   }
-  if (open && prev - open.start >= minMs)
-    windows.push({
-      start: new Date(Math.round(open.start / 60_000) * 60_000),
-      end: new Date(Math.round(prev / 60_000) * 60_000),
-      peakElevationDeg: open.peak,
-      peakAt: new Date(open.peakAt),
-      withThinMoon: open.thinMoon,
-    });
-  const reason = windows.length
+  if (open) close(open, prev);
+  const reason: MilkyWayWindowsReason = windows.length
     ? 'none'
     : !anyNight
       ? 'no-astronomical-night'
       : !anyCoreUp
         ? 'core-never-up'
-        : 'moon';
+        : !anyVisible
+          ? 'moon'
+          : 'too-short';
   return { windows, reason, from, days };
 }
 
@@ -265,8 +277,12 @@ export function describeMilkyWayWindows(r: MilkyWayWindows, zone: string, show =
         return `No astronomical night here in the next ${nights}`;
       case 'core-never-up':
         return `The core never stands ${MILKY_WAY_LOW_ELEVATION_DEG}° up in the dark here in the next ${nights}`;
-      default:
+      case 'moon':
         return `The Moon lights every dark hour the core is up in the next ${nights}`;
+      case 'too-short':
+        return `The core clears ${MILKY_WAY_LOW_ELEVATION_DEG}° in the dark only for minutes at a time in the next ${nights}`;
+      case 'none':
+        return `No dark window in the next ${nights}`;
     }
   }
   const parts = r.windows.slice(0, show).map((w) => formatMilkyWayWindow(w, zone));

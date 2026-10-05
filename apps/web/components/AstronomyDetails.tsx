@@ -10,6 +10,7 @@ import {
   nextMoonPhases,
   utcToLocalSelection,
   utcToWallClock,
+  type LunarState,
   type MilkyWayCoreState,
 } from '@lightmap/astronomy';
 import { useMemo, useState } from 'react';
@@ -59,7 +60,9 @@ function DarkWindows({ scene }: { scene: SceneState }) {
   const tz = scene.timeZone;
   const lat = scene.location.point.latitude;
   const lng = scene.location.point.longitude;
-  const from = scene.dayEvents.dayStart.getTime();
+  // From the selected day's noon, so the scan starts with the night that begins that evening
+  // and no night is split by its edges.
+  const from = scene.dayEvents.dayStart.getTime() + 12 * 3_600_000;
   const result = useMemo(
     () => milkyWayWindows(new Date(from), DARK_WINDOW_NIGHTS, lat, lng),
     [from, lat, lng],
@@ -99,18 +102,74 @@ function DarkWindows({ scene }: { scene: SceneState }) {
   );
 }
 
+/**
+ * The Moon section: phase, position, rise/set, the phase calendar, the Milky Way core and — while
+ * open — the dark windows ahead. Its open state lives here so it unmounts with the element when
+ * the lunar state goes away (the `moon_planning` entitlement) and comes back.
+ */
+function MoonDetails({ scene, lunar }: { scene: SceneState; lunar: LunarState }) {
+  const tz = scene.timeZone;
+  const [moonOpen, setMoonOpen] = useState(false);
+  // The next four principal phases from the selected day (night planning): per civil day.
+  const phaseFrom = scene.dayEvents.dayStart.getTime();
+  const nextPhases = useMemo(() => describeNextPhases(new Date(phaseFrom), tz), [phaseFrom, tz]);
+  return (
+    <details
+      className="group"
+      data-testid="moon-details"
+      onToggle={(e) => setMoonOpen(e.currentTarget.open)}
+    >
+      <summary className="cursor-pointer text-xs uppercase tracking-wide text-[var(--lm-text-muted)]">
+        Moon
+      </summary>
+      <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+        <Row
+          label="Phase"
+          value={`${lunar.phaseName} · ${Math.round(lunar.illuminatedFraction * 100)} %`}
+        />
+        <Row
+          label="Elevation"
+          value={`${lunar.elevationDegrees.toFixed(1)}°${
+            scene.terrainHorizon?.moonAboveTerrain === false && lunar.isAboveHorizon
+              ? ' · behind terrain'
+              : ''
+          }`}
+        />
+        <Row
+          label="Azimuth"
+          value={`${lunar.azimuthDegrees.toFixed(0)}° ${compassLabel(lunar.azimuthDegrees)}`}
+        />
+        <Row
+          label="Moonrise / set"
+          value={`${lunar.moonrise ? formatWallTime(lunar.moonrise, tz) : '—'} / ${lunar.moonset ? formatWallTime(lunar.moonset, tz) : '—'}`}
+        />
+      </dl>
+      <p className="mt-1 text-xs text-[var(--lm-text-muted)]" data-testid="moon-next-phases">
+        Next: {nextPhases}
+      </p>
+      {scene.nightSky ? (
+        <p
+          className={
+            scene.nightSky.verdict === 'visible'
+              ? 'mt-1 text-xs text-[var(--lm-ok)]'
+              : 'mt-1 text-xs text-[var(--lm-text-muted)]'
+          }
+          data-testid="milky-way"
+          data-verdict={scene.nightSky.verdict}
+        >
+          Milky Way core: {describeMilkyWay(scene.nightSky)}
+        </p>
+      ) : null}
+      {scene.nightSky && moonOpen ? <DarkWindows scene={scene} /> : null}
+      <p className="mt-1 text-xs text-[var(--lm-text-muted)]">{lunar.accuracyNote}</p>
+    </details>
+  );
+}
+
 export function AstronomyDetails({ scene }: { scene: SceneState }) {
   const s = scene.solar;
   const tz = scene.timeZone;
   const seasons = useSeasonalEnvelope(scene);
-  const [moonOpen, setMoonOpen] = useState(false);
-  // The next four principal phases from the selected day (night planning): per civil day.
-  const phaseFrom = scene.dayEvents.dayStart.getTime();
-  const hasMoon = scene.lunar !== null;
-  const nextPhases = useMemo(
-    () => (hasMoon ? describeNextPhases(new Date(phaseFrom), tz) : ''),
-    [hasMoon, phaseFrom, tz],
-  );
   return (
     <div className="space-y-3" data-testid="astronomy-details">
       <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
@@ -201,57 +260,7 @@ export function AstronomyDetails({ scene }: { scene: SceneState }) {
           <DayEventMarkers dayEvents={scene.dayEvents} timeZone={tz} />
         </div>
       </details>
-      {scene.lunar ? (
-        <details
-          className="group"
-          data-testid="moon-details"
-          onToggle={(e) => setMoonOpen(e.currentTarget.open)}
-        >
-          <summary className="cursor-pointer text-xs uppercase tracking-wide text-[var(--lm-text-muted)]">
-            Moon
-          </summary>
-          <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-            <Row
-              label="Phase"
-              value={`${scene.lunar.phaseName} · ${Math.round(scene.lunar.illuminatedFraction * 100)} %`}
-            />
-            <Row
-              label="Elevation"
-              value={`${scene.lunar.elevationDegrees.toFixed(1)}°${
-                scene.terrainHorizon?.moonAboveTerrain === false && scene.lunar.isAboveHorizon
-                  ? ' · behind terrain'
-                  : ''
-              }`}
-            />
-            <Row
-              label="Azimuth"
-              value={`${scene.lunar.azimuthDegrees.toFixed(0)}° ${compassLabel(scene.lunar.azimuthDegrees)}`}
-            />
-            <Row
-              label="Moonrise / set"
-              value={`${scene.lunar.moonrise ? formatWallTime(scene.lunar.moonrise, tz) : '—'} / ${scene.lunar.moonset ? formatWallTime(scene.lunar.moonset, tz) : '—'}`}
-            />
-          </dl>
-          <p className="mt-1 text-xs text-[var(--lm-text-muted)]" data-testid="moon-next-phases">
-            Next: {nextPhases}
-          </p>
-          {scene.nightSky ? (
-            <p
-              className={
-                scene.nightSky.verdict === 'visible'
-                  ? 'mt-1 text-xs text-[var(--lm-ok)]'
-                  : 'mt-1 text-xs text-[var(--lm-text-muted)]'
-              }
-              data-testid="milky-way"
-              data-verdict={scene.nightSky.verdict}
-            >
-              Milky Way core: {describeMilkyWay(scene.nightSky)}
-            </p>
-          ) : null}
-          {scene.nightSky && moonOpen ? <DarkWindows scene={scene} /> : null}
-          <p className="mt-1 text-xs text-[var(--lm-text-muted)]">{scene.lunar.accuracyNote}</p>
-        </details>
-      ) : null}
+      {scene.lunar ? <MoonDetails scene={scene} lunar={scene.lunar} /> : null}
       <details className="group" data-testid="why-panel">
         <summary className="cursor-pointer text-xs uppercase tracking-wide text-[var(--lm-text-muted)]">
           Why does it look like this?

@@ -82,15 +82,21 @@ describe('Galactic Centre (Milky Way core)', () => {
 
   it('lists the dark windows ahead: Moon-free stretches of astronomical night with the core up', () => {
     const kailua = [21.397, -157.727] as const;
-    const r = milkyWayWindows(new Date('2026-06-01T10:00:00Z'), 45, ...kailua);
+    // From local noon on 1 June (the scan starts with the night that begins that evening).
+    const r = milkyWayWindows(new Date('2026-06-01T22:00:00Z'), 45, ...kailua);
     expect(r.reason).toBe('none');
     expect(r.windows.length).toBeGreaterThan(20);
-    // Every window is visible at its middle and its peak, ordered, not overlapping, ≥ 30 min.
+    // Every window is visible at both printed edges, its middle and its peak; ordered, not
+    // overlapping, ≥ 30 min.
     let last = 0;
     for (const w of r.windows) {
       expect(w.start.getTime()).toBeGreaterThanOrEqual(last);
       expect(w.end.getTime() - w.start.getTime()).toBeGreaterThanOrEqual(30 * 60_000);
+      expect(w.start.getTime() % 60_000).toBe(0);
+      expect(w.end.getTime() % 60_000).toBe(0);
       const mid = new Date((w.start.getTime() + w.end.getTime()) / 2);
+      expect(milkyWayCore(w.start, ...kailua).verdict).toBe('visible');
+      expect(milkyWayCore(w.end, ...kailua).verdict).toBe('visible');
       expect(milkyWayCore(mid, ...kailua).verdict).toBe('visible');
       expect(milkyWayCore(w.peakAt, ...kailua).verdict).toBe('visible');
       expect(w.peakAt.getTime()).toBeGreaterThanOrEqual(w.start.getTime());
@@ -106,13 +112,19 @@ describe('Galactic Centre (Milky Way core)', () => {
     expect(dark!.end.getTime() - dark!.start.getTime()).toBeGreaterThan(7 * 3_600_000);
     expect(dark!.peakElevationDeg).toBeCloseTo(39.6, 0);
     expect(dark!.withThinMoon).toBe(false);
-    // Windows end to the minute at the edge the scan found: just before, not visible; at, visible.
+    // Edges are found to the minute: two minutes past the printed end the sky is no longer dark.
     expect(milkyWayCore(new Date(dark!.end.getTime() + 2 * 60_000), ...kailua).verdict).not.toBe(
       'visible',
     );
     const line = describeMilkyWayWindows(r, 'Pacific/Honolulu');
     expect(line).toMatch(/^3 Jun 21:\d\d–22:\d\d \(core to 2\d°\) · 4 Jun /);
     expect(line).toMatch(/ · \d+ more in 45 nights$/);
+    // A scan that starts inside a window reports it from where it looked (an evening start sees
+    // the whole night).
+    const evening = milkyWayWindows(new Date('2026-06-15T22:00:00Z'), 3, ...kailua);
+    expect(describeMilkyWayWindows(evening, 'Pacific/Honolulu')).toBe(
+      '15 Jun 20:40–04:23 (core to 40°) · 16 Jun 20:41–04:23 (core to 40°) · 17 Jun 20:41–04:23 (core to 40°)',
+    );
   });
 
   it('says why there is no window: no astronomical night, or a core that never clears 10°', () => {
@@ -129,10 +141,20 @@ describe('Galactic Centre (Milky Way core)', () => {
     const winter = milkyWayWindows(new Date('2026-12-01T10:00:00Z'), 45, 21.397, -157.727);
     expect(winter.reason).toBe('core-never-up');
     // Two nights around the full Moon: the Moon is the only thing in the way.
-    const full = milkyWayWindows(new Date('2026-05-30T10:00:00Z'), 2, 21.397, -157.727);
+    const full = milkyWayWindows(new Date('2026-05-30T22:00:00Z'), 2, 21.397, -157.727);
     expect(full.reason).toBe('moon');
     expect(describeMilkyWayWindows(full, 'Pacific/Honolulu')).toBe(
       'The Moon lights every dark hour the core is up in the next 2 nights',
+    );
+    // Kailua in late January: the core clears 10° before dawn for minutes only — not the Moon's
+    // fault, and the line does not say it is. Likewise 49.6° N in July, where the core grazes 10°.
+    const january = milkyWayWindows(new Date('2026-01-20T22:00:00Z'), 10, 21.397, -157.727);
+    expect(january.reason).toBe('too-short');
+    expect(describeMilkyWayWindows(january, 'Pacific/Honolulu')).toBe(
+      'The core clears 10° in the dark only for minutes at a time in the next 10 nights',
+    );
+    expect(milkyWayWindows(new Date('2026-07-15T10:00:00Z'), 45, 49.6, 4.35).reason).toBe(
+      'too-short',
     );
   });
 });

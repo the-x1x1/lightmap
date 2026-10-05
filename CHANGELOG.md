@@ -12,10 +12,11 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   the observer's sidereal time, the scene's own Sun and Moon. Not a sky-brightness model (light
   pollution and airglow are not modelled), and the docs say so. **Dark windows ahead**: the Moon
   details list the next nights the core can be shot (≥ 30 min of astronomical night with the
-  core 10° up and no Moon over 30 % above the horizon, 45 nights from the selected day, edges to
-  the minute), each a click that jumps the planner to the core's peak — or why there are none
-  (no astronomical night, core never up this season, the Moon). `milkyWayWindows()`, tested at
-  Kailua, London and the full-Moon nights.
+  core 10° up and no Moon over 30 % above the horizon, 45 nights from the selected day's evening,
+  edges to the minute and inside the stretch), each a click that jumps the planner to the core's
+  peak — or why there are none (no astronomical night, core never up this season, the Moon, or
+  only minutes at a time). `milkyWayWindows()`, tested at Kailua, London, the full-Moon nights
+  and the grazing cases.
 - **Moon phase calendar**: the Moon details list the next four principal phases from the selected
   day (New, First quarter, Full, Last quarter, as dates in the planning zone). `nextMoonPhases()`
   in `@lightmap/astronomy` bisects the elongation from the same Meeus series as the positions —
