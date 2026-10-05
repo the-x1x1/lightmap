@@ -24,7 +24,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   sums. Rise/set ±1 min, illumination ±1 %; the accuracy note in the UI says so. Moonrise and
   moonset were ~4 minutes late: the rise threshold applied Meeus's _geocentric_ h0 to an altitude
   that already had parallax removed; it is now −(semidiameter + 34′ refraction) on the
-  topocentric altitude, checked by a self-consistency test.
+  topocentric altitude, checked by a self-consistency test, and `isAboveHorizon` uses the same
+  rule. Parallax is now applied exactly (Meeus ch. 40 topocentric equatorial correction), so the
+  Moon's azimuth is topocentric too — the old altitude-only form left azimuth errors of up to a
+  few tenths of a degree at mid-latitudes.
 - **Planning card**: with the camera tools, the card carries a "Depth of field" row — the real
   lens on the chosen sensor, aperture, focus distance and the sharp range (hyperfocal when the
   far limit is finite).

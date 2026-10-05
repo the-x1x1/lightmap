@@ -5,9 +5,9 @@
  * terms in longitude and distance, 60 in latitude, plus the planetary and flattening terms),
  * nutation from the short form of ch. 22, true obliquity; validated against Meeus's worked
  * example 47.a to the last digit of the published sums. Geocentric accuracy ≈ 10″ in longitude,
- * 4″ in latitude, 4 km in distance. The topocentric correction for parallax (up to ~1° in
- * altitude) uses the first-order form h′ = h − π·cos h (error < 0.01°), because it matters for
- * moonrise planning. Illuminated fraction follows Meeus ch. 48 (phase angle from the Sun–Moon
+ * 4″ in latitude, 4 km in distance. Parallax (up to ~1°, in azimuth as well as altitude) is
+ * applied exactly through the topocentric equatorial correction of ch. 40, because it matters
+ * for where the Moon sits in a frame and for moonrise planning. Illuminated fraction follows Meeus ch. 48 (phase angle from the Sun–Moon
  * elongation).
  *
  * Honest accuracy statement (surfaced in the UI as the lunar confidence note): position ±0.02°,
@@ -16,6 +16,7 @@
  * (e.g. the MIT-licensed astronomy-engine) to be swapped in without touching callers (ADR-0006).
  */
 import {
+  greenwichMeanSiderealTimeDeg,
   meanObliquityDeg,
   solarEquatorial,
   toHorizontal,
@@ -304,7 +305,7 @@ export type MoonPhaseName =
   | 'Waning Crescent';
 
 export interface MoonPosition extends HorizontalCoordinates {
-  /** Topocentric (parallax-corrected) elevation, degrees. */
+  /** Same as `elevationDeg` (both topocentric since the Meeus ch. 40 correction); kept for callers. */
   topocentricElevationDeg: number;
   declinationDeg: number;
   rightAscensionDeg: number;
@@ -344,13 +345,50 @@ export function moonPhaseName(elongationDeg: number): MoonPhaseName {
   return 'Waning Crescent';
 }
 
+/**
+ * Geocentric → topocentric equatorial coordinates (Meeus ch. 40): the Moon's parallax moves it
+ * by up to ~1° — in azimuth as well as altitude — so the observer's position on the ellipsoid
+ * (sea level; the site's height matters < 0.001°) is applied before going to horizontal.
+ */
+export function topocentricEquatorial(
+  eq: { rightAscensionDeg: number; declinationDeg: number; parallaxDeg: number },
+  date: Date,
+  latitudeDeg: number,
+  longitudeDeg: number,
+): { rightAscensionDeg: number; declinationDeg: number } {
+  const u = Math.atan(0.996_647_19 * Math.tan(latitudeDeg * DEG));
+  const rhoSinPhi = 0.996_647_19 * Math.sin(u);
+  const rhoCosPhi = Math.cos(u);
+  const sinPi = Math.sin(eq.parallaxDeg * DEG);
+  const H = (greenwichMeanSiderealTimeDeg(date) + longitudeDeg - eq.rightAscensionDeg) * DEG;
+  const dec = eq.declinationDeg * DEG;
+  const dAlpha = Math.atan2(
+    -rhoCosPhi * sinPi * Math.sin(H),
+    Math.cos(dec) - rhoCosPhi * sinPi * Math.cos(H),
+  );
+  const decTopo = Math.atan2(
+    (Math.sin(dec) - rhoSinPhi * sinPi) * Math.cos(dAlpha),
+    Math.cos(dec) - rhoCosPhi * sinPi * Math.cos(H),
+  );
+  return {
+    rightAscensionDeg: wrap360(eq.rightAscensionDeg + dAlpha * RAD),
+    declinationDeg: decTopo * RAD,
+  };
+}
+
 export function moonPosition(date: Date, latitudeDeg: number, longitudeDeg: number): MoonPosition {
   const T = julianCenturiesTT(date);
   const moon = lunarEquatorial(T);
   const sun = solarEquatorial(T);
-  const hz = toHorizontal(moon, date, latitudeDeg, longitudeDeg);
-  // Topocentric altitude: h' = h − π cos h (adequate at this method's accuracy).
-  const topo = hz.elevationDeg - moon.parallaxDeg * Math.cos(hz.elevationDeg * DEG);
+  // Azimuth and elevation are topocentric (Meeus ch. 40), so `elevationDeg` is the altitude an
+  // observer sees before refraction; the geocentric altitude is not exposed.
+  const hz = toHorizontal(
+    topocentricEquatorial(moon, date, latitudeDeg, longitudeDeg),
+    date,
+    latitudeDeg,
+    longitudeDeg,
+  );
+  const topo = hz.elevationDeg;
 
   // Phase (Meeus 48.2 via geocentric elongation).
   const elongation = wrap360(moon.eclipticLongitudeDeg - sun.eclipticLongitudeDeg);
@@ -378,6 +416,15 @@ export function moonPosition(date: Date, latitudeDeg: number, longitudeDeg: numb
 }
 
 /**
+ * Topocentric altitude of the Moon's centre at which its upper limb touches the apparent horizon:
+ * −(semidiameter + 34′ refraction), with the semidiameter 0.2725 × the horizontal parallax.
+ */
+export function moonHorizonThresholdDeg(distanceKm: number): number {
+  const parallaxDeg = Math.asin(EARTH_EQUATORIAL_RADIUS_KM / distanceKm) * RAD;
+  return -(0.2725 * parallaxDeg + 34 / 60);
+}
+
+/**
  * Moonrise / moonset within [start, end): the instants the Moon's upper limb touches the apparent
  * horizon. Meeus 15.1 gives the *geocentric* threshold h0 = 0.7275π − 0°34′ (parallax,
  * semidiameter and refraction folded together); `moonPosition` already applies parallax, so for
@@ -393,8 +440,7 @@ export function moonRiseSet(
   const step = 10 * 60_000;
   const f = (t: number) => {
     const m = moonPosition(new Date(t), latitudeDeg, longitudeDeg);
-    const parallaxDeg = Math.asin(EARTH_EQUATORIAL_RADIUS_KM / m.distanceKm) * RAD;
-    return m.topocentricElevationDeg + 0.2725 * parallaxDeg + 34 / 60;
+    return m.topocentricElevationDeg - moonHorizonThresholdDeg(m.distanceKm);
   };
   let moonrise: Date | null = null;
   let moonset: Date | null = null;

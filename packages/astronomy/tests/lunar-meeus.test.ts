@@ -3,9 +3,13 @@ import {
   lunarArguments,
   lunarEquatorial,
   lunarPeriodicSums,
+  moonHorizonThresholdDeg,
   moonPosition,
   moonRiseSet,
+  topocentricEquatorial,
 } from '../src/lunar.ts';
+import { toHorizontal } from '../src/solar.ts';
+import { julianCenturiesTT } from '../src/time.ts';
 
 /**
  * Meeus, Astronomical Algorithms, Example 47.a: 1992 April 12, 0h TD (JDE 2448724.5),
@@ -54,13 +58,51 @@ describe('moonrise / moonset threshold', () => {
     expect(moonset).not.toBeNull();
     for (const t of [moonrise!, moonset!]) {
       const m = moonPosition(t, lat, lon);
-      const parallax = Math.asin(6378.14 / m.distanceKm) * (180 / Math.PI);
       // Centre at −(0.2725π + 34′) ≈ −0.83°, within the 10 s bisection.
-      expect(m.topocentricElevationDeg).toBeCloseTo(-(0.2725 * parallax + 34 / 60), 1);
+      expect(m.topocentricElevationDeg).toBeCloseTo(moonHorizonThresholdDeg(m.distanceKm), 1);
+      expect(moonHorizonThresholdDeg(m.distanceKm)).toBeLessThan(-0.8);
+      expect(moonHorizonThresholdDeg(m.distanceKm)).toBeGreaterThan(-0.86);
     }
     // Near full moon the Moon rises around sunset: 18:40–20:00 HST on 31 May 2026.
     const riseHst = (moonrise!.getTime() - day.getTime()) / 3_600_000;
     expect(riseHst).toBeGreaterThan(18.6);
     expect(riseHst).toBeLessThan(20.1);
+  });
+});
+
+describe('topocentric correction (Meeus ch. 40)', () => {
+  it('lowers the Moon by about its parallax near the horizon and shifts its azimuth at mid-latitudes', () => {
+    const lat = 51.5;
+    const lon = -0.1;
+    const t = new Date('2026-05-31T22:00:00Z');
+    const T = julianCenturiesTT(t);
+    const geo = lunarEquatorial(T);
+    const geoHz = toHorizontal(geo, t, lat, lon);
+    const topoHz = toHorizontal(topocentricEquatorial(geo, t, lat, lon), t, lat, lon);
+    const expectedDrop = geo.parallaxDeg * Math.cos((geoHz.elevationDeg * Math.PI) / 180);
+    expect(geoHz.elevationDeg - topoHz.elevationDeg).toBeCloseTo(expectedDrop, 2);
+    // The azimuth shift is real and bounded by the parallax.
+    const dAz = Math.abs((((topoHz.azimuthDeg - geoHz.azimuthDeg) % 360) + 540) % 360) - 180;
+    expect(Math.abs(dAz)).toBeLessThan(geo.parallaxDeg);
+    // moonPosition reports the topocentric values.
+    const mp = moonPosition(t, lat, lon);
+    expect(mp.elevationDeg).toBeCloseTo(topoHz.elevationDeg, 9);
+    expect(mp.topocentricElevationDeg).toBeCloseTo(topoHz.elevationDeg, 9);
+    expect(mp.azimuthDeg).toBeCloseTo(topoHz.azimuthDeg, 9);
+  });
+  it('vanishes at the Earth’s centre line of sight: an observer at the equator with the Moon overhead', () => {
+    // Parallax in altitude is π·cos h → ~0 at the zenith; the correction cannot invent a shift there.
+    const lat = 0;
+    const lon = 0;
+    for (let h = 0; h < 48; h++) {
+      const t = new Date(Date.UTC(2026, 5, 1, h * 0.5));
+      const T = julianCenturiesTT(t);
+      const geo = lunarEquatorial(T);
+      const geoHz = toHorizontal(geo, t, lat, lon);
+      if (geoHz.elevationDeg > 85) {
+        const topoHz = toHorizontal(topocentricEquatorial(geo, t, lat, lon), t, lat, lon);
+        expect(Math.abs(geoHz.elevationDeg - topoHz.elevationDeg)).toBeLessThan(0.1);
+      }
+    }
   });
 });

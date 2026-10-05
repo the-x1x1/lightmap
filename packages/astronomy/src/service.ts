@@ -13,7 +13,7 @@ import {
   type DayEvents,
   type LightPhase,
 } from './events.ts';
-import { moonPosition, moonRiseSet, type MoonPhaseName } from './lunar.ts';
+import { moonHorizonThresholdDeg, moonPosition, moonRiseSet, type MoonPhaseName } from './lunar.ts';
 import { sunPosition } from './solar.ts';
 import {
   civilDateString,
@@ -150,7 +150,7 @@ export class MeeusAstronomyService implements AstronomyService {
     return {
       azimuthDegrees: m.azimuthDeg,
       elevationDegrees: m.topocentricElevationDeg,
-      isAboveHorizon: m.topocentricElevationDeg > 0.125,
+      isAboveHorizon: m.topocentricElevationDeg > moonHorizonThresholdDeg(m.distanceKm),
       illuminatedFraction: m.illuminatedFraction,
       phaseName: m.phaseName,
       ageDays: m.ageDays,
