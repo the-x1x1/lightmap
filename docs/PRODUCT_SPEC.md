@@ -461,7 +461,7 @@ saves on its own; if the save fails the previous setting comes back and the pane
 | Saved viewpoints                            | 3 (total and per project)  | 200 per project, 5,000 total |
 | Preview quality ceiling                     | 1 (terrain preview)        | 3                            |
 | Hourly forecast detail & comparison         | –                          | Yes                          |
-| Moon planning                               | Basic                      | Yes                          |
+| Moon and night planning                     | Inside the date window     | Any date                     |
 | Planning-card export                        | –                          | Yes                          |
 | Camera tools (lens presets, heading, pitch) | –                          | Yes                          |
 | Light finder (reverse planning)             | Inside the date window     | Any range (≤ 1100 days)      |
