@@ -23,7 +23,8 @@ export const OPEN_METEO_CAPABILITIES: WeatherCapabilities = {
   reliableHorizonHours: 7 * 24,
   historicalDays: 92,
   // ERA5 reanalysis from 1940 (archive-api.open-meteo.com), ~5 days behind real time; the
-  // forecast endpoint's 92-day past covers the gap.
+  // forecast endpoint's 92-day past covers the gap. The live provider computes this from
+  // `ARCHIVE_START` at call time; the constant is the 2026 value for tests and fixtures.
   archiveDays: 86 * 365,
   hasCloudLayers: true,
   hasIrradiance: true,
@@ -61,6 +62,9 @@ interface OpenMeteoResponse {
   error?: boolean;
   reason?: string;
 }
+
+/** First day of the ERA5 reanalysis Open-Meteo serves. */
+const ARCHIVE_START = new Date('1940-01-01T00:00:00Z');
 
 /** The archive (ERA5) has no precipitation probability and no visibility. */
 const ARCHIVE_HOURLY_FIELDS = HOURLY_FIELDS.filter(
@@ -102,6 +106,7 @@ export class OpenMeteoProvider implements WeatherProvider {
   getCapabilities(): WeatherCapabilities {
     return {
       ...OPEN_METEO_CAPABILITIES,
+      archiveDays: Math.floor((this.now().getTime() - ARCHIVE_START.getTime()) / 86_400_000),
       commercialReview: this.apiKey ? 'approved' : 'conditional',
     };
   }

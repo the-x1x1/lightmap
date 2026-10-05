@@ -17,7 +17,7 @@ const res = (
 });
 
 const homeHeaders = {
-  'content-security-policy': "default-src 'self'; script-src 'self' 'nonce-abc'",
+  'content-security-policy': "default-src 'self'; script-src 'self' 'nonce-abc' 'wasm-unsafe-eval'",
   'strict-transport-security': 'max-age=63072000; includeSubDomains; preload',
   'x-content-type-options': 'nosniff',
   'referrer-policy': 'strict-origin-when-cross-origin',
@@ -45,7 +45,10 @@ function good(): SmokeInputs {
       'content-type': 'text/javascript; charset=utf-8',
       'cache-control': 'no-cache, no-store, must-revalidate',
     }),
-    privacy: res(200, '<html><h1>Privacy</h1><p>Contact support@example.com.</p></html>'),
+    privacy: res(
+      200,
+      '<html><h1>Privacy</h1><p>Contact support@example.com.</p><script>self.__next_f.push([1,"[\\"app-pages-internals\\",\\"static/chunks/x.js\\"]"])</script></html>',
+    ),
     profileUnauthenticated: res(401, { error: { code: 'unauthenticated' } }),
     stripeWebhookUnsigned: res(400, 'missing signature'),
   };
@@ -151,6 +154,15 @@ describe('production smoke checks (plan §43)', () => {
     i.privacy = res(404, '');
     const f = evaluateSmoke(i);
     expectAll(fails(f), ['auth.profile', 'billing.webhook', 'privacy']);
+    // A redirecting home page says where it went; an unreachable host says why.
+    const j = good();
+    j.home = res(308, '', { location: 'https://www.example.com/' });
+    j.health = { status: 0, headers: {}, body: 'fetch failed: ECONNREFUSED' };
+    const g = evaluateSmoke(j);
+    expect(g.find((x) => x.check === 'home')?.detail).toContain(
+      'redirects to https://www.example.com/',
+    );
+    expect(g.find((x) => x.check === 'health')?.detail).toContain('ECONNREFUSED');
   });
 
   it('the optional search probe must come from a live geocoder', () => {

@@ -62,7 +62,9 @@ export function HourlyOutlook({
     mode === 'EXTENDED_FORECAST'
       ? 'Extended forecast · low confidence'
       : mode === 'RECENT_PAST' || mode === 'PAST'
-        ? 'Recent conditions'
+        ? scene.confidence.weather === 'MEDIUM'
+          ? 'Observed · reanalysis'
+          : 'Recent conditions'
         : 'Forecast';
 
   if (!decision.allowed)

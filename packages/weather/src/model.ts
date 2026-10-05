@@ -40,9 +40,10 @@ export interface WeatherCapabilities {
   /** Days back the provider serves recent-past frames from the forecast model's own archive. */
   historicalDays: number;
   /**
-   * Days back the provider serves observed/reanalysis frames beyond `historicalDays` (0 = none).
-   * Slower and coarser than the recent past — a reanalysis grid, some fields missing — so it is
-   * reported with MEDIUM confidence and labelled "observed", never as a forecast.
+   * Days back from now (a total, not added to `historicalDays`) the provider serves
+   * observed/reanalysis frames; 0 = none. Days between `historicalDays` and this come from the
+   * archive — slower and coarser than the recent past (a reanalysis grid, some fields missing) —
+   * so they are reported with MEDIUM confidence and labelled "observed", never as a forecast.
    */
   archiveDays: number;
   hasCloudLayers: boolean;

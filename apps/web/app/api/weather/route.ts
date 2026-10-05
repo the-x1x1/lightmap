@@ -45,14 +45,19 @@ export async function GET(req: Request) {
     if (!decision.fetchWorthwhile) throw new HttpError(422, 'outside_horizon', decision.reason);
 
     const ctx = await requestContext();
-    // The reanalysis archive is "unrestricted date planning" (plan §38): the same window rule as
-    // saving a viewpoint, in the requested zone, so a Free plan cannot reach it round the UI.
-    if (decision.mode === 'RECENT_PAST' && -decision.leadHours > caps.historicalDays * 24) {
-      const window = can(ctx.entitlements, 'future_date_planning', {
+    // Days served from the reanalysis archive rather than the forecast model's own past: judged
+    // from the day's start, as the provider does (a day that starts past the window is archive).
+    const archiveDay =
+      decision.mode === 'RECENT_PAST' &&
+      Date.now() - start.getTime() > caps.historicalDays * 86_400_000;
+    // The archive is part of unrestricted date planning (plan §38): the same window rule as
+    // saving a viewpoint, in the requested zone, so the API does not hand it out past the paywall.
+    if (archiveDay) {
+      const dateWindow = can(ctx.entitlements, 'future_date_planning', {
         targetDate: civilDateString(civil),
         today: civilDateString(utcToWallClock(new Date(), tz)),
       });
-      if (!window.allowed) throw forbidByEntitlement(window);
+      if (!dateWindow.allowed) throw forbidByEntitlement(dateWindow);
     }
     const key = clientKey(req, ctx.user?.id ?? null);
     checkBurst(`weather:${key}`, 30);
@@ -73,11 +78,10 @@ export async function GET(req: Request) {
           ? await s.weather.getHistorical(clat, clng, start, end)
           : await s.weather.getForecast(clat, clng, start, end);
       // Recent past can still be revised by the model for a few hours; reanalysis is settled.
-      const ttl =
-        decision.mode === 'RECENT_PAST'
-          ? -decision.leadHours > caps.historicalDays * 24
-            ? 30 * 86_400
-            : 6 * 3600
+      const ttl = archiveDay
+        ? 30 * 86_400
+        : decision.mode === 'RECENT_PAST'
+          ? 6 * 3600
           : caps.updateIntervalMinutes * 60;
       if (cache) await cache.set('weather', cacheKey, series, ttl);
     }

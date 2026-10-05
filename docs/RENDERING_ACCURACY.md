@@ -128,8 +128,9 @@ by the light's colour. The light direction and terrain shading are untouched by 
 Where the terrain tiles carry a water mask (Cesium World Terrain does; a provider without one
 renders water as ground), the globe shades sea and lakes with Cesium's water effect: a specular
 glint from the scene light, so a low Sun over the sea glitters from the right direction.
-**Claim:** where the glint falls, and that it goes with the Sun. **Caveat:** no waves, swell,
-wet-surface or reflection of the sky's colour; the water mask is the provider's, not a tide model.
+**Claim:** where the glint falls, and that it goes with the Sun. **Caveat:** a ripple normal map
+only — no swell or wave geometry, no wet-surface effect, no reflection of the sky's colour; the
+water mask is the provider's, not a tide model.
 
 ### Weather scenarios
 

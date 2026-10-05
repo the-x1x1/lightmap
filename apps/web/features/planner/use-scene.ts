@@ -112,7 +112,8 @@ export function useScene(
       ),
     staleTime: 30 * 60_000,
     gcTime: 6 * 60 * 60_000,
-    retry: 1,
+    // One retry for a flaky network or provider; a 4xx (the plan window, a bad request) is final.
+    retry: (count, error) => count < 1 && !(error instanceof ApiRequestError && error.status < 500),
   });
 
   // Day events depend only on place + date + zone; cache them so scrubbing does not recompute.

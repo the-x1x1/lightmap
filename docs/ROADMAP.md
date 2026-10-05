@@ -99,8 +99,8 @@ the scenario; hand-set colours remain for twilight, night and the daytime horizo
 (`RENDERING_ACCURACY.md`).
 
 Also delivered (unreleased): **water** — the terrain water mask is requested and Cesium's water
-effect shades sea and lakes with a specular glint from the scene light (`RENDERING_ACCURACY.md`
-"Water"); no waves or sky reflection.
+effect shades sea and lakes with a specular glint from the scene light and a ripple normal map
+(`RENDERING_ACCURACY.md` "Water"); no swell geometry or sky reflection.
 
 Remaining: improved terrain texture; detailed buildings where licensed; the scattering model in
 Cesium's own dome (the haze → Mie wiring is in behind the `physicalSkyDome` flag with a

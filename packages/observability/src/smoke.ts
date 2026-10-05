@@ -62,7 +62,9 @@ export function evaluateSmoke(i: SmokeInputs): SmokeFinding[] {
     out.push({ check, level, detail });
   const expectStatus = (check: string, r: SmokeResponse, status: number): boolean => {
     if (r.status === status) return true;
-    add(check, 'fail', `expected HTTP ${status}, got ${r.status}`);
+    const where = r.headers['location'] ? ` (redirects to ${r.headers['location']})` : '';
+    const why = r.status === 0 ? ` (${r.body.slice(0, 120)})` : '';
+    add(check, 'fail', `expected HTTP ${status}, got ${r.status}${where}${why}`);
     return false;
   };
 
@@ -92,7 +94,7 @@ export function evaluateSmoke(i: SmokeInputs): SmokeFinding[] {
   if (expectStatus('home', i.home, 200)) {
     const csp = header(i.home, 'content-security-policy');
     if (!csp) add('home.csp', 'fail', 'no Content-Security-Policy header');
-    else if (/unsafe-eval/.test(csp)) add('home.csp', 'fail', "CSP allows 'unsafe-eval'");
+    else if (/'unsafe-eval'/.test(csp)) add('home.csp', 'fail', "CSP allows 'unsafe-eval'");
     else if (!/default-src\s+'self'/.test(csp))
       add('home.csp', 'fail', "CSP default-src is not 'self'");
     else add('home.csp', 'ok', 'strict CSP');
@@ -149,9 +151,11 @@ export function evaluateSmoke(i: SmokeInputs): SmokeFinding[] {
       add('sw.cache', 'fail', 'service worker is cacheable (updates would stall)');
   }
 
-  // Legal: present and no bracketed placeholders left for counsel.
+  // Legal: present and no bracketed placeholders left for counsel ("[legal entity name]" —
+  // prose only: the page's scripts carry Next's own bracketed data).
   if (expectStatus('privacy', i.privacy, 200)) {
-    const placeholders = i.privacy.body.match(/\[[^\]\n]{3,80}\]/g) ?? [];
+    const prose = i.privacy.body.replace(/<script[\s\S]*?<\/script>/gi, '');
+    const placeholders = prose.match(/\[[A-Za-z][^\]\n"\\]{2,80}\]/g) ?? [];
     if (placeholders.length)
       add(
         'privacy.placeholders',

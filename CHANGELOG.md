@@ -5,13 +5,13 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 ## Unreleased
 
 - **Observed weather for any past date**: dates beyond the forecast model's 92-day window now
-  load real conditions from the provider's reanalysis archive (Open-Meteo ERA5 from 1940;
-  `archiveDays` capability) — labelled "Observed · reanalysis" at MEDIUM confidence (coarse grid,
+  load real conditions from the provider's reanalysis archive (Open-Meteo ERA5 back to 1940;
+  `archiveDays` capability, computed from that date) — labelled "Observed · reanalysis" at MEDIUM confidence (coarse grid,
   no visibility), never a forecast, cached 30 days. Dates older than any archive stay a labelled
   scenario, as before. `WEATHER_AND_FORECAST_MODEL.md` §2/§6/§7.
 - **Water (Phase 4)**: the terrain water mask is requested and Cesium's water effect is on, so
-  sea and lakes carry a specular glint from the scene light where the tile set has a mask
-  (Cesium World Terrain); providers without one are unchanged.
+  sea and lakes carry a specular glint from the scene light and a ripple normal map where the
+  tile set has a mask (Cesium World Terrain); providers without one are unchanged.
 - **Production smoke test** (plan §43): `pnpm smoke:prod <url>` checks a deployed build — health
   and the tagged version, no fixture mode, the security headers and a CSP without `unsafe-eval`,
   capabilities without a dev banner or dev sign-in, manifest and an uncacheable service worker,

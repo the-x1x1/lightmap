@@ -17,8 +17,11 @@ if (!base || !/^https?:\/\//.test(base)) {
   process.exit(2);
 }
 const root = base.replace(/\/+$/, '');
-const version = (JSON.parse(readFileSync('apps/web/package.json', 'utf8')) as { version?: string })
-  .version;
+const version = (
+  JSON.parse(readFileSync(new URL('../apps/web/package.json', import.meta.url), 'utf8')) as {
+    version?: string;
+  }
+).version;
 if (!version) {
   console.error('apps/web/package.json has no version');
   process.exit(2);
@@ -26,7 +29,11 @@ if (!version) {
 
 async function probe(path: string, init?: RequestInit): Promise<SmokeResponse> {
   try {
-    const res = await fetch(`${root}${path}`, { redirect: 'manual', ...init });
+    const res = await fetch(`${root}${path}`, {
+      redirect: 'manual', // the final URL is what is tested; a redirect is reported with its target
+      signal: AbortSignal.timeout(15_000),
+      ...init,
+    });
     const headers: Record<string, string> = {};
     res.headers.forEach((v, k) => {
       headers[k.toLowerCase()] = v;

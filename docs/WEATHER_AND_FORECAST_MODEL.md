@@ -34,7 +34,8 @@ declares 7 days, 16 days and 92 days.
 | Provider call fails        | (mode unchanged)    | SCENARIO           | –      | "Live forecast unavailable — showing your selected scenario"                              |
 
 Past dates beyond the forecast model's own 92-day window come from the provider's **reanalysis
-archive** (`archiveDays` in the capabilities; ERA5 from 1940 for Open-Meteo): real observed
+archive** (`archiveDays` in the capabilities — days back from now; the live Open-Meteo provider
+computes it from the ERA5 start, 1 January 1940): real observed
 conditions, labelled "Observed · reanalysis", at MEDIUM confidence because the grid is coarse
 (≈ 10–25 km) and some fields are missing (no visibility, no precipitation probability). It is what
 happened, never a forecast, and "return later and see the forecast become more specific" is

@@ -71,8 +71,8 @@ export class CesiumSceneHost implements SceneHost {
   private lastFps = 0;
   /** Last Mie coefficient applied (so a scrub tick does not allocate a Cartesian3 each frame). */
   private mieCoefficient: number | undefined;
-  /** Cesium's own Mie coefficient, restored when no scene asks for the physical dome. */
-  private readonly defaultMie: Cesium.Cartesian3;
+  /** Cesium's own Mie coefficients (dome, ground atmosphere), restored when no scene asks for the physical dome. */
+  private readonly defaultMie: { sky: Cesium.Cartesian3 | null; ground: Cesium.Cartesian3 };
   private overlayEntities: Cesium.Entity[] = [];
   private hiddenRunEntities: Cesium.Entity[] = [];
   private baseLayer: Cesium.ImageryLayer | null = null;
@@ -117,7 +117,12 @@ export class CesiumSceneHost implements SceneHost {
     globe.baseColor = new C.Color(0.16, 0.18, 0.2, 1);
     scene.backgroundColor = new C.Color(0.02, 0.03, 0.05, 1);
     scene.atmosphere.dynamicLighting = C.DynamicAtmosphereLightingType.SCENE_LIGHT;
-    this.defaultMie = C.Cartesian3.clone(scene.atmosphere.mieCoefficient);
+    this.defaultMie = {
+      sky: scene.skyAtmosphere
+        ? C.Cartesian3.clone(scene.skyAtmosphere.atmosphereMieCoefficient)
+        : null,
+      ground: C.Cartesian3.clone(scene.atmosphere.mieCoefficient),
+    };
     if (scene.skyAtmosphere) {
       scene.skyAtmosphere.show = true;
       scene.skyAtmosphere.perFragmentAtmosphere = true;
@@ -249,9 +254,14 @@ export class CesiumSceneHost implements SceneHost {
       // Cesium's own value comes back when a scene stops asking for one.
       this.mieCoefficient = a.mieCoefficient;
       const m = a.mieCoefficient;
-      const mie = m === undefined ? this.defaultMie : new this.C.Cartesian3(m, m, m);
-      if (sky) sky.atmosphereMieCoefficient = this.C.Cartesian3.clone(mie);
-      scene.atmosphere.mieCoefficient = this.C.Cartesian3.clone(mie);
+      const C = this.C;
+      if (sky) {
+        const skyMie = m === undefined ? this.defaultMie.sky : new C.Cartesian3(m, m, m);
+        if (skyMie) sky.atmosphereMieCoefficient = C.Cartesian3.clone(skyMie);
+      }
+      scene.atmosphere.mieCoefficient = C.Cartesian3.clone(
+        m === undefined ? this.defaultMie.ground : new C.Cartesian3(m, m, m),
+      );
     }
   }
 
