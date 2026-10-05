@@ -61,6 +61,18 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   02:54 UTC) come out within two minutes.
 - **"Tonight"** beside "Now": today at the start of astronomical night at the place (`setTonight`,
   tested).
+- **Timeline marker labels no longer pile up**: dawn, sunrise and golden hour (or golden hour,
+  sunset and dusk) sit minutes apart and their words overlapped in the panel; labels now fit the
+  measured track — words where they clear each other, glyphs on a second row where they do not,
+  a bare tick where even that would touch; sunrise and sunset keep their words first
+  (`markerLabels()`, tested).
+- **Fixes from the first browser pass**: picking a location crashed the page in development
+  (React's StrictMode replays effects into a torn-down Cesium scene — the stale apply is now
+  dropped and `setAtmosphere` tolerates a scene without a globe); without a database the
+  session endpoint logged an Auth.js `ClientFetchError` on every load (it now answers signed-out
+  like Auth.js does); `GET /api/projects` failed on Postgres (a bare `Date` in a SQL template —
+  the window bounds now go through the column mapping; this was the CI integration failure);
+  choosing a place searched for its own label and reopened the result list over the map.
 - **Play the day**: a play/pause button beside the timeline clock runs the day by itself at 2, 10
   or 60 day-minutes per second (the pace button cycles them, mid-play too) and starts over at
   midnight — a sunset watched, not scrubbed; the clock waits while the thumb is held and

@@ -5,12 +5,13 @@
  * keyboard/touch accessibility; astronomy updates on every tick (sub-millisecond), and the caller
  * debounces expensive renderer work.
  */
-import { useId, useMemo } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { DayEvents } from '@lightmap/astronomy';
 import { formatWallTime } from '@lightmap/astronomy';
 import { usePlannerStore } from '@/features/planner/store';
 import { terrainShade } from '@/features/planner/terrain-shade';
 import { darkSkyBand, type Spell } from '@/features/planner/dark-sky-band';
+import { markerLabels } from '@/features/planner/marker-labels';
 import { describeRate } from '@/features/planner/play';
 import { usePlayDay } from '@/features/planner/use-play-day';
 import { cx } from '@lightmap/ui';
@@ -42,7 +43,19 @@ interface Marker {
   /** Single glyph for narrow screens (distinct per event kind, not colour-only). */
   glyph: string;
   tone: 'sun' | 'twilight' | 'muted' | 'moon';
+  /** Who keeps a word when labels collide: sunrise/sunset 3, noon/night/Moon 2, the rest 1. */
+  priority: 1 | 2 | 3;
 }
+
+const PRIORITY: Record<string, 1 | 2 | 3> = {
+  sunrise: 3,
+  sunset: 3,
+  noon: 2,
+  nightEnd: 2,
+  nightStart: 2,
+  moonrise: 2,
+  moonset: 2,
+};
 
 function minutesOf(d: Date | null, dayStart: Date): number | null {
   if (!d) return null;
@@ -66,7 +79,7 @@ export function dayMarkers(
     const mins = minutesOf(d, ev.dayStart);
     // Only instants inside this civil day sit on the track.
     if (mins === null || mins < 0 || mins > dayLength) return null;
-    return { key, minutes: mins, label, short, glyph, tone };
+    return { key, minutes: mins, label, short, glyph, tone, priority: PRIORITY[key] ?? 1 };
   };
   return [
     m('nightEnd', ev.astronomicalDawn, 'Night ends (astronomical dawn)', 'Night', '☆', 'twilight'),
@@ -169,6 +182,25 @@ export function Timeline({
   const track = [band, shade, gradient].filter((l) => l !== null).join(', ');
   // Play the day: the clock runs by itself at a chosen pace and wraps at midnight.
   const play = usePlayDay(total);
+  // Marker labels fit the track's real width: words where they clear each other, glyphs on a
+  // second row where they do not, a bare tick where even that would touch.
+  const markerRow = useRef<HTMLDivElement>(null);
+  const [trackWidth, setTrackWidth] = useState(0);
+  useEffect(() => {
+    const el = markerRow.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width ?? 0;
+      setTrackWidth((prev) => (Math.abs(prev - w) < 1 ? prev : w));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const labels = useMemo(() => {
+    const out = new Map<string, { mode: 'word' | 'glyph' | 'tick'; row: 0 | 1 }>();
+    for (const l of markerLabels(markers, total, trackWidth)) out.set(l.key, l);
+    return out;
+  }, [markers, total, trackWidth]);
   // The band is colour; the thumb's value text says it too (plan §28 "non-colour-only states").
   const atMs = dayEvents ? dayEvents.dayStart.getTime() + minutes * 60_000 : null;
   const inDarkSky =
@@ -296,9 +328,10 @@ export function Timeline({
           {markers.length > 0 ? '. Square brackets jump to the previous or next event.' : '.'}
           {' The play button runs the clock by itself; its pace button sets the speed.'}
         </p>
-        <div className="relative mt-0.5 h-8" aria-hidden>
+        <div className="relative mt-0.5 h-9" aria-hidden ref={markerRow}>
           {markers.map((mk) => {
             const left = `${(mk.minutes / total) * 100}%`;
+            const label = labels.get(mk.key) ?? { mode: 'glyph' as const, row: 0 as const };
             return (
               <button
                 key={mk.key}
@@ -307,7 +340,7 @@ export function Timeline({
                 title={`${mk.label} ${dayEvents ? formatWallTime(new Date(dayEvents.dayStart.getTime() + mk.minutes * 60_000), timeZone) : ''}`}
                 onClick={() => setMinutes(mk.minutes)}
                 className={cx(
-                  'absolute min-w-6 -translate-x-1/2 text-[10px] leading-tight',
+                  'absolute top-0 min-w-6 -translate-x-1/2 text-[10px] leading-tight',
                   mk.tone === 'sun'
                     ? 'text-[var(--lm-sun)]'
                     : mk.tone === 'twilight'
@@ -317,10 +350,16 @@ export function Timeline({
                         : 'text-[var(--lm-text-faint)]',
                 )}
                 style={{ left }}
+                data-label={label.mode}
               >
-                <span className="mx-auto block h-1.5 w-px bg-current" />
-                <span className="hidden sm:block">{mk.short}</span>
-                <span className="block sm:hidden">{mk.glyph}</span>
+                <span
+                  className={cx('mx-auto block w-px bg-current', label.row === 1 ? 'h-5' : 'h-1.5')}
+                />
+                {label.mode === 'word' ? (
+                  <span className="block whitespace-nowrap">{mk.short}</span>
+                ) : label.mode === 'glyph' ? (
+                  <span className="block">{mk.glyph}</span>
+                ) : null}
               </button>
             );
           })}

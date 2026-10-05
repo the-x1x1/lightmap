@@ -52,7 +52,11 @@ Markers drawn along the track: night ends (astronomical dawn, ☆), dawn (civil)
 golden hour, solar noon, evening golden hour, sunset, blue hour / civil dusk, night begins
 (astronomical dusk, ★); with moon planning,
 moonrise and moonset in grey (☾ / ☽); with a terrain horizon, ▲ / ▽ Ridge. Markers move when
-the date or location changes. With moon planning the night portions of the track carry a faint
+the date or location changes. Their labels fit the track's measured width (`markerLabels()`,
+tested): a marker keeps its word when the word clears its neighbours, shows its glyph on a second
+row when it does not, and keeps only its tick (the tooltip still names it) where even a glyph
+would touch — sunrise and sunset win the space, then noon, night and the Moon, then dawn, dusk
+and golden hour. With moon planning the night portions of the track carry a faint
 violet **dark-sky band** over the spells when the Milky Way core can be shot (astronomical night,
 core 10° up, no bright Moon — the same rule as the dark windows), so the scrubber shows the
 shootable hours at a glance; inside a spell the thumb's `aria-valuetext` ends ", dark sky: Milky
@@ -616,7 +620,7 @@ Generic "Something went wrong" is not acceptable when a recovery message exists.
   panel. The collapsed mobile sheet is `inert`, so hidden controls cannot take focus. There are no
   modal dialogs in v0.1 (the paywall and sign-in render inline).
 - **Not colour-only**: badges, confidence levels, selected cards and radio options carry text or a
-  glyph in addition to colour; timeline markers show glyphs on phones.
+  glyph in addition to colour; timeline markers show glyphs wherever their words would collide.
 - **Reduced motion**: CSS transitions are disabled globally under `prefers-reduced-motion`; the
   renderer receives `render.reducedMotion` and jumps the camera instead of flying (tested); the
   preference is tracked live, not read once.
