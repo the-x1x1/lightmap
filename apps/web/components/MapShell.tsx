@@ -83,7 +83,7 @@ export function MapShell() {
   // Units, time-zone mode and default lens: this device's, then the profile's once signed in.
   usePreferencesSync();
   // A `/?viewpoint=<id>` link reopens a saved viewpoint once the account is known.
-  useViewpointLink(account.signedIn);
+  const viewpointLink = useViewpointLink(account);
   const [rendererInfo, setRendererInfo] = useState<RendererInfo>({
     mode: 'loading',
     qualityLabel: '—',
@@ -347,6 +347,19 @@ export function MapShell() {
             data-testid="panel-body"
             inert={!sheetOpen && !desktop ? true : undefined}
           >
+            {viewpointLink.kind === 'sign-in' ? (
+              <ErrorState
+                live="status"
+                title="Sign in to open this viewpoint"
+                body="The link points at a saved viewpoint in an account. Sign in from the account tab and it opens."
+              />
+            ) : viewpointLink.kind === 'missing' ? (
+              <ErrorState
+                live="status"
+                title="That viewpoint is not in your account"
+                body="The link points at a viewpoint this account cannot see — it may have been deleted, or it belongs to someone else."
+              />
+            ) : null}
             {panel === 'plan' ? (
               <div className="space-y-5">
                 {location ? (

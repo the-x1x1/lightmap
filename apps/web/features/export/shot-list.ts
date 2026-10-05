@@ -15,13 +15,16 @@ import {
 } from '@lightmap/astronomy';
 import { brand } from '@lightmap/config';
 import { compassLabel } from '@lightmap/geospatial';
+import { formatHeight, type DistanceUnits } from '@lightmap/scene';
 import type { ProjectDto, ViewpointDto } from '@/lib/api-types';
 import { viewpointUrl } from '@/features/projects/open-viewpoint';
 
 export interface ShotListOptions {
-  /** Shown in the footer. */
+  /** Shown in the footer and used for the per-viewpoint links. */
   appUrl: string;
   generatedAt: Date;
+  /** Heights in metres (default) or feet. */
+  units?: DistanceUnits;
 }
 
 function civil(d: Date, tz: string): string {
@@ -44,7 +47,11 @@ function weatherLine(v: ViewpointDto): string {
 }
 
 /** One viewpoint's block, in the place's own zone; with `appUrl`, a link that reopens it. */
-export function shotBlock(v: ViewpointDto, appUrl?: string): string[] {
+export function shotBlock(
+  v: ViewpointDto,
+  appUrl?: string,
+  units: DistanceUnits = 'metric',
+): string[] {
   const at = new Date(v.selectedDatetimeUtc);
   const tz = v.timezone;
   const w = utcToWallClock(at, tz);
@@ -58,17 +65,19 @@ export function shotBlock(v: ViewpointDto, appUrl?: string): string[] {
   const lines = [
     `${v.label}`,
     `  When:    ${civil(at, tz)} ${formatWallTime(at, tz)} (${tz})`,
-    `  Where:   ${v.latitude.toFixed(5)}, ${v.longitude.toFixed(5)}${v.elevationM !== null ? ` · ${Math.round(v.elevationM)} m` : ''}`,
-    `  Camera:  ${Math.round(v.headingDeg)}° ${compassLabel(v.headingDeg)}, pitch ${v.pitchDeg.toFixed(0)}°${v.focalLengthEquivalentMm ? `, ${v.focalLengthEquivalentMm} mm` : `, ${v.fieldOfViewDeg.toFixed(0)}° field`}`,
-    `  Sun:     ${sun.elevationDeg > -0.833 ? `${sun.elevationDeg.toFixed(0)}° up, ${Math.round(sun.azimuthDeg)}° ${compassLabel(sun.azimuthDeg)}` : `${Math.abs(sun.elevationDeg).toFixed(0)}° below the horizon`}`,
+    `  Where:   ${v.latitude.toFixed(5)}, ${v.longitude.toFixed(5)}${v.elevationM !== null ? ` · ${formatHeight(v.elevationM, units)}` : ''}`,
+    `  Camera:  ${Math.round(v.headingDeg)}° ${compassLabel(v.headingDeg)}, pitch ${Math.round(v.pitchDeg)}°${v.focalLengthEquivalentMm ? `, ${v.focalLengthEquivalentMm} mm` : `, ${Math.round(v.fieldOfViewDeg)}° field`}`,
+    `  Sun:     ${sun.elevationDeg > -0.833 ? `${Math.round(sun.elevationDeg)}° up, ${Math.round(sun.azimuthDeg)}° ${compassLabel(sun.azimuthDeg)}` : `${Math.round(Math.abs(sun.elevationDeg))}° below the horizon`}`,
     `  Day:     sunrise ${ev.sunrise ? formatWallTime(ev.sunrise, tz) : '—'} · sunset ${ev.sunset ? formatWallTime(ev.sunset, tz) : '—'}`,
   ];
   if (sun.elevationDeg <= -6) {
     const moon = moonPosition(at, v.latitude, v.longitude);
     const core = milkyWayCore(at, v.latitude, v.longitude);
+    // "Up" by the same rise/set threshold the planner and the core verdict use, so the two lines
+    // never contradict each other at the horizon.
     lines.push(
-      `  Moon:    ${moon.elevationDeg > 0 ? `${moon.elevationDeg.toFixed(0)}° up, ${Math.round(moon.azimuthDeg)}° ${compassLabel(moon.azimuthDeg)}` : 'down'}, ${Math.round(moon.illuminatedFraction * 100)} % lit`,
-      `  Core:    ${core.elevationDeg > 0 ? `${core.elevationDeg.toFixed(0)}° up, ${Math.round(core.azimuthDeg)}° ${compassLabel(core.azimuthDeg)}` : 'below the horizon'} — ${core.reason}`,
+      `  Moon:    ${core.moonUp ? `${Math.round(moon.elevationDeg)}° up, ${Math.round(moon.azimuthDeg)}° ${compassLabel(moon.azimuthDeg)}` : 'down'}, ${Math.round(moon.illuminatedFraction * 100)} % lit`,
+      `  Core:    ${core.elevationDeg > 0 ? `${Math.round(core.elevationDeg)}° up, ${Math.round(core.azimuthDeg)}° ${compassLabel(core.azimuthDeg)}` : 'below the horizon'} — ${core.reason}`,
     );
   }
   lines.push(`  Weather: ${weatherLine(v)}`);
@@ -90,16 +99,17 @@ export function buildShotList(
     .sort(byTime);
   const out: string[] = [
     `${project.name} — shot list`,
-    project.shootDate ? `Shoot date: ${project.shootDate}` : '',
+    ...(project.shootDate ? [`Shoot date: ${project.shootDate}`] : []),
     `${viewpoints.length} viewpoint${viewpoints.length === 1 ? '' : 's'}`,
     '',
   ];
   if (project.description)
     out.push('Notes:', ...project.description.split('\n').map((l) => `  ${l}`), '');
   for (const p of parents) {
-    out.push(...shotBlock(p, opts.appUrl), '');
+    out.push(...shotBlock(p, opts.appUrl, opts.units), '');
     const variants = viewpoints.filter((v) => v.parentViewpointId === p.id).sort(byTime);
-    for (const v of variants) out.push(...shotBlock(v, opts.appUrl).map((l) => `    ${l}`), '');
+    for (const v of variants)
+      out.push(...shotBlock(v, opts.appUrl, opts.units).map((l) => `    ${l}`), '');
   }
   out.push(
     `Sun and Moon from ephemeris; the Milky Way core from geometry (no sky-brightness model). Weather lines say what the viewpoint was saved with — a scenario is not a forecast.`,

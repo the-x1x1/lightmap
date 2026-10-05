@@ -105,7 +105,7 @@ export function ProjectNotes({
             }}
             rows={4}
             maxLength={NOTES_MAX}
-            placeholder="Access, parking, permits, the shot list — anything for the day."
+            placeholder="Access, parking, permits, what to bring — anything for the day."
             className="mt-1 block w-full rounded-[var(--lm-radius-sm)] border border-[var(--lm-panel-border)] bg-[var(--lm-panel-raised)] px-3 py-2 text-sm text-[var(--lm-text)] focus:outline-none focus-visible:[box-shadow:var(--lm-focus)]"
             data-testid="project-notes-text"
           />

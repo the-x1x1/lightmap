@@ -87,6 +87,14 @@ describe('shot list', () => {
     expect(text).toContain('  Weather: Forecast at save time (check again before the day)');
     expect(text).toContain('  Open:    https://app.example/?viewpoint=v3');
     expect(shotBlock(base).some((l) => l.startsWith('  Open:'))).toBe(false);
+    // No shoot date: no stray blank line between the title and the count; imperial heights.
+    const bare = buildShotList({ ...project, shootDate: null }, [base], {
+      appUrl: 'https://app.example',
+      generatedAt: new Date('2026-05-02T00:00:00Z'),
+      units: 'imperial',
+    });
+    expect(bare.startsWith('Kailua weekend — shot list\n1 viewpoint\n\n')).toBe(true);
+    expect(bare).toContain('  Where:   21.39700, -157.72700 · 10 ft');
     expect(text).toContain('a scenario is not a forecast.');
     expect(
       text.endsWith('Made with LightMap · https://app.example · 2026-05-02T00:00:00.000Z'),

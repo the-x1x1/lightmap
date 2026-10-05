@@ -3,8 +3,12 @@ import { act, renderHook } from '@testing-library/react';
 import { useSettled } from '@/lib/use-settled';
 
 describe('useSettled', () => {
-  beforeEach(() => vi.useFakeTimers());
-  afterEach(() => vi.useRealTimers());
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('takes the first value at once and follows later ones only after they hold still', () => {
     const { result, rerender } = renderHook(({ v }) => useSettled(v, 300), {

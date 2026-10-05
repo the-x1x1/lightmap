@@ -10,6 +10,7 @@ import { useAccount } from '@/features/account/use-account';
 import { useProject, useProjectMutations, useProjects } from '@/features/projects/use-projects';
 import { viewpointPayload } from '@/features/projects/viewpoint-payload';
 import { buildShotList } from '@/features/export/shot-list';
+import { downloadBlob, fileStem } from '@/features/export/download';
 import { restoreInputFor } from '@/features/projects/open-viewpoint';
 import { ApiRequestError } from '@/lib/client/api';
 import type { ViewpointDto } from '@/lib/api-types';
@@ -42,6 +43,7 @@ export function ProjectDrawer({
   const [status, setStatus] = useState('');
   const restore = usePlannerStore((s) => s.restore);
   const setPanel = usePlannerStore((s) => s.setPanel);
+  const units = usePlannerStore((s) => s.units);
 
   const focusHeading = (id: string) =>
     requestAnimationFrame(() => document.getElementById(id)?.focus({ preventScroll: true }));
@@ -108,28 +110,27 @@ export function ProjectDrawer({
     return buildShotList(selectedProject, selectedProject.viewpoints, {
       appUrl: typeof window !== 'undefined' ? window.location.origin : '',
       generatedAt: new Date(),
+      units,
     });
   }
   async function copyShotList() {
     const text = shotListText();
     if (!text) return;
+    setError(null);
     try {
       await navigator.clipboard.writeText(text);
       setStatus('Shot list copied to the clipboard.');
     } catch {
-      setStatus('Could not reach the clipboard — use Download instead.');
+      setError({ message: 'Could not reach the clipboard here — use Download instead.' });
     }
   }
   function downloadShotList() {
     const text = shotListText();
     if (!text || !selectedProject) return;
-    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${selectedProject.name.replace(/[^\w.-]+/g, '_') || 'shot-list'}-shot-list.txt`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    downloadBlob(
+      new Blob([text], { type: 'text/plain;charset=utf-8' }),
+      `${fileStem(selectedProject.name, 'project')}-shot-list.txt`,
+    );
     setStatus('Shot list downloaded.');
   }
   // Group shot variants under their parent; variants of a deleted/unknown parent surface top-level.
@@ -351,7 +352,7 @@ export function ProjectDrawer({
                 </>
               ) : (
                 <span className="text-xs text-[var(--lm-sun)]" data-testid="shot-list-locked">
-                  {shotListDecision.reason ?? 'Exports are part of Pro.'}
+                  The shot list export is part of Pro.
                 </span>
               )}
             </div>

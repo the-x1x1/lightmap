@@ -409,7 +409,9 @@ shots the Moon and the Milky Way core with the planner's verdict; the weather li
 viewpoint was saved with ("Scenario (not a forecast): overcast", "Forecast at save time (check
 again before the day)", "Observed conditions"); the notes on top; an honesty footer; and a
 link per block (`/?viewpoint=<id>`) that reopens the viewpoint in the planner for the signed-in
-owner (fetched owner-scoped, restored like "Open", the parameter then dropped from the address).
+owner (fetched owner-scoped, restored like "Open", the parameter then dropped from the address);
+signed out, the planner says to sign in first, and a viewpoint the account cannot see (deleted,
+or someone else's) is said so, never silently ignored.
 Pure and unit-tested (`buildShotList()`, `restoreInputFor()`); Free accounts see the reason
 instead of the buttons.
 
