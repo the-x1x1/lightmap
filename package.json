@@ -28,6 +28,7 @@
     "release": "node --experimental-strip-types scripts/release.ts",
     "retention": "node --env-file-if-exists=.env --experimental-strip-types scripts/retention.ts",
     "usage:report": "node --env-file-if-exists=.env --experimental-strip-types scripts/usage-report.ts",
+    "smoke:prod": "node --experimental-strip-types scripts/smoke-prod.ts",
     "renderer:smoke": "cd tools/renderer-smoke && node run.mjs",
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down"

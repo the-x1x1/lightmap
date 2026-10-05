@@ -39,9 +39,9 @@ jobs:
           echo "Wire one of: vercel deploy --prod · fly deploy · render deploy hook. See docs/RELEASE_PROCESS.md."
       - name: Smoke test
         if: env.NEXT_PUBLIC_APP_URL != ''
-        run: |
-          curl -fsS "$NEXT_PUBLIC_APP_URL/api/health" | tee health.json
-          node -e "const h=require('./health.json'); if(!h.ok) process.exit(1)"
+        # Health, security headers, capabilities, manifest + service worker, legal page, and that
+        # the profile and webhook routes refuse a stranger (packages/observability/src/smoke.ts).
+        run: pnpm smoke:prod "$NEXT_PUBLIC_APP_URL"
       - name: No production target yet
         if: env.DATABASE_URL == '' || env.NEXT_PUBLIC_APP_URL == ''
         run: |

@@ -4,6 +4,12 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Production smoke test** (plan §43): `pnpm smoke:prod <url>` checks a deployed build — health
+  and the tagged version, no fixture mode, the security headers and a CSP without `unsafe-eval`,
+  capabilities without a dev banner or dev sign-in, manifest and an uncacheable service worker,
+  the privacy page's placeholders, and that the profile route answers 401 and an unsigned Stripe
+  event 400 — as pure, unit-tested checks (`evaluateSmoke` in `@lightmap/observability`);
+  `release.yml` runs it after the deploy in place of the bare health curl.
 - **Sky from physics (Phase 4)**: the clear-sky colours of the overlay gradient, the preview chrome
   and the planning card now come from a single-scattering Rayleigh + Mie model
   (`skyRadiance()`, `clearSkyStops()` in `@lightmap/renderer`): a blue overhead and a pale

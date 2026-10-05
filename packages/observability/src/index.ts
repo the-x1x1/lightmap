@@ -181,3 +181,4 @@ export const DAILY_BUDGET_LIMITS: Record<
   climatology: { anonymous: 0, free: 0, pro: 60 },
 };
 export * from './sentry-envelope.ts';
+export * from './smoke.ts';

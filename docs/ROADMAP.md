@@ -74,7 +74,8 @@ Outstanding before commercial beta (plan §43):
   governing law, liability cap, refunds — still outstanding); ~~mobile usability pass~~ (code pass done: 16 px fields, safe
   areas, swipe handle, glance line, touch slop — device QA on real phones per `QA_PLAN.md`
   still to run); backups verified on the host;
-  ~~incident runbooks~~ (`RUNBOOKS.md`).
+  ~~incident runbooks~~ (`RUNBOOKS.md`); ~~end-to-end production smoke test~~ (`pnpm smoke:prod`,
+  run by `release.yml` after the deploy; host still to come).
 
 ## Phase 4 — Visual quality (started, 2+ releases)
 

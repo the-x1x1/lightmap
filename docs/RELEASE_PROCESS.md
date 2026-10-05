@@ -68,7 +68,12 @@ approval):
 3. **database migration**, forward-only, against `secrets.DATABASE_URL`;
 4. **deploy** — a host-specific step deliberately not coupled to app code (plan §13). Wire one of
    `vercel deploy --prod`, `fly deploy` or a Render deploy hook here;
-5. **smoke**: `GET /api/health` must return `ok: true`;
+5. **smoke**: `pnpm smoke:prod $NEXT_PUBLIC_APP_URL` — health (`ok`, database, the tagged
+   version, no fixture mode), the plan §29 security headers and a CSP without `unsafe-eval`,
+   capabilities (no dev banner, no dev sign-in), manifest and an uncacheable service worker, the
+   privacy page, and that `/api/account/profile` answers 401 and an unsigned Stripe event 400
+   (`packages/observability/src/smoke.ts`, unit tested); any `FAIL` stops the release, warnings
+   (no billing, no database, bracketed legal placeholders) are printed;
 6. GitHub release with generated notes.
 
 Order matters: migrate before deploy so the new code never meets an old schema; migrations must
