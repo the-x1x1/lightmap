@@ -40,6 +40,16 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
   await setDateTime(page, '2026-05-31', 12 * 60 + 30);
   await expect(page.getByTestId('timeline-time')).toHaveText('12:30');
   await expect(page.getByTestId('preview-time')).toHaveText('12:30');
+  // The day-of-year slider scrubs the seasons and keeps the time: day 151 is 31 May; winter
+  // solstice (day 355) drops the noon sun to ~45° at Kailua; back to 31 May for the rest.
+  const year = page.getByTestId('year-range');
+  await expect(year).toHaveValue('151');
+  await setRangeValue(year, 355);
+  await expect(page.getByTestId('date-input')).toHaveValue('2026-12-21');
+  await expect(page.getByTestId('timeline-time')).toHaveText('12:30');
+  await expect(page.getByTestId('preview-sun')).toContainText(/4[45]° up/);
+  await setRangeValue(year, 151);
+  await expect(page.getByTestId('date-input')).toHaveValue('2026-05-31');
 
   // Solar facts (USNO: transit 12:29, sun ~89° elevation, sunrise 05:48, sunset 19:09).
   await expect(page.getByTestId('preview-sunrise')).toHaveText('05:48');

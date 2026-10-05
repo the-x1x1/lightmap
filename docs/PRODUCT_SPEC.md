@@ -68,7 +68,11 @@ Keyboard, when the thumb has focus:
 The thumb has `aria-valuetext` carrying the time and the current light phase (for example
 "18:42, golden hour"). A "Now" action resets date and time to the present at the location.
 
-Date is chosen with a date control; DST-transition days and date-line locations are handled by the
+Date is chosen with a date control (±1 day, a date input, "Now") and a **day-of-year slider**
+under it — scrub the seasons the way the timeline scrubs the day (plan §44 "scrub through days,
+months, and seasons"): the date moves, the time of day stays, so the sun path, the shadows and
+the night-sky verdict swing through the year; month initials run under the track, the thumb's
+`aria-valuetext` is the human date. DST-transition days and date-line locations are handled by the
 astronomy package's time-zone helpers (see QA_PLAN for the covered cases).
 
 ## 4. Weather and atmosphere control (plan §4, §9)
