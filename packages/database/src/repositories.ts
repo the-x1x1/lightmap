@@ -37,15 +37,32 @@ export interface ProjectInput {
 
 export function projectsRepo(db: Db) {
   return {
-    async list(userId: string): Promise<Array<Project & { viewpointCount: number }>> {
+    /**
+     * The user's projects with their viewpoint counts; with `upcoming`, also how many viewpoints
+     * sit inside that window (the forecast horizon: "a shoot is close enough to forecast now").
+     */
+    async list(
+      userId: string,
+      upcoming?: { from: Date; to: Date },
+    ): Promise<Array<Project & { viewpointCount: number; upcomingViewpointCount: number }>> {
+      const from = upcoming?.from ?? new Date(0);
+      const to = upcoming?.to ?? new Date(0);
       const rows = await db
-        .select({ project: projects, viewpointCount: count(viewpoints.id) })
+        .select({
+          project: projects,
+          viewpointCount: count(viewpoints.id),
+          upcomingViewpointCount: sql<number>`count(${viewpoints.id}) filter (where ${viewpoints.selectedDatetimeUtc} >= ${from} and ${viewpoints.selectedDatetimeUtc} <= ${to})`,
+        })
         .from(projects)
         .leftJoin(viewpoints, eq(viewpoints.projectId, projects.id))
         .where(and(eq(projects.userId, userId), isNull(projects.archivedAt)))
         .groupBy(projects.id)
         .orderBy(desc(projects.updatedAt));
-      return rows.map((r) => ({ ...r.project, viewpointCount: Number(r.viewpointCount) }));
+      return rows.map((r) => ({
+        ...r.project,
+        viewpointCount: Number(r.viewpointCount),
+        upcomingViewpointCount: upcoming ? Number(r.upcomingViewpointCount) : 0,
+      }));
     },
     async count(userId: string): Promise<number> {
       const [r] = await db

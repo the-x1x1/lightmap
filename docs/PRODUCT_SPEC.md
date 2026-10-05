@@ -348,7 +348,9 @@ app-generated thumbnail when the renderer can capture one. Reopening a viewpoint
 location, UTC instant (rendered in the location's zone), camera and scenario exactly.
 
 **As the shoot approaches** (North Star: "return later and see the forecast become more
-specific"): each saved viewpoint card compares the weather basis it was saved with against what
+specific"): a project card says how many of its viewpoints now sit inside the reliable forecast
+window ("◉ 2 inside the forecast window", counted by the server against the provider's horizon),
+and each saved viewpoint card compares the weather basis it was saved with against what
 the provider can give today — "◉ Forecast available now — open to see it" once a scenario-saved
 date is inside the reliable horizon, "Extended forecast available (low confidence)" in days 8–16,
 "Date has passed — observed conditions on open" afterwards (`forecastNudge()`, from the same

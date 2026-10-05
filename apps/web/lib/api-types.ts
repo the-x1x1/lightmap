@@ -96,6 +96,8 @@ export interface ProjectDto {
   createdAt: string;
   updatedAt: string;
   viewpointCount: number;
+  /** Viewpoints whose instant is inside the provider's reliable forecast horizon right now. */
+  upcomingViewpointCount: number;
 }
 
 export interface ViewpointDto {

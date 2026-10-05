@@ -2,7 +2,9 @@ import 'server-only';
 import type { Project, Viewpoint } from '@lightmap/database';
 import type { ProjectDto, ViewpointDto } from '@/lib/api-types';
 
-export function projectDto(p: Project & { viewpointCount?: number }): ProjectDto {
+export function projectDto(
+  p: Project & { viewpointCount?: number; upcomingViewpointCount?: number },
+): ProjectDto {
   return {
     id: p.id,
     name: p.name,
@@ -11,6 +13,7 @@ export function projectDto(p: Project & { viewpointCount?: number }): ProjectDto
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
     viewpointCount: p.viewpointCount ?? 0,
+    upcomingViewpointCount: p.upcomingViewpointCount ?? 0,
   };
 }
 

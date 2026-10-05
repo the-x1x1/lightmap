@@ -34,6 +34,13 @@ export function ProjectCard({
       <span className="mt-0.5 block text-xs text-[var(--lm-text-muted)]">
         {project.shootDate ? `Shoot ${project.shootDate} · ` : ''}
         {project.viewpointCount} viewpoint{project.viewpointCount === 1 ? '' : 's'}
+        {project.upcomingViewpointCount > 0 ? (
+          <span className="text-[var(--lm-ok)]" data-testid="project-upcoming">
+            {' · '}
+            <span aria-hidden>◉ </span>
+            {project.upcomingViewpointCount} inside the forecast window
+          </span>
+        ) : null}
       </span>
     </button>
   );

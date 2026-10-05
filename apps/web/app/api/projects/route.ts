@@ -2,6 +2,7 @@ import { can } from '@lightmap/entitlements';
 import { auditRepo, projectsRepo } from '@lightmap/database';
 import { errorResponse, forbidByEntitlement, json, readJson, v } from '@/lib/server/http';
 import { requireDb, requireUser } from '@/lib/server/session';
+import { getServices } from '@/lib/server/services';
 import { projectDto } from '@/lib/server/dto';
 
 export const dynamic = 'force-dynamic';
@@ -9,7 +10,13 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const ctx = await requireUser();
-    const list = await projectsRepo(requireDb()).list(ctx.user.id);
+    // "Return later as the shoot approaches": count the viewpoints a forecast now covers.
+    const now = new Date();
+    const horizonHours = getServices().weather.getCapabilities().reliableHorizonHours;
+    const list = await projectsRepo(requireDb()).list(ctx.user.id, {
+      from: now,
+      to: new Date(now.getTime() + horizonHours * 3_600_000),
+    });
     return json({ projects: list.map(projectDto) });
   } catch (e) {
     return errorResponse(e);

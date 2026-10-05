@@ -11,7 +11,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   02:54 UTC) come out within two minutes.
 - **Moonrise and moonset on the timeline** (moon planning): grey ☾ / ☽ markers beside the sun's,
   clickable like them; only instants inside the civil day are placed.
-- **Forecast nudges on saved viewpoints**: a card whose date has come inside the forecast horizon
+- **Forecast nudges on saved viewpoints**: a project card counts the viewpoints now inside the
+  reliable forecast window ("◉ 2 inside the forecast window", `upcomingViewpointCount` from the
+  list query); a viewpoint card whose date has come inside the forecast horizon
   since it was saved says "◉ Forecast available now — open to see it" (or the extended-range
   wording), and a passed date says observed conditions are there — the North Star's "return later
   and see the forecast become more specific", from the planner's own horizon rule

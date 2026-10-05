@@ -79,6 +79,18 @@ run('repositories (integration)', () => {
       thumbnailDataUrl: 'data:image/jpeg;base64,AAAA',
     });
     expect(await vps.countInProject(alice, p.id)).toBe(1);
+    // The list counts viewpoints inside a window (the forecast horizon) when given one.
+    const inWindow = await projects.list(alice, {
+      from: new Date('2026-05-31T00:00:00Z'),
+      to: new Date('2026-06-01T00:00:00Z'),
+    });
+    expect(inWindow.find((x) => x.id === p.id)?.upcomingViewpointCount).toBe(1);
+    const outside = await projects.list(alice, {
+      from: new Date('2026-06-02T00:00:00Z'),
+      to: new Date('2026-06-09T00:00:00Z'),
+    });
+    expect(outside.find((x) => x.id === p.id)?.upcomingViewpointCount).toBe(0);
+    expect((await projects.list(alice)).find((x) => x.id === p.id)?.upcomingViewpointCount).toBe(0);
     const got = await vps.get(alice, v.id);
     expect(got.snapshot?.thumbnailDataUrl).toBe('data:image/jpeg;base64,AAAA');
     await vps.saveSnapshot(v.id, {
