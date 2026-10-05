@@ -127,6 +127,28 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
   // The Light stat shows the colour temperature; the phase is its sub-line.
   await expect(page.getByTestId('preview-light-sub')).toContainText('blue hour');
   await expect(overlay).toHaveAttribute('data-sun-elevation', /^-/);
+
+  // Play the day: the clock runs by itself (10 day-minutes per second), pauses, and keeps the
+  // pace button's choice (2 min/s → 10 → 60 → 2).
+  await setDateTime(page, '2026-05-31', 18 * 60);
+  const play = page.getByTestId('timeline-play');
+  await expect(play).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByTestId('timeline-rate')).toHaveText('10 min/s');
+  await play.click();
+  await expect(play).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('timeline-time')).toHaveText(/^18:(0[5-9]|1\d|2\d)$/, {
+    timeout: 5000,
+  });
+  await play.click();
+  await expect(play).toHaveAttribute('aria-pressed', 'false');
+  const held = await page.getByTestId('timeline-time').textContent();
+  await page.waitForTimeout(600);
+  await expect(page.getByTestId('timeline-time')).toHaveText(held ?? '');
+  await page.getByTestId('timeline-rate').click();
+  await expect(page.getByTestId('timeline-rate')).toHaveText('60 min/s');
+  await page.getByTestId('timeline-rate').click();
+  await expect(page.getByTestId('timeline-rate')).toHaveText('2 min/s');
+  await setDateTime(page, '2026-05-31', 19 * 60 + 30);
 });
 
 test('a date beyond the forecast horizon is labelled a scenario, never a forecast', async ({

@@ -11,6 +11,8 @@ import { formatWallTime } from '@lightmap/astronomy';
 import { usePlannerStore } from '@/features/planner/store';
 import { terrainShade } from '@/features/planner/terrain-shade';
 import { darkSkyBand, type Spell } from '@/features/planner/dark-sky-band';
+import { describeRate } from '@/features/planner/play';
+import { usePlayDay } from '@/features/planner/use-play-day';
 import { cx } from '@lightmap/ui';
 
 export interface TimelineProps {
@@ -165,6 +167,8 @@ export function Timeline({
     [dayEvents, darkSky],
   );
   const track = [band, shade, gradient].filter((l) => l !== null).join(', ');
+  // Play the day: the clock runs by itself at a chosen pace and wraps at midnight.
+  const play = usePlayDay(total);
   // The band is colour; the thumb's value text says it too (plan §28 "non-colour-only states").
   const atMs = dayEvents ? dayEvents.dayStart.getTime() + minutes * 60_000 : null;
   const inDarkSky =
@@ -184,14 +188,46 @@ export function Timeline({
         <label htmlFor={id} className="text-xs uppercase tracking-wide text-[var(--lm-text-muted)]">
           Time
         </label>
-        <output
-          htmlFor={id}
-          className="font-mono text-2xl tabular-nums"
-          aria-live="off"
-          data-testid="timeline-time"
-        >
-          {timeLabel}
-        </output>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={play.toggle}
+            aria-pressed={play.playing}
+            aria-label={play.playing ? 'Pause' : 'Play the day'}
+            title={
+              play.playing
+                ? 'Pause'
+                : `Play the day — the clock runs at ${describeRate(play.rate)} and starts over at midnight`
+            }
+            className={cx(
+              'inline-flex h-9 w-9 items-center justify-center rounded-[var(--lm-radius-sm)] text-sm transition-colors focus-visible:outline-none focus-visible:[box-shadow:var(--lm-focus)]',
+              play.playing
+                ? 'bg-[var(--lm-panel-raised)] text-[var(--lm-text)]'
+                : 'text-[var(--lm-text-muted)] hover:text-[var(--lm-text)]',
+            )}
+            data-testid="timeline-play"
+          >
+            <span aria-hidden>{play.playing ? '❚❚' : '▶'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={play.cycleRate}
+            aria-label={`Playback pace ${describeRate(play.rate)}; change`}
+            title="Playback pace: day-minutes per second"
+            className="h-9 rounded-[var(--lm-radius-sm)] px-1.5 font-mono text-xs tabular-nums text-[var(--lm-text-faint)] hover:text-[var(--lm-text)] focus-visible:outline-none focus-visible:[box-shadow:var(--lm-focus)]"
+            data-testid="timeline-rate"
+          >
+            {describeRate(play.rate)}
+          </button>
+          <output
+            htmlFor={id}
+            className="ml-1 font-mono text-2xl tabular-nums"
+            aria-live="off"
+            data-testid="timeline-time"
+          >
+            {timeLabel}
+          </output>
+        </div>
       </div>
       <div className="relative">
         <div

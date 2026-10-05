@@ -73,6 +73,14 @@ Keyboard, when the thumb has focus:
 The thumb has `aria-valuetext` carrying the time and the current light phase (for example
 "18:42, golden hour"). A "Now" action resets date and time to the present at the location.
 
+**Play the day** (plan §1 "scrub the clock forward and watch the scene change"). A play/pause
+button beside the clock runs the timeline by itself at a chosen pace — 2, 10 or 60 day-minutes
+per real second (a golden hour in half a minute; the whole day in 2½ minutes or in 24 s), cycled
+by the pace button — and starts over at midnight, so a sunset can be watched again. The clock
+moves through the store like a scrub, so the sun, shadows, sky, markers and the preview all
+follow; a drag while playing is honoured and playback continues from where the thumb was dropped.
+Playback stops when the timeline leaves the screen (`usePlayDay`, `advance()`; tested).
+
 Date is chosen with a date control (±1 day, a date input, "Now", and "Tonight" — today at the
 start of astronomical night here, an hour after sunset where the sky never gets that dark, 21:00
 without a place) and a **day-of-year slider**

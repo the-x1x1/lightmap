@@ -61,6 +61,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   02:54 UTC) come out within two minutes.
 - **"Tonight"** beside "Now": today at the start of astronomical night at the place (`setTonight`,
   tested).
+- **Play the day**: a play/pause button beside the timeline clock runs the day by itself at 2, 10
+  or 60 day-minutes per second (the pace button cycles them) and starts over at midnight — a
+  sunset watched, not scrubbed; a drag while playing is honoured (`usePlayDay`, `advance()`,
+  tested; E2E).
 - **Field conditions in the weather details**: the wind with the quarter it blows from ("4 m/s
   from the ENE", "calm"), the humidity, and visibility in sensible units ("600 m", "4.5 km",
   "24 km"); notes when there is something to act on — a fresh breeze and up ("weigh the tripod
