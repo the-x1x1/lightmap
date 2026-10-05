@@ -61,12 +61,12 @@ export function ProjectNotes({
       save({ shootDate: value || null });
     }, DATE_SETTLE_MS);
   };
-  useEffect(
-    () => () => {
-      if (dateTimer.current) clearTimeout(dateTimer.current);
-    },
-    [],
-  );
+  useEffect(() => {
+    const timer = dateTimer;
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, []);
 
   return (
     <details className="group" data-testid="project-notes">
