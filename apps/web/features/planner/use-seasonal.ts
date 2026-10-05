@@ -4,8 +4,7 @@
  * place and year, since two solstice day computations are a few hundred solar positions.
  */
 import { useMemo } from 'react';
-import { seasonalEnvelope, type SeasonalEnvelope } from '@lightmap/scene';
-import type { SceneState } from '@lightmap/scene';
+import { seasonalEnvelope, type SceneState, type SeasonalEnvelope } from '@lightmap/scene';
 
 export function useSeasonalEnvelope(scene: SceneState): SeasonalEnvelope {
   const lat = scene.location.point.latitude;

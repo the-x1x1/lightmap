@@ -29,7 +29,9 @@ describe('seasonal envelope (plan §1 "seasonal path")', () => {
       date: { year: 2026, month: 6, day: 21 },
     });
     expect(e.june.daylightMinutes).toBe(ev.daylightMinutes);
-    expect(e.june.noonElevationDeg).toBe(ev.maxElevationDeg);
+    // Noon is the transit itself: at or a fraction above the day's sampled maximum.
+    expect(e.june.noonElevationDeg).toBeGreaterThanOrEqual(ev.maxElevationDeg - 1e-9);
+    expect(e.june.noonElevationDeg - ev.maxElevationDeg).toBeLessThan(0.5);
   });
 
   it('southern hemisphere: the December noon is the high one; the sweep stays the shorter arc', () => {
@@ -48,8 +50,19 @@ describe('seasonal envelope (plan §1 "seasonal path")', () => {
     expect(e.sunsetRange).toBeNull();
     expect(e.december.noonElevationDeg).toBeLessThan(0);
     expect(describeSeasonalEnvelope(e)).toBe(
-      'June: midnight sun, December: polar night; noon -3°–44°',
+      'June: midnight sun; December: polar night; noon -3°–44°',
     );
+    // Just inside the Arctic circle: midnight sun in June, an ordinary (low) December day — the
+    // December bearings are still given, and a noon a hair under 0° never reads "-0°".
+    const bodo = seasonalEnvelope({ latitude: 67.28, longitude: 14.4 }, 'Europe/Oslo', 2026);
+    expect(bodo.june.polar).toBe('midnight-sun');
+    expect(bodo.december.polar).toBe('normal');
+    expect(bodo.sunriseRange).toBeNull();
+    const line = describeSeasonalEnvelope(bodo);
+    expect(line).toMatch(
+      /^June: midnight sun; December: sunrise \d+° \([A-Z]+\), sunset \d+° \([A-Z]+\); noon /,
+    );
+    expect(line).not.toContain('-0°');
   });
 
   it('reads out as one line with compass names', () => {

@@ -3,7 +3,7 @@
  * camera) apply immediately on every scrub tick; expensive things (terrain detail, shadow map
  * size, provider swaps) are debounced and diffed (plan §4 "debounce expensive visual refresh").
  */
-import { computeDayEvents, sunPosition } from '@lightmap/astronomy';
+import { localDayBounds, sunPosition } from '@lightmap/astronomy';
 import {
   aboveTerrain,
   type CameraState,
@@ -356,17 +356,11 @@ export function seasonPathsForYear(
   stepMinutes = 15,
 ): HostOverlay['seasonPaths'] {
   const year = Number(scene.dayEvents.date.slice(0, 4));
-  const { latitude, longitude } = scene.location.point;
   const out: HostOverlay['seasonPaths'] = [];
   for (const month of [6, 12] as const) {
-    const ev = computeDayEvents({
-      latitude,
-      longitude,
-      timeZone: scene.location.timeZone,
-      date: { year, month, day: 21 },
-    });
+    const { start, end } = localDayBounds({ year, month, day: 21 }, scene.location.timeZone);
     const path: Array<{ azimuthDeg: number; elevationDeg: number }> = [];
-    for (let t = ev.dayStart.getTime(); t <= ev.dayEnd.getTime(); t += stepMinutes * 60_000) {
+    for (let t = start.getTime(); t <= end.getTime(); t += stepMinutes * 60_000) {
       const s = sunAt(new Date(t), scene);
       if (s.elevationDeg > -1) path.push(s);
     }

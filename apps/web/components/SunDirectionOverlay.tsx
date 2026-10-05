@@ -12,9 +12,11 @@ import { sunPosition } from '@lightmap/astronomy';
 import { useMemo } from 'react';
 import { useSeasonalEnvelope } from '@/features/planner/use-seasonal';
 
+/** Bearing (0 = north, clockwise) → SVG angle with north at the top. */
+const rad = (d: number) => ((d - 90) * Math.PI) / 180;
+
 /** An SVG arc on a circle of radius `radius` about (c, c), clockwise from bearing a to b. */
 function bearingArc(c: number, radius: number, range: [number, number]): string {
-  const rad = (d: number) => ((d - 90) * Math.PI) / 180;
   const [a, b] = range;
   const large = rangeWidthDeg(range) > 180 ? 1 : 0;
   return `M${(c + radius * Math.cos(rad(a))).toFixed(1)},${(c + radius * Math.sin(rad(a))).toFixed(1)} A${radius},${radius} 0 ${large} 1 ${(c + radius * Math.cos(rad(b))).toFixed(1)},${(c + radius * Math.sin(rad(b))).toFixed(1)}`;
@@ -31,7 +33,6 @@ export function SunDirectionOverlay({ scene, compact }: { scene: SceneState; com
   const up = el > -0.833;
   // Sun marker: radius shrinks toward the centre as the sun climbs (an "orthographic" sky dome).
   const sunR = r * Math.cos(Math.max(0, el) * (Math.PI / 180));
-  const rad = (d: number) => ((d - 90) * Math.PI) / 180;
   const sx = c + sunR * Math.cos(rad(az));
   const sy = c + sunR * Math.sin(rad(az));
   const path = useMemo(() => {
@@ -112,6 +113,22 @@ export function SunDirectionOverlay({ scene, compact }: { scene: SceneState; com
           stroke="rgba(255,255,255,0.25)"
           strokeWidth={1}
         />
+        {/* Seasonal envelope (plan §1): the year's sunrise and sunset bearings as rim arcs,
+            under the compass letters. */}
+        {[seasons.sunriseRange, seasons.sunsetRange].map((range, i) =>
+          range ? (
+            <path
+              key={i}
+              d={bearingArc(c, r + 2, range)}
+              fill="none"
+              stroke="var(--lm-sun)"
+              strokeOpacity={0.45}
+              strokeWidth={2}
+              strokeLinecap="butt"
+              data-testid={i === 0 ? 'seasonal-sunrise-arc' : 'seasonal-sunset-arc'}
+            />
+          ) : null,
+        )}
         {['N', 'E', 'S', 'W'].map((n, i) => (
           <text
             key={n}
@@ -125,21 +142,6 @@ export function SunDirectionOverlay({ scene, compact }: { scene: SceneState; com
             {n}
           </text>
         ))}
-        {/* Seasonal envelope (plan §1): the year's sunrise and sunset bearings as rim arcs. */}
-        {[seasons.sunriseRange, seasons.sunsetRange].map((range, i) =>
-          range ? (
-            <path
-              key={i}
-              d={bearingArc(c, r + 3, range)}
-              fill="none"
-              stroke="var(--lm-sun)"
-              strokeOpacity={0.45}
-              strokeWidth={compact ? 2 : 3}
-              strokeLinecap="butt"
-              data-testid={i === 0 ? 'seasonal-sunrise-arc' : 'seasonal-sunset-arc'}
-            />
-          ) : null,
-        )}
         {path ? (
           <path
             d={path}
