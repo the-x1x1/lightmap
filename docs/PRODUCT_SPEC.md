@@ -206,6 +206,13 @@ focal-length preset, and mode.
   "Focus at hyperfocal", and never blurs the preview: the numbers describe the photograph, the
   frame stays sharp so its geometry is readable.
 
+- **Level & thirds guide** (viewpoint mode, free): a rule-of-thirds grid, the true-level line
+  (elevation 0; with no roll it is straight, at `y = −tan(pitch) / tan(½·vFOV)`) and the modelled
+  terrain skyline — the same sampled ridge the "behind terrain" timings use, labelled "terrain
+  only". One click pitches the camera so level sits on the low third, the centre or the high
+  third (`pitchForHorizonAt`). The status line says where level is ("Level on the low third",
+  "Level is below the frame").
+
 No lens optical simulation (distortion, rendered blur) in v1.
 
 ### 8a. Light finder — reverse planning (plan §26)

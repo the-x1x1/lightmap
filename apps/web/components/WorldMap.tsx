@@ -14,6 +14,7 @@ import type { GeoPoint } from '@lightmap/geospatial';
 import type { HostStats, RendererCapabilities } from '@lightmap/renderer';
 import { SunDirectionOverlay } from './SunDirectionOverlay';
 import { SkyBackdrop } from './SkyBackdrop';
+import { LevelGuide } from './LevelGuide';
 import { EmptyState } from './states/EmptyState';
 import { cx } from '@lightmap/ui';
 
@@ -28,7 +29,8 @@ export interface RendererInfo {
   capture: (maxWidth?: number) => Promise<string | null>;
   /** Terrain heights at a tile level, for the terrain horizon; null when no host is running. */
   sampleHeights:
-    ((points: readonly GeoPoint[], level: number) => Promise<Array<number | null>>) | null;
+    | ((points: readonly GeoPoint[], level: number) => Promise<Array<number | null>>)
+    | null;
 }
 
 export interface WorldMapProps {
@@ -48,6 +50,7 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
   const finderPicking = usePlannerStore((s) => s.finderPicking);
   const finderTarget = usePlannerStore((s) => s.finderTarget);
   const setFinderTarget = usePlannerStore((s) => s.setFinderTarget);
+  const showLevelGuide = usePlannerStore((s) => s.showLevelGuide);
   const setQualityFromGovernor = useRef<
     (q: {
       shadowMapSize: 1024 | 2048 | 4096;
@@ -290,6 +293,9 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
         >
           Click where the sun (or moon) should be in this view.
         </p>
+      ) : null}
+      {showLevelGuide && camera.mode === 'viewpoint' && !overlayMode && location ? (
+        <LevelGuide container={container} />
       ) : null}
       {finderTarget && camera.mode === 'viewpoint' && !overlayMode ? (
         <FinderReticle

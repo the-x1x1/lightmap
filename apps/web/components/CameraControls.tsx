@@ -1,5 +1,5 @@
 'use client';
-/** Viewpoint camera (plan §5): map/viewpoint toggle, heading dial, pitch, lens presets, sensor format, depth of field. */
+/** Viewpoint camera (plan §5): map/viewpoint toggle, heading dial, pitch + level guide, lens presets, sensor format, depth of field. */
 import { useState } from 'react';
 import {
   FOCAL_LENGTH_PRESETS_MM,
@@ -23,6 +23,8 @@ export function CameraControls({ advancedAllowed }: { advancedAllowed: boolean }
   const sensorWidthMm = usePlannerStore((s) => s.sensorWidthMm);
   const setSensorWidth = usePlannerStore((s) => s.setSensorWidth);
   const setActualFocalLength = usePlannerStore((s) => s.setActualFocalLength);
+  const showLevelGuide = usePlannerStore((s) => s.showLevelGuide);
+  const setShowLevelGuide = usePlannerStore((s) => s.setShowLevelGuide);
   const isVp = camera.mode === 'viewpoint';
   const sensor = SENSOR_PRESETS.find((x) => Math.abs(x.widthMm - sensorWidthMm) < 0.05);
   // The lens box is "controlled while typing": it shows the typed text only while it still maps
@@ -132,6 +134,15 @@ export function CameraControls({ advancedAllowed }: { advancedAllowed: boolean }
             onChange={(e) => setPitch(Number(e.target.value))}
             aria-valuetext={`${Math.abs(Math.round(camera.pitchDeg))} degrees ${camera.pitchDeg >= 0 ? 'up' : 'down'}`}
           />
+          <label className="mt-2 flex items-center gap-2 text-sm text-[var(--lm-text-muted)]">
+            <input
+              type="checkbox"
+              checked={showLevelGuide}
+              onChange={(e) => setShowLevelGuide(e.target.checked)}
+              data-testid="level-guide-toggle"
+            />
+            Level &amp; thirds guide
+          </label>
         </div>
       ) : null}
       <div>

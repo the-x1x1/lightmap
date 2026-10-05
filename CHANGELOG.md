@@ -10,6 +10,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   `depthOfField()`, `hyperfocalDistanceM()`, `circleOfConfusionMm()` (diagonal ÷ 1500) in
   `@lightmap/scene`, checked against the textbook 50 mm f/8 case; sensor presets now carry their
   height. The preview is never blurred.
+- **Horizon levelling (Phase 6)**: "Level & thirds guide" in the viewpoint view — a
+  rule-of-thirds grid, the true-level line and the modelled terrain skyline (dotted, "terrain
+  only"), with buttons that pitch the camera so level sits on the low third, the centre or the
+  high third. `levelLineY()`, `pitchForHorizonAt()`, `skylinePath()` in `@lightmap/scene`.
 
 ## v0.1.0 — 2026-09-25
 

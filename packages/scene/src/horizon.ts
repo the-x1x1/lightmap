@@ -155,7 +155,10 @@ export function horizonProfileFromSamples(
 }
 
 /** Terrain-horizon elevation at any azimuth (linear interpolation, wrapping at 360°). */
-export function horizonElevationAt(profile: HorizonProfile, azimuthDeg: number): number {
+export function horizonElevationAt(
+  profile: Pick<HorizonProfile, 'stepDeg' | 'elevationDeg'>,
+  azimuthDeg: number,
+): number {
   const n = profile.elevationDeg.length;
   if (n === 0) return 0;
   const a = (((azimuthDeg % 360) + 360) % 360) / profile.stepDeg;

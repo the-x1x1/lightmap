@@ -41,6 +41,8 @@ export interface PlannerState {
   reducedMotion: boolean;
   /** Sensor width the photographer's own lens numbers refer to (full frame = 36). Not persisted per viewpoint: saved viewpoints store FOV and the full-frame equivalent. */
   sensorWidthMm: number;
+  /** Viewpoint overlay: true level, rule-of-thirds grid and the modelled skyline (Phase 6 levelling). */
+  showLevelGuide: boolean;
   /** Depth-of-field inputs (Phase 6): f-number and focus distance from the focal plane, metres. */
   aperture: number;
   focusDistanceM: number;
@@ -72,6 +74,7 @@ export interface PlannerActions {
   setSensorWidth: (mm: number) => void;
   /** A lens on the chosen sensor ("my 16 mm"), converted to FOV and full-frame equivalent. */
   setActualFocalLength: (mm: number) => void;
+  setShowLevelGuide: (v: boolean) => void;
   setAperture: (n: number) => void;
   setFocusDistance: (m: number) => void;
   setPanel: (panel: PlannerState['panel']) => void;
@@ -112,6 +115,7 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
   panel: 'plan',
   sheetOpen: true,
   sensorWidthMm: 36,
+  showLevelGuide: false,
   aperture: 8,
   focusDistanceM: 10,
   finderTarget: null,
@@ -195,6 +199,9 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
         focalLengthMm: Math.round(focalLengthForFov(fov) * 10) / 10,
       },
     });
+  },
+  setShowLevelGuide(v) {
+    set({ showLevelGuide: v });
   },
   setAperture(n) {
     if (Number.isFinite(n)) set({ aperture: Math.max(0.95, Math.min(64, n)) });

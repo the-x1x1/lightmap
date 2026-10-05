@@ -123,7 +123,11 @@ Also delivered: **depth of field** in "Your camera" — aperture and focus dista
 limits for the real lens on the chosen sensor, whether the horizon is sharp, and a one-click
 hyperfocal focus (`depthOfField()` in `@lightmap/scene`, textbook cases tested).
 
-Next: horizon levelling remains future.
+Also delivered: **horizon levelling** — a level & thirds guide in the viewpoint view with the
+true-level line, the modelled skyline and one-click horizon placement on a third
+(`levelLineY`, `pitchForHorizonAt`, `skylinePath`; tested against `frameCoordinates`).
+
+Next: camera roll (tilted horizons) and a live device-level reading once the PWA has field mode.
 
 ## Phase 7 — Long-range climatology (delivered, unreleased)
 
