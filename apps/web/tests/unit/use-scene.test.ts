@@ -28,6 +28,7 @@ const caps: CapabilitiesResponse = {
   devBanner: true,
   flags: {},
   billingConfigured: false,
+  analytics: false,
   authMethods: { email: false, google: false, devLogin: false },
 };
 

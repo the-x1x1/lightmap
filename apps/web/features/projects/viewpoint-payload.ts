@@ -1,6 +1,10 @@
 import type { SceneState } from '@lightmap/scene';
 
-/** Build the save body from the current SceneState (plan §4 "Each project can contain saved viewpoints"). */
+/**
+ * Build the save body from the current SceneState (plan §4 "Each project can contain saved
+ * viewpoints"). The saved zone is the place's own (`scene.location.timeZone`), whichever zone
+ * the planner was showing times in.
+ */
 export function viewpointPayload(
   scene: SceneState,
   label: string,

@@ -54,7 +54,10 @@ Delivered: Auth.js with magic-link email, optional Google, dev sign-in (non-prod
 projects and viewpoints with owner-scoped repositories and entitlement-checked limits; Stripe
 Checkout and Customer Portal routes; idempotent webhook pipeline; central entitlement derivation
 and `GET /api/account/entitlements`; usage counters and daily budgets; account-deletion request;
-legal placeholders wired into the app.
+legal placeholders wired into the app; profile preferences (units, time-zone mode, default lens;
+`GET/PATCH /api/account/profile`, kept on the device when signed out); product analytics (plan
+§31: the eight named events as same-origin beacons to `/api/analytics`, sanitised server-side,
+`ANALYTICS_SINK` off in production by default, Do-Not-Track and Global Privacy Control honoured).
 
 Outstanding before commercial beta (plan §43):
 

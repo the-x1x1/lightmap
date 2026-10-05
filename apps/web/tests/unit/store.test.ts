@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { selectedUtc, usePlannerStore } from '@/features/planner/store';
+import {
+  deviceTimeZone,
+  effectiveTimeZone,
+  selectedUtc,
+  usePlannerStore,
+} from '@/features/planner/store';
 
 const kailua = {
   point: { latitude: 21.397, longitude: -157.727 },
@@ -80,5 +85,58 @@ describe('planner store', () => {
   it('selectedUtc is null without a location', () => {
     usePlannerStore.getState().clearLocation();
     expect(selectedUtc(usePlannerStore.getState())).toBeNull();
+  });
+  it('the preferred lens is the camera a new place starts with; an existing camera is kept', () => {
+    const s = usePlannerStore.getState();
+    s.setPreferences({
+      units: 'metric',
+      defaultTimezoneBehavior: 'location',
+      defaultLensEquivalentMm: 35,
+    });
+    s.setLocation(kailua);
+    expect(usePlannerStore.getState().camera.focalLengthMm).toBe(35);
+    s.setFocalLength(85);
+    s.setLocation({ ...kailua, label: 'Same bay, other end' }, { keepCamera: true });
+    expect(usePlannerStore.getState().camera.focalLengthMm).toBe(85);
+    s.setPreferences({
+      units: 'metric',
+      defaultTimezoneBehavior: 'location',
+      defaultLensEquivalentMm: 24,
+    });
+  });
+  it('switching the time-zone mode keeps the selected instant and re-reads it in the other zone', () => {
+    const s = usePlannerStore.getState();
+    s.setLocation(kailua);
+    s.setDate('2026-05-31');
+    s.setMinutes(18 * 60 + 30); // 18:30 HST
+    const before = selectedUtc(usePlannerStore.getState())!.toISOString();
+    expect(before).toBe('2026-06-01T04:30:00.000Z');
+    s.setPreferences({
+      units: 'imperial',
+      defaultTimezoneBehavior: 'device',
+      defaultLensEquivalentMm: 24,
+    });
+    const after = usePlannerStore.getState();
+    expect(after.units).toBe('imperial');
+    expect(after.timeZoneMode).toBe('device');
+    expect(selectedUtc(after)?.toISOString()).toBe(before);
+    expect(effectiveTimeZone(after)).toBe(deviceTimeZone());
+    // Saved viewpoints restore through the same zone.
+    s.restore({
+      location: kailua,
+      utc: new Date('2026-06-01T04:30:00.000Z'),
+      camera: after.camera,
+      scenario: null,
+    });
+    expect(selectedUtc(usePlannerStore.getState())?.toISOString()).toBe(before);
+    s.setPreferences({
+      units: 'metric',
+      defaultTimezoneBehavior: 'location',
+      defaultLensEquivalentMm: 24,
+    });
+    const back = usePlannerStore.getState();
+    expect(back.minutes).toBe(18 * 60 + 30);
+    expect(back.date).toBe('2026-05-31');
+    expect(effectiveTimeZone(back)).toBe('Pacific/Honolulu');
   });
 });

@@ -21,6 +21,7 @@ export async function GET() {
     devBanner: s.env.LIGHTMAP_SHOW_DEV_BANNER,
     flags: { ...s.flags },
     billingConfigured: s.billing.configured,
+    analytics: s.env.ANALYTICS_SINK !== 'none',
     ...(usesIon && s.env.CESIUM_ION_TOKEN ? { ionToken: s.env.CESIUM_ION_TOKEN } : {}),
     authMethods: s.db ? s.authMethods : { email: false, google: false, devLogin: false },
   };

@@ -16,7 +16,7 @@ import {
 } from '@lightmap/scene';
 import { decideWeatherMode, type WeatherCapabilities, type WeatherFrame } from '@lightmap/weather';
 import { gridKey } from '@lightmap/geospatial';
-import { selectedUtc, usePlannerStore } from './store.ts';
+import { effectiveTimeZone, selectedUtc, usePlannerStore } from './store.ts';
 import { fetchJson } from '@/lib/client/api';
 import type { CapabilitiesResponse, WeatherResponse } from '@/lib/api-types';
 
@@ -87,7 +87,14 @@ export function useScene(
   const forceScenario = usePlannerStore((s) => s.forceScenario);
   const horizonProfile = usePlannerStore((s) => s.horizonProfile);
   const camera = usePlannerStore((s) => s.camera);
-  const utc = useMemo(() => selectedUtc({ location, date, minutes }), [location, date, minutes]);
+  const timeZoneMode = usePlannerStore((s) => s.timeZoneMode);
+  // The zone the planner reads times in: the place's own, or the device's when preferred (plan
+  // §17). The weather day, day events and the scene's clock follow it; the place keeps its zone.
+  const timeZone = effectiveTimeZone({ location, timeZoneMode });
+  const utc = useMemo(
+    () => selectedUtc({ location, date, minutes, timeZoneMode }),
+    [location, date, minutes, timeZoneMode],
+  );
   const caps = useCapabilities();
   const now = opts.now ?? new Date();
 
@@ -96,11 +103,12 @@ export function useScene(
   const cell = location ? gridKey(location.point) : null;
 
   const weatherQuery = useQuery({
-    queryKey: ['weather', cell, date],
+    // The zone is part of the key: the same civil date is a different 24 h in another zone.
+    queryKey: ['weather', cell, date, timeZone],
     enabled: Boolean(location && cell && horizon?.fetchWorthwhile),
     queryFn: () =>
       fetchJson<WeatherResponse>(
-        `/api/weather?lat=${location!.point.latitude.toFixed(4)}&lng=${location!.point.longitude.toFixed(4)}&date=${date}&tz=${encodeURIComponent(location!.timeZone)}`,
+        `/api/weather?lat=${location!.point.latitude.toFixed(4)}&lng=${location!.point.longitude.toFixed(4)}&date=${date}&tz=${encodeURIComponent(timeZone)}`,
       ),
     staleTime: 30 * 60_000,
     gcTime: 6 * 60 * 60_000,
@@ -115,10 +123,10 @@ export function useScene(
     return computeDayEvents({
       latitude: location.point.latitude,
       longitude: location.point.longitude,
-      timeZone: location.timeZone,
+      timeZone,
       date: civil,
     });
-  }, [location, date]);
+  }, [location, date, timeZone]);
 
   const environment = useMemo(
     () => environmentFromCapabilities(caps.data ?? null, location?.point.elevationM ?? null),
@@ -132,6 +140,7 @@ export function useScene(
     if (!location || !utc || !dayEvents) return null;
     return buildSceneState({
       location,
+      timeZone,
       utc,
       now,
       camera,
@@ -149,6 +158,7 @@ export function useScene(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     location,
+    timeZone,
     utc,
     dayEvents,
     camera,

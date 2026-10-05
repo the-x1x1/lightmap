@@ -41,6 +41,12 @@ export interface Env {
   REFERENCE_IMAGERY_PROVIDER: 'none';
   SENTRY_DSN: string | undefined;
   LOG_LEVEL: 'debug' | 'info' | 'warn' | 'error';
+  /**
+   * Product analytics sink (plan §31): 'none' records nothing and the client sends nothing;
+   * 'log' writes the sanitised events to the structured log (an operator's log pipeline is the
+   * analytics store). Off in production unless set.
+   */
+  ANALYTICS_SINK: 'none' | 'log';
   LIGHTMAP_SHOW_DEV_BANNER: boolean;
 }
 
@@ -176,6 +182,13 @@ export function parseEnv(raw: RawEnv): EnvResult {
     ),
     SENTRY_DSN: str(raw, 'SENTRY_DSN'),
     LOG_LEVEL: oneOf(raw, 'LOG_LEVEL', ['debug', 'info', 'warn', 'error'] as const, 'info', issues),
+    ANALYTICS_SINK: oneOf(
+      raw,
+      'ANALYTICS_SINK',
+      ['none', 'log'] as const,
+      isProd ? 'none' : 'log',
+      issues,
+    ),
     LIGHTMAP_SHOW_DEV_BANNER: bool(raw, 'LIGHTMAP_SHOW_DEV_BANNER', !isProd),
   };
 

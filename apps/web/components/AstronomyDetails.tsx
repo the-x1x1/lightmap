@@ -7,7 +7,7 @@ import { DayEventMarkers } from './Timeline';
 
 export function AstronomyDetails({ scene }: { scene: SceneState }) {
   const s = scene.solar;
-  const tz = scene.location.timeZone;
+  const tz = scene.timeZone;
   return (
     <div className="space-y-3" data-testid="astronomy-details">
       <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">

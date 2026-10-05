@@ -42,6 +42,8 @@ import type {
 
 export interface SceneInputs {
   location: LocationState;
+  /** Zone for the clock and day events; the place's own when omitted (plan §17 time-zone mode). */
+  timeZone?: string;
   utc: Date;
   /** "Now" for the forecast-horizon decision (injected for tests). */
   now: Date;
@@ -132,24 +134,25 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
 export function buildSceneState(inputs: SceneInputs): SceneState {
   const svc = inputs.astronomyService ?? defaultAstronomy;
   const { location, utc } = inputs;
+  const timeZone = inputs.timeZone ?? location.timeZone;
   const solarInput = {
     latitude: location.point.latitude,
     longitude: location.point.longitude,
     timestampUtc: utc,
-    timeZone: location.timeZone,
+    timeZone,
   };
   const solar = svc.getSolarState(solarInput);
   const lunar = inputs.includeLunar ? svc.getLunarState(solarInput) : null;
-  const wall = utcToWallClock(utc, location.timeZone);
+  const wall = utcToWallClock(utc, timeZone);
   const dayEvents =
     inputs.dayEvents &&
-    inputs.dayEvents.timeZone === location.timeZone &&
+    inputs.dayEvents.timeZone === timeZone &&
     inputs.dayEvents.date === dateOf(wall)
       ? inputs.dayEvents
       : svc.getDayEvents({
           latitude: location.point.latitude,
           longitude: location.point.longitude,
-          timeZone: location.timeZone,
+          timeZone,
           date: wall,
         });
 
@@ -170,6 +173,7 @@ export function buildSceneState(inputs: SceneInputs): SceneState {
 
   return {
     location,
+    timeZone,
     localTime: {
       date: dateOf(wall),
       time: `${pad(wall.hour)}:${pad(wall.minute)}`,

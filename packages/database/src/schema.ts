@@ -253,6 +253,8 @@ export const usageCounters = pgTable(
 );
 
 export type User = typeof users.$inferSelect;
+export type Profile = typeof profiles.$inferSelect;
+export type NewProfile = typeof profiles.$inferInsert;
 export type Project = typeof projects.$inferSelect;
 export type NewProject = typeof projects.$inferInsert;
 export type Viewpoint = typeof viewpoints.$inferSelect;

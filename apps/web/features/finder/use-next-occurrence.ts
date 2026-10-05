@@ -72,7 +72,7 @@ export function useNextOccurrence(
 
   const lat = scene?.location.point.latitude;
   const lng = scene?.location.point.longitude;
-  const tz = scene?.location.timeZone;
+  const tz = scene?.timeZone;
   const date = scene?.localTime.date;
   const az = scene ? Math.round(scene.solar.azimuthDegrees * 100) / 100 : null;
   const el = scene ? Math.round(scene.solar.elevationDegrees * 100) / 100 : null;

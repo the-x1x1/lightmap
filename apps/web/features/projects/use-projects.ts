@@ -1,6 +1,7 @@
 'use client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/client/api';
+import { track } from '@/lib/client/analytics';
 import type { ProjectDetailDto, ProjectDto, ViewpointDto } from '@/lib/api-types';
 
 export function useProjects(enabled: boolean) {
@@ -31,7 +32,10 @@ export function useProjectMutations() {
         description?: string | null;
         shootDate?: string | null;
       }) => api.post<{ project: ProjectDto }>('/api/projects', body),
-      onSuccess: invalidate,
+      onSuccess: () => {
+        track('project_created');
+        invalidate();
+      },
     }),
     update: useMutation({
       mutationFn: ({
@@ -52,7 +56,11 @@ export function useProjectMutations() {
     saveViewpoint: useMutation({
       mutationFn: ({ projectId, body }: { projectId: string; body: unknown }) =>
         api.post<{ viewpoint: ViewpointDto }>(`/api/projects/${projectId}/viewpoints`, body),
-      onSuccess: invalidate,
+      onSuccess: (_r, vars) => {
+        const b = vars.body as { parentViewpointId?: unknown } | null;
+        track('viewpoint_saved', { variant: typeof b?.parentViewpointId === 'string' });
+        invalidate();
+      },
     }),
     updateViewpoint: useMutation({
       mutationFn: ({ id, body }: { id: string; body: unknown }) =>

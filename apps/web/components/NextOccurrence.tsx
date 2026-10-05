@@ -37,7 +37,7 @@ export function NextOccurrence({
   const setMinutes = usePlannerStore((s) => s.setMinutes);
   const [showPaywall, setShowPaywall] = useState(false);
   const paywallId = useId();
-  const tz = scene.location.timeZone;
+  const tz = scene.timeZone;
   const state = useNextOccurrence(scene, {
     enabled: !planLoading,
     lastDate: allowed ? null : windowEnd,

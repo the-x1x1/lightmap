@@ -46,8 +46,26 @@ the app's own origin.
 - Events are limited to the product set: `location_selected`, `timeline_scrubbed`,
   `weather_scenario_changed`, `project_created`, `viewpoint_saved`, `preview_expanded`,
   `upgrade_started`, `subscription_started`.
-- The default sink is a logger or a no-op; a third-party analytics vendor would plug in behind
-  `AnalyticsSink` and would still only receive sanitised properties.
+- The sink is chosen by `ANALYTICS_SINK`: `none` (the production default) records nothing and
+  the client sends nothing; `log` writes the sanitised events to the structured server log. A
+  third-party analytics vendor would plug in behind `AnalyticsSink` and would still only receive
+  sanitised properties. There is no third-party analytics script in the app.
+- Client events travel as beacons to our own origin only (`POST /api/analytics`, same-origin
+  checked). The route keeps, for each event, only the properties on that event's own list with
+  the type the list gives them (`ANALYTICS_PROPS` in `apps/web/lib/analytics-event.ts`) — any
+  other key is dropped whatever the client sent, coordinate buckets are re-rounded to whole
+  degrees server-side, enum values outside the list are dropped — refuses unknown event names and
+  bodies over 4 KB (measured on the body, not a header), is burst-limited by the usual salted
+  client key and attaches **no user id and no cookie-derived identity** to an event. The browser's **Do-Not-Track** and **Global Privacy Control** signals
+  are honoured on both sides: the client sends nothing, and the route records nothing, when
+  either is set.
+- What each event carries: `location_selected` — how the place was chosen (search, map click,
+  coordinates, device, saved, fixture) and the whole-degree buckets; `timeline_scrubbed` — how many steps
+  the slider moved before resting; `weather_scenario_changed` — the scenario id;
+  `preview_expanded` — map or viewpoint camera; `viewpoint_saved` — whether it is a shot variant;
+  `project_created` — nothing; `upgrade_started` — monthly or yearly; `subscription_started`
+  (server-side, from the Stripe webhook) — the plan key. Never a label, a note, a search query,
+  a precise coordinate or an email address.
 
 ## 5. Server logs
 
@@ -121,6 +139,7 @@ the job is idempotent.
 | Stripe                                                                   | Email address, user id as `client_reference_id`, payment details entered on Stripe's hosted pages              | Locations, projects, notes                                            |
 | Email provider (magic links)                                             | Email address, sign-in link                                                                                    | Anything else                                                         |
 | Error monitoring (when `SENTRY_DSN` is set)                              | Error messages and stack traces, redacted context                                                              | Coordinates, freeform text                                            |
+| Product analytics                                                        | Nobody: events go to our own origin only (`/api/analytics`) and, when `ANALYTICS_SINK=log`, to our own log     | Identity, precise coordinates, labels, queries                        |
 
 **No imagery uploads exist.** There is no path by which a user photo reaches LightMap or any third
 party.

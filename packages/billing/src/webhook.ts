@@ -92,6 +92,8 @@ export interface WebhookOutcome {
   outcome: 'processed' | 'duplicate' | 'ignored' | 'unmapped';
   userId: string | null;
   detail?: string;
+  /** The plan the processed subscription resolved to (when the event carried one). */
+  planKey?: PlanKey;
 }
 
 /** Stripe price id → plan, from env. Studio has no price yet (Phase 3+). */
@@ -299,8 +301,11 @@ export async function processWebhookEvent(
 
   // Apply the effect FIRST, then record the event. If the upsert throws, Stripe's retry finds the
   // event unrecorded and applies it again; the unique index still guards concurrent duplicates.
+  let planKey: PlanKey | undefined;
   if (sub) {
-    await store.upsertSubscription(subscriptionToRecord(sub, userId, deps.priceMap));
+    const record = subscriptionToRecord(sub, userId, deps.priceMap);
+    planKey = record.planKey;
+    await store.upsertSubscription(record);
   } else if (event.type === 'checkout.session.completed' && customerId) {
     // Checkout without a subscription object yet (subscription.created follows). Nothing to write.
     detail = 'checkout completed; awaiting subscription event';
@@ -324,5 +329,6 @@ export async function processWebhookEvent(
     outcome: 'processed',
     userId,
     ...(detail ? { detail } : {}),
+    ...(planKey ? { planKey } : {}),
   };
 }

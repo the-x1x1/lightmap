@@ -36,6 +36,9 @@ export async function POST(req: Request) {
       outcome: outcome.outcome,
       eventId: outcome.eventId,
     });
+    // The one product event that starts server-side (plan §31): a checkout that went through.
+    if (outcome.outcome === 'processed' && outcome.type === 'checkout.session.completed')
+      s.analytics.track('subscription_started', { plan: outcome.planKey ?? 'unknown' });
     return Response.json({ received: true, outcome: outcome.outcome });
   } catch (error) {
     reportError(error, { eventId: event.id, type: event.type });

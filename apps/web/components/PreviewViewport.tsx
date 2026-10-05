@@ -40,7 +40,7 @@ export function PreviewViewport({
   const expanded = usePlannerStore((s) => s.previewExpanded);
   const setExpanded = usePlannerStore((s) => s.setPreviewExpanded);
   const light = lightingFromScene(scene);
-  const tz = scene.location.timeZone;
+  const tz = scene.timeZone;
   const s = scene.solar;
   const [exportState, setExportState] = useState<'idle' | 'busy' | 'done' | 'paywall' | 'error'>(
     'idle',
@@ -62,6 +62,7 @@ export function PreviewViewport({
       const sensor = SENSOR_PRESETS.find((x) => Math.abs(x.widthMm - st.sensorWidthMm) < 0.05);
       const model = buildPlanningCard(scene, {
         generatedAt: new Date(),
+        units: st.units,
         ...(typeof window !== 'undefined' ? { appUrl: window.location.origin } : {}),
         // The card carries the photographer's own lens and depth of field when the camera tools
         // are theirs to use (the same gate as the "Your camera" panel).

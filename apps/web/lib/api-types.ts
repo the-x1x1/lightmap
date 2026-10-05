@@ -16,6 +16,8 @@ export interface CapabilitiesResponse {
   devBanner: boolean;
   flags: Record<string, boolean>;
   billingConfigured: boolean;
+  /** The server records product events (plan §31); when false the client sends none. */
+  analytics: boolean;
   /** Cesium ion tokens are public by design (scope them to the production domain in the ion dashboard); sent only when an ion provider is active. */
   ionToken?: string;
   authMethods: { email: boolean; google: boolean; devLogin: boolean };
@@ -70,6 +72,20 @@ export interface EntitlementsResponse {
     cancelAtPeriodEnd: boolean;
     hasCustomer: boolean;
   } | null;
+}
+
+/** Profile preferences (plan §17): `GET /api/account/profile`, patched by `PATCH`. */
+export interface ProfileDto {
+  units: 'metric' | 'imperial';
+  /** Which zone the planner shows times in: the place's own, or the device's. */
+  defaultTimezoneBehavior: 'location' | 'device';
+  /** Full-frame-equivalent focal length the camera starts at for a new place, mm. */
+  defaultLensEquivalentMm: number;
+}
+
+export interface ProfileResponse extends ProfileDto {
+  /** False until the user has changed a preference: the values are the defaults, not a choice. */
+  customized: boolean;
 }
 
 export interface ProjectDto {

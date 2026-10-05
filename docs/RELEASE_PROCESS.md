@@ -110,6 +110,8 @@ access. If a webhook backlog built up, Stripe redelivers; idempotency makes rede
 - [ ] Terrain/imagery provider review states are `approved` in the registry; attribution footer
       verified.
 - [ ] `SENTRY_DSN` (or equivalent) set; `/api/health` monitored.
+- [ ] `ANALYTICS_SINK` decided (`none` unless the privacy page's analytics wording is wanted
+      live; `log` records only the sanitised event set, `PRIVACY.md` §4).
 - [ ] Managed database backups and point-in-time recovery enabled and tested once.
 - [ ] Retention job: `retention.yml` sees the production `DATABASE_URL`; run it once manually with the dry-run switch and read the log
       (`PRIVACY.md` §8).

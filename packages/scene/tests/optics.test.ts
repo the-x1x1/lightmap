@@ -3,10 +3,14 @@ import {
   APERTURE_STOPS,
   circleOfConfusionMm,
   depthOfField,
+  feetFromMetres,
+  formatDistance,
   formatDistanceM,
+  formatHeight,
   hyperfocalDistanceM,
+  metresFromFeet,
 } from '../src/optics.ts';
-import { SENSOR_PRESETS } from '../src/camera.ts';
+import { SENSOR_PRESETS, defaultCamera } from '../src/camera.ts';
 
 describe('depth of field', () => {
   it('circle of confusion is the diagonal / 1500 (full frame ≈ 0.029 mm, APS-C ≈ 0.019 mm)', () => {
@@ -92,5 +96,35 @@ describe('depth of field', () => {
     expect(formatDistanceM(12.4)).toBe('12 m');
     expect(formatDistanceM(1234)).toBe('1.2 km');
     expect(formatDistanceM(Infinity)).toBe('∞');
+  });
+
+  it('formats imperial distances in inches, feet and miles; metric is unchanged', () => {
+    expect(formatDistance(3.389, 'metric')).toBe('3.4 m');
+    expect(formatDistance(0.2, 'imperial')).toBe('8 in');
+    expect(formatDistance(1, 'imperial')).toBe('3.3 ft');
+    expect(formatDistance(3.389, 'imperial')).toBe('11 ft');
+    expect(formatDistance(250, 'imperial')).toBe('820 ft');
+    expect(formatDistance(1500, 'imperial')).toBe('4921 ft');
+    expect(formatDistance(1609.344, 'imperial')).toBe('1.0 mi');
+    expect(formatDistance(4000, 'imperial')).toBe('2.5 mi');
+    expect(formatDistance(Infinity, 'imperial')).toBe('∞');
+    expect(formatHeight(1234, 'metric')).toBe('1234 m');
+    expect(formatHeight(1234, 'imperial')).toBe('4049 ft');
+    expect(metresFromFeet(feetFromMetres(7.5))).toBeCloseTo(7.5, 12);
+  });
+
+  it('defaultCamera takes the preferred lens, clamped to the planner frustum', () => {
+    const eye = { latitude: 0, longitude: 0 };
+    expect(defaultCamera(eye).focalLengthMm).toBe(24);
+    expect(defaultCamera(eye, 0, 35).focalLengthMm).toBe(35);
+    expect(defaultCamera(eye, 0, 35).fovDeg).toBeCloseTo(54.4, 1);
+    // 600 mm would be 3.4°: the 5° floor wins and the lens figure follows it.
+    const tele = defaultCamera(eye, 0, 600);
+    expect(tele.fovDeg).toBe(5);
+    expect(tele.focalLengthMm).toBeCloseTo(412.3, 0);
+    // 8 mm would be 132°: capped at 120°.
+    expect(defaultCamera(eye, 0, 8).fovDeg).toBe(120);
+    expect(defaultCamera(eye, 0, Number.NaN).focalLengthMm).toBe(24);
+    expect(defaultCamera(eye, 0, -5).focalLengthMm).toBe(24);
   });
 });

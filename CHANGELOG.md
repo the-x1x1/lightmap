@@ -4,6 +4,28 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Preferences (plan §17)**: an "Account & plan" section — signed in or not — for distances
+  (metric or imperial: the depth-of-field figures and focus box, the planning card, weather
+  visibility and wind), which zone times are shown in (the place's own or the device's; switching
+  keeps the selected instant and re-reads it, and saved viewpoints always carry the place's zone)
+  and the lens a new place starts with (8–600 mm full-frame equivalent, saved when the box is
+  left). The scene now carries `timeZone` (the zone its clock and day events are read in) apart
+  from `location.timeZone` (the place's own, still used for climatology, the finder's place
+  data, the card subtitle and saved viewpoints); the weather query is keyed by zone. Kept on the device,
+  saved to the profile when signed in (`GET/PATCH /api/account/profile`, `profilesRepo`), the
+  profile winning when it loads unless it has never been changed, in which case the device's
+  choices are adopted into the account; a failed save rolls back and says so. `formatDistance()`,
+  `formatHeight()`, `defaultCamera(eye, heading, lensMm)` in `@lightmap/scene`.
+- **Product analytics (plan §31)**: the eight named events are now actually recorded —
+  `location_selected` (how the place was chosen, whole-degree buckets), `timeline_scrubbed`
+  (steps per rest), `weather_scenario_changed`, `preview_expanded`, `project_created`,
+  `viewpoint_saved` (variant or not), `upgrade_started` (interval) from the client as same-origin
+  beacons to `POST /api/analytics`, and `subscription_started` (plan key) from the Stripe webhook.
+  The route keeps only each event's own, typed properties (anything else is dropped, buckets
+  re-rounded), refuses unknown events and bodies over 4 KB, is burst-limited and carries no
+  identity; Do-Not-Track and Global Privacy Control stop events on both sides. `ANALYTICS_SINK` (`none` in production by default, `log` in development) picks the
+  sink and `capabilities.analytics` tells the client whether to send at all. PRIVACY.md §4 and the
+  public privacy page say what each event carries.
 - **Depth of field (Phase 6)**: "Your camera" gains an aperture and focus-distance pair that
   reports the near and far limits of sharpness for the real lens on the chosen sensor, whether
   the sun, moon and horizon fall inside the zone, and a "Focus at hyperfocal" button.

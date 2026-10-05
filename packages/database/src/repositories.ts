@@ -9,6 +9,7 @@ import { ulid } from './ids.ts';
 import {
   auditEvents,
   previewSnapshots,
+  profiles,
   projects,
   providerCache,
   subscriptionEvents,
@@ -18,6 +19,7 @@ import {
   viewpoints,
   type NewProject,
   type NewViewpoint,
+  type Profile,
   type Project,
   type Subscription,
   type Viewpoint,
@@ -380,6 +382,54 @@ export function usersRepo(db: Db) {
     /** Hard delete: cascades to projects, viewpoints, sessions, subscriptions. Audit row kept without PII. */
     async erase(id: string): Promise<void> {
       await db.delete(users).where(eq(users.id, id));
+    },
+  };
+}
+
+/** The preference columns of a profile (plan §17); what the API reads and patches. */
+export type ProfilePreferences = Pick<
+  Profile,
+  'units' | 'defaultTimezoneBehavior' | 'defaultLensEquivalentMm'
+>;
+
+/** What a user without a profile row gets — the same values the table defaults to. */
+export const PROFILE_DEFAULTS: ProfilePreferences = {
+  units: 'metric',
+  defaultTimezoneBehavior: 'location',
+  defaultLensEquivalentMm: 24,
+};
+
+/**
+ * Profiles (plan §17): one row per user, created on the first change. Reading a user who has
+ * never changed anything returns the defaults rather than null, so callers need no fallback.
+ */
+export function profilesRepo(db: Db) {
+  return {
+    /** `customized` is false until the user has changed something (no row yet). */
+    async get(userId: string): Promise<ProfilePreferences & { customized: boolean }> {
+      const [p] = await db.select().from(profiles).where(eq(profiles.userId, userId)).limit(1);
+      if (!p) return { ...PROFILE_DEFAULTS, customized: false };
+      return {
+        units: p.units,
+        defaultTimezoneBehavior: p.defaultTimezoneBehavior,
+        defaultLensEquivalentMm: p.defaultLensEquivalentMm,
+        customized: true,
+      };
+    },
+    /** Merge a partial change into the row, creating it from the defaults when missing. */
+    async update(userId: string, patch: Partial<ProfilePreferences>): Promise<ProfilePreferences> {
+      const now = new Date();
+      const [p] = await db
+        .insert(profiles)
+        .values({ userId, ...PROFILE_DEFAULTS, ...patch, createdAt: now, updatedAt: now })
+        .onConflictDoUpdate({ target: profiles.userId, set: { ...patch, updatedAt: now } })
+        .returning();
+      if (!p) throw new NotFoundError('profile');
+      return {
+        units: p.units,
+        defaultTimezoneBehavior: p.defaultTimezoneBehavior,
+        defaultLensEquivalentMm: p.defaultLensEquivalentMm,
+      };
     },
   };
 }

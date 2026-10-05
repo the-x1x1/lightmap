@@ -9,10 +9,12 @@ import dynamic from 'next/dynamic';
 import { brand, isEnabled } from '@lightmap/config';
 import { addCivilDays, civilDateString, parseCivilDate, utcToWallClock } from '@lightmap/astronomy';
 import { DEFAULT_RENDER_SETTINGS } from '@lightmap/scene';
-import { usePlannerStore } from '@/features/planner/store';
+import { effectiveTimeZone, usePlannerStore } from '@/features/planner/store';
 import { useScene } from '@/features/planner/use-scene';
 import { useTerrainHorizon } from '@/features/planner/use-terrain-horizon';
 import { useAccount } from '@/features/account/use-account';
+import { usePreferencesSync } from '@/features/account/use-preferences';
+import { useProductEvents } from '@/features/analytics/use-product-events';
 import { Button, cx } from '@lightmap/ui';
 import { WorldMap, type RendererInfo } from './WorldMap';
 import { LocationSearch } from './LocationSearch';
@@ -55,6 +57,9 @@ export function MapShell() {
   const fieldViewOpen = usePlannerStore((s) => s.fieldViewOpen);
   const setFieldViewOpen = usePlannerStore((s) => s.setFieldViewOpen);
   const location = usePlannerStore((s) => s.location);
+  const timeZoneMode = usePlannerStore((s) => s.timeZoneMode);
+  /** The zone the date, timeline and clock are shown in (the place's, or the device's by preference). */
+  const planningZone = effectiveTimeZone({ location, timeZoneMode });
   const date = usePlannerStore((s) => s.date);
   const showPerf = usePlannerStore((s) => s.showPerfPanel);
   const togglePerf = usePlannerStore((s) => s.togglePerfPanel);
@@ -73,6 +78,8 @@ export function MapShell() {
   const handleSettledByPointer = useRef(false);
   const [desktop, setDesktop] = useState(false);
   const account = useAccount();
+  // Units, time-zone mode and default lens: this device's, then the profile's once signed in.
+  usePreferencesSync();
   const [rendererInfo, setRendererInfo] = useState<RendererInfo>({
     mode: 'loading',
     qualityLabel: '—',
@@ -89,6 +96,8 @@ export function MapShell() {
     includeLunar: account.can('moon_planning').allowed || !account.snapshot,
   });
   const { scene, dayEvents, capabilities, weather } = bundle;
+  // Product events (plan §31): only once the server says it records them, never to a third party.
+  useProductEvents(capabilities?.analytics);
   // Ridge markers only where the terrain moved first/last light (else they would sit on top of
   // the ordinary sunrise/sunset markers). Identity is stable per day thanks to the scene memo.
   const terrainMarkers = useMemo(() => {
@@ -107,20 +116,18 @@ export function MapShell() {
     eyeHeightM: scene?.camera.eyeHeightM ?? 1.6,
   });
 
-  // Free-plan date window (plan §38): explain, never block silently. "Today" is the location's
-  // civil date so the decision matches the server's.
-  const today = civilDateString(
-    utcToWallClock(
-      new Date(),
-      location?.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
-    ),
-  );
+  // Free-plan date window (plan §38): explain, never block silently. Target and "today" are civil
+  // dates in the place's own zone — the same rule the server applies when a viewpoint is saved —
+  // whichever zone the planner shows times in.
+  const windowZone = location?.timeZone ?? planningZone;
+  const today = civilDateString(utcToWallClock(new Date(), windowZone));
+  const targetDate = bundle.utc ? civilDateString(utcToWallClock(bundle.utc, windowZone)) : date;
   // Last civil date a Free plan may plan for; the recurrence chip clips its search to it.
   const freeWindowEnd = civilDateString(
     addCivilDays(parseCivilDate(today)!, account.snapshot?.limits.futureDateWindowDays ?? 14),
   );
   const dateDecision = account.snapshot
-    ? account.can('future_date_planning', { targetDate: date, today })
+    ? account.can('future_date_planning', { targetDate, today })
     : { allowed: true, key: 'future_date_planning' as const };
   // While the entitlement snapshot loads, `can()` answers "not allowed — loading"; the Pro panels
   // must not flash a paywall in that window, so they get an explicit loading flag.
@@ -324,7 +331,7 @@ export function MapShell() {
                 ) : null}
                 <Timeline
                   dayEvents={dayEvents}
-                  timeZone={location?.timeZone ?? 'UTC'}
+                  timeZone={planningZone}
                   phase={scene?.solar.phase}
                   terrain={terrainMarkers}
                   terrainVisible={scene?.terrainHorizon?.sunEvents.visible ?? null}

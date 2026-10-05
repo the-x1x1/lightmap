@@ -7,6 +7,7 @@ import {
   type EntitlementKey,
 } from '@lightmap/entitlements';
 import { api } from '@/lib/client/api';
+import { track } from '@/lib/client/analytics';
 import type { EntitlementsResponse } from '@/lib/api-types';
 
 /** Server-derived entitlement snapshot; the client never decides plans itself. */
@@ -35,6 +36,9 @@ export function useCheckout() {
   return useMutation({
     mutationFn: (interval: 'monthly' | 'yearly') =>
       api.post<{ url: string }>('/api/billing/checkout', { interval }),
+    onMutate: (interval) => {
+      track('upgrade_started', { interval });
+    },
     onSuccess: (r) => {
       window.location.href = r.url;
     },

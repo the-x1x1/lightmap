@@ -77,3 +77,37 @@ export function formatDistanceM(m: number): string {
   if (m < 1000) return `${Math.round(m)} m`;
   return `${(m / 1000).toFixed(1)} km`;
 }
+
+/** Measurement system for distances shown to the photographer (plan §17 profile `units`). */
+export type DistanceUnits = 'metric' | 'imperial';
+
+export const M_PER_FT = 0.3048;
+export const M_PER_MI = 1609.344;
+
+export function feetFromMetres(m: number): number {
+  return m / M_PER_FT;
+}
+
+export function metresFromFeet(ft: number): number {
+  return ft * M_PER_FT;
+}
+
+/**
+ * A distance in the chosen units: metric as `formatDistanceM`; imperial as inches below a foot,
+ * feet to a tenth below 10 ft, whole feet up to a mile, then miles to a tenth. Infinity is "∞"
+ * in both.
+ */
+export function formatDistance(m: number, units: DistanceUnits = 'metric'): string {
+  if (units === 'metric') return formatDistanceM(m);
+  if (!Number.isFinite(m)) return '∞';
+  const ft = feetFromMetres(m);
+  if (ft < 1) return `${Math.round(ft * 12)} in`;
+  if (ft < 10) return `${ft.toFixed(1)} ft`;
+  if (m < M_PER_MI) return `${Math.round(ft)} ft`;
+  return `${(m / M_PER_MI).toFixed(1)} mi`;
+}
+
+/** A height or elevation, whole metres or feet ("1 234 m" → "4 049 ft"). */
+export function formatHeight(m: number, units: DistanceUnits = 'metric'): string {
+  return units === 'metric' ? `${Math.round(m)} m` : `${Math.round(feetFromMetres(m))} ft`;
+}

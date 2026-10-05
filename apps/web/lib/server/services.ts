@@ -20,7 +20,10 @@ import { createBillingProvider, type BillingProvider } from '@lightmap/billing/s
 import {
   createLogger,
   createSentryEnvelopeReporter,
+  loggingAnalytics,
   loggingErrorReporter,
+  noopAnalytics,
+  type AnalyticsSink,
   type ErrorReporter,
   type Logger,
 } from '@lightmap/observability';
@@ -35,6 +38,8 @@ export interface Services {
   env: Env;
   log: Logger;
   errors: ErrorReporter;
+  /** Product analytics (plan §31): sanitised events to the log, or nothing (`ANALYTICS_SINK`). */
+  analytics: AnalyticsSink;
   geo: GeospatialProviders;
   weather: WeatherProvider;
   climatology: ClimatologyProvider;
@@ -89,10 +94,12 @@ export function getServices(): Services {
       log.error('SENTRY_DSN rejected; error reports go to the logs only', { error: String(e) });
     }
   }
+  const analytics = env.ANALYTICS_SINK === 'log' ? loggingAnalytics(log) : noopAnalytics();
   services = {
     env,
     log,
     errors,
+    analytics,
     geo,
     weather,
     climatology,

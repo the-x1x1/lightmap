@@ -20,10 +20,16 @@ import {
 import type { WeatherScenarioId } from '@lightmap/weather';
 import type { HorizonProfile } from '@lightmap/scene';
 import type { GeoPoint } from '@lightmap/geospatial';
+import {
+  DEFAULT_PREFERENCES,
+  type Preferences,
+  type TimeZoneMode,
+  type Units,
+} from '@/lib/preferences';
 
 export interface PlannerState {
   location: LocationState | null;
-  /** Civil date at the location, YYYY-MM-DD. */
+  /** Civil date in the planning zone (`effectiveTimeZone`), YYYY-MM-DD. */
   date: string;
   /** Minutes since local midnight, 0–1439 (may be 1440+ across a DST day; clamped by UI). */
   minutes: number;
@@ -59,6 +65,15 @@ export interface PlannerState {
    * renderer has no terrain). Cleared with the location; `useTerrainHorizon` refills it.
    */
   horizonProfile: HorizonProfile | null;
+  /**
+   * Preferences (plan §17). Hydrated from local storage at startup and from the profile once
+   * signed in (`usePreferencesSync`); the account panel changes them.
+   */
+  units: Units;
+  /** Which zone the planner shows times in: the place's own (`location.timeZone`) or the device's. */
+  timeZoneMode: TimeZoneMode;
+  /** Full-frame-equivalent lens the camera starts with at a new place, mm. */
+  defaultLensMm: number;
 }
 
 export interface PlannerActions {
@@ -92,6 +107,8 @@ export interface PlannerActions {
   setFinderTarget: (t: { azimuthDeg: number; elevationDeg: number } | null) => void;
   setFinderPicking: (v: boolean) => void;
   setHorizonProfile: (profile: HorizonProfile | null) => void;
+  /** Apply preferences (all three at once; a changed time-zone mode keeps the selected instant). */
+  setPreferences: (prefs: Preferences) => void;
   /** Restore a saved viewpoint. */
   restore: (v: {
     location: LocationState;
@@ -107,9 +124,26 @@ function todayIn(timeZone: string): { date: string; minutes: number } {
   return utcToLocalSelection(new Date(), timeZone);
 }
 
-const initialToday = todayIn(
-  typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC',
-);
+let deviceZone: string | null = null;
+
+/** The device's own zone, resolved once (UTC where Intl is unavailable — never on a real browser). */
+export function deviceTimeZone(): string {
+  deviceZone ??=
+    typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC';
+  return deviceZone;
+}
+
+/**
+ * The zone the planner's civil date and minutes are in: the place's own zone, or the device's
+ * when the photographer prefers reading times as their watch shows them (plan §17
+ * `default_timezone_behavior`). Without a place, the device zone.
+ */
+export function effectiveTimeZone(s: Pick<PlannerState, 'location' | 'timeZoneMode'>): string {
+  if (!s.location) return deviceTimeZone();
+  return s.timeZoneMode === 'device' ? deviceTimeZone() : s.location.timeZone;
+}
+
+const initialToday = todayIn(deviceTimeZone());
 
 export const usePlannerStore = create<PlannerStore>((set, get) => ({
   location: null,
@@ -133,12 +167,18 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
   qualityCeiling: 1,
   showPerfPanel: false,
   reducedMotion: false,
+  units: DEFAULT_PREFERENCES.units,
+  timeZoneMode: DEFAULT_PREFERENCES.defaultTimezoneBehavior,
+  defaultLensMm: DEFAULT_PREFERENCES.defaultLensEquivalentMm,
 
   setLocation(loc, opts) {
     const prev = get();
     const camera: CameraState = opts?.keepCamera
       ? { ...prev.camera, eye: loc.point }
-      : { ...defaultCamera(loc.point, prev.camera.headingDeg), mode: prev.camera.mode };
+      : {
+          ...defaultCamera(loc.point, prev.camera.headingDeg, prev.defaultLensMm),
+          mode: prev.camera.mode,
+        };
     // Keep the chosen wall-clock time when the zone changes: "12:30" stays "12:30" at the new place.
     // A picked finder target belongs to the old viewpoint.
     set({ location: loc, camera, finderTarget: null, finderPicking: false, horizonProfile: null });
@@ -156,8 +196,7 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
     set({ minutes: Math.max(0, Math.min(1439, Math.round(minutes))) });
   },
   setNow(timeZone) {
-    const tz = timeZone ?? get().location?.timeZone ?? 'UTC';
-    set(todayIn(tz));
+    set(todayIn(timeZone ?? effectiveTimeZone(get())));
   },
   setScenario(id, force) {
     set({ scenario: id, forceScenario: force ?? get().forceScenario });
@@ -257,8 +296,35 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
         : { finderPicking: false },
     );
   },
+  setPreferences(prefs) {
+    const prev = get();
+    const next: Partial<PlannerState> = {
+      units: prefs.units,
+      defaultLensMm: prefs.defaultLensEquivalentMm,
+      timeZoneMode: prefs.defaultTimezoneBehavior,
+    };
+    if (prefs.defaultTimezoneBehavior !== prev.timeZoneMode && prev.location) {
+      // Same instant, read in the other zone: "18:30 at the place" becomes "08:30 at home".
+      const utc = selectedUtc(prev);
+      if (utc) {
+        const sel = utcToLocalSelection(
+          utc,
+          effectiveTimeZone({
+            location: prev.location,
+            timeZoneMode: prefs.defaultTimezoneBehavior,
+          }),
+        );
+        next.date = sel.date;
+        next.minutes = sel.minutes;
+      }
+    }
+    set(next);
+  },
   restore(v) {
-    const sel = utcToLocalSelection(v.utc, v.location.timeZone);
+    const sel = utcToLocalSelection(
+      v.utc,
+      effectiveTimeZone({ location: v.location, timeZoneMode: get().timeZoneMode }),
+    );
     set({
       location: v.location,
       date: sel.date,
@@ -273,12 +339,14 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
   },
 }));
 
-/** The selected UTC instant, or null without a location (its zone decides what "12:30" means). */
-export function selectedUtc(s: Pick<PlannerState, 'location' | 'date' | 'minutes'>): Date | null {
+/** The selected UTC instant, or null without a location (the planning zone decides what "12:30" means). */
+export function selectedUtc(
+  s: Pick<PlannerState, 'location' | 'date' | 'minutes' | 'timeZoneMode'>,
+): Date | null {
   if (!s.location) return null;
   const civil = parseCivilDate(s.date);
   if (!civil) return null;
-  return localSelectionToUtc(civil, s.minutes, s.location.timeZone);
+  return localSelectionToUtc(civil, s.minutes, effectiveTimeZone(s));
 }
 
 export function locationFromPoint(

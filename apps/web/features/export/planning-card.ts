@@ -19,7 +19,9 @@ import {
   depthOfField,
   focalLengthForFov,
   formatDeg,
-  formatDistanceM,
+  formatDistance,
+  formatHeight,
+  type DistanceUnits,
   type SceneState,
   type SourceMode,
 } from '@lightmap/scene';
@@ -70,11 +72,20 @@ export interface CardCameraOptions {
 
 export function buildPlanningCard(
   scene: SceneState,
-  opts: { generatedAt: Date; appUrl?: string; camera?: CardCameraOptions } = {
+  opts: {
+    generatedAt: Date;
+    appUrl?: string;
+    camera?: CardCameraOptions;
+    /** Distances and heights on the card (plan §17 profile `units`); metric by default. */
+    units?: DistanceUnits;
+  } = {
     generatedAt: new Date(),
   },
 ): PlanningCardModel {
-  const tz = scene.location.timeZone;
+  // Times in the zone the planner showed them in; the subtitle names the place's own zone.
+  const tz = scene.timeZone;
+  const units = opts.units ?? 'metric';
+  const dist = (m: number) => formatDistance(m, units);
   const s = scene.solar;
   const ev = scene.dayEvents;
   const a = scene.atmosphere;
@@ -137,7 +148,7 @@ export function buildPlanningCard(
     });
     facts.push({
       label: 'Depth of field',
-      value: `${lensMm.toFixed(lensMm < 10 ? 1 : 0)} mm f/${opts.camera.aperture} at ${formatDistanceM(opts.camera.focusDistanceM)}: sharp ${formatDistanceM(dof.nearM)}–${formatDistanceM(dof.farM)}${dof.infinitySharp ? '' : ` · hyperfocal ${formatDistanceM(dof.hyperfocalM)}`}`,
+      value: `${lensMm.toFixed(lensMm < 10 ? 1 : 0)} mm f/${opts.camera.aperture} at ${dist(opts.camera.focusDistanceM)}: sharp ${dist(dof.nearM)}–${dist(dof.farM)}${dof.infinitySharp ? '' : ` · hyperfocal ${dist(dof.hyperfocalM)}`}`,
     });
   }
   if (ev.polar !== 'normal') facts.push({ label: 'Note', value: ev.polar.replace('-', ' ') });
@@ -189,9 +200,9 @@ export function buildPlanningCard(
 
   return {
     title: scene.location.label,
-    subtitle: `${scene.location.point.latitude.toFixed(4)}, ${scene.location.point.longitude.toFixed(4)} · ${tz}${
+    subtitle: `${scene.location.point.latitude.toFixed(4)}, ${scene.location.point.longitude.toFixed(4)} · ${scene.location.timeZone}${
       scene.environment.groundElevationM !== null
-        ? ` · ${Math.round(scene.environment.groundElevationM)} m`
+        ? ` · ${formatHeight(scene.environment.groundElevationM, units)}`
         : ''
     }`,
     dateLine,

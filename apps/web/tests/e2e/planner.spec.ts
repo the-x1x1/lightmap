@@ -295,3 +295,47 @@ test('mobile: the field view shows the planned sun over the (fake) camera and fo
   await page.getByTestId('field-view-close').click();
   await expect(view).toHaveCount(0);
 });
+
+test.describe('preferences', () => {
+  // A fixed device zone so "my device's" time is predictable: Kailua 12:30 HST = 23:30 BST.
+  test.use({ timezoneId: 'Europe/London' });
+
+  test('times follow the chosen zone, distances the chosen units, and both survive a reload', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await pickKailua(page);
+    await setDateTime(page, '2026-05-31', 12 * 60 + 30);
+    await expect(page.getByTestId('timeline-time')).toHaveText('12:30');
+    await expect(page.getByTestId('date-control')).toContainText('Pacific/Honolulu');
+
+    await page.getByTestId('panel-tab-account').click();
+    await expect(page.getByTestId('preferences')).toBeVisible();
+    await page.getByTestId('pref-zone-device').click();
+    await expect(page.getByTestId('pref-zone-device')).toHaveAttribute('aria-checked', 'true');
+    await page.getByTestId('pref-units-imperial').click();
+    await page.getByTestId('panel-tab-plan').click();
+    // The same instant, read on a London watch (the date rolls with it).
+    await expect(page.getByTestId('timeline-time')).toHaveText('23:30');
+    await expect(page.getByTestId('date-control')).toContainText('Europe/London');
+    // Imperial wind and visibility on a forecast day (the fixture carries both).
+    const soon = new Date();
+    soon.setDate(soon.getDate() + 2);
+    await setDateTime(page, soon.toISOString().slice(0, 10), 14 * 60);
+    await page.getByTestId('details-weather').locator('summary').click();
+    const weather = page.getByTestId('weather-details');
+    await expect(weather).toContainText(/\d+ mph/);
+    await expect(weather).not.toContainText('m/s');
+
+    // Kept on this device: the choice is still there after a reload.
+    await page.reload();
+    await page.getByTestId('panel-tab-account').click();
+    await expect(page.getByTestId('pref-zone-device')).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByTestId('pref-units-imperial')).toHaveAttribute('aria-checked', 'true');
+    await page.getByTestId('pref-zone-location').click();
+    await page.getByTestId('pref-units-metric').click();
+    await page.getByTestId('panel-tab-plan').click();
+    await pickKailua(page);
+    await expect(page.getByTestId('date-control')).toContainText('Pacific/Honolulu');
+  });
+});

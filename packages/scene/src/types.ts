@@ -118,6 +118,12 @@ export interface TerrainHorizonState {
 export interface SceneState {
   location: LocationState;
   /** Wall-clock at the location. */
+  /**
+   * The zone the scene's clock, civil date and day events are read in: the place's own
+   * (`location.timeZone`) unless the photographer prefers the device's (plan §17). Display code
+   * formats times in this zone; anything describing the place itself uses `location.timeZone`.
+   */
+  timeZone: string;
   localTime: { date: string; time: string; offsetMinutes: number; zoneAbbreviation: string };
   utc: Date;
   camera: CameraState;

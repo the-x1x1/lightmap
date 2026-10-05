@@ -8,6 +8,20 @@ describe('parseEnv', () => {
     expect(r.env.NODE_ENV).toBe('development');
     expect(r.env.WEATHER_PROVIDER).toBe('open-meteo');
     expect(r.env.LIGHTMAP_SHOW_DEV_BANNER).toBe(true);
+    expect(r.env.ANALYTICS_SINK).toBe('log');
+  });
+
+  it('analytics are off in production unless switched on', () => {
+    const prod = {
+      NODE_ENV: 'production',
+      DATABASE_URL: 'postgres://x',
+      AUTH_SECRET: 'a'.repeat(40),
+      AUTH_URL: 'https://app.example.com',
+      EMAIL_SERVER: 'smtp://x',
+    };
+    expect(parseEnv(prod).env.ANALYTICS_SINK).toBe('none');
+    expect(parseEnv({ ...prod, ANALYTICS_SINK: 'log' }).env.ANALYTICS_SINK).toBe('log');
+    expect(parseEnv({ ANALYTICS_SINK: 'segment' }).ok).toBe(false);
   });
 
   it('rejects unknown enum values', () => {

@@ -3,12 +3,14 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useRef, useState } from 'react';
 import { signIn, signOut } from 'next-auth/react';
 import { useAccount, useDeleteAccount } from '@/features/account/use-account';
+import { clearLocalPreferences } from '@/features/account/use-preferences';
 import { useCapabilities } from '@/features/planner/use-scene';
 import { usePlannerStore } from '@/features/planner/store';
 import { useInstallPrompt, type InstallState } from '@/features/pwa/use-install-prompt';
 import { Button, cx } from '@lightmap/ui';
 import { SubscriptionStatus } from './SubscriptionStatus';
 import { Paywall } from './Paywall';
+import { Preferences } from './Preferences';
 
 export function AccountMenu() {
   const account = useAccount();
@@ -72,7 +74,14 @@ export function AccountMenu() {
               <Item onSelect={() => openPanel('account')}>Account &amp; plan</Item>
               <Item onSelect={() => openPanel('projects')}>Projects</Item>
               <DropdownMenu.Separator className="my-1 h-px bg-white/10" />
-              <Item onSelect={() => void signOut({ callbackUrl: '/' })}>Sign out</Item>
+              <Item
+                onSelect={() => {
+                  clearLocalPreferences();
+                  void signOut({ callbackUrl: '/' });
+                }}
+              >
+                Sign out
+              </Item>
             </>
           ) : (
             <>
@@ -230,11 +239,17 @@ export function AccountPanel() {
   const account = useAccount();
   const del = useDeleteAccount();
   if (!account.signedIn)
-    return <SignInPrompt reason="Sign in to save projects, sync across devices and subscribe." />;
+    return (
+      <div className="space-y-5">
+        <SignInPrompt reason="Sign in to save projects, sync across devices and subscribe." />
+        <Preferences />
+      </div>
+    );
   return (
     <div className="space-y-4" data-testid="account-panel">
       <SubscriptionStatus />
       {account.snapshot?.effectivePlan === 'free' ? <Paywall /> : null}
+      <Preferences />
       <details>
         <summary className="cursor-pointer text-xs uppercase tracking-wide text-[var(--lm-text-muted)]">
           Delete account

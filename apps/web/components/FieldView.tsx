@@ -182,7 +182,7 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
   );
   const level = levelLineSegment(frame, aspect, roll);
   const sky = profile ? skylinePath(frame, profile, aspect, 48, roll) : [];
-  const tz = scene.location.timeZone;
+  const tz = scene.timeZone;
 
   const cameraNote =
     status === 'denied'

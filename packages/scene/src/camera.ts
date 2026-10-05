@@ -40,14 +40,26 @@ export function actualFocalLengthMm(equivalentMm: number, sensorWidthMm: number)
   return (equivalentMm * sensorWidthMm) / 36;
 }
 
-export function defaultCamera(eye: GeoPoint, headingDeg = 0): CameraState {
+/** A level camera at `eye` with a 24 mm-equivalent lens (or the photographer's preferred one). */
+export function defaultCamera(
+  eye: GeoPoint,
+  headingDeg = 0,
+  focalLengthEquivalentMm = 24,
+): CameraState {
+  const mm =
+    Number.isFinite(focalLengthEquivalentMm) && focalLengthEquivalentMm > 0
+      ? focalLengthEquivalentMm
+      : 24;
+  // The same 5–120° frustum limits as the planner's lens controls; the lens figure follows the
+  // clamped field of view so the two always agree.
+  const fovDeg = Math.max(5, Math.min(120, horizontalFovDeg(mm)));
   return {
     eye,
     eyeHeightM: DEFAULT_EYE_HEIGHT_M,
     headingDeg,
     pitchDeg: 0,
-    fovDeg: horizontalFovDeg(24),
-    focalLengthMm: 24,
+    fovDeg,
+    focalLengthMm: Math.round(focalLengthForFov(fovDeg) * 10) / 10,
     mode: 'map',
   };
 }

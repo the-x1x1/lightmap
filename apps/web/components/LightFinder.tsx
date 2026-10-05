@@ -70,7 +70,7 @@ export function LightFinder({
   const finderPicking = usePlannerStore((s) => s.finderPicking);
   const setFinderPicking = usePlannerStore((s) => s.setFinderPicking);
   const setFinderTarget = usePlannerStore((s) => s.setFinderTarget);
-  const tz = scene.location.timeZone;
+  const tz = scene.timeZone;
   const today = todayAt(tz);
   const ids = useId();
 

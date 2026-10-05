@@ -7,7 +7,9 @@ verify, what to write down. Keep them boring and exact.
 Where things are: logs are structured JSON from `createLogger` (`packages/observability`);
 errors go to the DSN in `SENTRY_DSN` (envelope transport, `sentry-envelope.ts`) and to the logs;
 health is `GET /api/health` (`ok`, `version`, `database`, `fixtureMode`); usage is
-`pnpm usage:report`; migrations are `pnpm db:migrate`; retention is `retention.yml`.
+`pnpm usage:report`; migrations are `pnpm db:migrate`; retention is `retention.yml`; product
+analytics (`PRIVACY.md` §4) are `analytics <event>` lines in the same log when
+`ANALYTICS_SINK=log` (off in production unless set — the client sends nothing then).
 
 ## R1. Weather provider outage or quota exhaustion
 

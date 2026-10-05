@@ -160,6 +160,10 @@ describe('service worker — offline project cache', () => {
     expect(c('/api/projects/abc')).toBe('user');
     expect(c('/api/auth/session')).toBe('user');
     expect(c('/api/account/entitlements')).toBe('user');
+    // Preferences are kept in local storage for offline use; the profile read stays live so a
+    // stale cached copy can never overwrite a newer local choice.
+    expect(c('/api/account/profile')).toBeNull();
+    expect(c('/api/analytics', 'POST')).toBeNull();
     // Not cached: weather/terrain (licences, freshness), other APIs, writes, other origins.
     expect(c('/api/weather?lat=1&lng=2')).toBeNull();
     expect(c('/api/billing/checkout', 'POST')).toBeNull();

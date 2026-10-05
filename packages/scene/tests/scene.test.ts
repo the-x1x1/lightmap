@@ -91,6 +91,22 @@ describe('buildSceneState — Kailua Beach, 31 May 2026, 12:30 (acceptance case)
     expect(s.confidence.astronomy).toBe('HIGH');
     expect(s.sourceMode).toBe('SIMULATED_LIGHTING');
     expect(s.lunar?.phaseName).toBe('Full Moon');
+    expect(s.timeZone).toBe('Pacific/Honolulu');
+  });
+
+  it('reads the clock and day events in another zone when asked, leaving the place its own', () => {
+    // 12:30 HST on 31 May is 23:30 BST the same day: the instant and the sun do not move.
+    const s = buildSceneState(inputs({ timeZone: 'Europe/London' }));
+    expect(s.timeZone).toBe('Europe/London');
+    expect(s.location.timeZone).toBe('Pacific/Honolulu');
+    // (The abbreviation is ICU-dependent — "BST" or "GMT+1" — so only the offset is asserted.)
+    expect(s.localTime).toMatchObject({ date: '2026-05-31', time: '23:30', offsetMinutes: 60 });
+    expect(s.solar.elevationDegrees).toBeGreaterThan(89);
+    // Day events are for the London civil day 31 May: Kailua's sunrise that day in UTC terms
+    // (15:48 Z) lies inside it, and so does the sunset (05:09 Z on 1 June — still 31 May BST).
+    expect(s.dayEvents.timeZone).toBe('Europe/London');
+    expect(s.dayEvents.date).toBe('2026-05-31');
+    expect(s.dayEvents.sunrise?.toISOString().slice(0, 16)).toBe('2026-05-31T15:48');
   });
 
   it('uses the forecast frame inside the horizon and labels it a forecast', async () => {

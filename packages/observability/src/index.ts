@@ -97,15 +97,23 @@ export function loggingErrorReporter(log: Logger): ErrorReporter {
   };
 }
 
-export type AnalyticsEvent =
-  | 'location_selected'
-  | 'timeline_scrubbed'
-  | 'weather_scenario_changed'
-  | 'project_created'
-  | 'viewpoint_saved'
-  | 'preview_expanded'
-  | 'upgrade_started'
-  | 'subscription_started';
+/** The product event set (plan §31). Nothing outside this list is ever recorded. */
+export const ANALYTICS_EVENTS = [
+  'location_selected',
+  'timeline_scrubbed',
+  'weather_scenario_changed',
+  'project_created',
+  'viewpoint_saved',
+  'preview_expanded',
+  'upgrade_started',
+  'subscription_started',
+] as const;
+
+export type AnalyticsEvent = (typeof ANALYTICS_EVENTS)[number];
+
+export function isAnalyticsEvent(x: unknown): x is AnalyticsEvent {
+  return typeof x === 'string' && (ANALYTICS_EVENTS as readonly string[]).includes(x);
+}
 
 export interface AnalyticsSink {
   track(event: AnalyticsEvent, props?: Record<string, string | number | boolean>): void;

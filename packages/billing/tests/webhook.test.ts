@@ -140,6 +140,8 @@ describe('webhook processing', () => {
     expect(out.outcome).toBe('processed');
     expect(store.customers['cus_9']).toBe('user_9');
     expect(store.subs[0]).toMatchObject({ userId: 'user_9', planKey: 'pro' });
+    // The outcome names the plan so the route can record `subscription_started` (plan §31).
+    expect(out.planKey).toBe('pro');
   });
 
   it('cancellation and payment failure downgrade correctly', async () => {

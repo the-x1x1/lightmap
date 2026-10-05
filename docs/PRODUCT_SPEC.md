@@ -370,6 +370,26 @@ No collaboration or sharing in v0.1.
 (Chromium) and the Share → Add to Home Screen hint on iOS Safari; nothing is shown once the app
 runs installed. Installed launches arrive at `/?source=pwa`.
 
+**Preferences** (plan §17; "Account & plan" panel, available signed out too):
+
+- **Distances**: metric (m, km, m/s) or imperial (ft, mi, mph). Applies to the depth-of-field
+  figures and focus-distance box, the planning card (focus, sharp range, hyperfocal, ground
+  elevation) and the weather details (visibility, wind). Bearings and angles stay in degrees; lens
+  figures stay in millimetres everywhere.
+- **Times shown in**: the place's own zone (default) or the device's. Switching keeps the selected
+  instant and re-reads it in the other zone ("18:30 at the beach" becomes "08:30 at home"); the
+  date control, timeline, clock, day events and the weather day all follow. Saved viewpoints
+  always carry the place's zone, so a viewpoint restores correctly whichever mode is on.
+- **Lens a new place starts with**: a full-frame-equivalent focal length (8–600 mm, default 24)
+  the camera takes whenever a new place is picked; an existing camera is never changed under the
+  photographer.
+
+Preferences are kept on the device (local storage) for everyone and saved to the profile when
+signed in (`GET/PATCH /api/account/profile`), the profile winning over the device copy when it
+loads — except a profile nobody has changed yet (`customized: false`), which adopts the choices
+made on this device while signed out rather than resetting them. A change applies at once and
+saves on its own; if the save fails the previous setting comes back and the panel says so.
+
 ## 11. Plans and entitlements (plan §15)
 
 |                                             | Free                       | Photographer Pro             |

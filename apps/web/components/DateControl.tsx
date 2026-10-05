@@ -1,9 +1,9 @@
 'use client';
 import { addCivilDays, civilDateString, parseCivilDate } from '@lightmap/astronomy';
-import { usePlannerStore } from '@/features/planner/store';
+import { effectiveTimeZone, usePlannerStore } from '@/features/planner/store';
 import { Button } from '@lightmap/ui';
 
-/** Date picker with ±1 day steppers and "Today" (at the location's zone). */
+/** Date picker with ±1 day steppers and "Today" (in the zone the planner shows times in). */
 export function DateControl({
   disabled,
   blockedReason,
@@ -15,6 +15,7 @@ export function DateControl({
   const setDate = usePlannerStore((s) => s.setDate);
   const setNow = usePlannerStore((s) => s.setNow);
   const location = usePlannerStore((s) => s.location);
+  const timeZoneMode = usePlannerStore((s) => s.timeZoneMode);
   const civil = parseCivilDate(date);
   const step = (n: number) => civil && setDate(civilDateString(addCivilDays(civil, n)));
   const human = civil
@@ -36,7 +37,7 @@ export function DateControl({
           Date
         </label>
         <span className="text-xs text-[var(--lm-text-muted)]">
-          {location ? location.timeZone : 'device time zone'}
+          {location ? effectiveTimeZone({ location, timeZoneMode }) : 'device time zone'}
         </span>
       </div>
       <div className="flex items-center gap-1">

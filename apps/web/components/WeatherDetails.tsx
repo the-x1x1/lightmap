@@ -1,10 +1,15 @@
-import type { SceneState } from '@lightmap/scene';
+'use client';
+import { M_PER_MI, type SceneState } from '@lightmap/scene';
 import { describeWeatherCode } from '@lightmap/weather';
+import { usePlannerStore } from '@/features/planner/store';
+
+const MPH_PER_MPS = 3600 / M_PER_MI;
 
 export function WeatherDetails({ scene }: { scene: SceneState }) {
   const a = scene.atmosphere;
   const f = a.frame;
   const p = a.parameters;
+  const imperial = usePlannerStore((s) => s.units) === 'imperial';
   return (
     <div className="space-y-2 text-sm" data-testid="weather-details">
       <p className="text-[var(--lm-text-muted)]">{a.summary}</p>
@@ -18,10 +23,24 @@ export function WeatherDetails({ scene }: { scene: SceneState }) {
           <Row label="Rain chance" value={`${Math.round(f.precipitationProbability)} %`} />
         ) : null}
         {f?.visibility !== null && f?.visibility !== undefined ? (
-          <Row label="Visibility" value={`${(f.visibility / 1000).toFixed(0)} km`} />
+          <Row
+            label="Visibility"
+            value={
+              imperial
+                ? `${(f.visibility / M_PER_MI).toFixed(0)} mi`
+                : `${(f.visibility / 1000).toFixed(0)} km`
+            }
+          />
         ) : null}
         {f?.windSpeed !== null && f?.windSpeed !== undefined ? (
-          <Row label="Wind" value={`${f.windSpeed.toFixed(0)} m/s`} />
+          <Row
+            label="Wind"
+            value={
+              imperial
+                ? `${(f.windSpeed * MPH_PER_MPS).toFixed(0)} mph`
+                : `${f.windSpeed.toFixed(0)} m/s`
+            }
+          />
         ) : null}
       </dl>
       {a.providerAttribution ? (

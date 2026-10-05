@@ -1,6 +1,8 @@
 export * as schema from './schema.ts';
 export type {
   User,
+  Profile,
+  NewProfile,
   Project,
   NewProject,
   Viewpoint,

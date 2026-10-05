@@ -43,7 +43,7 @@ export function HourlyOutlook({
 }) {
   const minutes = usePlannerStore((s) => s.minutes);
   const setMinutes = usePlannerStore((s) => s.setMinutes);
-  const tz = scene.location.timeZone;
+  const tz = scene.timeZone;
   const civil = parseCivilDate(scene.localTime.date);
 
   const hours = useMemo(() => {

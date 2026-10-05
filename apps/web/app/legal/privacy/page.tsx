@@ -45,6 +45,12 @@ export default function PrivacyPage() {
           when you close the view.
         </li>
         <li>
+          Your preferences (units, which time zone times are shown in, the lens a new place starts
+          with) are kept in your browser&rsquo;s local storage so they are there on your next visit.
+          Signed in, the same three settings are saved to your account so your other devices follow
+          them.
+        </li>
+        <li>
           In production an offline cache on your device keeps a copy of the app and of{' '}
           <em>your own</em> saved projects so they open without a connection. Nothing is sent
           anywhere by it, and it is deleted when you sign out, when you request account deletion,
@@ -95,6 +101,9 @@ export default function PrivacyPage() {
           <strong>Usage counters</strong>: daily totals of API use per account, to enforce plan
           limits and fair use.
         </li>
+        <li>
+          <strong>Preferences</strong>: units, time-zone mode and default lens, if you change them.
+        </li>
       </ul>
       <p>
         There are no photo uploads. No image of yours ever reaches {brand.name} or any third party
@@ -106,9 +115,11 @@ export default function PrivacyPage() {
         Product analytics, when enabled, record a small fixed set of events (for example "a place
         was selected", "a viewpoint was saved"). Coordinates in those events are quantised to whole
         degrees (about 110 km); search text, notes, names, email addresses and labels are stripped
-        before an event is recorded. Server logs record the route, status and latency of requests
-        with secrets, tokens, cookies and email addresses redacted at write time; they do not record
-        query strings containing coordinates.
+        before an event is recorded, and no event carries an account identifier. Events are sent
+        only to {brand.name}'s own servers — there is no third-party analytics script — and are not
+        sent at all when your browser signals Do Not Track or Global Privacy Control. Server logs
+        record the route, status and latency of requests with secrets, tokens, cookies and email
+        addresses redacted at write time; they do not record query strings containing coordinates.
       </p>
 
       <h2>5. Who receives data</h2>
