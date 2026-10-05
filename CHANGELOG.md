@@ -23,7 +23,7 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   lists the next two dark windows; a saved viewpoint planned after dusk carries a night line
   ("✦ Milky Way core 36° up SSW · dark sky", `nightTag()`, tested). The **Light finder** takes the core as a third body: "when does the
   core stand over that peak?" — bearing/elevation matches like the Sun's, kept only in a dark
-  sky by default (`darkSkyOnly`; each match says `dark`, `twilight` or `moonlit`).
+  sky by default (`darkSkyOnly`; each match says `dark`, `daylight`, `twilight` or `moonlit`).
 - **Dark-hours climatology**: "Typical for this month" adds the night shooter's line — how
   often the dark hours of the selected night (astronomical dusk to dawn) were clear over ten
   years, mean cloud and the overcast/storm share (`hoursShare()`, `hoursBetween()`, tested).

@@ -276,8 +276,12 @@ export function hoursShare(
   let clear = 0;
   let dull = 0;
   let wet = 0;
-  for (const h of new Set(hours)) {
-    const b = summary.byHour[((h % 24) + 24) % 24];
+  // Normalise first (whole hours 0–23), then count each hour once.
+  const wanted = new Set(
+    hours.filter(Number.isFinite).map((x) => ((Math.floor(x) % 24) + 24) % 24),
+  );
+  for (const h of wanted) {
+    const b = summary.byHour[h];
     if (!b || b.samples === 0) continue;
     samples += b.samples;
     cloud += b.meanCloudCover * b.samples;
@@ -298,6 +302,7 @@ export function hoursShare(
 /** The local hours from `startHour` to `endHour` (exclusive), wrapping midnight: 21→4 is 21,22,23,0,1,2,3. */
 export function hoursBetween(startHour: number, endHour: number): number[] {
   const out: number[] = [];
+  if (!Number.isFinite(startHour) || !Number.isFinite(endHour)) return out;
   const a = ((Math.floor(startHour) % 24) + 24) % 24;
   const b = ((Math.floor(endHour) % 24) + 24) % 24;
   if (a === b) return out;

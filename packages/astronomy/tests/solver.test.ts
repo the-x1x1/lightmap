@@ -229,7 +229,7 @@ describe('reverse planning solver', () => {
     for (const a of all.alignments) {
       expect(a.body).toBe('core');
       expect(a.illuminatedFraction).toBeNull();
-      expect(['dark', 'twilight', 'moonlit']).toContain(a.sky);
+      expect(['dark', 'daylight', 'twilight', 'moonlit']).toContain(a.sky);
       const check = galacticCentrePosition(a.timestampUtc, KAILUA.latitude, KAILUA.longitude);
       expect(Math.abs(wrapDelta(check.azimuthDeg - 180))).toBeLessThan(0.02);
       // Transit height from Kailua: 90 − (21.4 + 29.0).
@@ -285,6 +285,28 @@ describe('reverse planning solver', () => {
       target: { azimuthDegrees: 90 },
     });
     expect(sun.alignments[0]?.sky).toBeNull();
+    expect(all.alignments.length).toBeGreaterThan(0);
+    // A daytime alignment with the filter off says so, not "twilight".
+    const winter = findDirectionMatches({
+      ...KAILUA,
+      from: { year: 2026, month: 12, day: 1 },
+      to: { year: 2026, month: 12, day: 3 },
+      target: { azimuthDegrees: 121.5, elevationDegrees: -1.1, elevationToleranceDegrees: 1 },
+      body: 'core',
+      minElevationDegrees: -3,
+      darkSkyOnly: false,
+    });
+    expect(winter.matches.length).toBeGreaterThan(0);
+    for (const m of winter.matches) expect(m.sky).toBe('daylight');
+    const moon = findDirectionMatches({
+      ...KAILUA,
+      from: range.from,
+      to: range.from,
+      target: { azimuthDegrees: 110, azimuthToleranceDegrees: 180 },
+      body: 'moon',
+      minElevationDegrees: -90,
+    });
+    expect(moon.alignments[0]?.sky).toBeNull();
   });
 
   it('respects maxDays and rejects inverted ranges', () => {

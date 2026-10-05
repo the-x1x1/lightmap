@@ -319,7 +319,7 @@ No lens optical simulation (distortion, rendered blur) in v1.
   core** (the Galactic Centre, a fixed point on the sky that comes round four minutes earlier
   each night), by default only in a dark sky — astronomical night, no Moon over 30 % lit above
   the horizon — so "when is the core over that peak?" lists the shootable nights; rows found
-  with the filter off say "twilight" or "moonlit". (Moon and core follow the `moon_planning` entitlement,
+  with the filter off say "daylight", "twilight" or "moonlit". (Moon and core follow the `moon_planning` entitlement,
   which every plan has; the date window is what a Free search is clipped to.)
 - **Range**: civil dates at the location, default today → +365 days, capped at 1100 days.
   Free plans search inside their date window; the range is clipped and explained, never refused.

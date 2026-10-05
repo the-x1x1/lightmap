@@ -27,7 +27,7 @@ import { addCivilDays, civilDateString, localDayBounds, type CivilTime } from '.
 export type CelestialBody = 'sun' | 'moon' | 'core';
 
 /** For the core: what stands between the band and the camera at an instant. */
-export type SkyState = 'dark' | 'twilight' | 'moonlit';
+export type SkyState = 'dark' | 'daylight' | 'twilight' | 'moonlit';
 
 export interface DirectionTarget {
   /** Compass azimuth of the desired body position, degrees clockwise from north. */
@@ -87,7 +87,7 @@ export interface DirectionMatch {
   illuminatedFraction: number | null;
   /**
    * Core only: whether the sky can show the band at the instant — `dark` (astronomical night, no
-   * Moon over 30 % up), `twilight`, or `moonlit`; null for the Sun and Moon.
+   * Moon over 30 % up), `daylight`, `twilight`, or `moonlit`; null for the Sun and Moon.
    */
   sky: SkyState | null;
   /** Rising (elevation increasing) or setting at the instant. */
@@ -136,7 +136,9 @@ function positionOf(body: CelestialBody, t: number, lat: number, lon: number) {
  */
 function skyAt(t: number, lat: number, lon: number): SkyState {
   const d = new Date(t);
-  if (sunPosition(d, lat, lon).elevationDeg > -18) return 'twilight';
+  const sunEl = sunPosition(d, lat, lon).elevationDeg;
+  if (sunEl > -6) return 'daylight';
+  if (sunEl > -18) return 'twilight';
   const moon = moonPosition(d, lat, lon);
   const moonUp = moon.elevationDeg > moonHorizonThresholdDeg(moon.distanceKm);
   return moonUp && moon.illuminatedFraction > MILKY_WAY_MOON_LIMIT ? 'moonlit' : 'dark';

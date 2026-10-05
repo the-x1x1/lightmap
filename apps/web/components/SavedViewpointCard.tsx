@@ -3,6 +3,7 @@ import type { ViewpointDto } from '@/lib/api-types';
 import { formatWallTime, utcToWallClock } from '@lightmap/astronomy';
 import { compassLabel } from '@lightmap/geospatial';
 import { Button } from '@lightmap/ui';
+import { useMemo } from 'react';
 import { useCapabilities } from '@/features/planner/use-scene';
 import { forecastNudge } from '@/features/projects/forecast-nudge';
 import { nightTag } from '@/features/projects/night-tag';
@@ -33,7 +34,12 @@ export function SavedViewpointCard({
   const w = utcToWallClock(utc, viewpoint.timezone);
   const caps = useCapabilities();
   const nudge = forecastNudge(viewpoint, caps.data?.weather ?? null, new Date());
-  const night = nightTag(viewpoint);
+  // Three ephemeris positions per card: memoised so a 200-card drawer does not redo them per render.
+  const { latitude, longitude, selectedDatetimeUtc } = viewpoint;
+  const night = useMemo(
+    () => nightTag({ latitude, longitude, selectedDatetimeUtc }),
+    [latitude, longitude, selectedDatetimeUtc],
+  );
   const stamp = (d: Date, tz: string) => {
     const x = utcToWallClock(d, tz);
     return `${x.year}-${String(x.month).padStart(2, '0')}-${String(x.day).padStart(2, '0')} ${formatWallTime(d, tz)}`;

@@ -53,6 +53,7 @@ export {
   type DirectionMatch,
   type SolverInput,
   type SolverResult,
+  type SkyState,
 } from './solver.ts';
 export * from './phases.ts';
 export * from './night-sky.ts';

@@ -118,8 +118,12 @@ describe('summarizeClimatology', () => {
     expect(night.clearShare).toBeCloseTo(1, 5);
     const morning = hoursShare(s, [6, 7, 8, 9]);
     expect(morning!.meanCloudCover).toBeCloseTo(10, 5);
-    // Duplicates count once; an empty set or hours without samples give null.
+    // Duplicates and aliases count once; fractions floor; an empty set or hours without samples
+    // give null; a non-finite bound yields no hours.
     expect(hoursShare(s, [22, 22])!.samples).toBe(31);
+    expect(hoursShare(s, [-1, 23, 47, 23.5])!.samples).toBe(31);
+    expect(hoursBetween(Number.NaN, 3)).toEqual([]);
+    expect(hoursBetween(2, Number.POSITIVE_INFINITY)).toEqual([]);
     expect(hoursShare(s, [])).toBeNull();
     expect(hoursShare(summarizeClimatology([], meta), [1, 2])).toBeNull();
   });

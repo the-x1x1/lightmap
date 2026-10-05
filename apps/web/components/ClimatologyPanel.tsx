@@ -252,8 +252,13 @@ function darkHours(scene: SceneState): { hours: number[]; from: number; to: numb
   const dawn = scene.dayEvents.astronomicalDawn;
   if (!dusk || !dawn) return null;
   const tz = scene.location.timeZone;
-  const from = utcToWallClock(dusk, tz).hour;
-  const to = utcToWallClock(dawn, tz).hour;
+  // To the nearest hour, so a 20:33 dusk starts the dark hours at 21, not at 20's twilight.
+  const hourOf = (d: Date) => {
+    const w = utcToWallClock(d, tz);
+    return Math.round(w.hour + w.minute / 60) % 24;
+  };
+  const from = hourOf(dusk);
+  const to = hourOf(dawn);
   const hours = hoursBetween(from, to);
   return hours.length ? { hours, from, to } : null;
 }
