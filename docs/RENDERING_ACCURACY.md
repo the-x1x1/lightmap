@@ -123,6 +123,14 @@ ground is lifted toward the sky colour by depth, more strongly at low Sun (`hori
 by the light's colour. The light direction and terrain shading are untouched by either. Verified in
 `tools/renderer-smoke` (contact sheet `docs/media/renderer-smoke-2026-09-24c.png`).
 
+### Water
+
+Where the terrain tiles carry a water mask (Cesium World Terrain does; a provider without one
+renders water as ground), the globe shades sea and lakes with Cesium's water effect: a specular
+glint from the scene light, so a low Sun over the sea glitters from the right direction.
+**Claim:** where the glint falls, and that it goes with the Sun. **Caveat:** no waves, swell,
+wet-surface or reflection of the sky's colour; the water mask is the provider's, not a tide model.
+
 ### Weather scenarios
 
 Deterministic parameter sets (`SCENARIOS`) or continuous parameters derived from a forecast frame.

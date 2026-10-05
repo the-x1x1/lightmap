@@ -109,6 +109,7 @@ export class CesiumSceneHost implements SceneHost {
     globe.dynamicAtmosphereLighting = true;
     globe.dynamicAtmosphereLightingFromSun = false; // follow scene.light, not Cesium's sun
     globe.showGroundAtmosphere = true;
+    globe.showWaterEffect = true; // needs a terrain water mask (requested below); otherwise inert
     globe.depthTestAgainstTerrain = true;
     globe.shadows = C.ShadowMode.ENABLED;
     globe.tileCacheSize = 300;
@@ -483,9 +484,13 @@ export class CesiumSceneHost implements SceneHost {
             break;
           case 'quantized-mesh':
             if (!t.url) throw new Error('quantized-mesh terrain needs a url');
+            // The water mask (where the tile set carries one) lets the globe shade sea and lakes
+            // with a specular glint from the scene light — the Sun's reflection on water is part
+            // of the picture a photographer plans for (Phase 4 "water"). Providers without a mask
+            // simply render as ground.
             this.scene.terrainProvider = await C.CesiumTerrainProvider.fromUrl(t.url, {
               requestVertexNormals: true,
-              requestWaterMask: false,
+              requestWaterMask: true,
             });
             break;
           case 'cesium-ion':
@@ -493,6 +498,7 @@ export class CesiumSceneHost implements SceneHost {
               t.assetId ?? 1,
               {
                 requestVertexNormals: true,
+                requestWaterMask: true,
                 ...(this.ionToken ? { accessToken: this.ionToken } : {}),
               },
             );

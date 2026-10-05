@@ -98,9 +98,14 @@ overhead, its paling with haze and the hue of the sunrise/sunset glow come from 
 the scenario; hand-set colours remain for twilight, night and the daytime horizon
 (`RENDERING_ACCURACY.md`).
 
+Also delivered (unreleased): **water** — the terrain water mask is requested and Cesium's water
+effect shades sea and lakes with a specular glint from the scene light (`RENDERING_ACCURACY.md`
+"Water"); no waves or sky reflection.
+
 Remaining: improved terrain texture; detailed buildings where licensed; the scattering model in
 Cesium's own dome (the haze → Mie wiring is in behind the `physicalSkyDome` flag with a
-smoke-harness shot to judge it; enabling it is the PC's call); water shader. Everything stays grounded: geometry and light direction are
+smoke-harness shot to judge it; enabling it is the PC's call); a fuller water shader (waves, sky
+reflection) is not planned until Phase 8. Everything stays grounded: geometry and light direction are
 never altered for looks.
 
 ## Phase 5 — Real references (future, requires licensing work)

@@ -4,6 +4,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Water (Phase 4)**: the terrain water mask is requested and Cesium's water effect is on, so
+  sea and lakes carry a specular glint from the scene light where the tile set has a mask
+  (Cesium World Terrain); providers without one are unchanged.
 - **Production smoke test** (plan §43): `pnpm smoke:prod <url>` checks a deployed build — health
   and the tagged version, no fixture mode, the security headers and a CSP without `unsafe-eval`,
   capabilities without a dev banner or dev sign-in, manifest and an uncacheable service worker,
