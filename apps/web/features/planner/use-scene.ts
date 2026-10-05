@@ -17,7 +17,7 @@ import {
 import { decideWeatherMode, type WeatherCapabilities, type WeatherFrame } from '@lightmap/weather';
 import { gridKey } from '@lightmap/geospatial';
 import { effectiveTimeZone, selectedUtc, usePlannerStore } from './store.ts';
-import { fetchJson } from '@/lib/client/api';
+import { ApiRequestError, fetchJson } from '@/lib/client/api';
 import type { CapabilitiesResponse, WeatherResponse } from '@/lib/api-types';
 
 export interface SceneBundle {
@@ -134,7 +134,12 @@ export function useScene(
   );
 
   const frames: readonly WeatherFrame[] = weatherQuery.data?.frames ?? EMPTY_FRAMES;
-  const providerFailed = Boolean(horizon?.fetchWorthwhile && weatherQuery.isError);
+  // A 403 is the plan's date window (the paywall is already on screen), not a provider failure.
+  const providerFailed = Boolean(
+    horizon?.fetchWorthwhile &&
+    weatherQuery.isError &&
+    !(weatherQuery.error instanceof ApiRequestError && weatherQuery.error.status === 403),
+  );
 
   const scene = useMemo(() => {
     if (!location || !utc || !dayEvents) return null;

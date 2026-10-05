@@ -253,9 +253,11 @@ export function deriveAtmosphere(
       ? 'Comparing scenario'
       : decision.mode === 'PAST'
         ? 'Historical weather not loaded'
-        : decision.mode === 'SCENARIO' && caps
-          ? 'Forecast unavailable this far ahead'
-          : 'No forecast';
+        : decision.mode === 'RECENT_PAST'
+          ? 'Observed conditions not loaded'
+          : decision.mode === 'SCENARIO' && caps
+            ? 'Forecast unavailable this far ahead'
+            : 'No forecast';
   return {
     mode: 'SCENARIO',
     scenario: s.id,
