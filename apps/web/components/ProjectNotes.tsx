@@ -1,13 +1,19 @@
 'use client';
 /**
  * A project's notes and shoot date (plan §4 "Projects: name, optional shoot date, notes"), edited
- * in place: the notes save when the field loses focus (or on Ctrl/⌘+Enter), the date on change.
- * Keyed on the project id by the caller, so switching projects resets the drafts.
+ * in place: the notes save when the field loses focus (or on Ctrl/⌘+Enter), the date half a
+ * second after the last change (a keyboard-edited date input emits a value per keystroke). Saves
+ * are chained so the last edit always wins, and "saved" is judged against what this component
+ * last sent, not against the list's refetch. Keyed on the project id by the caller, so switching
+ * projects resets the drafts.
  */
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ProjectDto } from '@/lib/api-types';
 
 const NOTES_MAX = 2000;
+const DATE_SETTLE_MS = 500;
+
+type Patch = { description?: string | null; shootDate?: string | null };
 
 export function ProjectNotes({
   project,
@@ -16,27 +22,51 @@ export function ProjectNotes({
 }: {
   project: ProjectDto;
   /** Resolves when the server has the change; rejects with the API error. */
-  onSave: (patch: { description?: string | null; shootDate?: string | null }) => Promise<unknown>;
+  onSave: (patch: Patch) => Promise<unknown>;
   busy: boolean;
 }) {
   const [notes, setNotes] = useState(project.description ?? '');
   const [date, setDate] = useState(project.shootDate ?? '');
   const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle');
-  const dirty = notes !== (project.description ?? '');
+  // What the server holds, as far as this component knows (the API trims notes).
+  const [savedNotes, setSavedNotes] = useState(project.description ?? '');
+  const dirty = notes.trim() !== savedNotes;
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
+  const dateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const save = async (patch: { description?: string | null; shootDate?: string | null }) => {
+  /** Chain the save behind any in-flight one so the last edit lands last. */
+  const save = (patch: Patch, onDone?: () => void) => {
     setState('saving');
-    try {
-      await onSave(patch);
-      setState('saved');
-    } catch {
-      setState('failed');
-    }
+    const run = queue.current
+      .then(() => onSave(patch))
+      .then(
+        () => {
+          onDone?.();
+          setState('saved');
+        },
+        () => setState('failed'),
+      );
+    queue.current = run;
   };
   const commitNotes = () => {
     if (!dirty) return;
-    void save({ description: notes.trim() === '' ? null : notes });
+    const trimmed = notes.trim();
+    save({ description: trimmed === '' ? null : trimmed }, () => setSavedNotes(trimmed));
   };
+  const changeDate = (value: string) => {
+    setDate(value);
+    if (dateTimer.current) clearTimeout(dateTimer.current);
+    dateTimer.current = setTimeout(() => {
+      dateTimer.current = null;
+      save({ shootDate: value || null });
+    }, DATE_SETTLE_MS);
+  };
+  useEffect(
+    () => () => {
+      if (dateTimer.current) clearTimeout(dateTimer.current);
+    },
+    [],
+  );
 
   return (
     <details className="group" data-testid="project-notes">
@@ -56,10 +86,7 @@ export function ProjectNotes({
           <input
             type="date"
             value={date}
-            onChange={(e) => {
-              setDate(e.target.value);
-              void save({ shootDate: e.target.value || null });
-            }}
+            onChange={(e) => changeDate(e.target.value)}
             className="mt-1 block h-11 rounded-[var(--lm-radius-sm)] border border-[var(--lm-panel-border)] bg-[var(--lm-panel-raised)] px-3 text-sm text-[var(--lm-text)] focus:outline-none focus-visible:[box-shadow:var(--lm-focus)]"
             data-testid="project-shoot-date"
           />

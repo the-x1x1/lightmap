@@ -30,7 +30,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   sky by default (`darkSkyOnly`; each match says `dark`, `daylight`, `twilight` or `moonlit`).
 - **Project notes and shoot date** are editable in place from the selected project (plan §4
   "Projects: name, optional shoot date, notes" — the API had them, the UI did not): notes save on
-  blur or Ctrl/⌘+Enter, the date on change, with an honest saved/unsaved status.
+  blur or Ctrl/⌘+Enter, the date once it has settled, chained so the last edit wins, with an
+  honest saved/unsaved status.
 - **Dark-hours climatology**: "Typical for this month" adds the night shooter's line — how
   often the dark hours of the selected night (astronomical dusk to dawn) were clear over ten
   years, mean cloud and the overcast/storm share (`hoursShare()`, `hoursBetween()`, tested).

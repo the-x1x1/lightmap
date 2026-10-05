@@ -77,6 +77,11 @@ export class CesiumSceneHost implements SceneHost {
   private hiddenRunEntities: Cesium.Entity[] = [];
   private seasonEntities: Cesium.Entity[] = [];
   private nightEntities: Cesium.Entity[] = [];
+  private nightKinds: Array<'moon' | 'core' | undefined> = [];
+  private nightMaterials: {
+    moon: Cesium.PolylineDashMaterialProperty;
+    core: Cesium.PolylineDashMaterialProperty;
+  } | null = null;
   private baseLayer: Cesium.ImageryLayer | null = null;
   private fallbackLayer: Cesium.ImageryLayer | null = null;
   private terrainReady: Promise<void> = Promise.resolve();
@@ -467,19 +472,31 @@ export class CesiumSceneHost implements SceneHost {
           polyline: { width: 2, arcType: C.ArcType.NONE },
         }),
       );
+    // Two shared dash materials, assigned only when an entity's kind changes (a material
+    // assignment makes the visualizer rebuild); positions follow the radius like the sun's.
+    this.nightMaterials ??= {
+      moon: new C.PolylineDashMaterialProperty({
+        color: C.Color.fromCssColorString('#d8dde6').withAlpha(0.55),
+        gapColor: C.Color.TRANSPARENT,
+        dashLength: 8,
+      }),
+      core: new C.PolylineDashMaterialProperty({
+        color: C.Color.fromCssColorString('#c9b8ff').withAlpha(0.7),
+        gapColor: C.Color.TRANSPARENT,
+        dashLength: 8,
+      }),
+    };
+    const materials = this.nightMaterials;
     this.nightEntities.forEach((e, i) => {
       const np = o.nightPaths[i];
       if (np && np.points.length > 1) {
         e.polyline!.positions = new C.ConstantProperty(
           np.points.map((s) => local(s.azimuthDeg, s.elevationDeg, o.radiusM)),
         );
-        e.polyline!.material = new C.PolylineDashMaterialProperty({
-          color: C.Color.fromCssColorString(np.kind === 'core' ? '#c9b8ff' : '#d8dde6').withAlpha(
-            np.kind === 'core' ? 0.7 : 0.55,
-          ),
-          gapColor: C.Color.TRANSPARENT,
-          dashLength: 8,
-        });
+        if (this.nightKinds[i] !== np.kind) {
+          e.polyline!.material = materials[np.kind];
+          this.nightKinds[i] = np.kind;
+        }
         e.show = true;
       } else e.show = false;
     });
