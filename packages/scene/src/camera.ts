@@ -54,7 +54,8 @@ export function defaultCamera(eye: GeoPoint, headingDeg = 0): CameraState {
 
 export function normalizeHeading(deg: number): number {
   const x = deg % 360;
-  return x < 0 ? x + 360 : x;
+  // (x + 360) % 360, not x + 360: a tiny negative (−1e-17 from atan2) must read 0, never 360.
+  return x < 0 ? (x + 360) % 360 : x;
 }
 
 export function clampPitch(deg: number, min = -89, max = 89): number {

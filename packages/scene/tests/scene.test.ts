@@ -18,6 +18,7 @@ import {
   horizontalFovDeg,
   isInFrame,
   lightingGeometry,
+  normalizeHeading,
   relativeBearing,
 } from '../src/camera.ts';
 import { explainScene } from '../src/explain.ts';
@@ -324,6 +325,11 @@ describe('confidence and source mode', () => {
 });
 
 describe('camera model', () => {
+  it('normalizeHeading never returns 360 (a tiny negative from atan2 reads 0)', () => {
+    expect(normalizeHeading(-1e-17)).toBe(0);
+    expect(normalizeHeading(-0.5)).toBeCloseTo(359.5, 9);
+    expect(normalizeHeading(720)).toBe(0);
+  });
   it('derives field of view from full-frame focal length', () => {
     expect(horizontalFovDeg(24)).toBeCloseTo(73.74, 1);
     expect(horizontalFovDeg(50)).toBeCloseTo(39.6, 1);

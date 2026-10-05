@@ -206,6 +206,15 @@ focal-length preset, and mode.
   "Focus at hyperfocal", and never blurs the preview: the numbers describe the photograph, the
   frame stays sharp so its geometry is readable.
 
+- **Point with phone** (viewpoint mode, phones and tablets): the camera follows where the
+  device's back camera points — heading from the compass, pitch from the tilt — so you can stand
+  at the spot, raise the phone like a camera and see the planned light for that framing. Uses the
+  DeviceOrientation angles (`cameraPointingFromOrientation`: the device's −z axis through
+  Rz·Rx·Ry, so screen rotation does not matter; iOS compass heading when alpha is only relative),
+  smoothed on the unit circle and throttled. Opt-in per use (iOS asks for permission on the first
+  tap); any drag, slider or key press hands control back; leaving viewpoint mode, clearing the
+  place or hiding the page stops it. Devices without a compass reference are told so instead of
+  being pointed somewhere arbitrary.
 - **Level & thirds guide** (viewpoint mode, free): a rule-of-thirds grid, the true-level line
   (elevation 0; with no roll it is straight, at `y = −tan(pitch) / tan(½·vFOV)`) and the modelled
   terrain skyline — the same sampled ridge the "behind terrain" timings use, labelled "terrain

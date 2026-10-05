@@ -14,6 +14,12 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   rule-of-thirds grid, the true-level line and the modelled terrain skyline (dotted, "terrain
   only"), with buttons that pitch the camera so level sits on the low third, the centre or the
   high third. `levelLineY()`, `pitchForHorizonAt()`, `skylinePath()` in `@lightmap/scene`.
+- **Point with phone (Phase 9 field mode)**: in viewpoint mode on a phone, the camera follows
+  the device's back camera — compass heading and tilt from DeviceOrientation, screen-rotation
+  independent, smoothed and throttled; iOS permission prompt handled; manual input takes over;
+  devices without a compass are told so. `cameraPointingFromOrientation()` and `blendHeading()`
+  in `@lightmap/scene` (tested against hand-computed poses); `normalizeHeading()` can no longer
+  return 360 for a tiny negative input.
 - **Legal drafts**: `/legal/privacy` and `/legal/terms` are now full drafts derived from
   `docs/PRIVACY.md` and the product spec (what stays on the device, what we store, recipients,
   retention, deletion, offline cache; accuracy statements, plans and cancellation, past-due grace,

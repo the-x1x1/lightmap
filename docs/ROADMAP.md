@@ -168,8 +168,12 @@ account deletion, a signed-out session or a change of user. The network banner s
 data is on screen and how old it is. Terrain and weather still need the network; offline, weather
 falls back to scenarios and the globe to the overlay.
 
-Capacitor or React Native wrapper only after PWA usage proves demand: native install, compass,
-device orientation, AR sun alignment, field mode.
+**Compass / device orientation — delivered (unreleased)**: "Point with phone" in viewpoint mode
+aims the camera where the phone's back camera points (`cameraPointingFromOrientation`,
+`blendHeading`, `useCompass`), the first piece of field mode.
+
+Capacitor or React Native wrapper only after PWA usage proves demand: native install, AR sun
+alignment (camera pass-through), full field mode.
 
 ## Not on the roadmap (plan §37)
 

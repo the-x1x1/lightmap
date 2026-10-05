@@ -11,3 +11,4 @@ export * from './optics.ts';
 export * from './explain.ts';
 export * from './horizon.ts';
 export * from './level.ts';
+export * from './orientation.ts';
