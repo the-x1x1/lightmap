@@ -365,6 +365,10 @@ No collaboration or sharing in v0.1.
 - Account required for saving, subscribing and cross-device sync.
 - Logout, session expiry, and an account-deletion request flow (14-day window, see `PRIVACY.md`).
 
+**Install**: the account menu offers "Install app" where the browser provides an install prompt
+(Chromium) and the Share → Add to Home Screen hint on iOS Safari; nothing is shown once the app
+runs installed. Installed launches arrive at `/?source=pwa`.
+
 ## 11. Plans and entitlements (plan §15)
 
 |                                             | Free                       | Photographer Pro             |

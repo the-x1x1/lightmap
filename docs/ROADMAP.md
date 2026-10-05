@@ -164,7 +164,9 @@ direction or erase uncertainty labels.
 
 The PWA baseline exists (unreleased): a complete manifest (`id`, scope, 192/512 PNG icons plus a
 maskable variant, `display_override`), an apple-touch-icon, `start_url=/?source=pwa` so installed
-launches can be counted.
+launches can be counted, and an **Install app** entry in the account menu (deferred
+`beforeinstallprompt` on Chromium; the "Share → Add to Home Screen" hint on iOS Safari; hidden
+once installed — `useInstallPrompt`).
 
 **Offline project cache — delivered (unreleased)**, the first Phase 9 deliverable: a hand-written
 service worker (`public/sw.js`, production only) keeps the planner page, its hashed chunks, the

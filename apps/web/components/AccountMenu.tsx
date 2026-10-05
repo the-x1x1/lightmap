@@ -5,6 +5,7 @@ import { signIn, signOut } from 'next-auth/react';
 import { useAccount, useDeleteAccount } from '@/features/account/use-account';
 import { useCapabilities } from '@/features/planner/use-scene';
 import { usePlannerStore } from '@/features/planner/store';
+import { useInstallPrompt } from '@/features/pwa/use-install-prompt';
 import { Button, cx } from '@lightmap/ui';
 import { SubscriptionStatus } from './SubscriptionStatus';
 import { Paywall } from './Paywall';
@@ -77,9 +78,28 @@ export function AccountMenu() {
               <Item onSelect={() => openPanel('account')}>About Pro</Item>
             </>
           )}
+          <InstallItem />
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
+  );
+}
+
+/** "Install app" when the browser offers a prompt; the iOS hint when it does not. */
+function InstallItem() {
+  const { state, install } = useInstallPrompt();
+  if (state === 'none' || state === 'installed') return null;
+  return (
+    <>
+      <DropdownMenu.Separator className="my-1 h-px bg-white/10" />
+      {state === 'promptable' ? (
+        <Item onSelect={() => void install()}>Install app</Item>
+      ) : (
+        <DropdownMenu.Label className="px-2 py-1.5 text-xs text-[var(--lm-text-muted)]">
+          Install: Share → Add to Home Screen
+        </DropdownMenu.Label>
+      )}
+    </>
   );
 }
 

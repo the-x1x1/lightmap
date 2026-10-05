@@ -18,6 +18,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   `@vitest/mocker` redirect mocks — dev-only, closed anyway); nodemailer 10.0.9+ across the workspace (GHSA-v53p-9fqp-m79j and
   GHSA-prgh-xp8r-p3m5, high: address-parser denial of service; plus three moderate advisories).
   Only `createTransport`/`sendMail` are used, unchanged across the major.
+- **Install app** in the account menu (Phase 9 "native install"): Chromium's deferred install
+  prompt, the Add-to-Home-Screen hint on iOS Safari, hidden when already installed.
 - **Roll-aware field view**: the phone's roll about its line of sight (from the orientation
   reading, smoothed) tilts the sun marker, the sun path, the level line and the ridge the other
   way, so a hand-held phone that is not quite level still marks the picture correctly.
