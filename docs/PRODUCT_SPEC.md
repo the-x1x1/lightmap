@@ -278,8 +278,10 @@ focal-length preset, and mode.
   and the modelled ridge, and an edge arrow with the turn needed when the sun is out of frame
   ("sun 40° right, 12° up"). On a dark sky (Sun below −6°, core up) the Milky Way core is marked
   the same way — a four-point star in the frame, full on _visible_, faint otherwise, or an edge
-  arrow ("core 30° left") when it is out of frame — so a night shooter can hold the phone up
-  and see where the band will stand at the planned time. Heading and pitch follow the phone (the compass starts with the
+  arrow ("core 30° left") when it is out of frame — and the core's dotted violet **track** over
+  the night's dark hours (`corePathInFrame`: Sun below −18°, core above the horizon; geometry,
+  not a visibility verdict), so a night shooter can hold the phone up, see where the band will
+  stand at the planned time and where it goes through the night. Heading and pitch follow the phone (the compass starts with the
   view); "Now" jumps the planner to the present; the feed's field of view starts at a phone-camera
   default (`defaultCameraFeedFovDeg`: 69° across the long side) and can be nudged ±3° until the
   frame matches the eye. The frames never leave the device — nothing is captured, stored or sent
