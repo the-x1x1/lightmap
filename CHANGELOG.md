@@ -5,9 +5,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 ## Unreleased
 
 - **Seasonal envelope** (plan §1 "seasonal path"): the compass rose shows where sunrise and
-  sunset swing to across the year as rim arcs (June to December solstice), and "Sun & moon
-  details" reads the bearings and the noon range out ("Sunrise 64°–115° (ENE–ESE) …"); polar
-  places name the solstice condition instead. `seasonalEnvelope()` in `@lightmap/scene`, tested
+  sunset swing to across the year as rim arcs (June to December solstice), the 3D map draws the
+  two solstice sun paths faintly beside the day's arc, the planning card carries the line, and
+  "Sun & moon details" reads the bearings and the noon range out ("Sunrise 64°–115° (ENE–ESE)
+  …"); polar places name the solstice condition instead. `seasonalEnvelope()` in `@lightmap/scene`, tested
   at London, Kailua, Sydney and Tromsø.
 - **Observed weather for any past date**: dates beyond the forecast model's 92-day window now
   load real conditions from the provider's reanalysis archive (Open-Meteo ERA5 back to 1940;

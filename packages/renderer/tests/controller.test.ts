@@ -160,11 +160,18 @@ describe('SceneController', () => {
     const o = calls['setOverlay']![0]![0] as {
       visible: boolean;
       sunPath: unknown[];
+      seasonPaths: Array<Array<{ azimuthDeg: number; elevationDeg: number }>>;
       sun: { elevationDeg: number };
       shadowAzimuthDeg: number;
     };
     expect(o.visible).toBe(true);
     expect(o.sunPath.length).toBeGreaterThan(60);
+    // The year's envelope: the June arc climbs higher than December's at Kailua (21° N).
+    expect(o.seasonPaths).toHaveLength(2);
+    const peak = (p: Array<{ elevationDeg: number }>) => Math.max(...p.map((x) => x.elevationDeg));
+    expect(peak(o.seasonPaths[0]!)).toBeGreaterThan(85);
+    expect(peak(o.seasonPaths[1]!)).toBeLessThan(50);
+    expect(o.seasonPaths[1]!.length).toBeLessThan(o.seasonPaths[0]!.length); // shorter December day
     expect(o.sun.elevationDeg).toBeGreaterThan(89);
     expect(o.shadowAzimuthDeg).toBeCloseTo((s.solar.azimuthDegrees + 180) % 360, 6);
     expect(sunPathForDay(s).every((p) => p.elevationDeg > -1)).toBe(true);

@@ -158,8 +158,9 @@ In v0.1 **Real Reference never appears**: no imagery provider is contracted
 ### 6a. Seasonal envelope (plan §1 "seasonal path")
 
 The compass rose carries two faint rim arcs — where sunrise and where sunset fall across the
-year, from the June to the December solstice (the two bound every other day) — and "Sun & moon
-details" reads them out: "Across the year · Sunrise 64°–115° (ENE–ESE), sunset 245°–296°, noon
+year, from the June to the December solstice (the two bound every other day) — the 3D map view
+draws the two solstice sun paths faintly beside the day's arc, the planning card carries the line,
+and "Sun & moon details" reads it out: "Across the year · Sunrise 64°–115° (ENE–ESE), sunset 245°–296°, noon
 45°–88°". Pure astronomy (`seasonalEnvelope()` in `@lightmap/scene`, solstice day events and
 sun positions), no terrain. Polar places name the condition instead ("June: midnight sun,
 December: polar night") when a solstice has no sunrise.

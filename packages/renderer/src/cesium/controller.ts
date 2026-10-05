@@ -3,7 +3,7 @@
  * camera) apply immediately on every scrub tick; expensive things (terrain detail, shadow map
  * size, provider swaps) are debounced and diffed (plan §4 "debounce expensive visual refresh").
  */
-import { sunPosition } from '@lightmap/astronomy';
+import { computeDayEvents, sunPosition } from '@lightmap/astronomy';
 import {
   aboveTerrain,
   type CameraState,
@@ -271,9 +271,15 @@ export class SceneController {
       sunPath = sunPathForDay(scene);
       this.cachedSunPath = sunPath;
     }
+    const yearKey = `${scene.dayEvents.date.slice(0, 4)}|${scene.location.point.latitude}|${scene.location.point.longitude}`;
+    if (yearKey !== this.lastYearKey || this.cachedSeasonPaths === null) {
+      this.lastYearKey = yearKey;
+      this.cachedSeasonPaths = seasonPathsForYear(scene);
+    }
     const overlay: HostOverlay = {
       pin: { ...scene.location.point, heightM: this.groundHeightM },
       sunPath,
+      seasonPaths: this.cachedSeasonPaths,
       sun:
         scene.solar.elevationDegrees > -0.833
           ? { azimuthDeg: scene.solar.azimuthDegrees, elevationDeg: scene.solar.elevationDegrees }
@@ -287,6 +293,8 @@ export class SceneController {
   }
   private cachedSunPath: HostOverlay['sunPath'] | null = null;
   private lastPathProfile: HorizonProfile | null = null;
+  private cachedSeasonPaths: HostOverlay['seasonPaths'] | null = null;
+  private lastYearKey = '';
 
   private scheduleExpensive(fn: () => void): void {
     if (this.pendingExpensive !== null) this.clearTimeoutImpl(this.pendingExpensive);
@@ -334,6 +342,35 @@ export function sunPathForDay(scene: SceneState, stepMinutes = 10): HostOverlay[
       out.push(
         profile ? { ...s, behindTerrain: !aboveTerrain(profile, s.azimuthDeg, s.elevationDeg) } : s,
       );
+  }
+  return out;
+}
+
+/**
+ * The sun's paths on the two solstices of the scene's year (plan §1 "seasonal path"), every 15
+ * minutes while above the horizon: the envelope every other day's arc lies within. Empty for a
+ * polar solstice with no daylight.
+ */
+export function seasonPathsForYear(
+  scene: SceneState,
+  stepMinutes = 15,
+): HostOverlay['seasonPaths'] {
+  const year = Number(scene.dayEvents.date.slice(0, 4));
+  const { latitude, longitude } = scene.location.point;
+  const out: HostOverlay['seasonPaths'] = [];
+  for (const month of [6, 12] as const) {
+    const ev = computeDayEvents({
+      latitude,
+      longitude,
+      timeZone: scene.location.timeZone,
+      date: { year, month, day: 21 },
+    });
+    const path: Array<{ azimuthDeg: number; elevationDeg: number }> = [];
+    for (let t = ev.dayStart.getTime(); t <= ev.dayEnd.getTime(); t += stepMinutes * 60_000) {
+      const s = sunAt(new Date(t), scene);
+      if (s.elevationDeg > -1) path.push(s);
+    }
+    if (path.length > 1) out.push(path);
   }
   return out;
 }

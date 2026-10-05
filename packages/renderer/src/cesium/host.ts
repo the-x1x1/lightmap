@@ -93,6 +93,12 @@ export interface HostOverlay {
    * over the path); absent when no terrain horizon exists.
    */
   sunPath: Array<{ azimuthDeg: number; elevationDeg: number; behindTerrain?: boolean }>;
+  /**
+   * The year's bounds (plan §1 "seasonal path"): the sun's path on the June and December
+   * solstices, drawn faint on the same sphere so the day's arc is seen against where it can be.
+   * Empty when not wanted.
+   */
+  seasonPaths: Array<Array<{ azimuthDeg: number; elevationDeg: number }>>;
   sun: { azimuthDeg: number; elevationDeg: number } | null;
   shadowAzimuthDeg: number | null;
   radiusM: number;

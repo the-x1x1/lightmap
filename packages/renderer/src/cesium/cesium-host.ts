@@ -75,6 +75,7 @@ export class CesiumSceneHost implements SceneHost {
   private readonly defaultMie: { sky: Cesium.Cartesian3 | null; ground: Cesium.Cartesian3 };
   private overlayEntities: Cesium.Entity[] = [];
   private hiddenRunEntities: Cesium.Entity[] = [];
+  private seasonEntities: Cesium.Entity[] = [];
   private baseLayer: Cesium.ImageryLayer | null = null;
   private fallbackLayer: Cesium.ImageryLayer | null = null;
   private terrainReady: Promise<void> = Promise.resolve();
@@ -342,6 +343,7 @@ export class CesiumSceneHost implements SceneHost {
     if (!o.visible || !o.pin) {
       for (const e of this.overlayEntities) e.show = false;
       for (const e of this.hiddenRunEntities) e.show = false;
+      for (const e of this.seasonEntities) e.show = false;
       return;
     }
     const pin = o.pin;
@@ -433,6 +435,27 @@ export class CesiumSceneHost implements SceneHost {
       );
       pathE.show = true;
     } else pathE.show = false;
+    // Solstice arcs: thin and faint, one entity per path, created on first use.
+    while (this.seasonEntities.length < o.seasonPaths.length)
+      this.seasonEntities.push(
+        ents.add({
+          show: false,
+          polyline: {
+            width: 1.5,
+            material: C.Color.fromCssColorString('#f5b342').withAlpha(0.35),
+            arcType: C.ArcType.NONE,
+          },
+        }),
+      );
+    this.seasonEntities.forEach((e, i) => {
+      const path = o.seasonPaths[i];
+      if (path && path.length > 1) {
+        e.polyline!.positions = new C.ConstantProperty(
+          path.map((s) => local(s.azimuthDeg, s.elevationDeg, o.radiusM)),
+        );
+        e.show = true;
+      } else e.show = false;
+    });
     // Hidden runs: consecutive points marked behindTerrain, extended by one point on each side so
     // the dashes meet the gold path where the sun clears the ridge.
     const runs: Array<Cesium.Cartesian3[]> = [];
