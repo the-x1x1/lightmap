@@ -11,6 +11,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { formatWallTime } from '@lightmap/astronomy';
 import {
+  corePathInFrame,
   defaultCameraFeedFovDeg,
   edgeIndicator,
   frameCoordinates,
@@ -191,6 +192,17 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
     scene.dayEvents.dayEnd,
     { stepMinutes: 10, aspect, rollDeg: roll },
   );
+  // The core's track over the dark hours of this civil day (with the lunar state), for composing
+  // before it rises; the marker above says whether the sky can show it.
+  const coreTrack = scene.nightSky
+    ? corePathInFrame(
+        frame,
+        scene.location.point,
+        scene.dayEvents.dayStart,
+        scene.dayEvents.dayEnd,
+        { stepMinutes: 10, aspect, rollDeg: roll },
+      )
+    : [];
   const level = levelLineSegment(frame, aspect, roll);
   const sky = profile ? skylinePath(frame, profile, aspect, 48, roll) : [];
   const tz = scene.timeZone;
@@ -304,6 +316,19 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
                 vectorEffect="non-scaling-stroke"
               />
             ) : null}
+            {coreTrack.map((run, i) => (
+              <polyline
+                key={`core-${i}`}
+                points={pts(run)}
+                fill="none"
+                stroke="#c9b8ff"
+                strokeOpacity={0.7}
+                strokeWidth={1.5}
+                strokeDasharray="1 3"
+                vectorEffect="non-scaling-stroke"
+                data-testid="field-view-core-track"
+              />
+            ))}
             {path.map((run, i) => (
               <polyline
                 key={i}

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { localSelectionToUtc } from '@lightmap/astronomy';
-import { defaultCameraFeedFovDeg, edgeIndicator, sunPathInFrame } from '../src/frame-marks.ts';
+import {
+  corePathInFrame,
+  defaultCameraFeedFovDeg,
+  edgeIndicator,
+  sunPathInFrame,
+} from '../src/frame-marks.ts';
 import { frameCoordinates } from '../src/camera.ts';
 
 const kailua = { latitude: 21.397, longitude: -157.727 };
@@ -34,6 +39,41 @@ describe('sun path in the frame', () => {
     const runs = sunPathInFrame(cam, kailua, at(5), at(20), { stepMinutes: 5, aspect: 4 / 3 });
     expect(runs.length).toBeGreaterThanOrEqual(1);
     for (const run of runs) expect(run.length).toBeGreaterThan(0);
+  });
+});
+
+describe('core track in the frame', () => {
+  it('a south-facing frame at Kailua on the new-Moon night holds the core from dusk to dawn', () => {
+    const cam = { headingDeg: 180, pitchDeg: 25, fovDeg: 70 };
+    const night = { year: 2026, month: 6, day: 15 };
+    const from = localSelectionToUtc(night, 20 * 60, 'Pacific/Honolulu');
+    const to = localSelectionToUtc({ ...night, day: 16 }, 5 * 60, 'Pacific/Honolulu');
+    const runs = corePathInFrame(cam, kailua, from, to, { stepMinutes: 10, aspect: 4 / 3 });
+    const all = runs.flat();
+    expect(all.length).toBeGreaterThan(20);
+    // Nothing before astronomical dusk (~20:40 HST = 06:40 UTC) or after dawn (~04:23 = 14:23 UTC).
+    for (const p of all) {
+      const ms = p.at.getTime();
+      expect(ms).toBeGreaterThanOrEqual(Date.parse('2026-06-16T06:35:00Z'));
+      expect(ms).toBeLessThanOrEqual(Date.parse('2026-06-16T14:30:00Z'));
+    }
+    // The track rises to its transit (highest point, largest y) and sets again: not monotonic.
+    const ys = all.map((p) => p.y);
+    const topAt = ys.indexOf(Math.max(...ys));
+    expect(topAt).toBeGreaterThan(0);
+    expect(topAt).toBeLessThan(ys.length - 1);
+  });
+  it('by day there is no track, and none facing north from Kailua', () => {
+    const cam = { headingDeg: 180, pitchDeg: 25, fovDeg: 70 };
+    expect(corePathInFrame(cam, kailua, at(8), at(16), { aspect: 4 / 3 })).toEqual([]);
+    const north = { headingDeg: 0, pitchDeg: 25, fovDeg: 60 };
+    const from = localSelectionToUtc(
+      { year: 2026, month: 6, day: 15 },
+      20 * 60,
+      'Pacific/Honolulu',
+    );
+    const to = localSelectionToUtc({ year: 2026, month: 6, day: 16 }, 5 * 60, 'Pacific/Honolulu');
+    expect(corePathInFrame(north, kailua, from, to, { aspect: 4 / 3 })).toEqual([]);
   });
 });
 

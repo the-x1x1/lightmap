@@ -1,9 +1,10 @@
 /**
  * Marks for a camera frame (Phase 9 field view, "AR sun alignment"): where the sun's path for the
- * day crosses the frame, and where to point an edge arrow when a body is outside it. Pure frame
+ * day (or the Milky Way core's track for the night) crosses the frame, and where to point an edge
+ * arrow when a body is outside it. Pure frame
  * maths on top of `frameCoordinates`; the field view draws the results over the live camera feed.
  */
-import { sunPosition } from '@lightmap/astronomy';
+import { galacticCentrePosition, sunPosition } from '@lightmap/astronomy';
 import type { CameraState } from './types.ts';
 import { frameCoordinates, relativeBearing } from './camera.ts';
 
@@ -16,17 +17,25 @@ export interface FramePathPoint {
   at: Date;
 }
 
+export interface PathOptions {
+  stepMinutes?: number;
+  aspect?: number;
+  frameMargin?: number;
+  rollDeg?: number;
+}
+
 /**
- * The sun's path between two instants as a polyline in frame coordinates, sampled every
- * `stepMinutes`. Samples below the horizon or behind the camera are dropped, so the result may be
- * several runs; `frameMargin` keeps a little of the path past the edges so it reads as continuous.
+ * A body's path between two instants as a polyline in frame coordinates, sampled every
+ * `stepMinutes` from `positionAt` (null = not drawn at that instant). Samples behind the camera or
+ * outside the frame are dropped, so the result may be several runs; `frameMargin` keeps a little
+ * of the path past the edges so it reads as continuous.
  */
-export function sunPathInFrame(
+export function bodyPathInFrame(
   camera: FrameCamera,
-  point: { latitude: number; longitude: number },
   start: Date,
   end: Date,
-  opts: { stepMinutes?: number; aspect?: number; frameMargin?: number; rollDeg?: number } = {},
+  positionAt: (at: Date) => { azimuthDeg: number; elevationDeg: number } | null,
+  opts: PathOptions = {},
 ): FramePathPoint[][] {
   const step = Math.max(1, opts.stepMinutes ?? 10) * 60_000;
   const aspect = opts.aspect ?? 3 / 2;
@@ -36,11 +45,8 @@ export function sunPathInFrame(
   let run: FramePathPoint[] = [];
   for (let t = start.getTime(); t <= end.getTime(); t += step) {
     const at = new Date(t);
-    const p = sunPosition(at, point.latitude, point.longitude);
-    const f =
-      p.elevationDeg >= -1
-        ? frameCoordinates(camera, p.azimuthDeg, p.apparentElevationDeg, aspect, roll)
-        : null;
+    const p = positionAt(at);
+    const f = p ? frameCoordinates(camera, p.azimuthDeg, p.elevationDeg, aspect, roll) : null;
     if (f && Math.abs(f.x) <= 1 + margin && Math.abs(f.y) <= 1 + margin) {
       run.push({ x: f.x, y: f.y, at });
     } else if (run.length) {
@@ -50,6 +56,56 @@ export function sunPathInFrame(
   }
   if (run.length) runs.push(run);
   return runs;
+}
+
+/**
+ * The sun's path between two instants (apparent elevation, so the marker sits on it), dropped
+ * below −1°.
+ */
+export function sunPathInFrame(
+  camera: FrameCamera,
+  point: { latitude: number; longitude: number },
+  start: Date,
+  end: Date,
+  opts: PathOptions = {},
+): FramePathPoint[][] {
+  return bodyPathInFrame(
+    camera,
+    start,
+    end,
+    (at) => {
+      const p = sunPosition(at, point.latitude, point.longitude);
+      return p.elevationDeg >= -1
+        ? { azimuthDeg: p.azimuthDeg, elevationDeg: p.apparentElevationDeg }
+        : null;
+    },
+    opts,
+  );
+}
+
+/**
+ * The Milky Way core's track over the night (night planning): the Galactic Centre's path while
+ * the Sun is below −18° and the core above the horizon — where the band will stand through the
+ * dark hours, for composing before it rises. Not a visibility verdict (the Moon is not consulted).
+ */
+export function corePathInFrame(
+  camera: FrameCamera,
+  point: { latitude: number; longitude: number },
+  start: Date,
+  end: Date,
+  opts: PathOptions = {},
+): FramePathPoint[][] {
+  return bodyPathInFrame(
+    camera,
+    start,
+    end,
+    (at) => {
+      if (sunPosition(at, point.latitude, point.longitude).elevationDeg > -18) return null;
+      const c = galacticCentrePosition(at, point.latitude, point.longitude);
+      return c.elevationDeg > 0 ? { azimuthDeg: c.azimuthDeg, elevationDeg: c.elevationDeg } : null;
+    },
+    opts,
+  );
 }
 
 export interface EdgeIndicator {
