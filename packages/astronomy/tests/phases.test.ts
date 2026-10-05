@@ -34,6 +34,23 @@ describe('principal moon phases', () => {
     }
   });
 
+  it('every instant is at or after its crossing, so the position model names that phase there', () => {
+    const target = { new: 0, 'first-quarter': 90, full: 180, 'last-quarter': 270 };
+    const names = {
+      new: 'New Moon',
+      'first-quarter': 'First Quarter',
+      full: 'Full Moon',
+      'last-quarter': 'Last Quarter',
+    };
+    for (const e of nextMoonPhases(new Date('2024-01-01T00:00:00Z'), 12)) {
+      const d = ((moonElongationDeg(e.at) - target[e.phase] + 180) % 360) - 180;
+      expect(d).toBeGreaterThanOrEqual(0);
+      expect(moonPosition(e.at, 0, 0).phaseName).toBe(names[e.phase]);
+      // Strictly after: asking from the instant itself moves on to the next phase.
+      expect(nextMoonPhases(e.at, 1)[0]!.phase).not.toBe(e.phase);
+    }
+  });
+
   it('agrees with the phase name and illumination the position model reports', () => {
     const [full] = nextMoonPhases(new Date('2026-05-25T00:00:00Z'), 4).filter(
       (x) => x.phase === 'full',

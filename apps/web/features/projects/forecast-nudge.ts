@@ -22,7 +22,13 @@ export function forecastNudge(
     return { kind: 'forecast', text: 'Forecast available now — open to see it' };
   if (d.mode === 'EXTENDED_FORECAST' && viewpoint.weatherMode === 'SCENARIO')
     return { kind: 'extended', text: 'Extended forecast available (low confidence)' };
-  if ((d.mode === 'RECENT_PAST' || d.mode === 'PAST') && d.leadHours < 0)
+  // A date that has passed since the viewpoint was saved with a forecast or a scenario; one
+  // saved as the past already says so on its own line.
+  if (
+    (d.mode === 'RECENT_PAST' || d.mode === 'PAST') &&
+    viewpoint.weatherMode !== 'RECENT_PAST' &&
+    viewpoint.weatherMode !== 'PAST'
+  )
     return {
       kind: 'past',
       text: d.fetchWorthwhile ? 'Date has passed — observed conditions on open' : 'Date has passed',

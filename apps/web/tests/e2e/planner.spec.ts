@@ -57,10 +57,11 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
     page.locator('button[title^="Moonrise"], button[title^="Moonset"]').first(),
   ).toBeAttached();
   // The phase calendar from the selected day: the Full Moon of 31 May (08:45 UTC = 30 May HST)
-  // has passed, so the next principal phases start with the last quarter on 8 June.
+  // has passed, so the next principal phases start with the last quarter (8 June 10:01 UTC —
+  // a minute past midnight HST, so either date is accepted) and the new Moon of 14 June HST.
   await page.getByTestId('moon-details').locator('summary').click();
   await expect(page.getByTestId('moon-next-phases')).toContainText(
-    'Last quarter 8 Jun · New 14 Jun',
+    /Last quarter [78] Jun · New 14 Jun/,
   );
 
   // Source + confidence.

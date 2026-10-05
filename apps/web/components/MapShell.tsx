@@ -115,11 +115,21 @@ export function MapShell() {
       lastLight: ev.lastLightDiffers ? ev.lastLight : null,
     };
   }, [scene?.terrainHorizon?.sunEvents]);
-  // Moonrise/moonset on the timeline (moon planning): stable per day thanks to the scene memo.
-  const moonMarkers = useMemo(() => {
-    const l = scene?.lunar;
-    return l ? { moonrise: l.moonrise, moonset: l.moonset } : null;
-  }, [scene?.lunar]);
+  // Moonrise/moonset on the timeline (moon planning): keyed on the instants, so a scrub tick
+  // (which rebuilds the scene) does not hand the timeline a new object.
+  const moonriseMs = scene?.lunar?.moonrise?.getTime() ?? null;
+  const moonsetMs = scene?.lunar?.moonset?.getTime() ?? null;
+  const hasLunar = Boolean(scene?.lunar);
+  const moonMarkers = useMemo(
+    () =>
+      hasLunar
+        ? {
+            moonrise: moonriseMs === null ? null : new Date(moonriseMs),
+            moonset: moonsetMs === null ? null : new Date(moonsetMs),
+          }
+        : null,
+    [hasLunar, moonriseMs, moonsetMs],
+  );
   // Terrain horizon around the pin (sampled through the renderer; nothing on the ellipsoid).
   useTerrainHorizon({
     sampleHeights: rendererInfo.sampleHeights,

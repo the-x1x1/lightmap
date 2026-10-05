@@ -54,6 +54,14 @@ describe('forecast nudge on saved viewpoints (North Star: the forecast becomes s
       now,
     );
     expect(ancient?.text).toBe('Date has passed');
+    // Saved as the past already: nothing has changed, so no nudge.
+    expect(
+      forecastNudge(
+        { selectedDatetimeUtc: at(-2), weatherMode: 'RECENT_PAST' },
+        OPEN_METEO_CAPABILITIES,
+        now,
+      ),
+    ).toBeNull();
   });
   it('nothing without weather capabilities', () => {
     expect(

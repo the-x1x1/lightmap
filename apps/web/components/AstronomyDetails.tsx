@@ -5,6 +5,7 @@ import { compassLabel } from '@lightmap/geospatial';
 import { formatWallTime, nextMoonPhases, utcToWallClock } from '@lightmap/astronomy';
 import { useMemo } from 'react';
 import { useSeasonalEnvelope } from '@/features/planner/use-seasonal';
+import { DayEventMarkers } from './Timeline';
 
 const PHASE_LABEL = {
   new: 'New',
@@ -24,7 +25,6 @@ export function describeNextPhases(from: Date, timeZone: string): string {
     })
     .join(' · ');
 }
-import { DayEventMarkers } from './Timeline';
 
 export function AstronomyDetails({ scene }: { scene: SceneState }) {
   const s = scene.solar;
