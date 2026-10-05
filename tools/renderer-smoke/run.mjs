@@ -107,5 +107,5 @@ const terrainOk =
   new Date(terrain.firstLight).getTime() > new Date(terrain.sunrise).getTime() + 30 * 60_000;
 console.log(`terrain horizon: ${terrainOk ? 'ok' : 'FAIL'} ${JSON.stringify(terrain)}`);
 process.exit(
-  smoke.errors.length === 0 && Object.keys(shots).length >= 11 && shadowOk && terrainOk ? 0 : 1,
+  smoke.errors.length === 0 && Object.keys(shots).length >= 12 && shadowOk && terrainOk ? 0 : 1,
 );

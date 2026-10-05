@@ -16,6 +16,12 @@ export const featureFlags = {
   moonPlanning: true,
   /** Development-only performance panel (plan §27). */
   perfPanel: true,
+  /**
+   * Phase 4: the 3D sky dome's aerosol density follows the scenario's haze through the sky
+   * model's Mie coefficient (`RENDERING_ACCURACY.md` "Sky and atmosphere"). Off until the
+   * renderer smoke harness has compared it with the shift-only dome.
+   */
+  physicalSkyDome: false,
 } as const;
 
 export type FeatureFlag = keyof typeof featureFlags;

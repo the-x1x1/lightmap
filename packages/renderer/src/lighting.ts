@@ -5,7 +5,7 @@
 import type { SceneState } from '@lightmap/scene';
 import { kelvinToRgb } from '@lightmap/weather';
 import { shadowOnGround, sunLightDirectionEcef, type Vec3 } from './sun-vector.ts';
-import { clearSkyStops, type SkyStops } from './sky-model.ts';
+import { BETA_MIE, clearSkyStops, mieScaleForHaze, type SkyStops } from './sky-model.ts';
 
 export interface LightingParameters {
   /** True Sun → ground direction in ECEF (for overlays and the ephemeris cross-check). */
@@ -37,6 +37,8 @@ export interface LightingParameters {
     saturationShift: number;
     brightnessShift: number;
     lightIntensity: number;
+    /** Sea-level Mie coefficient from the sky model, m⁻¹ — only with `render.physicalSkyDome`. */
+    mieCoefficient?: number;
   };
   /** Fog density (Cesium `scene.fog.density`), driven by haze. */
   fogDensity: number;
@@ -178,6 +180,8 @@ export function lightingFromScene(s: SceneState): LightingParameters {
       brightnessShift: atmosphereBrightness,
       // Moonlit: the atmosphere's lobe around the light becomes the Moon's halo; keep it modest.
       lightIntensity: 20 * (0.4 + 0.6 * (1 - nightFactor)) * twilightBoost * (moonlit ? 0.3 : 1),
+      // Flagged experiment: the dome's aerosol density follows the scenario's haze.
+      ...(s.render.physicalSkyDome ? { mieCoefficient: BETA_MIE * mieScaleForHaze(p.haze) } : {}),
     },
     fogDensity,
     grade: {

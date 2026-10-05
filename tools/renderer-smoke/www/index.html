@@ -207,6 +207,37 @@
         await new Promise((r) => {
           window.__takeShot = r;
         });
+        // Phase 4 experiment (feature flag `physicalSkyDome`): the same storm with the dome's
+        // aerosol density from the sky model's Mie coefficient. Compare with the shot above —
+        // a hazier, paler sky with a wider halo is the expected difference; nothing else moves.
+        const stormPhysical = buildSceneState({
+          location: kailua,
+          utc: storm.utc,
+          now: new Date('2026-05-01T00:00:00Z'),
+          camera: storm.camera,
+          environment: env,
+          scenario: 'storm',
+          forceScenario: true,
+          weather: { capabilities: OPEN_METEO_CAPABILITIES, frames: [], providerFailed: false },
+          render: { ...DEFAULT_RENDER_SETTINGS, physicalSkyDome: true },
+          includeLunar: true,
+          realReference: false,
+        });
+        controller.apply(stormPhysical);
+        window.__smoke.lighting.stormPhysical = lightingFromScene(stormPhysical);
+        log(
+          'applied storm viewpoint, physical dome (mie ' +
+            window.__smoke.lighting.stormPhysical.atmosphere.mieCoefficient +
+            ')',
+        );
+        await wait(1500);
+        window.__smoke.shot = 'storm-physical-dome';
+        await new Promise((r) => {
+          window.__takeShot = r;
+        });
+        // Back to the default dome for every scene that follows.
+        controller.apply(scene(12.5, 'clear'));
+        await wait(300);
         // Layered decks from a forecast frame (not a scenario): the same minute after sunset with
         // only cirrus (stays sunlit, pink) and with only a low stratus deck (in shadow, dark).
         const frameAt = (hour, layers) => ({

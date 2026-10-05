@@ -32,6 +32,11 @@ export interface HostAtmosphere {
   brightnessShift: number;
   lightIntensity: number;
   fogDensity: number;
+  /**
+   * Sea-level aerosol (Mie) scattering coefficient for the dome and the ground atmosphere, m⁻¹,
+   * from the sky model (feature flag `physicalSkyDome`); absent ⇒ Cesium's default stays.
+   */
+  mieCoefficient?: number;
 }
 
 export interface HostGradeUniforms {

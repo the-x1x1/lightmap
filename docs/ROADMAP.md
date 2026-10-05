@@ -98,7 +98,8 @@ the scenario; hand-set colours remain for twilight, night and the daytime horizo
 (`RENDERING_ACCURACY.md`).
 
 Remaining: improved terrain texture; detailed buildings where licensed; the scattering model in
-Cesium's own dome (needs the smoke harness); water shader. Everything stays grounded: geometry and light direction are
+Cesium's own dome (the haze → Mie wiring is in behind the `physicalSkyDome` flag with a
+smoke-harness shot to judge it; enabling it is the PC's call); water shader. Everything stays grounded: geometry and light direction are
 never altered for looks.
 
 ## Phase 5 — Real references (future, requires licensing work)

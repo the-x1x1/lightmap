@@ -31,7 +31,7 @@ const ATMOSPHERE_TOP_M = EARTH_RADIUS_M + 80_000;
 /** Sea-level Rayleigh scattering coefficients, m⁻¹, at 680 / 550 / 440 nm (∝ λ⁻⁴). */
 const BETA_RAYLEIGH: LinearRgb = [5.8e-6, 13.5e-6, 33.1e-6];
 /** Sea-level Mie scattering coefficient, m⁻¹ (wavelength-independent); extinction is 10 % more. */
-const BETA_MIE = 21e-6;
+export const BETA_MIE = 21e-6;
 const MIE_EXTINCTION_RATIO = 1.1;
 const RAYLEIGH_SCALE_HEIGHT_M = 8_000;
 const MIE_SCALE_HEIGHT_M = 1_200;

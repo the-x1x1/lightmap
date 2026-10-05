@@ -96,6 +96,12 @@ export interface RenderSettings {
   terrainScreenSpaceError: number;
   resolutionScale: number;
   reducedMotion: boolean;
+  /**
+   * Phase 4 experiment (feature flag `physicalSkyDome`): drive the 3D dome's aerosol (Mie)
+   * density from the scenario's haze with the sky model's coefficients, instead of only the
+   * hue/saturation/brightness shifts. Off until the smoke harness has judged it.
+   */
+  physicalSkyDome?: boolean;
 }
 
 /**

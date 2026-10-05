@@ -90,7 +90,14 @@ export function MapShell() {
     sampleHeights: null,
   });
 
-  const render = useMemo(() => ({ ...DEFAULT_RENDER_SETTINGS, reducedMotion }), [reducedMotion]);
+  const render = useMemo(
+    () => ({
+      ...DEFAULT_RENDER_SETTINGS,
+      reducedMotion,
+      physicalSkyDome: isEnabled('physicalSkyDome'),
+    }),
+    [reducedMotion],
+  );
   const bundle = useScene({
     render,
     includeLunar: account.can('moon_planning').allowed || !account.snapshot,

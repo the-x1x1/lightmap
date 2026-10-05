@@ -195,6 +195,17 @@ describe('lightingFromScene', () => {
     const hazyZ = rgb(skyGradientFor(40, 0, 0.5, 1, 0.7)[0]);
     expect(hazyZ[2] - hazyZ[0]).toBeLessThan(clearZ[2] - clearZ[0]);
   });
+
+  it('the dome Mie coefficient follows haze only behind the physicalSkyDome flag', () => {
+    expect(lightingFromScene(scene(12, 'storm')).atmosphere.mieCoefficient).toBeUndefined();
+    const physical = { ...DEFAULT_RENDER_SETTINGS, physicalSkyDome: true };
+    const clearMie = lightingFromScene(scene(12, 'clear', { render: physical })).atmosphere
+      .mieCoefficient;
+    const stormMie = lightingFromScene(scene(12, 'storm', { render: physical })).atmosphere
+      .mieCoefficient;
+    expect(clearMie).toBeGreaterThan(0);
+    expect(stormMie).toBeGreaterThan(clearMie! * 2);
+  });
 });
 
 describe('moonlight', () => {

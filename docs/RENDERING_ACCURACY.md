@@ -108,8 +108,11 @@ the overhead, mid and horizon stops once the Sun is 20° up, fading to none by 6
 from the model's sample at its own brightness while the Sun is above −9°; hand-set twilight and
 night below (`skyGradientFor`). Checked in `sky-model.test.ts`: Rayleigh ordering and ratio,
 horizon brighter/paler than zenith, sunset reddening on the Sun's side, haze paling, Earth-shadow
-darkness, azimuth symmetry, exposure anchor. The Cesium dome does not use this model yet (a
-smoke-harness job on the PC).
+darkness, azimuth symmetry, exposure anchor. The Cesium dome does not use this model yet: behind
+the feature flag `physicalSkyDome` the dome's and the ground atmosphere's Mie coefficient follow
+the scenario's haze through the same `mieScaleForHaze` (Cesium's own value is restored when the
+flag is off), and `tools/renderer-smoke` renders the storm scene both ways (`storm-viewpoint`
+vs `storm-physical-dome`) so the flag can be judged on a contact sheet before it is enabled.
 
 Two corrections compensate for the single-scattering model, both driven by the true Sun elevation
 and never by taste: (1) **twilight** — the dome collapses within a degree of the light setting, so
