@@ -26,11 +26,25 @@ export function LocationSearch({
   const [attribution, setAttribution] = useState<string>('');
   const [active, setActive] = useState(-1);
   const setLocation = usePlannerStore((s) => s.setLocation);
+  const locationLabel = usePlannerStore((s) => s.location?.label ?? null);
   const listId = useId();
   const abort = useRef<AbortController | null>(null);
+  // The label of the place just chosen: filling the box with it must not start another search
+  // (and reopen the list over the map); typing anything else clears it.
+  const chosen = useRef<string | null>(null);
+
+  // A place picked elsewhere — a tap on the globe, a reopened viewpoint — names itself in the box.
+  useEffect(() => {
+    if (locationLabel === null || locationLabel === chosen.current) return;
+    chosen.current = locationLabel;
+    setQuery(locationLabel);
+    setOpen(false);
+  }, [locationLabel]);
 
   useEffect(() => {
     const q = query.trim();
+    if (chosen.current !== null && q === chosen.current.trim()) return;
+    chosen.current = null;
     if (q.length < 2) {
       setResults([]);
       setOpen(false);
@@ -84,7 +98,10 @@ export function LocationSearch({
   }, [query]);
 
   async function choose(p: Place) {
+    abort.current?.abort();
+    setBusy(false);
     setOpen(false);
+    chosen.current = p.label;
     setQuery(p.label);
     const deviceZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     setLocation({
