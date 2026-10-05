@@ -1,5 +1,6 @@
 import { profilesRepo } from '@lightmap/database';
 import { errorResponse, json, readJson } from '@/lib/server/http';
+import { checkBurst } from '@/lib/server/rate-limit';
 import { requireDb, requireUser } from '@/lib/server/session';
 import { parsePreferencesPatch } from '@/lib/preferences';
 import type { ProfileResponse } from '@/lib/api-types';
@@ -23,6 +24,7 @@ export async function GET() {
 export async function PATCH(req: Request) {
   try {
     const ctx = await requireUser();
+    checkBurst(`profile:u:${ctx.user.id}`, 30);
     const patch = await readJson(req, parsePreferencesPatch);
     const body: ProfileResponse = {
       ...(await profilesRepo(requireDb()).update(ctx.user.id, patch)),
