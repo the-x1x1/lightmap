@@ -319,7 +319,12 @@ export function can(
         return { allowed: false, key, reason: 'Saving projects requires an account.', upgradeTo };
       const max = snap.limits.maxProjects;
       if (max !== null && (ctx.projectCount ?? 0) >= max)
-        return { allowed: false, key, reason: `Free plans include ${max} project.`, upgradeTo };
+        return {
+          allowed: false,
+          key,
+          reason: `Free plans include ${max} active project${max === 1 ? '' : 's'} — archive a finished shoot to free the slot, or upgrade.`,
+          upgradeTo,
+        };
       return { allowed: true, key };
     }
     case 'saved_viewpoints': {
