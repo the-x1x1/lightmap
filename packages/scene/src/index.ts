@@ -7,5 +7,6 @@ export {
   type SceneInputs,
 } from './build.ts';
 export * from './camera.ts';
+export * from './optics.ts';
 export * from './explain.ts';
 export * from './horizon.ts';

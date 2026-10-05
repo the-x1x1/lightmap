@@ -1,5 +1,5 @@
 'use client';
-/** Viewpoint camera (plan §5): map/viewpoint toggle, heading dial, pitch, lens presets, sensor format. */
+/** Viewpoint camera (plan §5): map/viewpoint toggle, heading dial, pitch, lens presets, sensor format, depth of field. */
 import { useState } from 'react';
 import {
   FOCAL_LENGTH_PRESETS_MM,
@@ -9,6 +9,7 @@ import {
 } from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
 import { usePlannerStore } from '@/features/planner/store';
+import { DepthOfField } from '@/components/DepthOfField';
 import { Button, cx, useRovingRadio } from '@lightmap/ui';
 
 const MODES = ['map', 'viewpoint'] as const;
@@ -242,6 +243,7 @@ export function CameraControls({ advancedAllowed }: { advancedAllowed: boolean }
               : ''}
             .
           </p>
+          <DepthOfField />
         </details>
       ) : null}
     </div>

@@ -62,6 +62,21 @@ describe('planner store', () => {
     expect(st.scenario).toBe('overcast');
     expect(st.forceScenario).toBe(true);
   });
+  it('depth-of-field inputs are clamped and ignore non-numbers', () => {
+    const s = usePlannerStore.getState();
+    s.setAperture(5.6);
+    s.setFocusDistance(3);
+    expect(usePlannerStore.getState().aperture).toBe(5.6);
+    expect(usePlannerStore.getState().focusDistanceM).toBe(3);
+    s.setAperture(0.2);
+    s.setFocusDistance(-4);
+    expect(usePlannerStore.getState().aperture).toBe(0.95);
+    expect(usePlannerStore.getState().focusDistanceM).toBe(0.1);
+    s.setAperture(Number.NaN);
+    s.setFocusDistance(Number.NaN);
+    expect(usePlannerStore.getState().aperture).toBe(0.95);
+    expect(usePlannerStore.getState().focusDistanceM).toBe(0.1);
+  });
   it('selectedUtc is null without a location', () => {
     usePlannerStore.getState().clearLocation();
     expect(selectedUtc(usePlannerStore.getState())).toBeNull();

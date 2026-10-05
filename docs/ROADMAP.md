@@ -119,7 +119,11 @@ Also delivered: the **terrain horizon** — "when does the sun clear the ridge?"
 the renderer from the DEM; "Sun behind terrain" badge, ridge markers on the timeline, first/last
 light over terrain, finder tags; `PRODUCT_SPEC.md` §8b).
 
-Next: DOF and horizon levelling remain future.
+Also delivered: **depth of field** in "Your camera" — aperture and focus distance give near/far
+limits for the real lens on the chosen sensor, whether the horizon is sharp, and a one-click
+hyperfocal focus (`depthOfField()` in `@lightmap/scene`, textbook cases tested).
+
+Next: horizon levelling remains future.
 
 ## Phase 7 — Long-range climatology (delivered, unreleased)
 

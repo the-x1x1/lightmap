@@ -199,7 +199,14 @@ focal-length preset, and mode.
   their lens; the frame takes the matching horizontal FOV and the full-frame equivalent is shown.
   Saved viewpoints keep storing FOV and the equivalent, so they are sensor-independent.
 
-No lens optical simulation (distortion, depth of field) in v1.
+- **Depth of field** (Pro, inside "Your camera"): aperture (f/1.4–f/22) and focus distance give
+  the near and far limits of acceptable sharpness for the real lens on the chosen sensor
+  (thin-lens geometry, circle of confusion = sensor diagonal ÷ 1500, stated in the panel as a
+  convention). The panel says whether the sun, moon and horizon fall inside the zone, offers
+  "Focus at hyperfocal", and never blurs the preview: the numbers describe the photograph, the
+  frame stays sharp so its geometry is readable.
+
+No lens optical simulation (distortion, rendered blur) in v1.
 
 ### 8a. Light finder — reverse planning (plan §26)
 

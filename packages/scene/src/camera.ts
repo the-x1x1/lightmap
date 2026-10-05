@@ -19,14 +19,14 @@ export function focalLengthForFov(fovDeg: number, sensorWidthMm = 36): number {
 
 export const DEFAULT_EYE_HEIGHT_M = 1.7;
 
-/** Sensor formats (Phase 6 "sensor formats"): width in mm, horizontal for a 3:2 or 4:3 frame. */
+/** Sensor formats (Phase 6 "sensor formats"): width and height in mm, landscape orientation. */
 export const SENSOR_PRESETS = [
-  { id: 'full-frame', label: 'Full frame (36×24)', widthMm: 36 },
-  { id: 'aps-c', label: 'APS-C (23.5×15.6)', widthMm: 23.5 },
-  { id: 'aps-c-canon', label: 'APS-C Canon (22.3×14.9)', widthMm: 22.3 },
-  { id: 'mft', label: 'Micro Four Thirds (17.3×13)', widthMm: 17.3 },
-  { id: 'one-inch', label: '1-inch (13.2×8.8)', widthMm: 13.2 },
-  { id: 'medium-44', label: 'Medium format 44×33', widthMm: 43.8 },
+  { id: 'full-frame', label: 'Full frame (36×24)', widthMm: 36, heightMm: 24 },
+  { id: 'aps-c', label: 'APS-C (23.5×15.6)', widthMm: 23.5, heightMm: 15.6 },
+  { id: 'aps-c-canon', label: 'APS-C Canon (22.3×14.9)', widthMm: 22.3, heightMm: 14.9 },
+  { id: 'mft', label: 'Micro Four Thirds (17.3×13)', widthMm: 17.3, heightMm: 13 },
+  { id: 'one-inch', label: '1-inch (13.2×8.8)', widthMm: 13.2, heightMm: 8.8 },
+  { id: 'medium-44', label: 'Medium format 44×33', widthMm: 43.8, heightMm: 32.9 },
 ] as const;
 export type SensorPresetId = (typeof SENSOR_PRESETS)[number]['id'];
 

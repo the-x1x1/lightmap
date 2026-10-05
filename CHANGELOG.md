@@ -2,6 +2,15 @@
 
 All notable changes. Versions follow semver; `pnpm release <version>` prepends entries from commits.
 
+## Unreleased
+
+- **Depth of field (Phase 6)**: "Your camera" gains an aperture and focus-distance pair that
+  reports the near and far limits of sharpness for the real lens on the chosen sensor, whether
+  the sun, moon and horizon fall inside the zone, and a "Focus at hyperfocal" button.
+  `depthOfField()`, `hyperfocalDistanceM()`, `circleOfConfusionMm()` (diagonal ÷ 1500) in
+  `@lightmap/scene`, checked against the textbook 50 mm f/8 case; sensor presets now carry their
+  height. The preview is never blurred.
+
 ## v0.1.0 — 2026-09-25
 
 - **Terrain horizon** ("when does the sun clear the ridge?"): the land horizon around the pin is
