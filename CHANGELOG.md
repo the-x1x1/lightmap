@@ -28,6 +28,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   ("✦ Milky Way core 36° up SSW · dark sky", `nightTag()`, tested). The **Light finder** takes the core as a third body: "when does the
   core stand over that peak?" — bearing/elevation matches like the Sun's, kept only in a dark
   sky by default (`darkSkyOnly`; each match says `dark`, `daylight`, `twilight` or `moonlit`).
+- **Shot list**: a project exported as plain text to copy or download — the call sheet for the
+  day, one block per viewpoint in time order (variants under their parent) with the camera, the
+  Sun, the day's sunrise/sunset, the Moon and the Milky Way core for night shots, the weather
+  basis it was saved with and the project notes (`buildShotList()`, tested; Pro export).
 - **Project notes and shoot date** are editable in place from the selected project (plan §4
   "Projects: name, optional shoot date, notes" — the API had them, the UI did not): notes save on
   blur or Ctrl/⌘+Enter, the date once it has settled, chained so the last edit wins, with an

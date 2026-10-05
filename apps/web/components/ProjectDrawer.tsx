@@ -11,6 +11,7 @@ import { usePlannerStore } from '@/features/planner/store';
 import { useAccount } from '@/features/account/use-account';
 import { useProject, useProjectMutations, useProjects } from '@/features/projects/use-projects';
 import { viewpointPayload } from '@/features/projects/viewpoint-payload';
+import { buildShotList } from '@/features/export/shot-list';
 import { ApiRequestError } from '@/lib/client/api';
 import type { ViewpointDto } from '@/lib/api-types';
 import { Button } from '@lightmap/ui';
@@ -100,6 +101,38 @@ export function ProjectDrawer({
   }
 
   const selectedProject = project.data?.project ?? null;
+  // The shot list (plan §4 "save to a shoot"): the whole project as text to copy or download —
+  // part of the Pro export entitlement, like the planning card.
+  const shotListDecision = account.can('export_preview');
+  function shotListText(): string | null {
+    if (!selectedProject) return null;
+    return buildShotList(selectedProject, selectedProject.viewpoints, {
+      appUrl: typeof window !== 'undefined' ? window.location.origin : '',
+      generatedAt: new Date(),
+    });
+  }
+  async function copyShotList() {
+    const text = shotListText();
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setStatus('Shot list copied to the clipboard.');
+    } catch {
+      setStatus('Could not reach the clipboard — use Download instead.');
+    }
+  }
+  function downloadShotList() {
+    const text = shotListText();
+    if (!text || !selectedProject) return;
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${selectedProject.name.replace(/[^\w.-]+/g, '_') || 'shot-list'}-shot-list.txt`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setStatus('Shot list downloaded.');
+  }
   // Group shot variants under their parent; variants of a deleted/unknown parent surface top-level.
   const all = project.data?.project.viewpoints ?? [];
   const ids = new Set(all.map((v) => v.id));
@@ -318,6 +351,35 @@ export function ProjectDrawer({
                 })
               }
             />
+          ) : null}
+          {selectedProject && selectedProject.viewpoints.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-2" data-testid="shot-list">
+              <span className="text-xs text-[var(--lm-text-muted)]">Shot list</span>
+              {shotListDecision.allowed ? (
+                <>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => void copyShotList()}
+                    data-testid="shot-list-copy"
+                  >
+                    Copy
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={downloadShotList}
+                    data-testid="shot-list-download"
+                  >
+                    Download .txt
+                  </Button>
+                </>
+              ) : (
+                <span className="text-xs text-[var(--lm-sun)]" data-testid="shot-list-locked">
+                  {shotListDecision.reason ?? 'Exports are part of Pro.'}
+                </span>
+              )}
+            </div>
           ) : null}
           {scene ? (
             <form

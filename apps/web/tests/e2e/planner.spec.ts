@@ -238,6 +238,9 @@ test('sign in (dev), create a project, save the viewpoint, reload and reopen it'
   await page.getByTestId('viewpoint-label').fill('Beach, 9am');
   await page.getByTestId('viewpoint-save').click();
   await expect(page.getByTestId('viewpoint-card')).toContainText('Beach, 9am');
+  // The shot list is a Pro export: a Free account sees the reason, not the buttons.
+  await expect(page.getByTestId('shot-list-locked')).toBeVisible();
+  await expect(page.getByTestId('shot-list-copy')).toHaveCount(0);
   // Notes and the shoot date are edited in place and survive a reload.
   await page.getByTestId('project-notes').locator('summary').click();
   await page.getByTestId('project-notes-text').fill('Park at the boat ramp; permit in the bag.');
