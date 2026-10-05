@@ -150,3 +150,26 @@ describe('planning card — terrain horizon', () => {
     expect(plain.facts.some((f) => f.label === 'Over the terrain')).toBe(false);
   });
 });
+
+describe('planning card — depth of field', () => {
+  it('prints the real lens, aperture, focus and the sharp range when the camera options are given', () => {
+    const sc = scene();
+    const model = buildPlanningCard(sc, {
+      generatedAt: new Date('2026-05-30T20:00:00Z'),
+      camera: { sensorWidthMm: 36, sensorHeightMm: 24, aperture: 8, focusDistanceM: 5 },
+    });
+    const row = model.facts.find((f) => f.label === 'Depth of field');
+    expect(row).toBeDefined();
+    // The default 24 mm at f/8 focused at 5 m reaches infinity (hyperfocal ≈ 2.5 m).
+    expect(row!.value).toMatch(/^24 mm f\/8 at 5\.0 m: sharp 1\.\d m–∞$/);
+    // Wide open the far limit is finite and the hyperfocal distance is offered.
+    const wide = buildPlanningCard(sc, {
+      generatedAt: new Date('2026-05-30T20:00:00Z'),
+      camera: { sensorWidthMm: 36, sensorHeightMm: 24, aperture: 2.8, focusDistanceM: 5 },
+    }).facts.find((f) => f.label === 'Depth of field')!;
+    expect(wide.value).toMatch(/sharp \d\.\d m–\d+ m · hyperfocal \d\.\d m$/);
+    // Without camera options the card stays as before.
+    const plain = buildPlanningCard(sc, { generatedAt: new Date('2026-05-30T20:00:00Z') });
+    expect(plain.facts.some((f) => f.label === 'Depth of field')).toBe(false);
+  });
+});

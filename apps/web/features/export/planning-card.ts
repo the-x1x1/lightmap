@@ -13,7 +13,16 @@ import { formatWallTime } from '@lightmap/astronomy';
 import { brand } from '@lightmap/config';
 import { compassLabel } from '@lightmap/geospatial';
 import { lightingFromScene } from '@lightmap/renderer';
-import { SOURCE_MODE_LABEL, formatDeg, type SceneState, type SourceMode } from '@lightmap/scene';
+import {
+  SOURCE_MODE_LABEL,
+  circleOfConfusionMm,
+  depthOfField,
+  focalLengthForFov,
+  formatDeg,
+  formatDistanceM,
+  type SceneState,
+  type SourceMode,
+} from '@lightmap/scene';
 import { scenarioById } from '@lightmap/weather';
 
 export interface PlanningCardModel {
@@ -51,9 +60,19 @@ function slug(s: string): string {
   );
 }
 
+/** The photographer's own glass, for the card's camera line (Pro "Your camera" + depth of field). */
+export interface CardCameraOptions {
+  sensorWidthMm: number;
+  sensorHeightMm?: number;
+  aperture: number;
+  focusDistanceM: number;
+}
+
 export function buildPlanningCard(
   scene: SceneState,
-  opts: { generatedAt: Date; appUrl?: string } = { generatedAt: new Date() },
+  opts: { generatedAt: Date; appUrl?: string; camera?: CardCameraOptions } = {
+    generatedAt: new Date(),
+  },
 ): PlanningCardModel {
   const tz = scene.location.timeZone;
   const s = scene.solar;
@@ -107,6 +126,20 @@ export function buildPlanningCard(
     label: 'Camera',
     value: `${c.mode === 'viewpoint' ? 'Viewpoint' : 'Map'} · ${Math.round(c.headingDeg)}° ${compassLabel(c.headingDeg)} · pitch ${c.pitchDeg.toFixed(0)}° · ${c.focalLengthMm ? `${c.focalLengthMm} mm` : `${c.fovDeg.toFixed(0)}° FOV`}`,
   });
+  if (opts.camera) {
+    // The real lens on the chosen sensor, and what it holds sharp (Phase 6 depth of field).
+    const lensMm = focalLengthForFov(c.fovDeg, opts.camera.sensorWidthMm);
+    const dof = depthOfField({
+      focalLengthMm: lensMm,
+      aperture: opts.camera.aperture,
+      focusDistanceM: opts.camera.focusDistanceM,
+      cocMm: circleOfConfusionMm(opts.camera.sensorWidthMm, opts.camera.sensorHeightMm),
+    });
+    facts.push({
+      label: 'Depth of field',
+      value: `${lensMm.toFixed(lensMm < 10 ? 1 : 0)} mm f/${opts.camera.aperture} at ${formatDistanceM(opts.camera.focusDistanceM)}: sharp ${formatDistanceM(dof.nearM)}–${formatDistanceM(dof.farM)}${dof.infinitySharp ? '' : ` · hyperfocal ${formatDistanceM(dof.hyperfocalM)}`}`,
+    });
+  }
   if (ev.polar !== 'normal') facts.push({ label: 'Note', value: ev.polar.replace('-', ' ') });
   const th = scene.terrainHorizon;
   if (th?.sunEvents.differsFromAstronomical) {

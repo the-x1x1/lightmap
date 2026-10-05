@@ -18,6 +18,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   `@vitest/mocker` redirect mocks — dev-only, closed anyway); nodemailer 10.0.9+ across the workspace (GHSA-v53p-9fqp-m79j and
   GHSA-prgh-xp8r-p3m5, high: address-parser denial of service; plus three moderate advisories).
   Only `createTransport`/`sendMail` are used, unchanged across the major.
+- **Planning card**: with the camera tools, the card carries a "Depth of field" row — the real
+  lens on the chosen sensor, aperture, focus distance and the sharp range (hyperfocal when the
+  far limit is finite).
 - **Install app** in the account menu (Phase 9 "native install"): Chromium's deferred install
   prompt, the Add-to-Home-Screen hint on iOS Safari, hidden when already installed.
 - **Roll-aware field view**: the phone's roll about its line of sight (from the orientation

@@ -386,6 +386,7 @@ export function MapShell() {
                           : undefined
                       }
                       expandButtonRef={expandButtonRef}
+                      advancedAllowed={account.can('advanced_camera_tools').allowed}
                     />
                     {rendererInfo.error && rendererInfo.mode !== 'OVERLAY' ? (
                       <ErrorState live="status" title="Renderer notice" body={rendererInfo.error} />

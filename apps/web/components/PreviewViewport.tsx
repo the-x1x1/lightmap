@@ -4,7 +4,7 @@
  * scenario, sunrise/sunset. The 3D view itself IS the preview; this frames it with the facts and
  * offers "expand" for full-screen on mobile.
  */
-import type { SceneState } from '@lightmap/scene';
+import { SENSOR_PRESETS, type SceneState } from '@lightmap/scene';
 import { formatWallTime } from '@lightmap/astronomy';
 import { compassLabel } from '@lightmap/geospatial';
 import { scenarioById } from '@lightmap/weather';
@@ -24,6 +24,7 @@ export function PreviewViewport({
   capture,
   exportDecision,
   expandButtonRef,
+  advancedAllowed = false,
 }: {
   scene: SceneState;
   rendererMode: '3D' | 'OVERLAY' | 'loading';
@@ -33,6 +34,8 @@ export function PreviewViewport({
   exportDecision?: EntitlementDecision | undefined;
   /** Lets the shell return focus here after the expanded preview is collapsed. */
   expandButtonRef?: Ref<HTMLButtonElement>;
+  /** `advanced_camera_tools`: the card then carries the photographer's lens and depth of field. */
+  advancedAllowed?: boolean;
 }) {
   const expanded = usePlannerStore((s) => s.previewExpanded);
   const setExpanded = usePlannerStore((s) => s.setPreviewExpanded);
@@ -55,9 +58,23 @@ export function PreviewViewport({
       const { buildPlanningCard, downloadBlob, renderPlanningCardPng } =
         await import('@/features/export/planning-card');
       const image = capture ? await capture(1280) : null;
+      const st = usePlannerStore.getState();
+      const sensor = SENSOR_PRESETS.find((x) => Math.abs(x.widthMm - st.sensorWidthMm) < 0.05);
       const model = buildPlanningCard(scene, {
         generatedAt: new Date(),
         ...(typeof window !== 'undefined' ? { appUrl: window.location.origin } : {}),
+        // The card carries the photographer's own lens and depth of field when the camera tools
+        // are theirs to use (the same gate as the "Your camera" panel).
+        ...(advancedAllowed
+          ? {
+              camera: {
+                sensorWidthMm: st.sensorWidthMm,
+                ...(sensor ? { sensorHeightMm: sensor.heightMm } : {}),
+                aperture: st.aperture,
+                focusDistanceM: st.focusDistanceM,
+              },
+            }
+          : {}),
       });
       const blob = await renderPlanningCardPng(model, image);
       downloadBlob(blob, model.fileName);

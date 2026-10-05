@@ -133,7 +133,8 @@ confidence dimension.
 from the current frame (captured at 1280 px from the renderer, or the sky-gradient band when the
 3D preview is unavailable) plus the facts above — place, coordinates, zone, date/time, sun
 elevation/azimuth, light phase and colour temperature, sunrise/sunset, golden and blue hour, solar
-noon, moon, camera heading/pitch/lens. The card always shows the source label as a text badge, the
+noon, moon, camera heading/pitch/lens and — with the camera tools — the photographer's real lens,
+aperture, focus distance and sharp range ("Depth of field"). The card always shows the source label as a text badge, the
 weather line prefixed **Forecast (provider)** / **Observed** / **Scenario (not a forecast)**, the
 five confidence dimensions, the honesty note for the source mode, provider attribution, and
 "Made with LightMap · URL · timestamp". Nothing on the card is generated; the file name is
