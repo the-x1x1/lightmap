@@ -23,7 +23,7 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   lists the next two dark windows; a saved viewpoint planned after dusk carries a night line
   ("✦ Milky Way core 36° up SSW · dark sky", `nightTag()`, tested). The **Light finder** takes the core as a third body: "when does the
   core stand over that peak?" — bearing/elevation matches like the Sun's, kept only in a dark
-  sky by default (`darkSkyOnly`, `skyDark` on each match).
+  sky by default (`darkSkyOnly`; each match says `dark`, `twilight` or `moonlit`).
 - **Day-of-year slider** under the date control: scrub the seasons the way the timeline scrubs
   the day — the date moves, the time of day stays (plan §44 "scrub through days, months, and
   seasons"); `lib/civil-year.ts`, tested across the leap day. The weather fetch and the

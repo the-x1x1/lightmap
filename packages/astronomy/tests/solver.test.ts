@@ -229,14 +229,14 @@ describe('reverse planning solver', () => {
     for (const a of all.alignments) {
       expect(a.body).toBe('core');
       expect(a.illuminatedFraction).toBeNull();
-      expect(typeof a.skyDark).toBe('boolean');
+      expect(['dark', 'twilight', 'moonlit']).toContain(a.sky);
       const check = galacticCentrePosition(a.timestampUtc, KAILUA.latitude, KAILUA.longitude);
       expect(Math.abs(wrapDelta(check.azimuthDeg - 180))).toBeLessThan(0.02);
       // Transit height from Kailua: 90 − (21.4 + 29.0).
       expect(a.elevationDegrees).toBeCloseTo(39.6, 0);
     }
     for (const a of dark.alignments) {
-      expect(a.skyDark).toBe(true);
+      expect(a.sky).toBe('dark');
       expect(milkyWayCore(a.timestampUtc, KAILUA.latitude, KAILUA.longitude).verdict).toBe(
         'visible',
       );
@@ -257,7 +257,7 @@ describe('reverse planning solver', () => {
       darkSkyOnly: false,
     });
     expect(bay.matches.length).toBeGreaterThan(0);
-    expect(bay.matches.some((m) => m.skyDark === false)).toBe(true);
+    expect(bay.matches.some((m) => m.sky === 'moonlit')).toBe(true);
     const bayDark = findDirectionMatches({
       ...KAILUA,
       from: { year: 2026, month: 5, day: 25 },
@@ -267,7 +267,7 @@ describe('reverse planning solver', () => {
       minElevationDegrees: -3,
     });
     expect(bayDark.matches.length).toBeLessThan(bay.matches.length);
-    for (const m of bayDark.matches) expect(m.skyDark).toBe(true);
+    for (const m of bayDark.matches) expect(m.sky).toBe('dark');
     // The per-day helper keeps every alignment unless asked to filter.
     const perDay = elevationAtAzimuthByDay({
       ...KAILUA,
@@ -284,7 +284,7 @@ describe('reverse planning solver', () => {
       to: range.from,
       target: { azimuthDegrees: 90 },
     });
-    expect(sun.alignments[0]?.skyDark).toBeNull();
+    expect(sun.alignments[0]?.sky).toBeNull();
   });
 
   it('respects maxDays and rejects inverted ranges', () => {

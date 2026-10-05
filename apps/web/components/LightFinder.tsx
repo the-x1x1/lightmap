@@ -575,7 +575,7 @@ export function LightFinder({
                       {m.illuminatedFraction !== null
                         ? ` · ${Math.round(m.illuminatedFraction * 100)} % lit`
                         : ''}
-                      {m.skyDark === false ? ' · sky not dark' : ''}
+                      {m.sky !== null && m.sky !== 'dark' ? ` · ${m.sky}` : ''}
                       {mode !== 'ridge' && behindTerrain(m) ? (
                         <span className="ml-1 text-[color:#ffd27a]" title={profile?.caveat}>
                           · behind terrain

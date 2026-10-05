@@ -26,6 +26,9 @@ import { addCivilDays, civilDateString, localDayBounds, type CivilTime } from '.
 /** The Sun, the Moon, or the Galactic Centre (the Milky Way's core, a fixed point on the sky). */
 export type CelestialBody = 'sun' | 'moon' | 'core';
 
+/** For the core: what stands between the band and the camera at an instant. */
+export type SkyState = 'dark' | 'twilight' | 'moonlit';
+
 export interface DirectionTarget {
   /** Compass azimuth of the desired body position, degrees clockwise from north. */
   azimuthDegrees: number;
@@ -82,8 +85,11 @@ export interface DirectionMatch {
   withinTolerance: boolean;
   /** Moon only. */
   illuminatedFraction: number | null;
-  /** Core only: astronomical night and no bright Moon up at the instant (null for Sun and Moon). */
-  skyDark: boolean | null;
+  /**
+   * Core only: whether the sky can show the band at the instant — `dark` (astronomical night, no
+   * Moon over 30 % up), `twilight`, or `moonlit`; null for the Sun and Moon.
+   */
+  sky: SkyState | null;
   /** Rising (elevation increasing) or setting at the instant. */
   trend: 'rising' | 'setting';
 }
@@ -124,16 +130,16 @@ function positionOf(body: CelestialBody, t: number, lat: number, lon: number) {
 }
 
 /**
- * Core only: is the sky dark enough to show the band at this instant — astronomical night and no
- * Moon over the limit above the horizon? Tested directly (not through the verdict, whose
- * below-horizon answer comes before the Moon's): a core target on a sea skyline sits below 0°.
+ * Core only: can the sky show the band at this instant — astronomical night and no Moon over the
+ * limit above the horizon? Tested directly (not through the verdict, whose below-horizon answer
+ * comes before the Moon's): a core target on a sea skyline sits below 0°.
  */
-function skyDarkAt(t: number, lat: number, lon: number): boolean {
+function skyAt(t: number, lat: number, lon: number): SkyState {
   const d = new Date(t);
-  if (sunPosition(d, lat, lon).elevationDeg > -18) return false;
+  if (sunPosition(d, lat, lon).elevationDeg > -18) return 'twilight';
   const moon = moonPosition(d, lat, lon);
   const moonUp = moon.elevationDeg > moonHorizonThresholdDeg(moon.distanceKm);
-  return !(moonUp && moon.illuminatedFraction > MILKY_WAY_MOON_LIMIT);
+  return moonUp && moon.illuminatedFraction > MILKY_WAY_MOON_LIMIT ? 'moonlit' : 'dark';
 }
 
 /** Bisection on a signed function between two instants that bracket a sign change. */
@@ -191,8 +197,8 @@ export function findDirectionMatches(input: SolverInput): SolverResult {
   const record = (dayKey: string, tc: number, via: DirectionMatch['via']) => {
     const p = positionOf(body, tc, lat, lon);
     if (p.elevation < minEl || (p.illuminated ?? 1) < minIllum) return;
-    const skyDark = body === 'core' ? skyDarkAt(tc, lat, lon) : null;
-    if (skyDark === false && darkOnly) return;
+    const sky = body === 'core' ? skyAt(tc, lat, lon) : null;
+    if (sky !== null && sky !== 'dark' && darkOnly) return;
     // The two detectors can find the same instant (body crossing the bearing exactly at the
     // target elevation); keep one.
     const dup = alignments.find(
@@ -214,7 +220,7 @@ export function findDirectionMatches(input: SolverInput): SolverResult {
       elevationErrorDegrees: elErr,
       withinTolerance: within,
       illuminatedFraction: p.illuminated,
-      skyDark,
+      sky,
       trend: after >= p.elevation ? 'rising' : 'setting',
     });
   };

@@ -11,7 +11,7 @@ const match = (iso: string, date: string) => ({
   elevationErrorDegrees: 0.1,
   withinTolerance: true,
   illuminatedFraction: null,
-  skyDark: null,
+  sky: null,
   trend: 'setting' as const,
 });
 
