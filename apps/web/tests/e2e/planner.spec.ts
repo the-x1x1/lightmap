@@ -254,3 +254,44 @@ test('mobile: "Point with phone" follows synthetic orientation readings and stop
   await expect(page.getByTestId('compass-toggle')).toHaveText('Point with phone');
   await expect(page.getByTestId('camera-heading')).toContainText('90° E');
 });
+
+test('mobile: the field view shows the planned sun over the (fake) camera and follows the phone', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(!isMobile, 'mobile project only');
+  await page.goto('/');
+  await pickKailua(page);
+  // 31 May 2026 17:30 HST: the sun is ~30° up in the west-north-west.
+  await setDateTime(page, '2026-05-31', 17 * 60 + 30);
+  await page.getByTestId('camera-mode-viewpoint').click();
+  await page.getByTestId('field-view-open').click();
+  const view = page.getByTestId('field-view');
+  await expect(view).toBeVisible();
+  await expect(page.getByTestId('field-view-time')).toContainText('17:30');
+  // Aim the phone at the sun: heading ≈ 285° (alpha = 360 − 285), tilted back 30° (beta = 120).
+  const fire = (alpha: number, beta: number) =>
+    page.evaluate(
+      ([a, b]) => {
+        const e = new Event('deviceorientationabsolute') as Event & Record<string, unknown>;
+        Object.assign(e, { alpha: a, beta: b, gamma: 0, absolute: true });
+        window.dispatchEvent(e);
+      },
+      [alpha, beta] as const,
+    );
+  for (let i = 0; i < 8; i++) {
+    await fire(75, 120);
+    await page.waitForTimeout(100);
+  }
+  await expect(page.getByTestId('field-view-sun')).toBeAttached();
+  await expect(page.getByTestId('field-view-sun-edge')).toHaveCount(0);
+  // Turn away to the south-east: the sun leaves the frame and the edge arrow says how far.
+  for (let i = 0; i < 8; i++) {
+    await fire(225, 120);
+    await page.waitForTimeout(100);
+  }
+  await expect(page.getByTestId('field-view-sun-edge')).toBeVisible();
+  await expect(page.getByTestId('field-view-sun-edge')).toContainText(/sun \d+° (right|left)/);
+  await page.getByTestId('field-view-close').click();
+  await expect(view).toHaveCount(0);
+});
