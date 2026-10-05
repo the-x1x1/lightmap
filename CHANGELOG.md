@@ -73,7 +73,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   best" → "hand-held only"), fog ("lenses mist within minutes"; rain or snow cutting the view is
   not called fog), dew likely at ≥ 95 % humidity after sunset (mist in the air by day), dew
   possible on a calm, mostly clear night from 85 % (`fieldConditions()`, Beaufort's bands and the
-  WMO fog threshold, tested). Scenario days say nothing: there is no frame.
+  WMO fog threshold, tested). Scenario days say nothing: there is no frame. The planning card
+  carries the same line ("In the field") and its notes on forecast and observed days.
 - **Dark-sky cloud in the hourly outlook**: a line with the forecast cloud over the night's
   dark-sky spells and the clearest hour — "is the core window going to be clear?"
   (`cloudOverSpells`, tested).

@@ -218,8 +218,10 @@ from the current frame (captured at 1280 px from the renderer, or the sky-gradie
 elevation/azimuth, light phase and colour temperature, sunrise/sunset, golden and blue hour, solar
 noon, moon, camera heading/pitch/lens and — with the camera tools — the photographer's real lens,
 aperture, focus distance and sharp range ("Depth of field"), the "Milky Way core" line once the
-Sun is below −6°, the next two dark windows ("Dark windows"), and the year's envelope ("Across
-the year"). The card always shows the source label as a text badge, the
+Sun is below −6°, the next two dark windows ("Dark windows"), the year's envelope ("Across
+the year") and, on a forecast or observed day, the frame's field conditions ("In the field":
+wind with its quarter, humidity, visibility, with any wind or dew/fog note among the card's
+notes). The card always shows the source label as a text badge, the
 weather line prefixed **Forecast (provider)** / **Observed** / **Scenario (not a forecast)**, the
 five confidence dimensions, the honesty note for the source mode, provider attribution, and
 "Made with LightMap · URL · timestamp". Nothing on the card is generated; the file name is

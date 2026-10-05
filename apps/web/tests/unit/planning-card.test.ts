@@ -117,6 +117,33 @@ describe('buildPlanningCard', () => {
     expect(card.weatherLine).toMatch(/^Forecast \(open-meteo\)/);
     expect(card.weatherLine).toMatch(/confidence (HIGH|MEDIUM|LOW)/);
     expect(card.notes.some((n) => n.includes('No forecast exists'))).toBe(false);
+    // The frame's field conditions: a moderate breeze and dry air, nothing to warn about.
+    expect(card.facts.find((f) => f.label === 'In the field')?.value).toBe(
+      'wind 4 m/s from the ENE · humidity 60 % · visibility 20 km',
+    );
+    expect(card.notes.some((n) => n.startsWith('Wind:') || n.startsWith('Humidity:'))).toBe(false);
+    // A fresh breeze and saturated night air put both notes on the card, in the chosen units.
+    const night = localSelectionToUtc({ year: 2026, month: 5, day: 2 }, 23 * 60, kailua.timeZone);
+    const windy = buildPlanningCard(
+      scene({
+        utc: night,
+        weather: {
+          capabilities: OPEN_METEO_CAPABILITIES,
+          frames: [{ ...frame, timestamp: night.toISOString(), windSpeed: 9, humidity: 97 }],
+          providerFailed: false,
+        },
+      }),
+      { generatedAt, units: 'imperial' },
+    );
+    expect(windy.facts.find((f) => f.label === 'In the field')?.value).toBe(
+      'wind 20 mph from the ENE · humidity 97 % · visibility 12 mi',
+    );
+    expect(windy.notes).toContain(
+      'Wind: fresh — weigh the tripod down; clouds streak in a long exposure.',
+    );
+    expect(windy.notes).toContain(
+      'Humidity: near saturation — dew on the glass is likely; a lens warmer or a deep hood helps.',
+    );
   });
 
   it('mentions fixture data when a fixture provider was active', () => {

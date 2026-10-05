@@ -17,11 +17,13 @@ import {
   SOURCE_MODE_LABEL,
   circleOfConfusionMm,
   depthOfField,
+  fieldConditions,
   focalLengthForFov,
   describeSeasonalEnvelope,
   formatDeg,
   formatDistance,
   formatHeight,
+  formatVisibility,
   seasonalEnvelope,
   type DistanceUnits,
   type SceneState,
@@ -206,6 +208,19 @@ export function buildPlanningCard(
       value: `sun behind the terrain (ridge ${formatDeg(th.horizonAtSunDeg)}°, sun's upper limb ${formatDeg(scene.solar.apparentElevationDegrees + 0.27)}°; terrain only, trees and buildings not modelled)`,
     });
 
+  // What the frame says about the shoot itself: wind, humidity, visibility — and the notes.
+  const field = fieldConditions(a.frame, s.elevationDegrees, units);
+  if (a.frame && field.length) {
+    const vis =
+      a.frame.visibility !== null
+        ? [`visibility ${formatVisibility(a.frame.visibility, units)}`]
+        : [];
+    facts.push({
+      label: 'In the field',
+      value: [...field.map((l) => `${l.label.toLowerCase()} ${l.value}`), ...vis].join(' · '),
+    });
+  }
+
   const confidence = [
     { label: 'Astronomy', level: scene.confidence.astronomy },
     { label: 'Terrain', level: scene.confidence.terrain },
@@ -224,6 +239,7 @@ export function buildPlanningCard(
   );
   if (!isForecast && !isPast)
     notes.push('Weather shown is a chosen scenario. No forecast exists this far ahead.');
+  for (const l of field) if (l.note) notes.push(`${l.label}: ${l.note}.`);
   if (scene.environment.fixtureMode)
     notes.push('Development fixture data was active when this card was made.');
 
