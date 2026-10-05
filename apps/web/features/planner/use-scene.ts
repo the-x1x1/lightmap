@@ -18,6 +18,7 @@ import { decideWeatherMode, type WeatherCapabilities, type WeatherFrame } from '
 import { gridKey } from '@lightmap/geospatial';
 import { effectiveTimeZone, selectedUtc, usePlannerStore } from './store.ts';
 import { ApiRequestError, fetchJson } from '@/lib/client/api';
+import { useSettled } from '@/lib/use-settled';
 import type { CapabilitiesResponse, WeatherResponse } from '@/lib/api-types';
 
 export interface SceneBundle {
@@ -39,6 +40,8 @@ export interface SceneBundle {
 }
 
 const EMPTY_FRAMES: readonly WeatherFrame[] = [];
+/** How long the date must hold still before its weather is fetched (a slider drag, not a click). */
+export const WEATHER_DATE_SETTLE_MS = 300;
 
 const FALLBACK_ENV: EnvironmentState = {
   terrainAvailable: false,
@@ -102,13 +105,18 @@ export function useScene(
   const horizon = utc ? decideWeatherMode(utc, now, weatherCaps) : null;
   const cell = location ? gridKey(location.point) : null;
 
+  // The weather day waits for the date to settle: the day-of-year slider can pass fifty dates in
+  // a second, each a separate day's fetch against the route's burst limit and the daily budget.
+  // Astronomy, day events and the scene follow the live date; only the fetch is held back.
+  const settledDate = useSettled(date, WEATHER_DATE_SETTLE_MS);
+  const dateSettled = settledDate === date;
   const weatherQuery = useQuery({
     // The zone is part of the key: the same civil date is a different 24 h in another zone.
-    queryKey: ['weather', cell, date, timeZone],
-    enabled: Boolean(location && cell && horizon?.fetchWorthwhile),
+    queryKey: ['weather', cell, settledDate, timeZone],
+    enabled: Boolean(location && cell && horizon?.fetchWorthwhile && dateSettled),
     queryFn: () =>
       fetchJson<WeatherResponse>(
-        `/api/weather?lat=${location!.point.latitude.toFixed(4)}&lng=${location!.point.longitude.toFixed(4)}&date=${date}&tz=${encodeURIComponent(timeZone)}`,
+        `/api/weather?lat=${location!.point.latitude.toFixed(4)}&lng=${location!.point.longitude.toFixed(4)}&date=${settledDate}&tz=${encodeURIComponent(timeZone)}`,
       ),
     staleTime: 30 * 60_000,
     gcTime: 6 * 60 * 60_000,
@@ -134,9 +142,13 @@ export function useScene(
     [caps.data, location?.point.elevationM],
   );
 
-  const frames: readonly WeatherFrame[] = weatherQuery.data?.frames ?? EMPTY_FRAMES;
+  // Frames belong to the settled day only; while the date is moving the scene runs on scenarios.
+  const frames: readonly WeatherFrame[] = dateSettled
+    ? (weatherQuery.data?.frames ?? EMPTY_FRAMES)
+    : EMPTY_FRAMES;
   // A 403 is the plan's date window (the paywall is already on screen), not a provider failure.
   const providerFailed = Boolean(
+    dateSettled &&
     horizon?.fetchWorthwhile &&
     weatherQuery.isError &&
     !(weatherQuery.error instanceof ApiRequestError && weatherQuery.error.status === 403),
@@ -184,12 +196,12 @@ export function useScene(
     utc,
     dayEvents,
     weather: {
-      loading: weatherQuery.isLoading,
-      error: weatherQuery.error ? String(weatherQuery.error) : null,
+      loading: (!dateSettled && Boolean(horizon?.fetchWorthwhile)) || weatherQuery.isLoading,
+      error: dateSettled && weatherQuery.error ? String(weatherQuery.error) : null,
       providerFailed,
       capabilities: weatherCaps,
       frames,
-      mode: weatherQuery.data?.mode ?? null,
+      mode: dateSettled ? (weatherQuery.data?.mode ?? null) : null,
     },
     capabilities: caps.data ?? null,
     environment,

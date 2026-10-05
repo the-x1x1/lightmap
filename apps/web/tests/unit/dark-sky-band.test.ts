@@ -22,6 +22,13 @@ describe('dark-sky band on the timeline', () => {
     expect(band).toMatch(/^linear-gradient\(90deg, rgba\(201,184,255,0\) 0%, /);
     expect(band).toContain('rgba(201,184,255,0.45) 0.00%');
     expect(band).toMatch(/100\.00%, rgba\(201,184,255,0\) 100%\)$/);
+    // 7 June: the night's window ends ten minutes after midnight — the short head of the civil
+    // day is kept (judged as part of the whole night, not on its own).
+    const june7 = computeDayEvents({ ...KAILUA, date: { year: 2026, month: 6, day: 7 } });
+    const head = darkSkySpells(june7, KAILUA.latitude, KAILUA.longitude)[0]!;
+    expect(head.from.getTime()).toBe(june7.dayStart.getTime());
+    expect(head.to.getTime() - head.from.getTime()).toBeLessThan(20 * 60_000);
+    expect(head.to.getTime() - head.from.getTime()).toBeGreaterThan(0);
     // 31 May 2026: full Moon up all night — no band.
     const full = computeDayEvents({ ...KAILUA, date: { year: 2026, month: 5, day: 31 } });
     expect(darkSkySpells(full, KAILUA.latitude, KAILUA.longitude)).toEqual([]);

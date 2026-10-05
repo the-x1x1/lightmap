@@ -75,7 +75,9 @@ Date is chosen with a date control (±1 day, a date input, "Now") and a **day-of
 under it — scrub the seasons the way the timeline scrubs the day (plan §44 "scrub through days,
 months, and seasons"): the date moves, the time of day stays, so the sun path, the shadows and
 the night-sky verdict swing through the year; month initials run under the track, the thumb's
-`aria-valuetext` is the human date. DST-transition days and date-line locations are handled by the
+`aria-valuetext` is the human date. The weather fetch (and the longer night-sky scans) wait for
+the date to hold still for 300 ms (`useSettled`), so a drag across the year costs no requests and
+the scene runs on scenarios until the date settles; astronomy follows every tick. DST-transition days and date-line locations are handled by the
 astronomy package's time-zone helpers (see QA_PLAN for the covered cases).
 
 ## 4. Weather and atmosphere control (plan §4, §9)

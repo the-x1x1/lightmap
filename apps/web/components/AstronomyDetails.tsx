@@ -16,6 +16,7 @@ import {
 } from '@lightmap/astronomy';
 import { useMemo, useState } from 'react';
 import { usePlannerStore } from '@/features/planner/store';
+import { useSettled } from '@/lib/use-settled';
 import { useSeasonalEnvelope } from '@/features/planner/use-seasonal';
 import { DayEventMarkers } from './Timeline';
 
@@ -62,8 +63,8 @@ function DarkWindows({ scene, windowEnd }: { scene: SceneState; windowEnd: strin
   const lat = scene.location.point.latitude;
   const lng = scene.location.point.longitude;
   // From the selected day's noon, so the scan starts with the night that begins that evening
-  // and no night is split by its edges.
-  const from = scene.dayEvents.dayStart.getTime() + 12 * 3_600_000;
+  // and no night is split by its edges; the day settles first (the year slider is continuous).
+  const from = useSettled(scene.dayEvents.dayStart.getTime() + 12 * 3_600_000, 300);
   const result = useMemo(
     () => milkyWayWindows(new Date(from), DARK_WINDOW_NIGHTS, lat, lng),
     [from, lat, lng],
@@ -135,8 +136,9 @@ function MoonDetails({
 }) {
   const tz = scene.timeZone;
   const [moonOpen, setMoonOpen] = useState(false);
-  // The next four principal phases from the selected day (night planning): per civil day.
-  const phaseFrom = scene.dayEvents.dayStart.getTime();
+  // The next four principal phases from the selected day (night planning): per settled civil
+  // day (a few milliseconds each; the year slider is continuous).
+  const phaseFrom = useSettled(scene.dayEvents.dayStart.getTime(), 300);
   const nextPhases = useMemo(() => describeNextPhases(new Date(phaseFrom), tz), [phaseFrom, tz]);
   return (
     <details

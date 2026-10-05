@@ -10,16 +10,28 @@ export interface Spell {
   to: Date;
 }
 
-/** The dark-sky spells of one civil day (clipped to it), from the night-sky scan. */
+/**
+ * The dark-sky spells of one civil day, clipped to it. The scan runs over the padded night (noon
+ * before to noon after) with the same 30-minute rule as the "dark windows ahead" list, so a
+ * window that straddles local midnight keeps both its pieces and a run too short for the list
+ * never shows on the track.
+ */
 export function darkSkySpells(
   ev: Pick<DayEvents, 'dayStart' | 'dayEnd'>,
   latitude: number,
   longitude: number,
 ): Spell[] {
-  const days = (ev.dayEnd.getTime() - ev.dayStart.getTime()) / 86_400_000;
-  return milkyWayWindows(ev.dayStart, days, latitude, longitude, { minMinutes: 20 }).windows.map(
-    (w) => ({ from: w.start, to: w.end }),
-  );
+  const HALF_DAY = 12 * 3_600_000;
+  const start = ev.dayStart.getTime();
+  const end = ev.dayEnd.getTime();
+  const from = new Date(start - HALF_DAY);
+  const days = (end + HALF_DAY - from.getTime()) / 86_400_000;
+  return milkyWayWindows(from, days, latitude, longitude)
+    .windows.map((w) => ({
+      from: new Date(Math.max(w.start.getTime(), start)),
+      to: new Date(Math.min(w.end.getTime(), end)),
+    }))
+    .filter((s) => s.to.getTime() > s.from.getTime());
 }
 
 /** A gradient layer marking the spells on the track; null when there are none. */

@@ -24,7 +24,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   sky by default (`darkSkyOnly`, `skyDark` on each match).
 - **Day-of-year slider** under the date control: scrub the seasons the way the timeline scrubs
   the day — the date moves, the time of day stays (plan §44 "scrub through days, months, and
-  seasons"); `lib/civil-year.ts`, tested across the leap day.
+  seasons"); `lib/civil-year.ts`, tested across the leap day. The weather fetch and the
+  night-sky scans wait for the date to settle (300 ms), so a drag costs no requests.
 - **Checkout return**: `/account?checkout=success` now watches for Stripe's confirmation (the
   entitlement snapshot is re-read every two seconds for up to a minute) and switches from "being
   activated" to "You're on Pro — everything is unlocked" with a link back to the map, or says
