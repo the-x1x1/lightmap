@@ -82,6 +82,20 @@ describe('planner store', () => {
     expect(usePlannerStore.getState().aperture).toBe(0.95);
     expect(usePlannerStore.getState().focusDistanceM).toBe(0.1);
   });
+  it('"tonight" is today at astronomical dusk here, 21:00 without a place', () => {
+    const s = usePlannerStore.getState();
+    s.setLocation(kailua);
+    s.setTonight();
+    const after = usePlannerStore.getState();
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Pacific/Honolulu' });
+    expect(after.date).toBe(today);
+    // Astronomical dusk at Kailua is between 19:00 and 21:00 the year round.
+    expect(after.minutes).toBeGreaterThanOrEqual(19 * 60);
+    expect(after.minutes).toBeLessThanOrEqual(21 * 60);
+    s.clearLocation();
+    s.setTonight();
+    expect(usePlannerStore.getState().minutes).toBe(21 * 60);
+  });
   it('selectedUtc is null without a location', () => {
     usePlannerStore.getState().clearLocation();
     expect(selectedUtc(usePlannerStore.getState())).toBeNull();

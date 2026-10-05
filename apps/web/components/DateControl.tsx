@@ -21,6 +21,7 @@ export function DateControl({
   const date = usePlannerStore((s) => s.date);
   const setDate = usePlannerStore((s) => s.setDate);
   const setNow = usePlannerStore((s) => s.setNow);
+  const setTonight = usePlannerStore((s) => s.setTonight);
   const location = usePlannerStore((s) => s.location);
   const timeZoneMode = usePlannerStore((s) => s.timeZoneMode);
   const civil = parseCivilDate(date);
@@ -86,6 +87,15 @@ export function DateControl({
           title="Jump to now at this place"
         >
           Now
+        </Button>
+        <Button
+          variant="ghost"
+          size="md"
+          onClick={() => setTonight()}
+          title="Tonight: today at the start of astronomical night here"
+          data-testid="date-tonight"
+        >
+          Tonight
         </Button>
       </div>
       <p id="lm-date-human" className="mt-1 text-xs text-[var(--lm-text-muted)]">

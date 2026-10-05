@@ -59,6 +59,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   in `@lightmap/astronomy` bisects the elongation from the same Meeus series as the positions —
   the published 2026 instants (3 Jan full 10:03, 18 Jan new 19:52, 31 May full 08:45, 15 Jun new
   02:54 UTC) come out within two minutes.
+- **"Tonight"** beside "Now": today at the start of astronomical night at the place (`setTonight`,
+  tested).
 - **Dark-sky cloud in the hourly outlook**: a line with the forecast cloud over the night's
   dark-sky spells and the clearest hour — "is the core window going to be clear?"
   (`cloudOverSpells`, tested).

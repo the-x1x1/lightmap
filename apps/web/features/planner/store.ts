@@ -6,7 +6,12 @@
  * until the user explicitly saves a viewpoint.
  */
 import { create } from 'zustand';
-import { localSelectionToUtc, parseCivilDate, utcToLocalSelection } from '@lightmap/astronomy';
+import {
+  computeDayEvents,
+  localSelectionToUtc,
+  parseCivilDate,
+  utcToLocalSelection,
+} from '@lightmap/astronomy';
 import {
   defaultCamera,
   equivalentFocalLengthMm,
@@ -82,6 +87,11 @@ export interface PlannerActions {
   setDate: (date: string) => void;
   setMinutes: (minutes: number) => void;
   setNow: (timeZone?: string) => void;
+  /**
+   * Tonight at this place: today's date and the start of astronomical night (or an hour after
+   * sunset, or 21:00 where neither happens today) — the night shooter's "Now".
+   */
+  setTonight: () => void;
   setScenario: (id: WeatherScenarioId, force?: boolean) => void;
   setForceScenario: (force: boolean) => void;
   setCameraMode: (mode: CameraState['mode']) => void;
@@ -197,6 +207,26 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
   },
   setNow(timeZone) {
     set(todayIn(timeZone ?? effectiveTimeZone(get())));
+  },
+  setTonight() {
+    const st = get();
+    const tz = effectiveTimeZone(st);
+    const today = todayIn(tz);
+    const civil = parseCivilDate(today.date);
+    if (!st.location || !civil) {
+      set({ date: today.date, minutes: 21 * 60 });
+      return;
+    }
+    const ev = computeDayEvents({
+      latitude: st.location.point.latitude,
+      longitude: st.location.point.longitude,
+      timeZone: tz,
+      date: civil,
+    });
+    const at =
+      ev.astronomicalDusk ?? (ev.sunset ? new Date(ev.sunset.getTime() + 3_600_000) : null);
+    const minutes = at ? Math.round((at.getTime() - ev.dayStart.getTime()) / 60_000) : 21 * 60;
+    set({ date: today.date, minutes: Math.max(0, Math.min(1439, minutes)) });
   },
   setScenario(id, force) {
     set({ scenario: id, forceScenario: force ?? get().forceScenario });

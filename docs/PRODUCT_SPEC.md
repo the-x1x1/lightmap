@@ -73,7 +73,9 @@ Keyboard, when the thumb has focus:
 The thumb has `aria-valuetext` carrying the time and the current light phase (for example
 "18:42, golden hour"). A "Now" action resets date and time to the present at the location.
 
-Date is chosen with a date control (±1 day, a date input, "Now") and a **day-of-year slider**
+Date is chosen with a date control (±1 day, a date input, "Now", and "Tonight" — today at the
+start of astronomical night here, an hour after sunset where the sky never gets that dark, 21:00
+without a place) and a **day-of-year slider**
 under it — scrub the seasons the way the timeline scrubs the day (plan §44 "scrub through days,
 months, and seasons"): the date moves, the time of day stays, so the sun path, the shadows and
 the night-sky verdict swing through the year; month initials run under the track, the thumb's
