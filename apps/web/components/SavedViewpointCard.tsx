@@ -3,6 +3,8 @@ import type { ViewpointDto } from '@/lib/api-types';
 import { formatWallTime, utcToWallClock } from '@lightmap/astronomy';
 import { compassLabel } from '@lightmap/geospatial';
 import { Button } from '@lightmap/ui';
+import { useCapabilities } from '@/features/planner/use-scene';
+import { forecastNudge } from '@/features/projects/forecast-nudge';
 import { PreviewSourceBadge } from './PreviewSourceBadge';
 
 export function SavedViewpointCard({
@@ -28,6 +30,8 @@ export function SavedViewpointCard({
 }) {
   const utc = new Date(viewpoint.selectedDatetimeUtc);
   const w = utcToWallClock(utc, viewpoint.timezone);
+  const caps = useCapabilities();
+  const nudge = forecastNudge(viewpoint, caps.data?.weather ?? null, new Date());
   const stamp = (d: Date, tz: string) => {
     const x = utcToWallClock(d, tz);
     return `${x.year}-${String(x.month).padStart(2, '0')}-${String(x.day).padStart(2, '0')} ${formatWallTime(d, tz)}`;
@@ -61,6 +65,19 @@ export function SavedViewpointCard({
             ? `Scenario: ${viewpoint.weatherScenario ?? '—'}`
             : viewpoint.weatherMode.toLowerCase().replace('_', ' ')}
         </p>
+        {nudge ? (
+          <p
+            className={
+              nudge.kind === 'forecast'
+                ? 'mt-1 text-xs text-[var(--lm-ok)]'
+                : 'mt-1 text-xs text-[var(--lm-text-muted)]'
+            }
+            data-testid={`viewpoint-nudge-${nudge.kind}`}
+          >
+            {nudge.kind === 'forecast' ? '◉ ' : ''}
+            {nudge.text}
+          </p>
+        ) : null}
         <div className="mt-1.5 flex items-center gap-2">
           <PreviewSourceBadge mode={viewpoint.previewSourceType} />
           <Button

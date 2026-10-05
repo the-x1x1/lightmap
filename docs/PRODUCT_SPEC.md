@@ -343,6 +343,13 @@ Account required. Limits come from the entitlement snapshot, never from UI const
 app-generated thumbnail when the renderer can capture one. Reopening a viewpoint restores
 location, UTC instant (rendered in the location's zone), camera and scenario exactly.
 
+**As the shoot approaches** (North Star: "return later and see the forecast become more
+specific"): each saved viewpoint card compares the weather basis it was saved with against what
+the provider can give today — "◉ Forecast available now — open to see it" once a scenario-saved
+date is inside the reliable horizon, "Extended forecast available (low confidence)" in days 8–16,
+"Date has passed — observed conditions on open" afterwards (`forecastNudge()`, from the same
+horizon rule as the planner).
+
 **Shot variants** (plan §25 Phase 6): a viewpoint can hold variants — the same place and camera at
 other dates/times or scenarios ("07:10 vs 18:40 vs 4 August"). A variant is a viewpoint row with
 `parentViewpointId`; it keeps the parent's label, counts toward the plan's viewpoint limits like any

@@ -4,6 +4,11 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Forecast nudges on saved viewpoints**: a card whose date has come inside the forecast horizon
+  since it was saved says "◉ Forecast available now — open to see it" (or the extended-range
+  wording), and a passed date says observed conditions are there — the North Star's "return later
+  and see the forecast become more specific", from the planner's own horizon rule
+  (`forecastNudge()`, tested).
 - **Moon on the compass rose**: when the Moon is up, the sun-direction overlay marks it as a grey
   disc (brighter the fuller it is) on the same dome, and the overlay's description names its
   bearing, elevation and illumination.
