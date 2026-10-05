@@ -24,7 +24,11 @@ export function ForecastBadge({ scene, loading }: { scene: SceneState; loading?:
         </Badge>
       );
     case 'RECENT_PAST':
-      return (
+      return scene.confidence.weather === 'MEDIUM' ? (
+        <Badge tone="ok" icon="◎" title={note} data-testid="observed-badge">
+          Observed · reanalysis{why}
+        </Badge>
+      ) : (
         <Badge tone="ok" icon="◉" title={note}>
           Recent conditions{why}
         </Badge>

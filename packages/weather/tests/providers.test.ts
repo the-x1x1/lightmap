@@ -91,6 +91,44 @@ describe('Open-Meteo normalisation', () => {
     expect(new OpenMeteoProvider().getCapabilities().commercialReview).toBe('conditional');
   });
 
+  it('serves history beyond 92 days from the reanalysis archive without the fields it lacks', async () => {
+    const seen: string[] = [];
+    const fetchImpl = (async (url: string | URL | Request) => {
+      seen.push(urlOf(url));
+      return new Response(JSON.stringify(sample), { status: 200 });
+    }) as typeof fetch;
+    const now = () => new Date('2026-05-31T00:00:00Z');
+    const p = new OpenMeteoProvider({ fetchImpl, now });
+    await p.getHistorical(
+      21.397,
+      -157.727,
+      new Date('2026-05-20T00:00:00Z'),
+      new Date('2026-05-20T23:00:00Z'),
+    );
+    expect(seen[0]).toContain('api.open-meteo.com/v1/forecast');
+    const series = await p.getHistorical(
+      21.397,
+      -157.727,
+      new Date('2024-05-31T00:00:00Z'),
+      new Date('2024-05-31T23:00:00Z'),
+    );
+    expect(seen[1]).toContain('archive-api.open-meteo.com/v1/archive');
+    expect(seen[1]).toContain('cloud_cover_low');
+    expect(seen[1]).not.toContain('visibility');
+    expect(seen[1]).not.toContain('precipitation_probability');
+    expect(seen[1]).toContain('start_date=2024-05-31');
+    expect(series.frames.length).toBeGreaterThan(0);
+    const keyed = new OpenMeteoProvider({ apiKey: 'k', fetchImpl, now });
+    await keyed.getHistorical(
+      0,
+      0,
+      new Date('2024-01-01T00:00:00Z'),
+      new Date('2024-01-01T23:00:00Z'),
+    );
+    expect(seen[2]).toContain('customer-archive-api.open-meteo.com');
+    expect(seen[2]).toContain('apikey=k');
+  });
+
   it('surfaces provider errors', async () => {
     const fetchImpl = (async () =>
       new Response(JSON.stringify({ error: true, reason: 'bad' }), {

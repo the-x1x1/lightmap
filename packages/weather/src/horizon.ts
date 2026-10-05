@@ -6,8 +6,10 @@
  *  - EXTENDED_FORECAST  beyond reliable but within what the provider returns (day 8–16):
  *                       shown as a forecast with a clear "low confidence" badge
  *  - SCENARIO           beyond the provider's horizon, or no provider, or provider error
- *  - RECENT_PAST        within the archive window (the provider serves observed/analysis data)
- *  - PAST               older than the archive; treated like a scenario ("historical weather not
+ *  - RECENT_PAST        the provider serves observed/analysis data: HIGH confidence within the
+ *                       forecast model's own recent-past window, MEDIUM from a reanalysis archive
+ *                       further back (coarser grid, some fields missing)
+ *  - PAST               older than any archive; treated like a scenario ("historical weather not
  *                       loaded") — never silently shown as a forecast
  */
 import type { WeatherCapabilities } from './model.ts';
@@ -49,6 +51,15 @@ export function decideWeatherMode(
         reason: 'Recent conditions from the provider archive',
         fetchWorthwhile: true,
         weatherConfidence: 'HIGH',
+      };
+    }
+    if (-leadHours <= caps.archiveDays * 24) {
+      return {
+        mode: 'RECENT_PAST',
+        leadHours,
+        reason: `Observed conditions ${days} days ago from the reanalysis archive (coarse grid; no visibility)`,
+        fetchWorthwhile: true,
+        weatherConfidence: 'MEDIUM',
       };
     }
     return {

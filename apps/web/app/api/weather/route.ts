@@ -56,7 +56,13 @@ export async function GET(req: Request) {
         decision.mode === 'RECENT_PAST'
           ? await s.weather.getHistorical(clat, clng, start, end)
           : await s.weather.getForecast(clat, clng, start, end);
-      const ttl = decision.mode === 'RECENT_PAST' ? 6 * 3600 : caps.updateIntervalMinutes * 60;
+      // Recent past can still be revised by the model for a few hours; reanalysis is settled.
+      const ttl =
+        decision.mode === 'RECENT_PAST'
+          ? -decision.leadHours > caps.historicalDays * 24
+            ? 30 * 86_400
+            : 6 * 3600
+          : caps.updateIntervalMinutes * 60;
       if (cache) await cache.set('weather', cacheKey, series, ttl);
     }
     const body: WeatherResponse = {

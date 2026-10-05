@@ -16,6 +16,7 @@ export const FIXTURE_CAPABILITIES: WeatherCapabilities = {
   maxHorizonHours: 16 * 24,
   reliableHorizonHours: 7 * 24,
   historicalDays: 30,
+  archiveDays: 3650,
   hasCloudLayers: true,
   hasIrradiance: false,
   hasVisibility: true,

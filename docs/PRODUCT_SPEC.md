@@ -76,13 +76,14 @@ The weather **mode** is decided by one pure function (`decideWeatherMode`) from 
 instant, "now", and the provider's declared horizon. Details are in
 `WEATHER_AND_FORECAST_MODEL.md`. Behaviour by mode:
 
-| Mode                | When                                                        | What the user sees                                                                       |
-| ------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `FORECAST`          | ≤ 7 days ahead                                              | "Forecast" badge (HIGH ≤ 48 h, MEDIUM after). Forecast-driven atmosphere is shown first. |
-| `EXTENDED_FORECAST` | 8–16 days ahead                                             | "Extended forecast — low confidence" badge. Still forecast-driven.                       |
-| `SCENARIO`          | Beyond the provider horizon, no provider, or provider error | "Forecast unavailable this far ahead — compare scenarios." Scenario buttons take over.   |
-| `RECENT_PAST`       | ≤ 92 days ago                                               | "Recent conditions from the provider archive."                                           |
-| `PAST`              | Older than the archive                                      | "Historical weather … is not loaded — showing a scenario." Behaves like SCENARIO.        |
+| Mode                | When                                                        | What the user sees                                                                              |
+| ------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `FORECAST`          | ≤ 7 days ahead                                              | "Forecast" badge (HIGH ≤ 48 h, MEDIUM after). Forecast-driven atmosphere is shown first.        |
+| `EXTENDED_FORECAST` | 8–16 days ahead                                             | "Extended forecast — low confidence" badge. Still forecast-driven.                              |
+| `SCENARIO`          | Beyond the provider horizon, no provider, or provider error | "Forecast unavailable this far ahead — compare scenarios." Scenario buttons take over.          |
+| `RECENT_PAST`       | ≤ 92 days ago                                               | "Recent conditions from the provider archive." (HIGH)                                           |
+| `RECENT_PAST`       | 92 days ago – the start of the reanalysis archive (1940)    | "Observed · reanalysis" badge (MEDIUM: coarse grid, no visibility). Observed, never a forecast. |
+| `PAST`              | Older than the archive                                      | "Historical weather … is not loaded — showing a scenario." Behaves like SCENARIO.               |
 
 Five scenarios, always available: **Clear · Mostly Clear · Partly Cloudy · Overcast · Rain / Storm**.
 Their render parameters are deterministic constants (see the scenario table in

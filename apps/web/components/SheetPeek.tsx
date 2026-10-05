@@ -24,7 +24,7 @@ function weatherWord(scene: SceneState): string {
     case 'FORECAST':
       return `${Math.round(scene.atmosphere.parameters.cloudCover * 100)} % cloud · forecast`;
     case 'RECENT_PAST':
-      return `${Math.round(scene.atmosphere.parameters.cloudCover * 100)} % cloud · recent conditions`;
+      return `${Math.round(scene.atmosphere.parameters.cloudCover * 100)} % cloud · ${scene.confidence.weather === 'MEDIUM' ? 'observed' : 'recent conditions'}`;
     case 'EXTENDED_FORECAST':
       return `${Math.round(scene.atmosphere.parameters.cloudCover * 100)} % cloud · extended · low confidence`;
     case 'SCENARIO':

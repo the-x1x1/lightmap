@@ -21,19 +21,24 @@ use historical weather as a future forecast; label scenarios as scenarios.
 provider declares `reliableHorizonHours`, `maxHorizonHours` and `historicalDays`; Open-Meteo
 declares 7 days, 16 days and 92 days.
 
-| Lead time (selected − now) | Mode                | Weather confidence | Fetch? | User-facing reason                                                     |
-| -------------------------- | ------------------- | ------------------ | ------ | ---------------------------------------------------------------------- |
-| ≤ 48 h ahead               | `FORECAST`          | HIGH               | yes    | "Forecast"                                                             |
-| 48 h – 7 days ahead        | `FORECAST`          | MEDIUM             | yes    | "Forecast, N days ahead"                                               |
-| 8 – 16 days ahead          | `EXTENDED_FORECAST` | LOW                | yes    | "Extended forecast, N days ahead — low confidence"                     |
-| > 16 days ahead            | `SCENARIO`          | SCENARIO           | no     | "Forecast unavailable this far ahead (N days) — compare scenarios"     |
-| 0 – 92 days ago            | `RECENT_PAST`       | HIGH               | yes    | "Recent conditions from the provider archive"                          |
-| > 92 days ago              | `PAST`              | SCENARIO           | no     | "Historical weather for N days ago is not loaded — showing a scenario" |
-| No provider configured     | `SCENARIO`          | SCENARIO           | no     | "No weather provider configured — choose a scenario"                   |
-| Provider call fails        | (mode unchanged)    | SCENARIO           | –      | "Live forecast unavailable — showing your selected scenario"           |
+| Lead time (selected − now) | Mode                | Weather confidence | Fetch? | User-facing reason                                                                        |
+| -------------------------- | ------------------- | ------------------ | ------ | ----------------------------------------------------------------------------------------- |
+| ≤ 48 h ahead               | `FORECAST`          | HIGH               | yes    | "Forecast"                                                                                |
+| 48 h – 7 days ahead        | `FORECAST`          | MEDIUM             | yes    | "Forecast, N days ahead"                                                                  |
+| 8 – 16 days ahead          | `EXTENDED_FORECAST` | LOW                | yes    | "Extended forecast, N days ahead — low confidence"                                        |
+| > 16 days ahead            | `SCENARIO`          | SCENARIO           | no     | "Forecast unavailable this far ahead (N days) — compare scenarios"                        |
+| 0 – 92 days ago            | `RECENT_PAST`       | HIGH               | yes    | "Recent conditions from the provider archive"                                             |
+| 92 days – 1940 (archive)   | `RECENT_PAST`       | MEDIUM             | yes    | "Observed conditions N days ago from the reanalysis archive (coarse grid; no visibility)" |
+| Older than the archive     | `PAST`              | SCENARIO           | no     | "Historical weather for N days ago is not loaded — showing a scenario"                    |
+| No provider configured     | `SCENARIO`          | SCENARIO           | no     | "No weather provider configured — choose a scenario"                                      |
+| Provider call fails        | (mode unchanged)    | SCENARIO           | –      | "Live forecast unavailable — showing your selected scenario"                              |
 
-`PAST` is deliberately treated as a scenario: the archive could be fetched, but until a product
-reason exists LightMap does not spend requests on it and does not imply it knows.
+Past dates beyond the forecast model's own 92-day window come from the provider's **reanalysis
+archive** (`archiveDays` in the capabilities; ERA5 from 1940 for Open-Meteo): real observed
+conditions, labelled "Observed · reanalysis", at MEDIUM confidence because the grid is coarse
+(≈ 10–25 km) and some fields are missing (no visibility, no precipitation probability). It is what
+happened, never a forecast, and "return later and see the forecast become more specific" is
+unaffected. Dates older than any archive stay `PAST`: a scenario, with the reason shown.
 
 The API refuses to fetch when `fetchWorthwhile` is false (HTTP 422 `outside_horizon`); the client
 already knows it is in scenario mode and should not have asked.
@@ -117,7 +122,10 @@ of the direct beam regardless of its total cover.
 - Adapter: `OpenMeteoProvider` (`api.open-meteo.com`, or `customer-api.open-meteo.com` with an API
   key). Hourly fields: cloud cover (total/low/mid/high), precipitation probability and amount,
   humidity, visibility, wind, weather code, DNI, diffuse and shortwave radiation.
-- Horizon: 16 days hourly; LightMap treats ≤ 7 days as reliable. Archive: `past_days` up to 92.
+- Horizon: 16 days hourly; LightMap treats ≤ 7 days as reliable. Recent past: `past_days` up
+  to 92 on the forecast endpoint; older dates from `archive-api.open-meteo.com/v1/archive`
+  (`customer-archive-api` with a key; ERA5, ~5 days behind real time) with the fields the archive
+  has (no visibility, no precipitation probability).
 - **Licensing.** The free tier is for **non-commercial** use (data CC BY 4.0, attribution
   required). A paid application requires an **Open-Meteo API subscription**. The adapter reports
   `commercialReview: 'conditional'` without `OPEN_METEO_API_KEY` and `'approved'` with it;
@@ -131,7 +139,8 @@ of the direct beam regardless of its total cover.
 - Coordinates are quantised to a **0.05° grid cell** (≈ 5.5 km at the equator) before any request.
 - One fetch per **(provider, version, grid cell, civil day at the location)**; key
   `weather:<provider>:v1:<cell>:<YYYY-MM-DD>`. Server cache lives in `provider_cache` (Postgres)
-  with TTL = provider update interval (60 min) for forecasts, 6 h for recent past.
+  with TTL = provider update interval (60 min) for forecasts, 6 h for the recent past, 30 days
+  for reanalysis history (settled).
 - The response carries the whole day of hourly frames; the client caches it in TanStack Query and
   **interpolates locally while scrubbing**. Moving the timeline never triggers a network request.
 - Per-client burst limit (30/min) and daily budgets (40 anonymous / 150 free / 600 pro weather

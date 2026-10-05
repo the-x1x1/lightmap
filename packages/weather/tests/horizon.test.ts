@@ -33,11 +33,25 @@ describe('decideWeatherMode', () => {
   it('is SCENARIO with no provider', () => {
     expect(decideWeatherMode(h(1), now, null).mode).toBe('SCENARIO');
   });
-  it('serves the recent past from the archive and refuses older history silently as forecast', () => {
-    expect(decideWeatherMode(h(-3 * 24), now, OPEN_METEO_CAPABILITIES).mode).toBe('RECENT_PAST');
-    const old = decideWeatherMode(h(-200 * 24), now, OPEN_METEO_CAPABILITIES);
+  it('serves the recent past from the model archive, older history from the reanalysis, and refuses the rest', () => {
+    const recent = decideWeatherMode(h(-3 * 24), now, OPEN_METEO_CAPABILITIES);
+    expect(recent.mode).toBe('RECENT_PAST');
+    expect(recent.weatherConfidence).toBe('HIGH');
+    const archive = decideWeatherMode(h(-200 * 24), now, OPEN_METEO_CAPABILITIES);
+    expect(archive.mode).toBe('RECENT_PAST');
+    expect(archive.weatherConfidence).toBe('MEDIUM');
+    expect(archive.fetchWorthwhile).toBe(true);
+    expect(archive.reason).toContain('reanalysis');
+    const old = decideWeatherMode(h(-90 * 365 * 24), now, OPEN_METEO_CAPABILITIES);
     expect(old.mode).toBe('PAST');
     expect(old.weatherConfidence).toBe('SCENARIO');
+    expect(old.fetchWorthwhile).toBe(false);
+    // A provider without an archive refuses anything beyond its recent past.
+    const noArchive = decideWeatherMode(h(-200 * 24), now, {
+      ...OPEN_METEO_CAPABILITIES,
+      archiveDays: 0,
+    });
+    expect(noArchive.mode).toBe('PAST');
   });
   it('cache key quantises by provider, grid and day', () => {
     expect(forecastCacheKey('open-meteo', '21.4000,-157.7500', '2026-05-31')).toBe(

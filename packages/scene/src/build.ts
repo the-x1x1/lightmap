@@ -229,7 +229,9 @@ export function deriveAtmosphere(
       decision.mode === 'EXTENDED_FORECAST'
         ? 'Extended forecast (low confidence)'
         : decision.mode === 'RECENT_PAST'
-          ? 'Recent conditions'
+          ? decision.weatherConfidence === 'MEDIUM'
+            ? 'Observed (reanalysis)'
+            : 'Recent conditions'
           : 'Forecast';
     return {
       mode: decision.mode,

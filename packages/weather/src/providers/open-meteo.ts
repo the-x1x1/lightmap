@@ -22,6 +22,9 @@ export const OPEN_METEO_CAPABILITIES: WeatherCapabilities = {
   maxHorizonHours: 16 * 24,
   reliableHorizonHours: 7 * 24,
   historicalDays: 92,
+  // ERA5 reanalysis from 1940 (archive-api.open-meteo.com), ~5 days behind real time; the
+  // forecast endpoint's 92-day past covers the gap.
+  archiveDays: 86 * 365,
   hasCloudLayers: true,
   hasIrradiance: true,
   hasVisibility: true,
@@ -59,8 +62,15 @@ interface OpenMeteoResponse {
   reason?: string;
 }
 
+/** The archive (ERA5) has no precipitation probability and no visibility. */
+const ARCHIVE_HOURLY_FIELDS = HOURLY_FIELDS.filter(
+  (f) => f !== 'precipitation_probability' && f !== 'visibility',
+);
+
 export interface OpenMeteoOptions {
   baseUrl?: string;
+  /** Reanalysis archive host; defaults to Open-Meteo's (customer host with a key). */
+  archiveBaseUrl?: string;
   apiKey?: string;
   fetchImpl?: typeof fetch;
   now?: () => Date;
@@ -68,6 +78,7 @@ export interface OpenMeteoOptions {
 
 export class OpenMeteoProvider implements WeatherProvider {
   private readonly baseUrl: string;
+  private readonly archiveBaseUrl: string;
   private readonly apiKey: string | undefined;
   private readonly fetchImpl: typeof fetch;
   private readonly now: () => Date;
@@ -77,6 +88,12 @@ export class OpenMeteoProvider implements WeatherProvider {
     this.baseUrl = (
       opts.baseUrl ??
       (opts.apiKey ? 'https://customer-api.open-meteo.com' : 'https://api.open-meteo.com')
+    ).replace(/\/$/, '');
+    this.archiveBaseUrl = (
+      opts.archiveBaseUrl ??
+      (opts.apiKey
+        ? 'https://customer-archive-api.open-meteo.com'
+        : 'https://archive-api.open-meteo.com')
     ).replace(/\/$/, '');
     this.fetchImpl = opts.fetchImpl ?? fetch;
     this.now = opts.now ?? (() => new Date());
@@ -116,8 +133,22 @@ export class OpenMeteoProvider implements WeatherProvider {
     to: Date,
     opts?: { signal?: AbortSignal },
   ): Promise<WeatherSeries> {
-    // The forecast endpoint serves the recent past (up to 92 days) with the same schema.
-    return this.getForecast(lat, lng, from, to, opts);
+    // The forecast endpoint serves the recent past (up to 92 days) with the same schema; further
+    // back, the ERA5 reanalysis archive with the fields it has.
+    const ageDays = (this.now().getTime() - from.getTime()) / 86_400_000;
+    if (ageDays <= OPEN_METEO_CAPABILITIES.historicalDays)
+      return this.getForecast(lat, lng, from, to, opts);
+    const url = new URL(`${this.archiveBaseUrl}/v1/archive`);
+    url.searchParams.set('latitude', lat.toFixed(4));
+    url.searchParams.set('longitude', lng.toFixed(4));
+    url.searchParams.set('hourly', ARCHIVE_HOURLY_FIELDS.join(','));
+    url.searchParams.set('timezone', 'UTC');
+    url.searchParams.set('timeformat', 'iso8601');
+    url.searchParams.set('wind_speed_unit', 'ms');
+    url.searchParams.set('start_date', isoDate(from));
+    url.searchParams.set('end_date', isoDate(to));
+    if (this.apiKey) url.searchParams.set('apikey', this.apiKey);
+    return this.request(url, lat, lng, opts?.signal);
   }
 
   private async request(

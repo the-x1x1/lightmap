@@ -37,8 +37,14 @@ export interface WeatherCapabilities {
   maxHorizonHours: number;
   /** Hours from "now" within which the provider's forecast is considered reliable for planning. */
   reliableHorizonHours: number;
-  /** Hours after "now" (negative) the provider serves recent-past frames from its archive. */
+  /** Days back the provider serves recent-past frames from the forecast model's own archive. */
   historicalDays: number;
+  /**
+   * Days back the provider serves observed/reanalysis frames beyond `historicalDays` (0 = none).
+   * Slower and coarser than the recent past — a reanalysis grid, some fields missing — so it is
+   * reported with MEDIUM confidence and labelled "observed", never as a forecast.
+   */
+  archiveDays: number;
   hasCloudLayers: boolean;
   hasIrradiance: boolean;
   hasVisibility: boolean;
