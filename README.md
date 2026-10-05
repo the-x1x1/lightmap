@@ -43,7 +43,8 @@ the shadow probe (a 20 m tower at Sun 11°, shadow measured against `h / tan(el)
   planned sun, its path, true level and the ridge over the live camera; saved projects open
   offline; installable as a PWA.
 - Accounts (passwordless email, optional Google), projects, saved viewpoints with thumbnails,
-  planning-card export.
+  planning-card export; preferences (metric or imperial, times in the place's zone or your own,
+  the lens a new place starts with) kept on the device and in the profile.
 - Subscription plumbing in Stripe test mode with a central entitlement service (Free / Pro).
 - No uploads, no social feed, no location-discovery engine. It is a planning instrument.
 
@@ -94,17 +95,18 @@ production) or with a magic link printed to the server log when `EMAIL_SERVER` i
 All keys are documented in [`.env.example`](.env.example) and validated by `packages/config/src/env.ts`.
 The important ones:
 
-| Key                                                                                                 | Purpose                                                                              |
-| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `DATABASE_URL`                                                                                      | PostgreSQL. Unset ⇒ no accounts/projects/billing (exploration still works).          |
-| `AUTH_SECRET`, `AUTH_URL`, `EMAIL_SERVER`, `EMAIL_FROM`, `AUTH_GOOGLE_*`, `AUTH_DEV_LOGIN`          | Auth.js.                                                                             |
-| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_YEARLY` | Billing (test mode keys locally).                                                    |
-| `WEATHER_PROVIDER` (`open-meteo` \| `fixture`), `OPEN_METEO_API_KEY`                                | Weather. Commercial use of Open-Meteo needs a paid key.                              |
-| `GEOCODER_PROVIDER` (`nominatim` \| `fixture`), `GEOCODER_USER_AGENT`                               | Place search. Nominatim is development-only.                                         |
-| `TERRAIN_PROVIDER` (`reearth` \| `cesium-ion` \| `ellipsoid`), `CESIUM_ION_TOKEN`                   | Terrain.                                                                             |
-| `IMAGERY_PROVIDER` (`natural-earth` \| `cesium-ion` \| `xyz`), `IMAGERY_XYZ_*`                      | Basemap imagery; attribution is mandatory.                                           |
-| `LIGHTMAP_SHOW_DEV_BANNER`                                                                          | Shows the "development mode" banner whenever a fixture/limited provider is active.   |
-| `SENTRY_DSN`                                                                                        | Error reports to any Sentry-compatible ingest (built-in envelope transport, no SDK). |
+| Key                                                                                                 | Purpose                                                                                |
+| --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                                                                      | PostgreSQL. Unset ⇒ no accounts/projects/billing (exploration still works).            |
+| `AUTH_SECRET`, `AUTH_URL`, `EMAIL_SERVER`, `EMAIL_FROM`, `AUTH_GOOGLE_*`, `AUTH_DEV_LOGIN`          | Auth.js.                                                                               |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_YEARLY` | Billing (test mode keys locally).                                                      |
+| `WEATHER_PROVIDER` (`open-meteo` \| `fixture`), `OPEN_METEO_API_KEY`                                | Weather. Commercial use of Open-Meteo needs a paid key.                                |
+| `GEOCODER_PROVIDER` (`nominatim` \| `fixture`), `GEOCODER_USER_AGENT`                               | Place search. Nominatim is development-only.                                           |
+| `TERRAIN_PROVIDER` (`reearth` \| `cesium-ion` \| `ellipsoid`), `CESIUM_ION_TOKEN`                   | Terrain.                                                                               |
+| `IMAGERY_PROVIDER` (`natural-earth` \| `cesium-ion` \| `xyz`), `IMAGERY_XYZ_*`                      | Basemap imagery; attribution is mandatory.                                             |
+| `LIGHTMAP_SHOW_DEV_BANNER`                                                                          | Shows the "development mode" banner whenever a fixture/limited provider is active.     |
+| `SENTRY_DSN`                                                                                        | Error reports to any Sentry-compatible ingest (built-in envelope transport, no SDK).   |
+| `ANALYTICS_SINK` (`none` \| `log`)                                                                  | Product events (eight, sanitised, `docs/PRIVACY.md` §4); off in production unless set. |
 
 ## Commands
 
@@ -176,7 +178,8 @@ daily account-erasure / cache-purge job once the production database secret exis
 - **Imagery is coarse by default.** Without an imagery key the globe shows Natural Earth II, so
   scenes are labelled _Estimated Preview_. Terrain relief and light direction are still real.
 - **No buildings or vegetation.** Shadows come from terrain only.
-- **Sky is a model, not a spectral simulation**; clouds are procedural coverage, not forecast shapes.
+- **Sky is a model, not a spectral simulation** (single scattering in three bands for the sky
+  gradient, Cesium's own dome in 3D); clouds are procedural coverage, not forecast shapes.
 - **Moon accuracy is ±0.02°** (sun ±0.01°); ample for framing, not an eclipse ephemeris.
 - **Real-reference imagery is disabled** until a licensed provider contract exists.
 - **Night sky**: Cesium's Moon mesh is hidden (it is lit by Cesium's own Sun and renders black at
