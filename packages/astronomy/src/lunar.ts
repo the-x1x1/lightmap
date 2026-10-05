@@ -5,9 +5,10 @@
  * terms in longitude and distance, 60 in latitude, plus the planetary and flattening terms),
  * nutation from the short form of ch. 22, true obliquity; validated against Meeus's worked
  * example 47.a to the last digit of the published sums. Geocentric accuracy ≈ 10″ in longitude,
- * 4″ in latitude, 4 km in distance. Parallax (up to ~1°, in azimuth as well as altitude) is
- * applied exactly through the topocentric equatorial correction of ch. 40, because it matters
- * for where the Moon sits in a frame and for moonrise planning. Illuminated fraction follows Meeus ch. 48 (phase angle from the Sun–Moon
+ * 4″ in latitude. Parallax (up to ~1°) is applied exactly through the topocentric equatorial
+ * correction of ch. 40 rather than the first-order h′ = h − π·cos h, which left a second-order
+ * altitude error of up to 0.01° — half the stated budget. (On the ellipsoid the azimuth change is
+ * only ≈ π·sin(φ − φ′) ≈ 0.003°; the correction matters for altitude.) Illuminated fraction follows Meeus ch. 48 (phase angle from the Sun–Moon
  * elongation).
  *
  * Honest accuracy statement (surfaced in the UI as the lunar confidence note): position ±0.02°,
@@ -16,8 +17,9 @@
  * (e.g. the MIT-licensed astronomy-engine) to be swapped in without touching callers (ADR-0006).
  */
 import {
-  greenwichMeanSiderealTimeDeg,
+  apparentSiderealTimeDeg,
   meanObliquityDeg,
+  nutationDeg,
   solarEquatorial,
   toHorizontal,
   type HorizontalCoordinates,
@@ -242,30 +244,10 @@ export function lunarPeriodicSums(T: number): { sumL: number; sumB: number; sumR
   return { sumL, sumB, sumR };
 }
 
-/** Nutation in longitude and obliquity (Meeus ch. 22, the 0.5″ short form), degrees. */
-function nutationDeg(T: number): { dPsi: number; dEps: number } {
-  const omega = (125.044_52 - 1934.136_261 * T) * DEG;
-  const L = (280.4665 + 36_000.7698 * T) * DEG;
-  const Lp = (218.3165 + 481_267.8813 * T) * DEG;
-  const dPsi =
-    (-17.2 * Math.sin(omega) -
-      1.32 * Math.sin(2 * L) -
-      0.23 * Math.sin(2 * Lp) +
-      0.21 * Math.sin(2 * omega)) /
-    3600;
-  const dEps =
-    (9.2 * Math.cos(omega) +
-      0.57 * Math.cos(2 * L) +
-      0.1 * Math.cos(2 * Lp) -
-      0.09 * Math.cos(2 * omega)) /
-    3600;
-  return { dPsi, dEps };
-}
-
 /**
  * Geocentric apparent equatorial coordinates of the Moon at Julian centuries T (TT): ecliptic
  * longitude/latitude from the abbreviated ELP-2000/82 series (Meeus ch. 47; ≈ 10″ in longitude,
- * 4″ in latitude, 4 km in distance), nutation applied, true obliquity.
+ * 4″ in latitude), nutation applied, true obliquity.
  */
 export function lunarEquatorial(T: number): LunarEquatorial {
   const a = lunarArguments(T);
@@ -307,6 +289,7 @@ export type MoonPhaseName =
 export interface MoonPosition extends HorizontalCoordinates {
   /** Same as `elevationDeg` (both topocentric since the Meeus ch. 40 correction); kept for callers. */
   topocentricElevationDeg: number;
+  /** Geocentric apparent declination / right ascension (the horizontal values are topocentric). */
   declinationDeg: number;
   rightAscensionDeg: number;
   distanceKm: number;
@@ -347,8 +330,8 @@ export function moonPhaseName(elongationDeg: number): MoonPhaseName {
 
 /**
  * Geocentric → topocentric equatorial coordinates (Meeus ch. 40): the Moon's parallax moves it
- * by up to ~1° — in azimuth as well as altitude — so the observer's position on the ellipsoid
- * (sea level; the site's height matters < 0.001°) is applied before going to horizontal.
+ * by up to ~1° along the vertical, so the observer's position on the ellipsoid (sea level; the
+ * site's height matters < 0.0015° below 6 km) is applied before going to horizontal.
  */
 export function topocentricEquatorial(
   eq: { rightAscensionDeg: number; declinationDeg: number; parallaxDeg: number },
@@ -360,7 +343,7 @@ export function topocentricEquatorial(
   const rhoSinPhi = 0.996_647_19 * Math.sin(u);
   const rhoCosPhi = Math.cos(u);
   const sinPi = Math.sin(eq.parallaxDeg * DEG);
-  const H = (greenwichMeanSiderealTimeDeg(date) + longitudeDeg - eq.rightAscensionDeg) * DEG;
+  const H = (apparentSiderealTimeDeg(date) + longitudeDeg - eq.rightAscensionDeg) * DEG;
   const dec = eq.declinationDeg * DEG;
   const dAlpha = Math.atan2(
     -rhoCosPhi * sinPi * Math.sin(H),

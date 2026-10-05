@@ -8,7 +8,7 @@ import {
   moonRiseSet,
   topocentricEquatorial,
 } from '../src/lunar.ts';
-import { toHorizontal } from '../src/solar.ts';
+import { apparentSiderealTimeDeg, toHorizontal } from '../src/solar.ts';
 import { julianCenturiesTT } from '../src/time.ts';
 
 /**
@@ -39,7 +39,8 @@ describe('Moon — Meeus example 47.a', () => {
   });
   it('apparent longitude, latitude, distance, parallax and equatorial coordinates', () => {
     const m = lunarEquatorial(T);
-    expect(m.eclipticLongitudeDeg).toBeCloseTo(133.167265, 3); // λ 133.162655 + Δψ 0.004610
+    // λ 133.162655 + Δψ: the book's full nutation gives 0.004610°, the short form here 0.004578°.
+    expect(m.eclipticLongitudeDeg).toBeCloseTo(133.167265, 3);
     expect(m.eclipticLatitudeDeg).toBeCloseTo(-3.229126, 5);
     expect(m.distanceKm).toBeCloseTo(368409.7, 0);
     expect(m.parallaxDeg).toBeCloseTo(0.99199, 4);
@@ -59,7 +60,7 @@ describe('moonrise / moonset threshold', () => {
     for (const t of [moonrise!, moonset!]) {
       const m = moonPosition(t, lat, lon);
       // Centre at −(0.2725π + 34′) ≈ −0.83°, within the 10 s bisection.
-      expect(m.topocentricElevationDeg).toBeCloseTo(moonHorizonThresholdDeg(m.distanceKm), 1);
+      expect(m.topocentricElevationDeg).toBeCloseTo(moonHorizonThresholdDeg(m.distanceKm), 2);
       expect(moonHorizonThresholdDeg(m.distanceKm)).toBeLessThan(-0.8);
       expect(moonHorizonThresholdDeg(m.distanceKm)).toBeGreaterThan(-0.86);
     }
@@ -90,19 +91,35 @@ describe('topocentric correction (Meeus ch. 40)', () => {
     expect(mp.topocentricElevationDeg).toBeCloseTo(topoHz.elevationDeg, 9);
     expect(mp.azimuthDeg).toBeCloseTo(topoHz.azimuthDeg, 9);
   });
-  it('vanishes at the Earth’s centre line of sight: an observer at the equator with the Moon overhead', () => {
-    // Parallax in altitude is π·cos h → ~0 at the zenith; the correction cannot invent a shift there.
+  it('is purely vertical: with the Moon at the zenith the correction cannot shift it', () => {
+    // Put an observer directly under the Moon: latitude = its declination, longitude such that
+    // the hour angle is zero. Then parallax in altitude (π·cos h) is ~0 and azimuth is moot.
+    const t = new Date('2026-06-01T12:00:00Z');
+    const T = julianCenturiesTT(t);
+    const geo = lunarEquatorial(T);
+    const lat = geo.declinationDeg;
+    const lon = ((geo.rightAscensionDeg - apparentSiderealTimeDeg(t) + 540) % 360) - 180;
+    const geoHz = toHorizontal(geo, t, lat, lon);
+    expect(geoHz.elevationDeg).toBeGreaterThan(89.9);
+    const topoHz = toHorizontal(topocentricEquatorial(geo, t, lat, lon), t, lat, lon);
+    expect(Math.abs(geoHz.elevationDeg - topoHz.elevationDeg)).toBeLessThan(0.02);
+  });
+  it('beats the first-order altitude form by the second-order term, up to ~0.01° at mid altitudes', () => {
     const lat = 0;
     const lon = 0;
-    for (let h = 0; h < 48; h++) {
-      const t = new Date(Date.UTC(2026, 5, 1, h * 0.5));
+    let worst = 0;
+    for (let h = 0; h < 24 * 30; h++) {
+      const t = new Date(Date.UTC(2026, 5, 1, h));
       const T = julianCenturiesTT(t);
       const geo = lunarEquatorial(T);
       const geoHz = toHorizontal(geo, t, lat, lon);
-      if (geoHz.elevationDeg > 85) {
-        const topoHz = toHorizontal(topocentricEquatorial(geo, t, lat, lon), t, lat, lon);
-        expect(Math.abs(geoHz.elevationDeg - topoHz.elevationDeg)).toBeLessThan(0.1);
-      }
+      if (geoHz.elevationDeg < 0) continue;
+      const firstOrder =
+        geoHz.elevationDeg - geo.parallaxDeg * Math.cos((geoHz.elevationDeg * Math.PI) / 180);
+      const exact = toHorizontal(topocentricEquatorial(geo, t, lat, lon), t, lat, lon).elevationDeg;
+      worst = Math.max(worst, Math.abs(exact - firstOrder));
     }
+    expect(worst).toBeGreaterThan(0.004);
+    expect(worst).toBeLessThan(0.015);
   });
 });

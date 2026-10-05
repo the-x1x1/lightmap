@@ -88,6 +88,37 @@ export function solarEquatorial(T: number): EquatorialCoordinates {
   };
 }
 
+/** Nutation in longitude and obliquity (Meeus ch. 22, the 0.5″ short form), degrees. */
+export function nutationDeg(T: number): { dPsi: number; dEps: number } {
+  const omega = (125.044_52 - 1934.136_261 * T) * DEG;
+  const L = (280.4665 + 36_000.7698 * T) * DEG;
+  const Lp = (218.3165 + 481_267.8813 * T) * DEG;
+  const dPsi =
+    (-17.2 * Math.sin(omega) -
+      1.32 * Math.sin(2 * L) -
+      0.23 * Math.sin(2 * Lp) +
+      0.21 * Math.sin(2 * omega)) /
+    3600;
+  const dEps =
+    (9.2 * Math.cos(omega) +
+      0.57 * Math.cos(2 * L) +
+      0.1 * Math.cos(2 * Lp) -
+      0.09 * Math.cos(2 * omega)) /
+    3600;
+  return { dPsi, dEps };
+}
+
+/**
+ * Greenwich apparent sidereal time in degrees (Meeus 12.4 + the equation of the equinoxes,
+ * Δψ·cos ε ≤ 17″ ≈ 0.005° of hour angle): what hour angles of *apparent* places need.
+ */
+export function apparentSiderealTimeDeg(date: Date): number {
+  const T = julianCenturiesTT(date);
+  const nut = nutationDeg(T);
+  const eps = (meanObliquityDeg(T) + nut.dEps) * DEG;
+  return wrap360(greenwichMeanSiderealTimeDeg(date) + nut.dPsi * Math.cos(eps));
+}
+
 /** Greenwich mean sidereal time in degrees (Meeus 12.4). */
 export function greenwichMeanSiderealTimeDeg(date: Date): number {
   const jd = julianDay(date);
@@ -116,8 +147,9 @@ export function toHorizontal(
   latitudeDeg: number,
   longitudeDeg: number,
 ): HorizontalCoordinates {
-  const gmst = greenwichMeanSiderealTimeDeg(date);
-  let H = wrap360(gmst + longitudeDeg - eq.rightAscensionDeg);
+  // Apparent places (nutation included) pair with apparent sidereal time.
+  const gast = apparentSiderealTimeDeg(date);
+  let H = wrap360(gast + longitudeDeg - eq.rightAscensionDeg);
   if (H >= 180) H -= 360;
   const Hr = H * DEG;
   const phi = latitudeDeg * DEG;

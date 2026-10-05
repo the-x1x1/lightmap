@@ -171,7 +171,7 @@ one-line, user-facing reason. Example:
 
 ```
 Preview basis
-Astronomy       High      Sun and moon positions computed from ephemeris (±0.01° sun, ±0.02° moon)
+Astronomy       High      Sun and moon positions computed from ephemeris (sun ±0.01° against USNO, moon ±0.02° against Meeus 47.a)
 Terrain         High      Real terrain; imagery without 3D buildings
 Scene detail    Medium
 Weather         Scenario  Forecast unavailable this far ahead (250 days) — compare scenarios
