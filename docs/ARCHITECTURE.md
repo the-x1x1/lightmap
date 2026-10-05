@@ -10,7 +10,7 @@ single `SceneState`. This document is the map of the code and the data flow from
 apps/web                  Next.js 15 (App Router). UI, API routes, auth entry point.
 packages/config           Brand config, env validation, feature flags.        (pure)
 packages/geospatial       Coordinates, provider interfaces + registry, fixtures, Nominatim, terrain/basemap sources.
-packages/astronomy        Sun/moon ephemeris, day events, zone conversion.     (pure, USNO-validated)
+packages/astronomy        Sun/moon ephemeris, day events, phases, Milky Way core, reverse-planning solver, zone conversion. (pure, USNO-validated)
 packages/weather          WeatherFrame model, Open-Meteo + fixture providers, horizon, scenarios.
 packages/scene            SceneState builder, confidence, camera model, explanation. (pure)
 packages/renderer         Sun vector math, lighting parameters, quality governor, Cesium host + controller, grade shader.
