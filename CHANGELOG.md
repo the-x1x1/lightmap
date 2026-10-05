@@ -72,7 +72,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   session endpoint logged an Auth.js `ClientFetchError` on every load (it now answers signed-out
   like Auth.js does); `GET /api/projects` failed on Postgres (a bare `Date` in a SQL template —
   the window bounds now go through the column mapping; this was the CI integration failure);
-  choosing a place searched for its own label and reopened the result list over the map.
+  choosing a place searched for its own label and reopened the result list over the map; a
+  `focus()` or scroll-into-view on a control below the bottom sheet's fold scrolled the
+  `overflow: hidden` shell, shifting the map and sheet up behind a black band (the shell now
+  uses `overflow: clip`, which nothing can scroll).
 - **Play the day**: a play/pause button beside the timeline clock runs the day by itself at 2, 10
   or 60 day-minutes per second (the pace button cycles them, mid-play too) and starts over at
   midnight — a sunset watched, not scrubbed; the clock waits while the thumb is held and

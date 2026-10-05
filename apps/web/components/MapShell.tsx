@@ -217,7 +217,10 @@ export function MapShell() {
 
   return (
     <div
-      className="relative h-dvh w-full overflow-hidden bg-[var(--lm-chrome)]"
+      // `overflow-clip`, not `hidden`: a focus() or scrollIntoView() on a control below the
+      // fold of the bottom sheet must never scroll this box (hidden boxes still scroll
+      // programmatically), which shifted the whole map and sheet up and left a black band.
+      className="relative h-dvh w-full overflow-clip bg-[var(--lm-chrome)]"
       data-testid="map-shell"
     >
       <DevBanner caps={capabilities} />

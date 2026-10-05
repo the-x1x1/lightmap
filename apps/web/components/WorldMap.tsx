@@ -253,7 +253,7 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
   return (
     <div
       className={cx(
-        'relative h-full w-full select-none overflow-hidden bg-[var(--lm-chrome)]',
+        'relative h-full w-full select-none overflow-clip bg-[var(--lm-chrome)]',
         className,
       )}
       data-testid="world-map"
