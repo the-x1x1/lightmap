@@ -52,6 +52,10 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
   await page.getByTestId('details-astronomy').locator('summary').click();
   await expect(page.getByTestId('seasonal-envelope')).toContainText('Sunrise 64°–115°');
   await expect(page.getByTestId('seasonal-envelope')).toContainText('noon 45°–88°');
+  // Moon planning: the full Moon of 31 May 2026 rises and sets inside the day — grey markers.
+  await expect(
+    page.locator('button[title^="Moonrise"], button[title^="Moonset"]').first(),
+  ).toBeAttached();
 
   // Source + confidence.
   const source = page.getByTestId('source-mode').first();
