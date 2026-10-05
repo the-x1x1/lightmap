@@ -30,7 +30,8 @@ Derived: weather requests before cache ≈ 6 × 3 × 1.5 = **27 per MAU per mont
   well under 16 ms; no server is involved.
 - **One weather fetch per place-day.** The client asks for a whole civil day of hourly frames for a
   0.05° grid cell, caches it in TanStack Query, and interpolates locally. Dragging the timeline for
-  an hour generates zero requests.
+  an hour generates zero requests; dragging the day-of-year slider across the year generates one
+  (the fetch waits 300 ms for the date to settle — `useSettled`).
 - **Long-range dates never fetch.** Beyond the horizon the mode is SCENARIO and the API refuses
   fetches anyway (422 `outside_horizon`).
 - **Server cache is shared.** The same cell-day is fetched once for everyone
