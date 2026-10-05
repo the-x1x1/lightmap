@@ -13,8 +13,7 @@ export function fieldViewSupported(): boolean {
     typeof navigator !== 'undefined' &&
     typeof navigator.mediaDevices?.getUserMedia === 'function' &&
     compassSupported() &&
-    (typeof window.matchMedia === 'function'
-      ? window.matchMedia('(pointer: coarse)').matches
-      : false)
+    (navigator.maxTouchPoints > 0 ||
+      (typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches))
   );
 }
