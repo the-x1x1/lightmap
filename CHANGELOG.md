@@ -11,7 +11,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   and the field view mark the core as a four-point star on a dark sky (the field view adds an
   edge arrow when it is out of frame, the core's dotted track over the night's dark hours and
   the Moon's path while it is up — `sampleTrack()`/`projectTrack()`: positions sampled once per
-  place and day, projected per frame as the phone turns; tested). `milkyWayCore()`
+  place and day, projected per frame as the phone turns; tested). The 3D map view draws the
+  same two night paths on the overlay sphere beside the day's sun arc (`nightPathsForDay()`,
+  tested; dashed grey and violet). `milkyWayCore()`
   / `milkyWayCoreFrom()` in `@lightmap/astronomy`: Sgr A\* precessed from J2000 (Meeus ch. 21),
   the observer's sidereal time, the scene's own Sun and Moon. Not a sky-brightness model (light
   pollution and airglow are not modelled), and the docs say so. **Dark windows ahead**: the Moon

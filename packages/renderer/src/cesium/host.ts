@@ -99,6 +99,15 @@ export interface HostOverlay {
    * Empty when not wanted.
    */
   seasonPaths: Array<Array<{ azimuthDeg: number; elevationDeg: number }>>;
+  /**
+   * Night planning on the same sphere: the Moon's path while it is up (grey) and the Milky Way
+   * core's track through the dark hours (violet), one run per unbroken spell; empty without the
+   * lunar state.
+   */
+  nightPaths: Array<{
+    kind: 'moon' | 'core';
+    points: Array<{ azimuthDeg: number; elevationDeg: number }>;
+  }>;
   sun: { azimuthDeg: number; elevationDeg: number } | null;
   shadowAzimuthDeg: number | null;
   radiusM: number;

@@ -16,6 +16,7 @@ import {
   SceneController,
   cesiumFovDeg,
   shadowReachM,
+  nightPathsForDay,
   sunPathForDay,
 } from '../src/cesium/controller.ts';
 import type { SceneHost } from '../src/cesium/host.ts';
@@ -174,6 +175,18 @@ describe('SceneController', () => {
     expect(o.seasonPaths[1]!.length).toBeLessThan(o.seasonPaths[0]!.length); // shorter December day
     expect(o.sun.elevationDeg).toBeGreaterThan(89);
     expect(o.shadowAzimuthDeg).toBeCloseTo((s.solar.azimuthDegrees + 180) % 360, 6);
+    // Night paths need the lunar state; without it the overlay carries none.
+    expect((calls['setOverlay']![0]![0] as { nightPaths: unknown[] }).nightPaths).toEqual([]);
+    const night = nightPathsForDay(scene({ includeLunar: true }));
+    const kinds = night.map((n) => n.kind);
+    // The full Moon of 31 May is up before dawn and again after dusk: two Moon runs, each up.
+    expect(kinds.filter((k) => k === 'moon')).toHaveLength(2);
+    for (const n of night) {
+      expect(n.points.length).toBeGreaterThan(1);
+      for (const p of n.points) expect(p.elevationDeg).toBeGreaterThan(-1);
+    }
+    // The core's track: dark hours only (the Moon is not consulted here), pre-dawn and post-dusk.
+    expect(kinds.filter((k) => k === 'core').length).toBeGreaterThanOrEqual(1);
     expect(sunPathForDay(s).every((p) => p.elevationDeg > -1)).toBe(true);
     expect(sunPathForDay(s).some((p) => p.behindTerrain !== undefined)).toBe(false);
     // With a terrain horizon (a 600 m ridge on the ~2 km ring across the east), the morning part

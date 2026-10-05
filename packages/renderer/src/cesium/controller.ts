@@ -6,6 +6,8 @@
 import { localDayBounds, sunPosition } from '@lightmap/astronomy';
 import {
   aboveTerrain,
+  coreTrackPosition,
+  moonTrackPosition,
   type CameraState,
   type HorizonProfile,
   type SceneState,
@@ -271,6 +273,12 @@ export class SceneController {
       sunPath = sunPathForDay(scene);
       this.cachedSunPath = sunPath;
     }
+    // Night paths ride on the lunar state (moon planning) and change with the day, not the scrub.
+    const nightKey = `${dayKey}|${scene.lunar ? 'moon' : ''}`;
+    if (nightKey !== this.lastNightKey || this.cachedNightPaths === null) {
+      this.lastNightKey = nightKey;
+      this.cachedNightPaths = nightPathsForDay(scene);
+    }
     const yearKey = `${scene.dayEvents.date.slice(0, 4)}|${scene.location.point.latitude}|${scene.location.point.longitude}`;
     if (yearKey !== this.lastYearKey || this.cachedSeasonPaths === null) {
       this.lastYearKey = yearKey;
@@ -280,6 +288,7 @@ export class SceneController {
       pin: { ...scene.location.point, heightM: this.groundHeightM },
       sunPath,
       seasonPaths: this.cachedSeasonPaths,
+      nightPaths: this.cachedNightPaths,
       sun:
         scene.solar.elevationDegrees > -0.833
           ? { azimuthDeg: scene.solar.azimuthDegrees, elevationDeg: scene.solar.elevationDegrees }
@@ -295,6 +304,8 @@ export class SceneController {
   private lastPathProfile: HorizonProfile | null = null;
   private cachedSeasonPaths: HostOverlay['seasonPaths'] | null = null;
   private lastYearKey = '';
+  private cachedNightPaths: HostOverlay['nightPaths'] | null = null;
+  private lastNightKey = '';
 
   private scheduleExpensive(fn: () => void): void {
     if (this.pendingExpensive !== null) this.clearTimeoutImpl(this.pendingExpensive);
@@ -365,6 +376,35 @@ export function seasonPathsForYear(
       if (s.elevationDeg > -1) path.push(s);
     }
     if (path.length > 1) out.push(path);
+  }
+  return out;
+}
+
+/**
+ * The Moon's path while it is up and the Milky Way core's track through the dark hours of the
+ * civil day (night planning), each as unbroken runs — a Moon that sets and rises again in one day
+ * is two runs, never a chord across the sky. Empty without the lunar state.
+ */
+export function nightPathsForDay(scene: SceneState, stepMinutes = 10): HostOverlay['nightPaths'] {
+  if (!scene.lunar) return [];
+  const out: HostOverlay['nightPaths'] = [];
+  const { dayStart, dayEnd } = scene.dayEvents;
+  const point = scene.location.point;
+  const tracks = [
+    ['moon', moonTrackPosition(point)],
+    ['core', coreTrackPosition(point)],
+  ] as const;
+  for (const [kind, positionAt] of tracks) {
+    let run: Array<{ azimuthDeg: number; elevationDeg: number }> = [];
+    for (let t = dayStart.getTime(); t <= dayEnd.getTime(); t += stepMinutes * 60_000) {
+      const p = positionAt(new Date(t));
+      if (p) run.push(p);
+      else if (run.length) {
+        if (run.length > 1) out.push({ kind, points: run });
+        run = [];
+      }
+    }
+    if (run.length > 1) out.push({ kind, points: run });
   }
   return out;
 }

@@ -76,6 +76,7 @@ export class CesiumSceneHost implements SceneHost {
   private overlayEntities: Cesium.Entity[] = [];
   private hiddenRunEntities: Cesium.Entity[] = [];
   private seasonEntities: Cesium.Entity[] = [];
+  private nightEntities: Cesium.Entity[] = [];
   private baseLayer: Cesium.ImageryLayer | null = null;
   private fallbackLayer: Cesium.ImageryLayer | null = null;
   private terrainReady: Promise<void> = Promise.resolve();
@@ -344,6 +345,7 @@ export class CesiumSceneHost implements SceneHost {
       for (const e of this.overlayEntities) e.show = false;
       for (const e of this.hiddenRunEntities) e.show = false;
       for (const e of this.seasonEntities) e.show = false;
+      for (const e of this.nightEntities) e.show = false;
       return;
     }
     const pin = o.pin;
@@ -453,6 +455,31 @@ export class CesiumSceneHost implements SceneHost {
         e.polyline!.positions = new C.ConstantProperty(
           path.map((s) => local(s.azimuthDeg, s.elevationDeg, o.radiusM)),
         );
+        e.show = true;
+      } else e.show = false;
+    });
+    // Night paths (moon planning): the Moon's path while up in grey, the Milky Way core's track
+    // through the dark hours in violet — dashed, one entity per run, pooled and restyled per use.
+    while (this.nightEntities.length < o.nightPaths.length)
+      this.nightEntities.push(
+        ents.add({
+          show: false,
+          polyline: { width: 2, arcType: C.ArcType.NONE },
+        }),
+      );
+    this.nightEntities.forEach((e, i) => {
+      const np = o.nightPaths[i];
+      if (np && np.points.length > 1) {
+        e.polyline!.positions = new C.ConstantProperty(
+          np.points.map((s) => local(s.azimuthDeg, s.elevationDeg, o.radiusM)),
+        );
+        e.polyline!.material = new C.PolylineDashMaterialProperty({
+          color: C.Color.fromCssColorString(np.kind === 'core' ? '#c9b8ff' : '#d8dde6').withAlpha(
+            np.kind === 'core' ? 0.7 : 0.55,
+          ),
+          gapColor: C.Color.TRANSPARENT,
+          dashLength: 8,
+        });
         e.show = true;
       } else e.show = false;
     });

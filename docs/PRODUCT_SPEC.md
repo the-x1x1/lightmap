@@ -204,7 +204,9 @@ In v0.1 **Real Reference never appears**: no imagery provider is contracted
 
 The compass rose carries two faint rim arcs — where sunrise and where sunset fall across the
 year, from the June to the December solstice (the two bound every other day) — the 3D map view
-draws the two solstice sun paths faintly beside the day's arc, the planning card carries the line,
+draws the two solstice sun paths faintly beside the day's arc (and, with moon planning, the
+Moon's path while it is up as grey dashes and the Milky Way core's track through the dark hours
+as violet dashes, one run per unbroken spell), the planning card carries the line,
 and "Sun & moon reads it out: "Across the year · Sunrise 64°–115° (ENE–ESE), sunset 245°–296° (WSW–WNW),
 noon 45°–88°". Pure astronomy (`seasonalEnvelope()` in `@lightmap/scene`, solstice day events and
 sun positions), no terrain. Where a solstice has no sunrise its condition is named and the other
