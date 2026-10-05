@@ -67,6 +67,7 @@ export function dayMarkers(
     return { key, minutes: mins, label, short, glyph, tone };
   };
   return [
+    m('nightEnd', ev.astronomicalDawn, 'Night ends (astronomical dawn)', 'Night', '☆', 'twilight'),
     m('dawn', ev.dawn, 'Civil dawn', 'Dawn', '◐', 'twilight'),
     m('sunrise', ev.sunrise, 'Sunrise', 'Rise', '↑', 'sun'),
     m('goldenEnd', ev.goldenHourMorningEnd, 'Golden hour ends', 'Golden', '✦', 'sun'),
@@ -74,6 +75,14 @@ export function dayMarkers(
     m('goldenStart', ev.goldenHourEveningStart, 'Golden hour begins', 'Golden', '✦', 'sun'),
     m('sunset', ev.sunset, 'Sunset', 'Set', '↓', 'sun'),
     m('dusk', ev.civilDusk, 'Civil dusk (blue hour ends)', 'Dusk', '◑', 'twilight'),
+    m(
+      'nightStart',
+      ev.astronomicalDusk,
+      'Night begins (astronomical dusk)',
+      'Night',
+      '★',
+      'twilight',
+    ),
     terrain
       ? m(
           'ridgeRise',

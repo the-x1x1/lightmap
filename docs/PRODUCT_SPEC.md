@@ -48,8 +48,9 @@ place, in the new zone.
 The most important interaction. The timeline is a range input over the civil day at the location
 (0–1439 minutes since local midnight).
 
-Markers drawn along the track: dawn (civil), sunrise, morning golden hour, solar noon, evening
-golden hour, sunset, blue hour, civil/nautical/astronomical dusk, night; with moon planning,
+Markers drawn along the track: night ends (astronomical dawn, ☆), dawn (civil), sunrise, morning
+golden hour, solar noon, evening golden hour, sunset, blue hour / civil dusk, night begins
+(astronomical dusk, ★); with moon planning,
 moonrise and moonset in grey (☾ / ☽); with a terrain horizon, ▲ / ▽ Ridge. Markers move when
 the date or location changes. With moon planning the night portions of the track carry a faint
 violet **dark-sky band** over the spells when the Milky Way core can be shot (astronomical night,

@@ -13,7 +13,17 @@ describe('timeline markers', () => {
   it('places sunrise/noon/sunset in order within the day', () => {
     const m = dayMarkers(ev);
     const keys = m.map((x) => x.key);
-    expect(keys).toEqual(['dawn', 'sunrise', 'goldenEnd', 'noon', 'goldenStart', 'sunset', 'dusk']);
+    expect(keys).toEqual([
+      'nightEnd',
+      'dawn',
+      'sunrise',
+      'goldenEnd',
+      'noon',
+      'goldenStart',
+      'sunset',
+      'dusk',
+      'nightStart',
+    ]);
     for (let i = 1; i < m.length; i++) expect(m[i]!.minutes).toBeGreaterThan(m[i - 1]!.minutes);
     expect(m.find((x) => x.key === 'sunrise')!.minutes).toBeCloseTo(5 * 60 + 48, 0);
   });
@@ -40,7 +50,8 @@ describe('timeline markers', () => {
     });
     const keys = dayMarkers(tromso).map((x) => x.key);
     // The sun never sets, so there is no dawn, sunrise, sunset or dusk …
-    for (const k of ['dawn', 'sunrise', 'sunset', 'dusk']) expect(keys).not.toContain(k);
+    for (const k of ['nightEnd', 'dawn', 'sunrise', 'sunset', 'dusk', 'nightStart'])
+      expect(keys).not.toContain(k);
     expect(keys).toContain('noon');
     // … but at midnight it dips to ≈ 3°, below the 6° golden-hour limit, so the golden spell
     // around midnight is real and is marked.

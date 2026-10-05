@@ -37,6 +37,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   in `@lightmap/astronomy` bisects the elongation from the same Meeus series as the positions —
   the published 2026 instants (3 Jan full 10:03, 18 Jan new 19:52, 31 May full 08:45, 15 Jun new
   02:54 UTC) come out within two minutes.
+- **Night on the timeline**: ☆ / ★ markers where astronomical night ends and begins (plan §4's
+  "night" marker), beside dawn and dusk.
 - **Moonrise and moonset on the timeline** (moon planning): grey ☾ / ☽ markers beside the sun's,
   clickable like them; only instants inside the civil day are placed.
 - **Forecast nudges on saved viewpoints**: a project card counts the viewpoints now inside the
