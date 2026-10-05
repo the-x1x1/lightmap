@@ -139,7 +139,9 @@ Galactic Centre stands for the selected instant and whether the sky can show it 
 Astronomical night, core 36° up, Moon down" — with one verdict in the order a photographer rules
 things out: _daylight_ (Sun above −6°), _twilight_ (above −18°), _below the horizon_, _moonlit_
 (Moon up and more than 30 % lit), _low_ (under 10°, in the thick air) or _visible_. The line is
-green only on _visible_. `milkyWayCoreFrom()` in `@lightmap/astronomy`: the J2000 direction of
+green only on _visible_; the compass rose marks the core as a four-point star once the Sun is
+below −6° and the core is up (full strength on _visible_, faint otherwise), and the overlay's
+description names its bearing and height. `milkyWayCoreFrom()` in `@lightmap/astronomy`: the J2000 direction of
 Sgr A\* precessed to the date, the observer's sidereal time, and the Sun and Moon the scene already
 has. It is not a sky-brightness model — light pollution, airglow and haze stay the photographer's
 call — and it says so in the accuracy docs.

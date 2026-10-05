@@ -1,7 +1,7 @@
 'use client';
 /**
  * Quality-0 overlay (plan §6): compass rose with sun arrow, shadow arrow, the day's sun path, the
- * year's sunrise/sunset arcs and the Moon when it is up.
+ * year's sunrise/sunset arcs, the Moon when it is up and the Milky Way core on a dark sky.
  * Always correct, always available, driven by SceneState only. In 3D mode it shrinks to a corner
  * compass; in overlay mode it is the hero.
  */
@@ -73,6 +73,14 @@ export function SunDirectionOverlay({ scene, compact }: { scene: SceneState; com
   const moonR = moon ? r * Math.cos(Math.max(0, moon.elevationDegrees) * (Math.PI / 180)) : 0;
   const mx = moon ? c + moonR * Math.cos(rad(moon.azimuthDegrees)) : 0;
   const my = moon ? c + moonR * Math.sin(rad(moon.azimuthDegrees)) : 0;
+  // The Milky Way core once the Sun is well down and the core is up: a four-point star, full
+  // strength when the sky can show it, faint when the Moon or twilight washes it out.
+  const core =
+    scene.nightSky && scene.nightSky.elevationDeg > 0 && el <= -6 ? scene.nightSky : null;
+  const coreR = core ? r * Math.cos(core.elevationDeg * (Math.PI / 180)) : 0;
+  const gx = core ? c + coreR * Math.cos(rad(core.azimuthDeg)) : 0;
+  const gy = core ? c + coreR * Math.sin(rad(core.azimuthDeg)) : 0;
+  const gs = compact ? 4 : 8;
 
   const label =
     (up
@@ -80,6 +88,9 @@ export function SunDirectionOverlay({ scene, compact }: { scene: SceneState; com
       : `Sun ${Math.abs(Math.round(el))}° below the horizon (${scene.solar.phase.replace('-', ' ')}).`) +
     (moon
       ? ` Moon at ${Math.round(moon.elevationDegrees)}° elevation, bearing ${Math.round(moon.azimuthDegrees)}° (${compassLabel(moon.azimuthDegrees)}), ${Math.round(moon.illuminatedFraction * 100)} % lit.`
+      : '') +
+    (core
+      ? ` Milky Way core at ${Math.round(core.elevationDeg)}° elevation, bearing ${Math.round(core.azimuthDeg)}° (${compassLabel(core.azimuthDeg)})${core.verdict === 'visible' ? '' : ' — ' + core.reason.toLowerCase()}.`
       : '');
 
   return (
@@ -203,6 +214,17 @@ export function SunDirectionOverlay({ scene, compact }: { scene: SceneState; com
             stroke="#1f2430"
             strokeWidth={1.5}
             data-testid="rose-moon"
+          />
+        ) : null}
+        {core ? (
+          <path
+            d={`M${gx} ${gy - gs} Q${gx} ${gy} ${gx + gs} ${gy} Q${gx} ${gy} ${gx} ${gy + gs} Q${gx} ${gy} ${gx - gs} ${gy} Q${gx} ${gy} ${gx} ${gy - gs} Z`}
+            fill="#c9b8ff"
+            fillOpacity={core.verdict === 'visible' ? 0.95 : 0.4}
+            stroke="#1f2430"
+            strokeWidth={1}
+            data-testid="rose-core"
+            data-verdict={core.verdict}
           />
         ) : null}
         <circle cx={c} cy={c} r={compact ? 3 : 5} fill="#fff" stroke="#000" strokeWidth={1.5} />
