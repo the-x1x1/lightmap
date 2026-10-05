@@ -71,6 +71,7 @@ export class CesiumSceneHost implements SceneHost {
   private lastFps = 0;
   /** Last Mie coefficient applied (so a scrub tick does not allocate a Cartesian3 each frame). */
   private mieCoefficient: number | undefined;
+  private destroyed = false;
   /** Cesium's own Mie coefficients (dome, ground atmosphere), restored when no scene asks for the physical dome. */
   private readonly defaultMie: { sky: Cesium.Cartesian3 | null; ground: Cesium.Cartesian3 };
   private overlayEntities: Cesium.Entity[] = [];
@@ -249,9 +250,13 @@ export class CesiumSceneHost implements SceneHost {
       sky.brightnessShift = a.brightnessShift;
       sky.atmosphereLightIntensity = a.lightIntensity;
     }
-    scene.globe.atmosphereHueShift = a.hueShift;
-    scene.globe.atmosphereSaturationShift = a.saturationShift;
-    scene.globe.atmosphereBrightnessShift = a.brightnessShift;
+    // `scene.globe` is undefined once the scene is destroyed (and when a host runs without one).
+    const globe = scene.globe as Cesium.Globe | undefined;
+    if (globe) {
+      globe.atmosphereHueShift = a.hueShift;
+      globe.atmosphereSaturationShift = a.saturationShift;
+      globe.atmosphereBrightnessShift = a.brightnessShift;
+    }
     scene.atmosphere.hueShift = a.hueShift;
     scene.atmosphere.saturationShift = a.saturationShift;
     scene.atmosphere.brightnessShift = a.brightnessShift;
@@ -814,7 +819,13 @@ export class CesiumSceneHost implements SceneHost {
     }
   }
 
+  isDestroyed(): boolean {
+    return this.destroyed;
+  }
+
   destroy(): void {
+    if (this.destroyed) return;
+    this.destroyed = true;
     this.preRenderRemover?.();
     this.pickHandler?.destroy();
     this.widget.destroy();

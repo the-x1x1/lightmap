@@ -158,6 +158,8 @@ export interface SceneHost {
   /** Subscribe to per-second frame samples. */
   onFrameSample(handler: (fps: number) => void): () => void;
   resize(): void;
+  /** True once `destroy()` has run; every other method is then a no-op for the caller to skip. */
+  isDestroyed(): boolean;
   /** PNG data URL of the current frame (thumbnails for saved viewpoints). */
   captureThumbnail(maxWidth: number): Promise<string | null>;
   destroy(): void;

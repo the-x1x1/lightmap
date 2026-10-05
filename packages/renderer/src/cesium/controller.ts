@@ -111,6 +111,9 @@ export class SceneController {
 
   /** Apply a new SceneState. Called on every timeline tick. */
   apply(scene: SceneState): void {
+    // A destroyed host (the renderer was torn down — React's StrictMode replays effects, a
+    // quality change rebuilds the view) has no scene to drive; the stale apply is dropped.
+    if (this.host.isDestroyed()) return;
     const prev = this.lastScene;
     this.lastScene = scene;
     const lighting = lightingFromScene(scene);

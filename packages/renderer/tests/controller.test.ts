@@ -93,6 +93,7 @@ function fakeHost() {
     onFrameSample: () => () => {},
     resize: () => {},
     captureThumbnail: async () => null,
+    isDestroyed: () => (calls['destroy']?.length ?? 0) > 0,
     destroy: rec('destroy'),
   };
   return { host, calls };
@@ -252,6 +253,10 @@ describe('SceneController', () => {
     expect(cam.targetHeightM).toBe(42);
     c.destroy();
     expect(calls['destroy']).toHaveLength(1);
+    // A scene applied after the teardown (React replaying effects) touches nothing.
+    const after = calls['setAtmosphere']!.length;
+    c.apply(scene({ scenario: 'clear' }));
+    expect(calls['setAtmosphere']).toHaveLength(after);
   });
 
   it('reduced motion: the pin move jumps instead of flying (plan §28)', () => {
