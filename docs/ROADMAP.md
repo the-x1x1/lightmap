@@ -154,6 +154,10 @@ Also delivered: **horizon levelling** — a level & thirds guide in the viewpoin
 true-level line, the modelled skyline and one-click horizon placement on a third
 (`levelLineY`, `pitchForHorizonAt`, `skylinePath`; tested against `frameCoordinates`).
 
+Also delivered: the **seasonal envelope** — the year's sunrise/sunset bearings and noon range
+from the two solstices, as rim arcs on the compass rose and a line in the sun details
+(`seasonalEnvelope()`; plan §1 "seasonal path").
+
 Also delivered: **camera roll in the frame maths** (`frameCoordinates`/`directionFromFrame`
 optional roll, `levelLineSegment`, roll from the device orientation) — used by the field view
 so a hand-held phone's tilt is honoured. The planner's saved camera stays roll-free; a rolled
