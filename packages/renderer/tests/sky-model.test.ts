@@ -72,7 +72,7 @@ describe('single-scattering sky model (Phase 4 atmospheric scattering)', () => {
   it("is symmetric about the Sun's vertical", () => {
     const a = skyRadiance({ sunElevationDeg: 20, viewElevationDeg: 10, relativeAzimuthDeg: 60 });
     const b = skyRadiance({ sunElevationDeg: 20, viewElevationDeg: 10, relativeAzimuthDeg: -60 });
-    for (let c = 0; c < 3; c++) expect(a[c]).toBeCloseTo(b[c], 10);
+    for (let c = 0; c < 3; c++) expect(a[c]).toBeCloseTo(b[c] ?? Number.NaN, 10);
   });
 
   it('tone mapping keeps chromaticity, clips at white, and the exposure anchors a mid-blue zenith', () => {
@@ -104,6 +104,9 @@ describe('single-scattering sky model (Phase 4 atmospheric scattering)', () => {
     const overhead = clearSkyStops(90);
     expect(overhead.zenith[2]).toBeGreaterThan(overhead.zenith[0] + 60);
     const sunset = clearSkyStops(0.5);
-    expect(sunset.horizon[0]).toBeGreaterThan(sunset.horizon[2] + 100);
+    expect(sunset.glow[0]).toBeGreaterThan(sunset.glow[2] + 100);
+    // By day the horizon away from the Sun is pale and roughly neutral, brighter than overhead.
+    expect(Math.abs(noon.horizon[0] - noon.horizon[2])).toBeLessThan(45);
+    expect(noon.horizon[1]).toBeGreaterThan(noon.zenith[1]);
   });
 });

@@ -93,19 +93,23 @@ single-scattering model (not spectral); no real cloud shapes.
 sky come from LightMap's own single-scattering model (`packages/renderer/src/sky-model.ts`,
 Phase 4 "atmospheric scattering"): Rayleigh (λ⁻⁴, sea-level 5.8/13.5/33.1 × 10⁻⁶ m⁻¹ at
 680/550/440 nm, 8 km scale height) plus Mie (21 × 10⁻⁶ m⁻¹, 1.2 km, Cornette–Shanks g = 0.76)
-integrated along the view ray through a spherical 80 km atmosphere with the Sun's transmittance
-at every sample, the aerosol density scaled by the scenario's haze. The three gradient stops are
-sampled away from the Sun's aureole (overhead ≥ 40° from the Sun; the glow 25° around from it),
-tone-mapped on luminance only so chromaticity is the physics', with one fixed exposure (a
-mid-afternoon zenith lands on a mid-blue). **Claim:** the blue overhead and its paling with haze,
-the brightening toward the horizon, and the hue of the sunrise/sunset glow and how haze deepens it
+integrated along the view ray through a spherical 80 km atmosphere (32 view samples with the
+optical depth taken at each sample's midpoint, 8 samples on each Sun ray; within ≈ 1 % of a
+2048 × 64 reference), the aerosol density scaled by the scenario's haze. Four samples keep clear
+of the Sun's aureole: overhead (≥ 40° from the Sun), mid-sky (30° up, 90° round), the horizon
+away from the Sun (2° up, 90° round) and the glow (2° up, 25° round). They are tone-mapped on
+luminance only so chromaticity is the physics', with one fixed exposure (a mid-afternoon zenith
+lands on a mid-blue luminance). **Claim:** the paling of the blue overhead and of the horizon
+with haze and with a lower Sun, and the hue of the sunrise/sunset glow and how haze deepens it,
 follow the geometry and the scenario rather than a palette. **Caveat:** single scattering — no
-ozone, no multiple scattering — so it is not trusted for the zenith within a few degrees of
-sunset, for the daytime horizon (which it yellows) or for twilight and night, where the long-
-standing hand-set colours take over by a smooth blend (`skyGradientFor`). Checked in
-`sky-model.test.ts`: Rayleigh ordering and ratio, horizon brighter/paler than zenith, sunset
-reddening on the Sun's side, haze paling, Earth-shadow darkness, azimuth symmetry, exposure
-anchor. The Cesium dome does not use this model yet (a smoke-harness job on the PC).
+ozone, no multiple scattering — under-blues the zenith at low Sun and goes dark in twilight, so
+the model is blended into the long-standing hand-set colours rather than replacing them: 60 % of
+the overhead, mid and horizon stops once the Sun is 20° up, fading to none by 6°; the glow's hue
+from the model's sample at its own brightness while the Sun is above −9°; hand-set twilight and
+night below (`skyGradientFor`). Checked in `sky-model.test.ts`: Rayleigh ordering and ratio,
+horizon brighter/paler than zenith, sunset reddening on the Sun's side, haze paling, Earth-shadow
+darkness, azimuth symmetry, exposure anchor. The Cesium dome does not use this model yet (a
+smoke-harness job on the PC).
 
 Two corrections compensate for the single-scattering model, both driven by the true Sun elevation
 and never by taste: (1) **twilight** — the dome collapses within a degree of the light setting, so
@@ -185,8 +189,8 @@ take it to Minimal, where terrain shadows are off.
 - `pnpm test --filter @lightmap/astronomy` — USNO golden set.
 - `pnpm test --filter @lightmap/renderer` — sun vector mapping, lighting parameters, controller.
 - Dev perf panel (press `` ` `` in development; plan §27): renderer mode, quality rung, FPS, draw
-  calls (Cesium's command list for the last frame), terrain tiles shown/loading, WebGL2 / WebGPU /
-  GPU string, weather cache hit, and Δ between LightMap's sun vector and Cesium's own ephemeris
-  (expect < 0.5°).
+  commands (Cesium's pre-cull command list for the last frame — a pick pass between renders shows
+  up here too), terrain tiles shown/loading, WebGL2 / WebGPU API / GPU string, weather cache hit,
+  and Δ between LightMap's sun vector and Cesium's own ephemeris (expect < 0.5°).
 - Manual: set Kailua, 31 May 2026 12:30 → sun 89° (near zenith, shadows nearly vertical); 18:45 →
   golden, shadows long toward the ENE; 19:30 → blue hour, no direct light.

@@ -103,6 +103,7 @@ export interface HostStats {
   fps: number;
   terrainTilesLoaded: number;
   terrainTilesLoading: number;
+  /** Cesium's pre-cull draw-command count for the last frame (null when unavailable). */
   drawCalls: number | null;
   /** Cesium's own sun direction (toward the Sun, ECEF), for the consistency check. */
   cesiumSunDirectionEcef: Vec3 | null;

@@ -83,6 +83,8 @@ export function mieScaleForHaze(haze: number): number {
 
 /** Optical depths (Rayleigh, Mie-in-units-of-sea-level) from `p` toward the Sun, or null in the Earth's shadow. */
 function sunOpticalDepth(p: Vec3, sun: Vec3, mieScale: number): [number, number] | null {
+  // Inside the ground (a last sample rounding under the surface) or a Sun ray that enters it.
+  if (dot(p, p) < EARTH_RADIUS_M * EARTH_RADIUS_M) return null;
   if (hitSphere(p, sun, EARTH_RADIUS_M, true) !== null) return null;
   const tMax = hitSphere(p, sun, ATMOSPHERE_TOP_M, false);
   if (tMax === null) return null;
@@ -127,12 +129,16 @@ export function skyRadiance(input: SkyRadianceInput): LinearRgb {
     const h = Math.max(0, Math.hypot(p[0], p[1], p[2]) - EARTH_RADIUS_M);
     const densR = Math.exp(-h / RAYLEIGH_SCALE_HEIGHT_M);
     const densM = Math.exp(-h / MIE_SCALE_HEIGHT_M) * mieScale;
+    // Optical depth from the observer to the sample point itself (half of this segment), then
+    // the whole segment goes on the running total for the next one.
+    const midR = viewR + densR * ds * 0.5;
+    const midM = viewM + densM * ds * 0.5;
     viewR += densR * ds;
     viewM += densM * ds;
     const toSun = sunOpticalDepth(p, sun, mieScale);
     if (!toSun) continue; // the Earth shades this point
-    const tauM = (viewM + toSun[1]) * BETA_MIE * MIE_EXTINCTION_RATIO;
-    const tauR = viewR + toSun[0];
+    const tauM = (midM + toSun[1]) * BETA_MIE * MIE_EXTINCTION_RATIO;
+    const tauR = midR + toSun[0];
     for (let c = 0; c < 3; c++) {
       const beta = BETA_RAYLEIGH[c] ?? 0;
       const tau = tauR * beta + tauM;
@@ -152,7 +158,7 @@ export function toneMap(l: LinearRgb, exposure: number): [number, number, number
   const g = Math.max(0, l[1]);
   const b = Math.max(0, l[2]);
   const y = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  if (y <= 0) return [0, 0, 0];
+  if (!(y > 0) || !Number.isFinite(y)) return [0, 0, 0];
   const scale = (1 - Math.exp(-exposure * y)) / y;
   const map = (v: number) => Math.round(Math.pow(Math.min(1, v * scale), 1 / 2.2) * 255);
   return [map(r), map(g), map(b)];
@@ -160,7 +166,7 @@ export function toneMap(l: LinearRgb, exposure: number): [number, number, number
 
 /**
  * Exposure that puts the zenith of a clear mid-afternoon sky (Sun at 45°) at the luminance of a
- * mid-blue (linear Y ≈ 0.26, about sRGB (80, 140, 220)): one constant for every sky the planner
+ * mid-blue (linear Y ≈ 0.26; the hue is the model's own): one constant for every sky the planner
  * shows, so brightness differences between skies are the model's, not a per-frame auto-exposure.
  * Computed once.
  */
@@ -184,19 +190,20 @@ export interface SkyStops {
   zenith: [number, number, number];
   /** 30° up, 90° around from the Sun — the broad mid-sky. */
   mid: [number, number, number];
-  /**
-   * Just above the horizon, 25° around from the Sun: the colour of the sunset/sunrise glow
-   * without the Sun's own aureole. Single scattering yellows every horizon by day (no multiple
-   * scattering to put the blue back), so callers use this for the glow's hue, not as the
-   * daytime horizon.
-   */
+  /** Just above the horizon, 90° around from the Sun: the pale daytime horizon. */
   horizon: [number, number, number];
+  /**
+   * Just above the horizon, 25° around from the Sun: the colour of the sunrise/sunset glow
+   * without the Sun's own aureole (by day, the Sun's side of the horizon).
+   */
+  glow: [number, number, number];
 }
 
 /**
  * The three colours a vertical sky gradient needs, sRGB 0–255, for a clear sky. The samples
  * keep clear of the Sun itself: near the Sun the forward-scattering aureole is white, and a
- * gradient stop is the sky, not the Sun.
+ * gradient stop is the sky, not the Sun. Four samples: overhead, mid-sky, the horizon away
+ * from the Sun and the horizon toward it (the glow).
  */
 export function clearSkyStops(sunElevationDeg: number, haze = 0.1): SkyStops {
   const k = skyExposure();
@@ -207,6 +214,7 @@ export function clearSkyStops(sunElevationDeg: number, haze = 0.1): SkyStops {
   return {
     zenith: at(zenithEl, 180),
     mid: at(30, 90),
-    horizon: at(2, 25),
+    horizon: at(2, 90),
+    glow: at(2, 25),
   };
 }

@@ -5,7 +5,7 @@
 import type { SceneState } from '@lightmap/scene';
 import { kelvinToRgb } from '@lightmap/weather';
 import { shadowOnGround, sunLightDirectionEcef, type Vec3 } from './sun-vector.ts';
-import { clearSkyStops } from './sky-model.ts';
+import { clearSkyStops, type SkyStops } from './sky-model.ts';
 
 export interface LightingParameters {
   /** True Sun → ground direction in ECEF (for overlays and the ephemeris cross-check). */
@@ -206,12 +206,15 @@ export function lightingFromScene(s: SceneState): LightingParameters {
 type Rgb = [number, number, number];
 
 /** Physically based clear-sky stops, memoised on (elevation to 0.1°, haze to 0.01). */
-const skyStopCache = new Map<string, { zenith: Rgb; mid: Rgb; horizon: Rgb }>();
-function clearSkyStopsCached(elevationDeg: number, haze: number) {
-  const key = `${Math.round(elevationDeg * 10)}|${Math.round(haze * 100)}`;
+const skyStopCache = new Map<string, SkyStops>();
+function clearSkyStopsCached(elevationDeg: number, haze: number): SkyStops | null {
+  if (!Number.isFinite(elevationDeg) || !Number.isFinite(haze)) return null;
+  const el = Math.round(Math.max(-90, Math.min(90, elevationDeg)) * 10) / 10;
+  const hz = Math.round(Math.max(0, Math.min(1, haze)) * 100) / 100;
+  const key = `${el}|${hz}`;
   let v = skyStopCache.get(key);
   if (!v) {
-    v = clearSkyStops(Math.round(elevationDeg * 10) / 10, Math.round(haze * 100) / 100);
+    v = clearSkyStops(el, hz);
     if (skyStopCache.size > 2000) skyStopCache.clear();
     skyStopCache.set(key, v);
   }
@@ -251,22 +254,22 @@ export function skyGradientFor(
     a[1] + (b[1] - a[1]) * t,
     a[2] + (b[2] - a[2]) * t,
   ];
-  // The scattering model's clear sky: trusted overhead once the Sun is a few degrees up (single
-  // scattering under-blues the zenith near sunset: no ozone, no multiple scattering), and for the
-  // hue of the horizon glow around sunrise and sunset, brought to the glow's brightness (the
-  // model's glow is dim once the Sun is down, again for want of multiple scattering). The daytime
-  // horizon stays the pale hand-set blue: single scattering yellows it instead.
+  // The scattering model's clear sky, blended with the hand-set colours: by day it carries the
+  // haze paling and the elevation trend of the blue overhead and of the pale horizon; near the
+  // horizon and below it the hand-set colours hold (single scattering has no ozone and no
+  // multiple scattering, so it under-blues the zenith at low Sun and goes dark in twilight).
+  // Its glow sample gives the hue of the sunrise/sunset glow, brought to the glow's brightness.
   const physical = elevationDeg > -9 ? clearSkyStopsCached(elevationDeg, haze) : null;
-  const overheadWeight = smooth(0, 12, elevationDeg);
-  const zenithClear = physical ? mix(zenithHand, physical.zenith, overheadWeight) : zenithHand;
-  const midClear = physical ? mix(midHand, physical.mid, overheadWeight) : midHand;
-  const horizonClear = horizonHand;
+  const dayWeight = 0.6 * smooth(6, 20, elevationDeg);
+  const zenithClear = physical ? mix(zenithHand, physical.zenith, dayWeight) : zenithHand;
+  const midClear = physical ? mix(midHand, physical.mid, dayWeight) : midHand;
+  const horizonClear = physical ? mix(horizonHand, physical.horizon, dayWeight) : horizonHand;
   const brighten = (c: Rgb): Rgb => {
     const peak = Math.max(c[0], c[1], c[2], 1);
     return [(c[0] * 255) / peak, (c[1] * 255) / peak, (c[2] * 255) / peak];
   };
   const glow: Rgb =
-    warmth > 0.55 ? (physical ? brighten(physical.horizon) : [255, 150, 70]) : [120, 140, 210];
+    warmth > 0.55 ? (physical ? brighten(physical.glow) : [255, 150, 70]) : [120, 140, 210];
   const build = (clear: Rgb, nightC: Rgb, glowAmount: number): string => {
     let c = mix(clear, overcast, cloudOpacity);
     c = mix(c, nightC, night);

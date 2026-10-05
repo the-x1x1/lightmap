@@ -50,15 +50,16 @@ export function PerfPanel({
     ['Quality', qualityLabel],
     ['FPS', stats ? stats.fps.toFixed(0) : '—'],
     [
-      'Draw calls',
+      'Draw commands',
       stats?.drawCalls !== null && stats?.drawCalls !== undefined ? String(stats.drawCalls) : '—',
     ],
+
     [
       'Terrain tiles',
       stats ? `${stats.terrainTilesLoaded} shown · ${stats.terrainTilesLoading} loading` : '—',
     ],
     [
-      'WebGL2 / WebGPU / GPU',
+      'WebGL2 / WebGPU API / GPU',
       capabilities
         ? `${capabilities.webgl2 ? 'yes' : 'no'} · ${capabilities.webgpu ? 'yes' : 'no'} · ${capabilities.gpu ?? 'unknown'}`
         : '—',

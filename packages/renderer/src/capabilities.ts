@@ -11,7 +11,7 @@ import type { QualityRung } from './quality-governor.ts';
 
 export interface RendererCapabilities {
   webgl2: boolean;
-  /** `navigator.gpu` exists (plan §27 debug panel); the renderer itself is WebGL2 for now. */
+  /** The WebGPU API (`navigator.gpu`) exists — an adapter may still be refused; plan §27 panel. */
   webgpu: boolean;
   /** Battery saver / integrated GPU heuristic. */
   lowPower: boolean;
