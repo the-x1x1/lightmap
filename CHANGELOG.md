@@ -66,6 +66,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   midnight — a sunset watched, not scrubbed; the clock waits while the thumb is held and
   continues from the drop point; a hidden tab does not make it leap (`usePlayDay`, `advance()`,
   tested; play, pause and pace in the E2E).
+- **Shoot countdown on project cards**: "Shoot 17 Oct · in 12 days · extended forecast
+  available" — civil days to the shoot date and where the provider's forecast stands for it
+  ("forecast from 13 Oct" while out of reach, green "forecast available" inside the reliable
+  horizon; `shootCountdown()`, tested; E2E).
 - **Field conditions in the weather details**: the wind with the quarter it blows from ("4 m/s
   from the ENE", "calm"), the humidity, and visibility in sensible units ("600 m", "4.5 km",
   "24 km"); notes when there is something to act on — a fresh breeze and up ("weigh the tripod
