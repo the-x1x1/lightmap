@@ -14,6 +14,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   rule-of-thirds grid, the true-level line and the modelled terrain skyline (dotted, "terrain
   only"), with buttons that pitch the camera so level sits on the low third, the centre or the
   high third. `levelLineY()`, `pitchForHorizonAt()`, `skylinePath()` in `@lightmap/scene`.
+- **Legal drafts**: `/legal/privacy` and `/legal/terms` are now full drafts derived from
+  `docs/PRIVACY.md` and the product spec (what stays on the device, what we store, recipients,
+  retention, deletion, offline cache; accuracy statements, plans and cancellation, past-due grace,
+  acceptable use, attribution), still flagged for counsel review with bracketed items to fill.
 - **Device conditions (Phase 4)**: the quality governor's ceiling now follows the battery and
   Save-Data while the app runs — draining below 50 % caps at Balanced, below 20 % at Battery;
   Save-Data / `prefers-reduced-data` caps at Balanced; charging lifts the cap. Conditions never
