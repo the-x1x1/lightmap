@@ -20,6 +20,8 @@ const REFRACTION_K = 0.13;
 const EFFECTIVE_RADIUS_M = EARTH_RADIUS_M / (1 - REFRACTION_K);
 /** Solar semi-diameter: the upper limb shows before the centre clears the ridge. */
 const SUN_SEMIDIAMETER_DEG = 0.27;
+/** Mean lunar semi-diameter (0.2725 × a 0.95° parallax); the Moon's varies 0.245–0.279°. */
+export const MOON_SEMIDIAMETER_DEG = 0.26;
 
 export interface HorizonSamplePoint {
   azimuthDeg: number;
@@ -176,8 +178,9 @@ export function aboveTerrain(
   profile: HorizonProfile,
   azimuthDeg: number,
   elevationDeg: number,
+  semidiameterDeg = SUN_SEMIDIAMETER_DEG,
 ): boolean {
-  const apparent = elevationDeg + refractionDeg(elevationDeg) + SUN_SEMIDIAMETER_DEG;
+  const apparent = elevationDeg + refractionDeg(elevationDeg) + semidiameterDeg;
   return apparent >= horizonElevationAt(profile, azimuthDeg);
 }
 

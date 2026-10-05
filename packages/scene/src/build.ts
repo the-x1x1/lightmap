@@ -23,6 +23,7 @@ import {
 } from '@lightmap/weather';
 import { deriveConfidence, deriveSourceMode } from './confidence.ts';
 import {
+  MOON_SEMIDIAMETER_DEG,
   aboveTerrain,
   horizonElevationAt,
   terrainSunEvents,
@@ -112,7 +113,7 @@ function terrainHorizonState(
     horizonAtSunDeg: horizonElevationAt(profile, solar.azimuthDegrees),
     sunAboveTerrain: aboveTerrain(profile, solar.azimuthDegrees, solar.elevationDegrees),
     moonAboveTerrain: lunar
-      ? aboveTerrain(profile, lunar.azimuthDegrees, lunar.elevationDegrees)
+      ? aboveTerrain(profile, lunar.azimuthDegrees, lunar.elevationDegrees, MOON_SEMIDIAMETER_DEG)
       : null,
     sunEvents,
   };

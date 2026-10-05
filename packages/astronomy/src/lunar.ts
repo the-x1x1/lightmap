@@ -420,7 +420,7 @@ export function moonRiseSet(
   latitudeDeg: number,
   longitudeDeg: number,
 ): { moonrise: Date | null; moonset: Date | null; alwaysUp: boolean; alwaysDown: boolean } {
-  const step = 10 * 60_000;
+  const step = 5 * 60_000; // a grazing rise+set pair at high latitude fits inside 10 minutes
   const f = (t: number) => {
     const m = moonPosition(new Date(t), latitudeDeg, longitudeDeg);
     return m.topocentricElevationDeg - moonHorizonThresholdDeg(m.distanceKm);

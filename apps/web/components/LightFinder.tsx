@@ -19,7 +19,12 @@ import {
   utcToWallClock,
   type CelestialBody,
 } from '@lightmap/astronomy';
-import { aboveTerrain, ridgeContactElevationDeg, type SceneState } from '@lightmap/scene';
+import {
+  MOON_SEMIDIAMETER_DEG,
+  aboveTerrain,
+  ridgeContactElevationDeg,
+  type SceneState,
+} from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
 import { Button, RadioGroup } from '@lightmap/ui';
 import { usePlannerStore } from '@/features/planner/store';
@@ -194,7 +199,13 @@ export function LightFinder({
 
   const [hideBehindTerrain, setHideBehindTerrain] = useState(false);
   const behindTerrain = (m: SerializedMatch) =>
-    profile !== null && !aboveTerrain(profile, m.azimuthDegrees, m.elevationDegrees);
+    profile !== null &&
+    !aboveTerrain(
+      profile,
+      m.azimuthDegrees,
+      m.elevationDegrees,
+      body === 'moon' ? MOON_SEMIDIAMETER_DEG : undefined,
+    );
   const allMatches = result?.res.matches ?? [];
   const terrainFilter = Boolean(profile) && hideBehindTerrain && mode !== 'ridge';
   const hidden = terrainFilter ? allMatches.filter(behindTerrain).length : 0;
