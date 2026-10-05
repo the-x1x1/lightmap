@@ -245,6 +245,38 @@ describe('reverse planning solver', () => {
     expect(dark.alignments.some((a) => a.date === '2026-06-15')).toBe(true);
     expect(dark.alignments.some((a) => a.date === '2026-05-31')).toBe(false);
     expect(all.alignments.some((a) => a.date === '2026-05-31')).toBe(true);
+    // A target below the horizon (the core rising over the bay) still asks the Moon: on the
+    // full-Moon night the sea-skyline alignment is not dark.
+    const bay = findDirectionMatches({
+      ...KAILUA,
+      from: { year: 2026, month: 5, day: 25 },
+      to: { year: 2026, month: 6, day: 5 },
+      target: { azimuthDegrees: 121.5, elevationDegrees: -1.1, elevationToleranceDegrees: 1 },
+      body: 'core',
+      minElevationDegrees: -3,
+      darkSkyOnly: false,
+    });
+    expect(bay.matches.length).toBeGreaterThan(0);
+    expect(bay.matches.some((m) => m.skyDark === false)).toBe(true);
+    const bayDark = findDirectionMatches({
+      ...KAILUA,
+      from: { year: 2026, month: 5, day: 25 },
+      to: { year: 2026, month: 6, day: 5 },
+      target: { azimuthDegrees: 121.5, elevationDegrees: -1.1, elevationToleranceDegrees: 1 },
+      body: 'core',
+      minElevationDegrees: -3,
+    });
+    expect(bayDark.matches.length).toBeLessThan(bay.matches.length);
+    for (const m of bayDark.matches) expect(m.skyDark).toBe(true);
+    // The per-day helper keeps every alignment unless asked to filter.
+    const perDay = elevationAtAzimuthByDay({
+      ...KAILUA,
+      from: { year: 2026, month: 1, day: 1 },
+      to: { year: 2026, month: 1, day: 10 },
+      azimuthDegrees: 180,
+      body: 'core',
+    });
+    expect(perDay.length).toBeGreaterThanOrEqual(10);
     // Sun and Moon matches do not carry a sky verdict.
     const sun = findDirectionMatches({
       ...KAILUA,

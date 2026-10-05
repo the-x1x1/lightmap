@@ -3,6 +3,7 @@ import type { SceneState } from '@lightmap/scene';
 import { describeSeasonalEnvelope, explainScene, formatDeg } from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
 import {
+  civilDateString,
   describeMilkyWayWindows,
   formatMilkyWayWindow,
   formatWallTime,
@@ -54,7 +55,7 @@ export function describeNextPhases(from: Date, timeZone: string): string {
  * core's highest instant inside the window). Rendered only while the Moon details are open: the
  * 45-night scan is a few tens of milliseconds and is memoised per place and civil day.
  */
-function DarkWindows({ scene }: { scene: SceneState }) {
+function DarkWindows({ scene, windowEnd }: { scene: SceneState; windowEnd: string | null }) {
   const setDate = usePlannerStore((s) => s.setDate);
   const setMinutes = usePlannerStore((s) => s.setMinutes);
   const tz = scene.timeZone;
@@ -67,8 +68,16 @@ function DarkWindows({ scene }: { scene: SceneState }) {
     () => milkyWayWindows(new Date(from), DARK_WINDOW_NIGHTS, lat, lng),
     [from, lat, lng],
   );
-  const shown = result.windows.slice(0, 3);
-  const more = result.windows.length - shown.length;
+  // A Free plan sees the nights inside its date window and an honest count beyond it (plan §38:
+  // explain, never leak the Pro answer). The window is civil dates in the place's own zone, the
+  // rule the server applies.
+  const placeZone = scene.location.timeZone;
+  const inWindow = windowEnd
+    ? result.windows.filter((w) => civilDateString(utcToWallClock(w.start, placeZone)) <= windowEnd)
+    : result.windows;
+  const beyond = result.windows.length - inWindow.length;
+  const shown = inWindow.slice(0, 3);
+  const more = inWindow.length - shown.length;
   const jump = (at: Date) => {
     const sel = utcToLocalSelection(at, tz);
     setDate(sel.date);
@@ -83,7 +92,9 @@ function DarkWindows({ scene }: { scene: SceneState }) {
     >
       Dark windows ahead:{' '}
       {shown.length === 0
-        ? describeMilkyWayWindows(result, tz)
+        ? beyond > 0
+          ? 'none inside your plan’s date window'
+          : describeMilkyWayWindows(result, tz)
         : shown.map((w, i) => (
             <span key={w.start.getTime()}>
               {i > 0 ? ' · ' : ''}
@@ -98,6 +109,12 @@ function DarkWindows({ scene }: { scene: SceneState }) {
             </span>
           ))}
       {more > 0 ? ` · ${more} more in ${result.days} nights` : ''}
+      {beyond > 0 ? (
+        <span data-testid="milky-way-windows-beyond">
+          {' '}
+          · {beyond} more beyond your window · Pro
+        </span>
+      ) : null}
     </p>
   );
 }
@@ -107,7 +124,15 @@ function DarkWindows({ scene }: { scene: SceneState }) {
  * open — the dark windows ahead. Its open state lives here so it unmounts with the element when
  * the lunar state goes away (the `moon_planning` entitlement) and comes back.
  */
-function MoonDetails({ scene, lunar }: { scene: SceneState; lunar: LunarState }) {
+function MoonDetails({
+  scene,
+  lunar,
+  windowEnd,
+}: {
+  scene: SceneState;
+  lunar: LunarState;
+  windowEnd: string | null;
+}) {
   const tz = scene.timeZone;
   const [moonOpen, setMoonOpen] = useState(false);
   // The next four principal phases from the selected day (night planning): per civil day.
@@ -160,13 +185,19 @@ function MoonDetails({ scene, lunar }: { scene: SceneState; lunar: LunarState })
           Milky Way core: {describeMilkyWay(scene.nightSky)}
         </p>
       ) : null}
-      {scene.nightSky && moonOpen ? <DarkWindows scene={scene} /> : null}
+      {scene.nightSky && moonOpen ? <DarkWindows scene={scene} windowEnd={windowEnd} /> : null}
       <p className="mt-1 text-xs text-[var(--lm-text-muted)]">{lunar.accuracyNote}</p>
     </details>
   );
 }
 
-export function AstronomyDetails({ scene }: { scene: SceneState }) {
+export interface AstronomyDetailsProps {
+  scene: SceneState;
+  /** Last civil date (place zone) a Free plan may plan for; null when the plan is unrestricted. */
+  windowEnd?: string | null;
+}
+
+export function AstronomyDetails({ scene, windowEnd = null }: AstronomyDetailsProps) {
   const s = scene.solar;
   const tz = scene.timeZone;
   const seasons = useSeasonalEnvelope(scene);
@@ -260,7 +291,7 @@ export function AstronomyDetails({ scene }: { scene: SceneState }) {
           <DayEventMarkers dayEvents={scene.dayEvents} timeZone={tz} />
         </div>
       </details>
-      {scene.lunar ? <MoonDetails scene={scene} lunar={scene.lunar} /> : null}
+      {scene.lunar ? <MoonDetails scene={scene} lunar={scene.lunar} windowEnd={windowEnd} /> : null}
       <details className="group" data-testid="why-panel">
         <summary className="cursor-pointer text-xs uppercase tracking-wide text-[var(--lm-text-muted)]">
           Why does it look like this?

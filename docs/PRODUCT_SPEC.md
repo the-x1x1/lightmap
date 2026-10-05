@@ -151,8 +151,10 @@ the core can be shot — every stretch of at least 30 minutes, over the 45 night
 the selected day's evening, with astronomical night, the core 10° up and no Moon brighter than
 30 % above the horizon; both printed minutes lie inside the stretch — "3 Jun 21:10–22:19 (core to
 21°) · 4 Jun 21:06–22:58 (core to 28°) · 5 Jun 21:02–23:35 (core to 33°) · 33 more in 45
-nights". Each is a button: the planner jumps to the core's highest instant in that window. When
-there is none the line says which thing rules every night out: no astronomical night (high
+nights". Each is a button: the planner jumps to the core's highest instant in that window. A
+Free plan sees the nights inside its date window and an honest count of the rest ("· 12 more
+beyond your window · Pro"), never the dates themselves. When there is none the line says which
+thing rules every night out: no astronomical night (high
 summer at high latitudes), a core that never clears 10° in the dark (the northern winter; Britain
 all year), the Moon over every dark hour the core is up, or a core that clears 10° only for
 minutes at a time. `milkyWayWindows()` scans from local noon (so no night is split) and takes the
@@ -301,7 +303,8 @@ No lens optical simulation (distortion, rendered blur) in v1.
   core** (the Galactic Centre, a fixed point on the sky that comes round four minutes earlier
   each night), by default only in a dark sky — astronomical night, no Moon over 30 % lit above
   the horizon — so "when is the core over that peak?" lists the shootable nights; rows found
-  with the filter off say "sky not dark". Moon and core are night planning (Pro).
+  with the filter off say "sky not dark". (Moon and core follow the `moon_planning` entitlement,
+  which every plan has; the date window is what a Free search is clipped to.)
 - **Range**: civil dates at the location, default today → +365 days, capped at 1100 days.
   Free plans search inside their date window; the range is clipped and explained, never refused.
 - **Tolerances**: azimuth ±2°, elevation ±1° by default; adjustable. Two detectors feed the
@@ -466,7 +469,9 @@ from the entitlement decision; a subscription unlocks the current plan immediate
 webhook lands — the return page from Checkout (`/account?checkout=success`) re-reads the
 entitlement snapshot every two seconds until the effective plan is no longer Free, then says
 "You're on Photographer Pro — everything is unlocked" with a link back to the map; after a
-minute without confirmation it says so plainly and what to do (plan §38, step 7). Details in
+minute without confirmation it says so plainly and what to do; a failed account read or a
+missing session gets its own wording rather than a false "not confirmed" (plan §38, step 7).
+Details in
 `BILLING_AND_ENTITLEMENTS.md`.
 
 ## 12. Error handling (plan §34)

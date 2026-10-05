@@ -20,7 +20,10 @@ export function CheckoutReturn({ outcome }: { outcome: 'success' | 'cancelled' }
   const [waitedMs, setWaitedMs] = useState(0);
   const unlocked =
     outcome === 'success' && account.snapshot !== null && account.snapshot.effectivePlan !== 'free';
-  const waiting = outcome === 'success' && !unlocked && waitedMs < GIVE_UP_MS;
+  // The account could not be read at all (fetch error, or no session after the redirect): a
+  // different message from "Stripe has not confirmed".
+  const unreadable = !account.isLoading && (account.isError || !account.signedIn);
+  const waiting = outcome === 'success' && !unlocked && !unreadable && waitedMs < GIVE_UP_MS;
 
   useEffect(() => {
     if (!waiting) return;
@@ -50,6 +53,18 @@ export function CheckoutReturn({ outcome }: { outcome: 'success' | 'cancelled' }
           Back to the map
         </Link>
         .
+      </p>
+    );
+  if (unreadable)
+    return (
+      <p
+        className="mt-2 rounded-[var(--lm-radius-sm)] bg-[color:rgba(255,210,122,0.15)] p-3 text-sm"
+        role="status"
+        data-testid="checkout-unreadable"
+      >
+        {account.isError
+          ? 'Your account could not be read just now. Reload this page in a moment; the subscription itself is confirmed by Stripe independently of this page.'
+          : 'You are not signed in on this device, so your plan cannot be shown here. Sign in with the same account you subscribed with and it will be unlocked.'}
       </p>
     );
   if (waiting)

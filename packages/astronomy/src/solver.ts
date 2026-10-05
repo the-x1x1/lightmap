@@ -19,7 +19,7 @@
  * Pure: no I/O, no Date.now().
  */
 import { moonHorizonThresholdDeg, moonPosition } from './lunar.ts';
-import { galacticCentrePosition, milkyWayCoreFrom } from './night-sky.ts';
+import { galacticCentrePosition, MILKY_WAY_MOON_LIMIT } from './night-sky.ts';
 import { sunPosition } from './solar.ts';
 import { addCivilDays, civilDateString, localDayBounds, type CivilTime } from './time.ts';
 
@@ -123,24 +123,17 @@ function positionOf(body: CelestialBody, t: number, lat: number, lon: number) {
   return { azimuth: s.azimuthDeg, elevation: s.elevationDeg, illuminated: null };
 }
 
-/** Core only: is the sky dark enough to show the band at this instant (Sun and Moon state)? */
-function skyDarkAt(
-  core: { azimuth: number; elevation: number },
-  t: number,
-  lat: number,
-  lon: number,
-): boolean {
+/**
+ * Core only: is the sky dark enough to show the band at this instant — astronomical night and no
+ * Moon over the limit above the horizon? Tested directly (not through the verdict, whose
+ * below-horizon answer comes before the Moon's): a core target on a sea skyline sits below 0°.
+ */
+function skyDarkAt(t: number, lat: number, lon: number): boolean {
   const d = new Date(t);
-  const sunEl = sunPosition(d, lat, lon).elevationDeg;
+  if (sunPosition(d, lat, lon).elevationDeg > -18) return false;
   const moon = moonPosition(d, lat, lon);
   const moonUp = moon.elevationDeg > moonHorizonThresholdDeg(moon.distanceKm);
-  const v = milkyWayCoreFrom(
-    { azimuthDeg: core.azimuth, elevationDeg: core.elevation },
-    sunEl,
-    moonUp,
-    moon.illuminatedFraction,
-  ).verdict;
-  return v !== 'daylight' && v !== 'twilight' && v !== 'moonlit';
+  return !(moonUp && moon.illuminatedFraction > MILKY_WAY_MOON_LIMIT);
 }
 
 /** Bisection on a signed function between two instants that bracket a sign change. */
@@ -198,7 +191,7 @@ export function findDirectionMatches(input: SolverInput): SolverResult {
   const record = (dayKey: string, tc: number, via: DirectionMatch['via']) => {
     const p = positionOf(body, tc, lat, lon);
     if (p.elevation < minEl || (p.illuminated ?? 1) < minIllum) return;
-    const skyDark = body === 'core' ? skyDarkAt(p, tc, lat, lon) : null;
+    const skyDark = body === 'core' ? skyDarkAt(tc, lat, lon) : null;
     if (skyDark === false && darkOnly) return;
     // The two detectors can find the same instant (body crossing the bearing exactly at the
     // target elevation); keep one.
@@ -288,6 +281,8 @@ export function elevationAtAzimuthByDay(
     ...input,
     target: { azimuthDegrees: input.azimuthDegrees, azimuthToleranceDegrees: 180 },
     minElevationDegrees: input.minElevationDegrees ?? -90,
+    // Every alignment, dark sky or not, unless the caller asks for the filter.
+    darkSkyOnly: input.darkSkyOnly ?? false,
   });
   return r.alignments.map((a) => ({
     date: a.date,

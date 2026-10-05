@@ -454,7 +454,15 @@ export function MapShell() {
                         Sun &amp; moon details
                       </summary>
                       <div className="mt-2">
-                        <AstronomyDetails scene={scene} />
+                        <AstronomyDetails
+                          scene={scene}
+                          windowEnd={
+                            account.snapshot &&
+                            account.snapshot.limits.futureDateWindowDays !== null
+                              ? freeWindowEnd
+                              : null
+                          }
+                        />
                       </div>
                     </details>
                     <details data-testid="details-weather">
