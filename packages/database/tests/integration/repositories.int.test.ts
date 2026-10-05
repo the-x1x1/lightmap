@@ -7,7 +7,9 @@ import { createDb, type DbHandle } from '../../src/client.ts';
 import { loadMigrations, migrate } from '../../src/migrate.ts';
 import {
   NotFoundError,
+  PROFILE_DEFAULTS,
   cacheRepo,
+  profilesRepo,
   projectsRepo,
   retentionRepo,
   subscriptionsRepo,
@@ -198,6 +200,28 @@ run('repositories (integration)', () => {
     expect(w).toMatchObject({ total: 4, keys: 2 });
     expect(w.topShare).toBeCloseTo(0.75, 6);
     expect(JSON.stringify(totals)).not.toContain(alice);
+  });
+
+  it('profiles read as defaults until changed, then merge patches per user', async () => {
+    const profiles = profilesRepo(h.db);
+    expect(await profiles.get(alice)).toEqual({ ...PROFILE_DEFAULTS, customized: false });
+    expect(await profiles.update(alice, { units: 'imperial' })).toEqual({
+      ...PROFILE_DEFAULTS,
+      units: 'imperial',
+    });
+    // A later patch keeps the earlier change; the other user is untouched.
+    expect(await profiles.update(alice, { defaultLensEquivalentMm: 35 })).toEqual({
+      units: 'imperial',
+      defaultTimezoneBehavior: 'location',
+      defaultLensEquivalentMm: 35,
+    });
+    expect(await profiles.get(alice)).toEqual({
+      units: 'imperial',
+      defaultTimezoneBehavior: 'location',
+      defaultLensEquivalentMm: 35,
+      customized: true,
+    });
+    expect(await profiles.get(bob)).toEqual({ ...PROFILE_DEFAULTS, customized: false });
   });
 
   it('deletion requests become due after the window', async () => {
