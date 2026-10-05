@@ -3,14 +3,22 @@ import type { SceneState } from '@lightmap/scene';
 import { describeSeasonalEnvelope, explainScene, formatDeg } from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
 import {
+  describeMilkyWayWindows,
+  formatMilkyWayWindow,
   formatWallTime,
+  milkyWayWindows,
   nextMoonPhases,
+  utcToLocalSelection,
   utcToWallClock,
   type MilkyWayCoreState,
 } from '@lightmap/astronomy';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { usePlannerStore } from '@/features/planner/store';
 import { useSeasonalEnvelope } from '@/features/planner/use-seasonal';
 import { DayEventMarkers } from './Timeline';
+
+/** How far ahead the dark-window scan looks: a lunation and a half, so a Moon-free run is always inside it. */
+export const DARK_WINDOW_NIGHTS = 45;
 
 const PHASE_LABEL = {
   new: 'New',
@@ -40,10 +48,62 @@ export function describeNextPhases(from: Date, timeZone: string): string {
     .join(' · ');
 }
 
+/**
+ * The nights ahead on which the core can be shot, each a click away (the planner jumps to the
+ * core's highest instant inside the window). Rendered only while the Moon details are open: the
+ * 45-night scan is a few tens of milliseconds and is memoised per place and civil day.
+ */
+function DarkWindows({ scene }: { scene: SceneState }) {
+  const setDate = usePlannerStore((s) => s.setDate);
+  const setMinutes = usePlannerStore((s) => s.setMinutes);
+  const tz = scene.timeZone;
+  const lat = scene.location.point.latitude;
+  const lng = scene.location.point.longitude;
+  const from = scene.dayEvents.dayStart.getTime();
+  const result = useMemo(
+    () => milkyWayWindows(new Date(from), DARK_WINDOW_NIGHTS, lat, lng),
+    [from, lat, lng],
+  );
+  const shown = result.windows.slice(0, 3);
+  const more = result.windows.length - shown.length;
+  const jump = (at: Date) => {
+    const sel = utcToLocalSelection(at, tz);
+    setDate(sel.date);
+    setMinutes(sel.minutes);
+  };
+  return (
+    <p
+      className="mt-1 text-xs text-[var(--lm-text-muted)]"
+      data-testid="milky-way-windows"
+      data-count={result.windows.length}
+      data-reason={result.reason}
+    >
+      Dark windows ahead:{' '}
+      {shown.length === 0
+        ? describeMilkyWayWindows(result, tz)
+        : shown.map((w, i) => (
+            <span key={w.start.getTime()}>
+              {i > 0 ? ' · ' : ''}
+              <button
+                type="button"
+                className="underline decoration-dotted underline-offset-2 hover:text-[var(--lm-text)]"
+                title="Jump the planner to the core's highest point in this window"
+                onClick={() => jump(w.peakAt)}
+              >
+                {formatMilkyWayWindow(w, tz)}
+              </button>
+            </span>
+          ))}
+      {more > 0 ? ` · ${more} more in ${result.days} nights` : ''}
+    </p>
+  );
+}
+
 export function AstronomyDetails({ scene }: { scene: SceneState }) {
   const s = scene.solar;
   const tz = scene.timeZone;
   const seasons = useSeasonalEnvelope(scene);
+  const [moonOpen, setMoonOpen] = useState(false);
   // The next four principal phases from the selected day (night planning): per civil day.
   const phaseFrom = scene.dayEvents.dayStart.getTime();
   const hasMoon = scene.lunar !== null;
@@ -142,7 +202,11 @@ export function AstronomyDetails({ scene }: { scene: SceneState }) {
         </div>
       </details>
       {scene.lunar ? (
-        <details className="group" data-testid="moon-details">
+        <details
+          className="group"
+          data-testid="moon-details"
+          onToggle={(e) => setMoonOpen(e.currentTarget.open)}
+        >
           <summary className="cursor-pointer text-xs uppercase tracking-wide text-[var(--lm-text-muted)]">
             Moon
           </summary>
@@ -184,6 +248,7 @@ export function AstronomyDetails({ scene }: { scene: SceneState }) {
               Milky Way core: {describeMilkyWay(scene.nightSky)}
             </p>
           ) : null}
+          {scene.nightSky && moonOpen ? <DarkWindows scene={scene} /> : null}
           <p className="mt-1 text-xs text-[var(--lm-text-muted)]">{scene.lunar.accuracyNote}</p>
         </details>
       ) : null}

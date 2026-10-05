@@ -10,7 +10,12 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   horizon, moonlit, low, visible) in the order a photographer rules things out. `milkyWayCore()`
   / `milkyWayCoreFrom()` in `@lightmap/astronomy`: Sgr A\* precessed from J2000 (Meeus ch. 21),
   the observer's sidereal time, the scene's own Sun and Moon. Not a sky-brightness model (light
-  pollution and airglow are not modelled), and the docs say so.
+  pollution and airglow are not modelled), and the docs say so. **Dark windows ahead**: the Moon
+  details list the next nights the core can be shot (≥ 30 min of astronomical night with the
+  core 10° up and no Moon over 30 % above the horizon, 45 nights from the selected day, edges to
+  the minute), each a click that jumps the planner to the core's peak — or why there are none
+  (no astronomical night, core never up this season, the Moon). `milkyWayWindows()`, tested at
+  Kailua, London and the full-Moon nights.
 - **Moon phase calendar**: the Moon details list the next four principal phases from the selected
   day (New, First quarter, Full, Last quarter, as dates in the planning zone). `nextMoonPhases()`
   in `@lightmap/astronomy` bisects the elongation from the same Meeus series as the positions —

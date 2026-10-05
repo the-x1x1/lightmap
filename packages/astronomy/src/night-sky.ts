@@ -8,7 +8,7 @@
  */
 import { moonHorizonThresholdDeg, moonPosition } from './lunar.ts';
 import { sunPosition, toHorizontal, type HorizontalCoordinates } from './solar.ts';
-import { julianCenturiesTT } from './time.ts';
+import { formatWallTime, julianCenturiesTT, utcToWallClock } from './time.ts';
 
 const DEG = Math.PI / 180;
 const RAD = 180 / Math.PI;
@@ -131,4 +131,145 @@ export function milkyWayCore(
   const moon = moonPosition(date, latitudeDeg, longitudeDeg);
   const moonUp = moon.elevationDeg > moonHorizonThresholdDeg(moon.distanceKm);
   return milkyWayCoreFrom(core, sun.elevationDeg, moonUp, moon.illuminatedFraction);
+}
+
+/** A stretch of one night in which the core verdict stays `visible`. */
+export interface MilkyWayWindow {
+  /** UTC, to the minute. */
+  start: Date;
+  end: Date;
+  /** Highest the core stands inside the window, and when. */
+  peakElevationDeg: number;
+  peakAt: Date;
+  /** A thin Moon (under the limit) is up for some of it. */
+  withThinMoon: boolean;
+}
+
+export interface MilkyWayWindows {
+  windows: MilkyWayWindow[];
+  /** When there are none: the first thing that rules every night out, in verdict order. */
+  reason: 'none' | 'no-astronomical-night' | 'core-never-up' | 'moon';
+  /** The scan's extent. */
+  from: Date;
+  days: number;
+}
+
+/**
+ * The nights ahead on which the core can be photographed: every stretch (≥ `minMinutes`) of
+ * `visible` verdicts in `days` days from `from`, with the edges found to the minute. The scan
+ * takes the Sun first (cheap) and asks for the Moon only inside astronomical night with the core
+ * high enough, so 45 nights cost a few thousand Sun positions and a few hundred Moon positions.
+ */
+export function milkyWayWindows(
+  from: Date,
+  days: number,
+  latitudeDeg: number,
+  longitudeDeg: number,
+  opts: { stepMinutes?: number; minMinutes?: number } = {},
+): MilkyWayWindows {
+  const stepMs = (opts.stepMinutes ?? 10) * 60_000;
+  const minMs = (opts.minMinutes ?? 30) * 60_000;
+  const t0 = from.getTime();
+  const t1 = t0 + days * 86_400_000;
+  let anyNight = false;
+  let anyCoreUp = false;
+  const visibleAt = (t: number): { ok: boolean; core: number; moonUp: boolean } => {
+    const d = new Date(t);
+    const sunEl = sunPosition(d, latitudeDeg, longitudeDeg).elevationDeg;
+    if (sunEl > -18) return { ok: false, core: Number.NaN, moonUp: false };
+    anyNight = true;
+    const core = galacticCentrePosition(d, latitudeDeg, longitudeDeg);
+    if (core.elevationDeg < MILKY_WAY_LOW_ELEVATION_DEG)
+      return { ok: false, core: core.elevationDeg, moonUp: false };
+    anyCoreUp = true;
+    const moon = moonPosition(d, latitudeDeg, longitudeDeg);
+    const moonUp = moon.elevationDeg > moonHorizonThresholdDeg(moon.distanceKm);
+    const ok = !(moonUp && moon.illuminatedFraction > MILKY_WAY_MOON_LIMIT);
+    return { ok, core: core.elevationDeg, moonUp };
+  };
+  // Bisect the visible/not-visible edge between two instants to the minute.
+  const edge = (bad: number, good: number): number => {
+    let lo = bad;
+    let hi = good;
+    while (Math.abs(hi - lo) > 60_000) {
+      const mid = (lo + hi) / 2;
+      if (visibleAt(mid).ok) hi = mid;
+      else lo = mid;
+    }
+    return hi;
+  };
+  const windows: MilkyWayWindow[] = [];
+  let open: { start: number; peak: number; peakAt: number; thinMoon: boolean } | null = null;
+  let prev = t0;
+  for (let t = t0; t <= t1; t += stepMs) {
+    const v = visibleAt(t);
+    if (v.ok) {
+      if (!open) {
+        const start = t === t0 ? t0 : edge(prev, t);
+        open = { start, peak: v.core, peakAt: t, thinMoon: v.moonUp };
+      } else if (v.core > open.peak) {
+        open.peak = v.core;
+        open.peakAt = t;
+      }
+      if (v.moonUp) open.thinMoon = true;
+    } else if (open) {
+      const end = edge(t, prev);
+      if (end - open.start >= minMs)
+        windows.push({
+          start: new Date(Math.round(open.start / 60_000) * 60_000),
+          end: new Date(Math.round(end / 60_000) * 60_000),
+          peakElevationDeg: open.peak,
+          peakAt: new Date(open.peakAt),
+          withThinMoon: open.thinMoon,
+        });
+      open = null;
+    }
+    prev = t;
+  }
+  if (open && prev - open.start >= minMs)
+    windows.push({
+      start: new Date(Math.round(open.start / 60_000) * 60_000),
+      end: new Date(Math.round(prev / 60_000) * 60_000),
+      peakElevationDeg: open.peak,
+      peakAt: new Date(open.peakAt),
+      withThinMoon: open.thinMoon,
+    });
+  const reason = windows.length
+    ? 'none'
+    : !anyNight
+      ? 'no-astronomical-night'
+      : !anyCoreUp
+        ? 'core-never-up'
+        : 'moon';
+  return { windows, reason, from, days };
+}
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** "13 Jun 20:39–04:23 (core to 40°)" in a zone; a window past midnight keeps its start date. */
+export function formatMilkyWayWindow(w: MilkyWayWindow, zone: string): string {
+  const s = utcToWallClock(w.start, zone);
+  return `${s.day} ${MONTHS[s.month - 1] ?? ''} ${formatWallTime(w.start, zone)}–${formatWallTime(w.end, zone)} (core to ${Math.round(w.peakElevationDeg)}°)`;
+}
+
+/**
+ * One line on the dark windows ahead, in a zone: "3 Jun 21:09–22:19 (core to 21°) · 4 Jun
+ * 21:06–22:59 (core to 28°) · 5 Jun 21:02–23:36 (core to 33°) · 34 more in 45 nights", or why
+ * there are none.
+ */
+export function describeMilkyWayWindows(r: MilkyWayWindows, zone: string, show = 3): string {
+  const nights = `${r.days} nights`;
+  if (!r.windows.length) {
+    switch (r.reason) {
+      case 'no-astronomical-night':
+        return `No astronomical night here in the next ${nights}`;
+      case 'core-never-up':
+        return `The core never stands ${MILKY_WAY_LOW_ELEVATION_DEG}° up in the dark here in the next ${nights}`;
+      default:
+        return `The Moon lights every dark hour the core is up in the next ${nights}`;
+    }
+  }
+  const parts = r.windows.slice(0, show).map((w) => formatMilkyWayWindow(w, zone));
+  const more = r.windows.length - show;
+  return more > 0 ? `${parts.join(' · ')} · ${more} more in ${nights}` : parts.join(' · ');
 }

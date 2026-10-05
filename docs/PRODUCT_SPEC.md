@@ -144,6 +144,17 @@ Sgr A\* precessed to the date, the observer's sidereal time, and the Sun and Moo
 has. It is not a sky-brightness model — light pollution, airglow and haze stay the photographer's
 call — and it says so in the accuracy docs.
 
+Under it, while the Moon details are open, **Dark windows ahead** lists the next nights on which
+the core can be shot — every stretch of at least 30 minutes, in the 45 nights from the selected
+day, with astronomical night, the core 10° up and no Moon brighter than 30 % above the horizon —
+"3 Jun 21:09–22:19 (core to 21°) · 4 Jun 21:06–22:59 (core to 28°) · 5 Jun 21:02–23:36 (core to
+33°) · 34 more in 45 nights". Each is a button: the planner jumps to the core's highest instant
+in that window. When there is none the line says which thing rules every night out: no
+astronomical night (high summer at high latitudes), a core that never clears 10° in the dark
+(the northern winter; Britain all year), or the Moon. `milkyWayWindows()` scans the Sun first and
+asks for the Moon only inside dark hours with the core up, so the 45 nights cost a few tens of
+milliseconds, memoised per place and civil day.
+
 **Export card** (Pro, entitlement `export_preview`): one PNG (1200 px wide) built in the browser
 from the current frame (captured at 1280 px from the renderer, or the sky-gradient band when the
 3D preview is unavailable) plus the facts above — place, coordinates, zone, date/time, sun

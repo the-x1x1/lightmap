@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   GALACTIC_CENTRE_J2000,
+  describeMilkyWayWindows,
   galacticCentrePosition,
   milkyWayCore,
   milkyWayCoreFrom,
+  milkyWayWindows,
   precessFromJ2000,
 } from '../src/night-sky.ts';
 
@@ -75,6 +77,62 @@ describe('Galactic Centre (Milky Way core)', () => {
     );
     expect(milkyWayCoreFrom({ azimuthDeg: 180, elevationDeg: 40 }, -10, false, 0).reason).toBe(
       'Twilight (Sun -10°): the band needs astronomical night',
+    );
+  });
+
+  it('lists the dark windows ahead: Moon-free stretches of astronomical night with the core up', () => {
+    const kailua = [21.397, -157.727] as const;
+    const r = milkyWayWindows(new Date('2026-06-01T10:00:00Z'), 45, ...kailua);
+    expect(r.reason).toBe('none');
+    expect(r.windows.length).toBeGreaterThan(20);
+    // Every window is visible at its middle and its peak, ordered, not overlapping, ≥ 30 min.
+    let last = 0;
+    for (const w of r.windows) {
+      expect(w.start.getTime()).toBeGreaterThanOrEqual(last);
+      expect(w.end.getTime() - w.start.getTime()).toBeGreaterThanOrEqual(30 * 60_000);
+      const mid = new Date((w.start.getTime() + w.end.getTime()) / 2);
+      expect(milkyWayCore(mid, ...kailua).verdict).toBe('visible');
+      expect(milkyWayCore(w.peakAt, ...kailua).verdict).toBe('visible');
+      expect(w.peakAt.getTime()).toBeGreaterThanOrEqual(w.start.getTime());
+      expect(w.peakAt.getTime()).toBeLessThanOrEqual(w.end.getTime());
+      last = w.end.getTime();
+    }
+    // The full-Moon night of 31 May/1 June has none; the new-Moon night (15 June, 02:00 HST)
+    // is inside a window that runs from astronomical dusk to astronomical dawn.
+    expect(r.windows[0]!.start.getTime()).toBeGreaterThan(Date.parse('2026-06-02T10:00:00Z'));
+    const newMoon = Date.parse('2026-06-15T12:00:00Z');
+    const dark = r.windows.find((w) => w.start.getTime() <= newMoon && newMoon <= w.end.getTime());
+    expect(dark).toBeDefined();
+    expect(dark!.end.getTime() - dark!.start.getTime()).toBeGreaterThan(7 * 3_600_000);
+    expect(dark!.peakElevationDeg).toBeCloseTo(39.6, 0);
+    expect(dark!.withThinMoon).toBe(false);
+    // Windows end to the minute at the edge the scan found: just before, not visible; at, visible.
+    expect(milkyWayCore(new Date(dark!.end.getTime() + 2 * 60_000), ...kailua).verdict).not.toBe(
+      'visible',
+    );
+    const line = describeMilkyWayWindows(r, 'Pacific/Honolulu');
+    expect(line).toMatch(/^3 Jun 21:\d\d–22:\d\d \(core to 2\d°\) · 4 Jun /);
+    expect(line).toMatch(/ · \d+ more in 45 nights$/);
+  });
+
+  it('says why there is no window: no astronomical night, or a core that never clears 10°', () => {
+    const london = [51.5, -0.12] as const;
+    const june = milkyWayWindows(new Date('2026-06-01T00:00:00Z'), 45, ...london);
+    expect(june.windows).toEqual([]);
+    expect(june.reason).toBe('no-astronomical-night');
+    expect(describeMilkyWayWindows(june, 'Europe/London')).toBe(
+      'No astronomical night here in the next 45 nights',
+    );
+    const september = milkyWayWindows(new Date('2026-09-01T00:00:00Z'), 45, ...london);
+    expect(september.reason).toBe('core-never-up');
+    // Kailua in December: dark enough, but the core is a daytime object this season.
+    const winter = milkyWayWindows(new Date('2026-12-01T10:00:00Z'), 45, 21.397, -157.727);
+    expect(winter.reason).toBe('core-never-up');
+    // Two nights around the full Moon: the Moon is the only thing in the way.
+    const full = milkyWayWindows(new Date('2026-05-30T10:00:00Z'), 2, 21.397, -157.727);
+    expect(full.reason).toBe('moon');
+    expect(describeMilkyWayWindows(full, 'Pacific/Honolulu')).toBe(
+      'The Moon lights every dark hour the core is up in the next 2 nights',
     );
   });
 });

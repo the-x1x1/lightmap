@@ -66,6 +66,16 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
   // Night planning: at noon the Milky Way line rules the sky out before anything else.
   await expect(page.getByTestId('milky-way')).toHaveAttribute('data-verdict', 'daylight');
   await expect(page.getByTestId('milky-way')).toContainText('Milky Way core:');
+  // The dark windows ahead (scanned from the selected day): the full Moon rules the first nights
+  // out, so the first window is the evening of 3 June; a click jumps to the core's peak in it.
+  const windows = page.getByTestId('milky-way-windows');
+  await expect(windows).toContainText(/Dark windows ahead: 3 Jun 21:\d\d–22:\d\d \(core to 2\d°\)/);
+  await windows.getByRole('button').first().click();
+  await expect(page.getByTestId('date-input')).toHaveValue('2026-06-03');
+  await expect(page.getByTestId('timeline-time')).toHaveText('22:10');
+  await expect(page.getByTestId('milky-way')).toHaveAttribute('data-verdict', 'visible');
+  await setDateTime(page, '2026-05-31', 12 * 60 + 30);
+  await expect(page.getByTestId('timeline-time')).toHaveText('12:30');
 
   // Source + confidence.
   const source = page.getByTestId('source-mode').first();
