@@ -16,7 +16,7 @@ export function CompassButton() {
   if (state === 'unsupported') return null;
   const on = state === 'active' || state === 'requesting';
   return (
-    <div className="mt-2 space-y-1" data-testid="compass">
+    <div className="space-y-1" data-testid="compass">
       <Button
         size="sm"
         variant={on ? 'primary' : 'secondary'}

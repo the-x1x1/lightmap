@@ -21,22 +21,30 @@ import {
 import type { SceneState } from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
 import { usePlannerStore } from '@/features/planner/store';
-import { useCompass } from '@/features/field/use-compass';
+import { compassSupported, useCompass } from '@/features/field/use-compass';
 import { Button } from '@lightmap/ui';
 
-/** Secure context with a camera API. Whether a camera exists is only known when it is asked for. */
+/**
+ * A phone (coarse pointer + compass) in a secure context with a camera API. Whether a camera
+ * exists is only known when it is asked for; a laptop webcam without a compass is not useful here.
+ */
 export function fieldViewSupported(): boolean {
   return (
     typeof window !== 'undefined' &&
     window.isSecureContext &&
     typeof navigator !== 'undefined' &&
-    typeof navigator.mediaDevices?.getUserMedia === 'function'
+    typeof navigator.mediaDevices?.getUserMedia === 'function' &&
+    compassSupported() &&
+    (typeof window.matchMedia === 'function'
+      ? window.matchMedia('(pointer: coarse)').matches
+      : false)
   );
 }
 
-/** Frame coordinates (−1…1, y up) → percent of the video box (y down). */
-const sx = (x: number) => ((x + 1) / 2) * 100;
+/** Frame coordinates (−1…1, y up) → SVG units: the viewBox is `100·aspect` wide and 100 tall, so circles stay round. */
 const sy = (y: number) => ((1 - y) / 2) * 100;
+/** Percent of the box, for HTML overlays. */
+const px = (x: number) => ((x + 1) / 2) * 100;
 
 type CameraStatus = 'starting' | 'live' | 'denied' | 'unavailable';
 
@@ -44,9 +52,15 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
   const camera = usePlannerStore((s) => s.camera);
   const profile = usePlannerStore((s) => s.horizonProfile);
   const setNow = usePlannerStore((s) => s.setNow);
-  const compass = useCompass();
+  const rotateCamera = usePlannerStore((s) => s.rotateCamera);
+  const { start, stop, state: compassState } = useCompass();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hostRef = useRef<HTMLDivElement | null>(null);
+  const closeRef = useRef<HTMLButtonElement | null>(null);
+  // `onClose` is an inline callback from the shell; keep it out of effect deps.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const feedSize = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
   const [status, setStatus] = useState<CameraStatus>('starting');
   const [video, setVideo] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
   const [host, setHost] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
@@ -101,18 +115,34 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
     return () => ro.disconnect();
   }, []);
 
-  // Follow the phone from the moment the view opens; stop when it closes.
-  const { start, stop, state: compassState } = compass;
+  // Follow the phone from the moment the view opens; stop when it closes. Focus lands on Close
+  // and Escape closes (the planner behind is covered, not inert).
   useEffect(() => {
     start();
-    return () => stop();
+    closeRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCloseRef.current();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      stop();
+    };
   }, [start, stop]);
 
-  const onMeta = () => {
+  // Feed dimensions: on metadata and on every `resize` (device rotation swaps width and height;
+  // the FOV default flips between the long and the short side with it).
+  const onFeedSize = () => {
     const el = videoRef.current;
-    if (!el) return;
-    setVideo({ w: el.videoWidth, h: el.videoHeight });
-    setFovDeg((f) => f ?? defaultCameraFeedFovDeg(el.videoWidth, el.videoHeight));
+    if (!el || !(el.videoWidth > 0) || !(el.videoHeight > 0)) return;
+    const w = el.videoWidth;
+    const h = el.videoHeight;
+    const prev = feedSize.current;
+    if (prev.w === w && prev.h === h) return;
+    const flipped = prev.w > 0 && prev.w >= prev.h !== w >= h;
+    feedSize.current = { w, h };
+    setVideo({ w, h });
+    if (prev.w === 0 || flipped) setFovDeg(defaultCameraFeedFovDeg(w, h));
   };
 
   // Letterbox: the largest box of the video's aspect that fits the host.
@@ -130,18 +160,21 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
       : { w: 0, h: 0 };
   const fov = fovDeg ?? defaultCameraFeedFovDeg(video.w, video.h);
   const frame = { headingDeg: camera.headingDeg, pitchDeg: camera.pitchDeg, fovDeg: fov };
+  // SVG units: width 100·aspect, height 100, so a circle of radius r is round on screen.
+  const W = 100 * aspect;
+  const sx = (x: number) => ((x + 1) / 2) * W;
+  const pts = (list: ReadonlyArray<{ x: number; y: number }>) =>
+    list.map((p) => `${sx(p.x).toFixed(2)},${sy(p.y).toFixed(2)}`).join(' ');
 
   const inFrame = (p: { x: number; y: number } | null) =>
     p !== null && Math.abs(p.x) <= 1 && Math.abs(p.y) <= 1 ? p : null;
-  const sunUp = scene.solar.elevationDegrees > -0.833;
+  // The same refracted elevation the path uses, so the marker sits on its own path.
+  const sunUp = scene.solar.isAboveHorizon;
+  const sunEl = scene.solar.apparentElevationDegrees;
   const sun = sunUp
-    ? inFrame(
-        frameCoordinates(frame, scene.solar.azimuthDegrees, scene.solar.elevationDegrees, aspect),
-      )
+    ? inFrame(frameCoordinates(frame, scene.solar.azimuthDegrees, sunEl, aspect))
     : null;
-  const sunEdge = sunUp
-    ? edgeIndicator(frame, scene.solar.azimuthDegrees, scene.solar.elevationDegrees, aspect)
-    : null;
+  const sunEdge = sunUp ? edgeIndicator(frame, scene.solar.azimuthDegrees, sunEl, aspect) : null;
   const moon = scene.lunar?.isAboveHorizon
     ? inFrame(
         frameCoordinates(frame, scene.lunar.azimuthDegrees, scene.lunar.elevationDegrees, aspect),
@@ -158,16 +191,24 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
   const sky = profile ? skylinePath(frame, profile, aspect) : [];
   const tz = scene.location.timeZone;
 
-  const statusText =
+  const cameraNote =
     status === 'denied'
-      ? 'Camera access was not allowed. The marks still follow the compass over a dark frame.'
+      ? 'Camera access was not allowed — marks over a dark frame.'
       : status === 'unavailable'
-        ? 'No camera is available here. The marks still follow the compass.'
-        : compassState === 'no-compass'
-          ? 'This device gives no compass heading; turn the camera with the heading slider instead.'
-          : compassState === 'denied'
-            ? 'Motion & orientation access was not allowed; the heading slider still works.'
+        ? 'No camera available here — marks over a dark frame.'
+        : '';
+  const compassNote =
+    compassState === 'no-compass'
+      ? 'No compass heading from this device: aim with the arrows below.'
+      : compassState === 'denied'
+        ? 'Motion & orientation access was not allowed: aim with the arrows below.'
+        : compassState === 'idle'
+          ? 'Not following the phone (you took over). Tap "Follow phone" to resume.'
+          : compassState === 'requesting'
+            ? 'Hold the phone up like a camera…'
             : '';
+  const statusText = [cameraNote, compassNote].filter(Boolean).join(' ');
+  const nudge = (dh: number, dp: number) => rotateCamera(dh, dp);
 
   return (
     <div
@@ -183,8 +224,8 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
           <div className="text-xs text-[var(--lm-text-muted)]" data-testid="field-view-time">
             {formatWallTime(scene.utc, tz)} · {scene.localTime.date} ·{' '}
             {sunUp
-              ? `sun ${Math.round(scene.solar.azimuthDegrees)}° ${compassLabel(scene.solar.azimuthDegrees)}, ${Math.round(scene.solar.elevationDegrees)}° up`
-              : `sun ${Math.abs(Math.round(scene.solar.elevationDegrees))}° below the horizon`}
+              ? `sun ${Math.round(scene.solar.azimuthDegrees)}° ${compassLabel(scene.solar.azimuthDegrees)}, ${Math.round(sunEl)}° up`
+              : `sun ${Math.abs(Math.round(sunEl))}° below the horizon`}
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
@@ -196,7 +237,13 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
           >
             Now
           </Button>
-          <Button size="sm" variant="secondary" onClick={onClose} data-testid="field-view-close">
+          <Button
+            ref={closeRef}
+            size="sm"
+            variant="secondary"
+            onClick={onClose}
+            data-testid="field-view-close"
+          >
             Close
           </Button>
         </div>
@@ -213,25 +260,26 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
             playsInline
             muted
             autoPlay
-            onLoadedMetadata={onMeta}
+            onLoadedMetadata={onFeedSize}
+            onResize={onFeedSize}
             aria-hidden
           />
           <svg
             className="pointer-events-none absolute inset-0 h-full w-full"
-            viewBox="0 0 100 100"
+            viewBox={`0 0 ${W.toFixed(3)} 100`}
             preserveAspectRatio="none"
             aria-hidden
             data-testid="field-view-marks"
           >
-            {[100 / 3, 200 / 3].map((v) => (
-              <g key={v} stroke="rgba(255,255,255,0.18)" strokeWidth={1}>
-                <line x1={v} y1={0} x2={v} y2={100} vectorEffect="non-scaling-stroke" />
-                <line x1={0} y1={v} x2={100} y2={v} vectorEffect="non-scaling-stroke" />
+            {[1 / 3, 2 / 3].map((f) => (
+              <g key={f} stroke="rgba(255,255,255,0.18)" strokeWidth={1}>
+                <line x1={W * f} y1={0} x2={W * f} y2={100} vectorEffect="non-scaling-stroke" />
+                <line x1={0} y1={100 * f} x2={W} y2={100 * f} vectorEffect="non-scaling-stroke" />
               </g>
             ))}
             {sky.length ? (
               <polyline
-                points={sky.map((p) => `${sx(p.x).toFixed(2)},${sy(p.y).toFixed(2)}`).join(' ')}
+                points={pts(sky)}
                 fill="none"
                 stroke="var(--lm-sun)"
                 strokeOpacity={0.7}
@@ -243,7 +291,7 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
             {levelY !== null ? (
               <line
                 x1={0}
-                x2={100}
+                x2={W}
                 y1={sy(levelY)}
                 y2={sy(levelY)}
                 stroke="white"
@@ -255,7 +303,7 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
             {path.map((run, i) => (
               <polyline
                 key={i}
-                points={run.map((p) => `${sx(p.x).toFixed(2)},${sy(p.y).toFixed(2)}`).join(' ')}
+                points={pts(run)}
                 fill="none"
                 stroke="var(--lm-sun)"
                 strokeOpacity={0.8}
@@ -292,8 +340,8 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
             <div
               className="pointer-events-none absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center text-[var(--lm-sun)]"
               style={{
-                left: `${Math.min(94, Math.max(6, sx(sunEdge.x)))}%`,
-                top: `${Math.min(92, Math.max(8, sy(sunEdge.y)))}%`,
+                left: `${Math.min(92, Math.max(8, px(sunEdge.x)))}%`,
+                top: `${Math.min(90, Math.max(10, sy(sunEdge.y)))}%`,
               }}
               data-testid="field-view-sun-edge"
             >
@@ -326,9 +374,44 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 text-xs">
-        <div className="text-[var(--lm-text-muted)]">
-          Heading {Math.round(camera.headingDeg)}° {compassLabel(camera.headingDeg)} · pitch{' '}
-          {Math.round(camera.pitchDeg)}°
+        <div className="flex items-center gap-1" role="group" aria-label="Aim the camera">
+          <Button
+            size="sm"
+            variant="secondary"
+            aria-label="Turn left 5 degrees"
+            onClick={() => nudge(-5, 0)}
+          >
+            ◀
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            aria-label="Turn right 5 degrees"
+            onClick={() => nudge(5, 0)}
+          >
+            ▶
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            aria-label="Tilt up 5 degrees"
+            onClick={() => nudge(0, 5)}
+          >
+            ▲
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            aria-label="Tilt down 5 degrees"
+            onClick={() => nudge(0, -5)}
+          >
+            ▼
+          </Button>
+          {compassState === 'idle' || compassState === 'no-compass' || compassState === 'denied' ? (
+            <Button size="sm" variant="secondary" onClick={start} data-testid="field-view-follow">
+              Follow phone
+            </Button>
+          ) : null}
         </div>
         <div className="flex items-center gap-1" role="group" aria-label="Camera field of view">
           <Button
@@ -354,9 +437,10 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
           </Button>
         </div>
         <p className="w-full text-[11px] text-[var(--lm-text-muted)]">
-          Nudge the field of view until the horizon and real objects sit where they do in the feed.
-          Dotted: the sun&rsquo;s path today; white line: true level; terrain line: modelled ridge
-          (terrain only). The camera picture never leaves this phone.
+          Heading {Math.round(camera.headingDeg)}° {compassLabel(camera.headingDeg)} · pitch{' '}
+          {Math.round(camera.pitchDeg)}°. Nudge the field of view until the horizon and real objects
+          sit where they do in the feed. Dotted: the sun&rsquo;s path today; white line: true level;
+          terrain line: modelled ridge (terrain only). The camera picture never leaves this phone.
         </p>
       </div>
     </div>

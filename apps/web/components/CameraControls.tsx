@@ -116,7 +116,7 @@ export function CameraControls({ advancedAllowed }: { advancedAllowed: boolean }
           aria-valuetext={`${Math.round(camera.headingDeg)} degrees, ${compassLabel(camera.headingDeg)}`}
         />
         {isVp ? (
-          <div className="flex flex-wrap items-start gap-2">
+          <div className="mt-2 flex flex-wrap items-start gap-2">
             <CompassButton />
             <FieldViewButton />
           </div>

@@ -56,7 +56,8 @@ module-scope `eval` breaks a strict CSP (ADR-0002, finding from the WorldView au
 
 Other headers: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
 `Referrer-Policy: strict-origin-when-cross-origin`,
-`Permissions-Policy: camera=(), microphone=(), geolocation=(self), payment=(self "https://checkout.stripe.com")`,
+`Permissions-Policy: camera=(self), microphone=(), geolocation=(self), payment=(self "https://checkout.stripe.com")`
+(camera for the field view only, frames never leave the device — PRIVACY.md §11),
 `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`,
 `Cross-Origin-Opener-Policy: same-origin`. `X-Powered-By` is disabled.
 

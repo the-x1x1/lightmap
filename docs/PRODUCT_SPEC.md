@@ -223,7 +223,9 @@ focal-length preset, and mode.
   default (`defaultCameraFeedFovDeg`: 69° across the long side) and can be nudged ±3° until the
   frame matches the eye. The frames never leave the device — nothing is captured, stored or sent
   (`Permissions-Policy: camera=(self)`). Without camera access the marks still follow the compass
-  over a dark frame. `sunPathInFrame()` and `edgeIndicator()` in `@lightmap/scene`.
+  over a dark frame; without a compass (or after a manual nudge) ◀ ▶ ▲ ▼ aim the camera by 5°
+  and "Follow phone" resumes. One compass follow serves both "Point with phone" and the field
+  view; hiding the page pauses it and showing it resumes it. Escape closes the view. `sunPathInFrame()` and `edgeIndicator()` in `@lightmap/scene`.
 - **Level & thirds guide** (viewpoint mode, free): a rule-of-thirds grid, the true-level line
   (elevation 0; with no roll it is straight, at `y = −tan(pitch) / tan(½·vFOV)`) and the modelled
   terrain skyline — the same sampled ridge the "behind terrain" timings use, labelled "terrain
