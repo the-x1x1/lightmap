@@ -125,7 +125,15 @@ the job is idempotent.
 **No imagery uploads exist.** There is no path by which a user photo reaches LightMap or any third
 party.
 
-## 11. Cookies
+## 11. Camera (field view)
+
+The field view asks the browser for the back camera (`getUserMedia`, video only, no audio) when
+the user opens it from viewpoint mode on a phone, and releases it when the view closes. The frames
+are drawn to a `<video>` element behind an SVG overlay; nothing reads pixels back, nothing is
+captured, stored, uploaded or sent — there is no code path from the camera to the network or to
+storage. `Permissions-Policy` allows `camera` for the app's own origin only.
+
+## 12. Cookies
 
 Auth.js session and CSRF cookies only, `HttpOnly`, `SameSite=Lax`, `Secure` in production. No
 advertising or cross-site tracking cookies. Per-viewer conveniences (collapsed sheet, last tab) may

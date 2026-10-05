@@ -172,8 +172,13 @@ falls back to scenarios and the globe to the overlay.
 aims the camera where the phone's back camera points (`cameraPointingFromOrientation`,
 `blendHeading`, `useCompass`), the first piece of field mode.
 
-Capacitor or React Native wrapper only after PWA usage proves demand: native install, AR sun
-alignment (camera pass-through), full field mode.
+**AR sun alignment — delivered (unreleased)**: the field view puts the planned sun, its path for
+the day, true level and the modelled ridge over the phone's live camera, with an edge arrow when
+the sun is out of frame (`sunPathInFrame`, `edgeIndicator`, `defaultCameraFeedFovDeg`;
+`FieldView`). Frames never leave the device.
+
+Capacitor or React Native wrapper only after PWA usage proves demand: native install, a native
+camera with a known field of view, full field mode.
 
 ## Not on the roadmap (plan §37)
 

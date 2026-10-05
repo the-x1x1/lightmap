@@ -11,7 +11,9 @@ const securityHeaders = [
   {
     key: 'Permissions-Policy',
     value:
-      'camera=(), microphone=(), geolocation=(self), payment=(self "https://checkout.stripe.com")',
+      // camera=(self): the field view shows the phone's own camera behind the planned sun; the
+      // frames never leave the device (PRIVACY.md §11).
+      'camera=(self), microphone=(), geolocation=(self), payment=(self "https://checkout.stripe.com")',
   },
   { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
   { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },

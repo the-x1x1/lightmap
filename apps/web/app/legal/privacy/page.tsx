@@ -40,6 +40,11 @@ export default function PrivacyPage() {
           pin: local until you save it.
         </li>
         <li>
+          The field view shows your phone&rsquo;s camera behind the planned sun. The picture is
+          drawn on the screen only: nothing is captured, stored or sent, and the camera is released
+          when you close the view.
+        </li>
+        <li>
           In production an offline cache on your device keeps a copy of the app and of{' '}
           <em>your own</em> saved projects so they open without a connection. Nothing is sent
           anywhere by it, and it is deleted when you sign out, when you request account deletion,

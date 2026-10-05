@@ -43,6 +43,8 @@ export interface PlannerState {
   sensorWidthMm: number;
   /** Viewpoint overlay: true level, rule-of-thirds grid and the modelled skyline (Phase 6 levelling). */
   showLevelGuide: boolean;
+  /** Field view (Phase 9): the live camera feed with the planned sun marked on it. */
+  fieldViewOpen: boolean;
   /** Width / height of the map viewport, kept current by WorldMap; frame maths in the panel use it. */
   viewportAspect: number;
   /** Depth-of-field inputs (Phase 6): f-number and focus distance from the focal plane, metres. */
@@ -78,6 +80,7 @@ export interface PlannerActions {
   setActualFocalLength: (mm: number) => void;
   setShowLevelGuide: (v: boolean) => void;
   setViewportAspect: (aspect: number) => void;
+  setFieldViewOpen: (v: boolean) => void;
   setAperture: (n: number) => void;
   setFocusDistance: (m: number) => void;
   setPanel: (panel: PlannerState['panel']) => void;
@@ -120,6 +123,7 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
   sensorWidthMm: 36,
   showLevelGuide: false,
   viewportAspect: 16 / 9,
+  fieldViewOpen: false,
   aperture: 8,
   focusDistanceM: 10,
   finderTarget: null,
@@ -140,7 +144,7 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
     set({ location: loc, camera, finderTarget: null, finderPicking: false, horizonProfile: null });
   },
   clearLocation() {
-    set({ location: null, horizonProfile: null });
+    set({ location: null, horizonProfile: null, fieldViewOpen: false });
   },
   setHorizonProfile(profile) {
     set({ horizonProfile: profile });
@@ -206,6 +210,14 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
   },
   setShowLevelGuide(v) {
     set({ showLevelGuide: v });
+  },
+  setFieldViewOpen(v) {
+    // The field view is a viewpoint-mode tool: opening it aims the viewpoint camera.
+    set(
+      v
+        ? { fieldViewOpen: true, camera: { ...get().camera, mode: 'viewpoint' } }
+        : { fieldViewOpen: false },
+    );
   },
   setViewportAspect(aspect) {
     if (Number.isFinite(aspect) && aspect > 0.2 && aspect < 5) set({ viewportAspect: aspect });

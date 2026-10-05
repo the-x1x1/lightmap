@@ -27,6 +27,7 @@ import { SheetPeek } from './SheetPeek';
 import { AccountMenu, AccountPanel } from './AccountMenu';
 import { DevBanner } from './DevBanner';
 import { OfflineState } from './states/OfflineState';
+import { FieldView } from './FieldView';
 import { EmptyState } from './states/EmptyState';
 import { ErrorState } from './states/ErrorState';
 import { Paywall } from './Paywall';
@@ -50,6 +51,8 @@ export function MapShell() {
   const panel = usePlannerStore((s) => s.panel);
   const setPanel = usePlannerStore((s) => s.setPanel);
   const previewExpanded = usePlannerStore((s) => s.previewExpanded);
+  const fieldViewOpen = usePlannerStore((s) => s.fieldViewOpen);
+  const setFieldViewOpen = usePlannerStore((s) => s.setFieldViewOpen);
   const location = usePlannerStore((s) => s.location);
   const date = usePlannerStore((s) => s.date);
   const showPerf = usePlannerStore((s) => s.showPerfPanel);
@@ -171,6 +174,9 @@ export function MapShell() {
     >
       <DevBanner caps={capabilities} />
       <OfflineState />
+      {fieldViewOpen && scene ? (
+        <FieldView scene={scene} onClose={() => setFieldViewOpen(false)} />
+      ) : null}
       {/* Map is the hero. */}
       <div
         className={cx(

@@ -12,6 +12,7 @@ import { usePlannerStore } from '@/features/planner/store';
 import { DepthOfField } from '@/components/DepthOfField';
 import { LevelControls } from '@/components/LevelGuide';
 import { CompassButton } from '@/components/CompassButton';
+import { FieldViewButton } from '@/components/FieldViewButton';
 import { Button, cx, useRovingRadio } from '@lightmap/ui';
 
 const MODES = ['map', 'viewpoint'] as const;
@@ -114,7 +115,12 @@ export function CameraControls({ advancedAllowed }: { advancedAllowed: boolean }
           onChange={(e) => setHeading(Number(e.target.value))}
           aria-valuetext={`${Math.round(camera.headingDeg)} degrees, ${compassLabel(camera.headingDeg)}`}
         />
-        {isVp ? <CompassButton /> : null}
+        {isVp ? (
+          <div className="flex flex-wrap items-start gap-2">
+            <CompassButton />
+            <FieldViewButton />
+          </div>
+        ) : null}
       </div>
       {isVp ? (
         <div>

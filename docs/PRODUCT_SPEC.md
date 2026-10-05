@@ -215,6 +215,15 @@ focal-length preset, and mode.
   tap); any drag, slider or key press hands control back; leaving viewpoint mode, clearing the
   place or hiding the page stops it. Devices without a compass reference are told so instead of
   being pointed somewhere arbitrary.
+- **Field view** (viewpoint mode, phones with a camera, HTTPS): the live back-camera feed with
+  the planned sun (and moon) marked on it, the sun's path for the day as a dotted arc, true level
+  and the modelled ridge, and an edge arrow with the turn needed when the sun is out of frame
+  ("sun 40° right, 12° up"). Heading and pitch follow the phone (the compass starts with the
+  view); "Now" jumps the planner to the present; the feed's field of view starts at a phone-camera
+  default (`defaultCameraFeedFovDeg`: 69° across the long side) and can be nudged ±3° until the
+  frame matches the eye. The frames never leave the device — nothing is captured, stored or sent
+  (`Permissions-Policy: camera=(self)`). Without camera access the marks still follow the compass
+  over a dark frame. `sunPathInFrame()` and `edgeIndicator()` in `@lightmap/scene`.
 - **Level & thirds guide** (viewpoint mode, free): a rule-of-thirds grid, the true-level line
   (elevation 0; with no roll it is straight, at `y = −tan(pitch) / tan(½·vFOV)`) and the modelled
   terrain skyline — the same sampled ridge the "behind terrain" timings use, labelled "terrain
