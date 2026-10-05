@@ -197,6 +197,18 @@ test('sign in (dev), create a project, save the viewpoint, reload and reopen it'
   await page.getByTestId('viewpoint-open').click();
   await expect(page.getByTestId('timeline-time')).toHaveText('09:00');
   await expect(page.getByTestId('location-label')).toContainText('Beach, 9am');
+
+  // Preferences live in the profile once signed in: wipe the device copy and they come back
+  // from the account (GET /api/account/profile) on the next load.
+  await page.getByTestId('panel-tab-account').click();
+  await page.getByTestId('pref-units-imperial').click();
+  await expect(page.getByTestId('preferences')).toContainText('Saved to your account.');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByTestId('panel-tab-account').click();
+  await expect(page.getByTestId('pref-units-imperial')).toHaveAttribute('aria-checked', 'true');
+  await page.getByTestId('pref-units-metric').click();
+  await expect(page.getByTestId('pref-units-metric')).toHaveAttribute('aria-checked', 'true');
 });
 
 test('mobile: bottom sheet collapses and the map remains usable', async ({ page, isMobile }) => {

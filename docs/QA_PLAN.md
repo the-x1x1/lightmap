@@ -83,7 +83,8 @@ Run against a built app with `WEATHER_PROVIDER=fixture`, `GEOCODER_PROVIDER=fixt
    pin a scenario; badge reads "Comparing scenario"; unpin returns to forecast.
 4. **Camera rotation**: drag or key-rotate; the heading readout follows and wraps at 360°.
 5. **Account flow**: dev sign-in → create project → save viewpoint → reload → open project →
-   reopen viewpoint → location, time, camera and scenario are restored.
+   reopen viewpoint → location, time, camera and scenario are restored; a preference changed
+   while signed in survives a wiped local storage and a reload (it comes back from the profile).
 6. **Mobile sheet**: on the mobile profile the bottom sheet collapses and the map remains usable;
    collapsed, the glance line shows time · phase · sun · basis and opens the sheet when tapped;
    the timeline thumb is reachable.
