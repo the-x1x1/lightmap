@@ -10,8 +10,9 @@ import {
   QualityGovernor,
   SceneController,
   detectCapabilities,
-  qualityCeiling,
+  effectiveCeiling,
   resolveRenderMode,
+  watchDeviceConditions,
   type HostStats,
   type RendererCapabilities,
   type SceneHost,
@@ -106,7 +107,9 @@ export function useRenderer(opts: UseRendererOptions): RendererHandle {
               : 16 / 9,
         });
         controllerRef.current = controller;
-        const governor = new QualityGovernor({ ceilingRung: qualityCeiling(caps, QUALITY_LADDER) });
+        const governor = new QualityGovernor({
+          ceilingRung: effectiveCeiling(caps, { saveData: false }, QUALITY_LADDER),
+        });
         const emitQuality = () => {
           const q = governor.quality;
           onQualityRef.current({
@@ -119,6 +122,14 @@ export function useRenderer(opts: UseRendererOptions): RendererHandle {
           setState((s) => ({ ...s, qualityLabel: q.label }));
         };
         emitQuality();
+        // Battery and Save-Data move the ceiling while the app runs (Phase 4 adaptation).
+        disposers.push(
+          watchDeviceConditions((conditions) => {
+            const before = governor.rungIndex;
+            governor.setCeiling(effectiveCeiling(caps, conditions, QUALITY_LADDER));
+            if (governor.rungIndex !== before) emitQuality();
+          }),
+        );
         disposers.push(
           host.onPick((p) => {
             void onPickRef.current(p);

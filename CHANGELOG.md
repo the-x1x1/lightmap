@@ -14,6 +14,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   rule-of-thirds grid, the true-level line and the modelled terrain skyline (dotted, "terrain
   only"), with buttons that pitch the camera so level sits on the low third, the centre or the
   high third. `levelLineY()`, `pitchForHorizonAt()`, `skylinePath()` in `@lightmap/scene`.
+- **Device conditions (Phase 4)**: the quality governor's ceiling now follows the battery and
+  Save-Data while the app runs — draining below 50 % caps at Balanced, below 20 % at Battery;
+  Save-Data / `prefers-reduced-data` caps at Balanced; charging lifts the cap. Conditions never
+  switch shadows off. `conditionsCeiling()`, `effectiveCeiling()`, `watchDeviceConditions()`.
 - **Offline project cache (Phase 9)**: in production a service worker (`public/sw.js`) keeps the
   planner page, its chunks and the signed-in user's own projects, viewpoints, session and
   entitlements, so saved plans open in the field with no signal — astronomy, the light finder,

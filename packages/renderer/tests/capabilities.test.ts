@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { detectCapabilities, qualityCeiling, resolveRenderMode } from '../src/capabilities.ts';
+import {
+  conditionsCeiling,
+  detectCapabilities,
+  effectiveCeiling,
+  qualityCeiling,
+  resolveRenderMode,
+  watchDeviceConditions,
+  type DeviceConditions,
+} from '../src/capabilities.ts';
 import { QUALITY_LADDER } from '../src/quality-governor.ts';
 import { pickSurface } from '../src/pick.ts';
 
@@ -120,5 +128,77 @@ describe('pickSurface (ported from WorldView)', () => {
         { x: 1, y: 1 },
       ),
     ).toBeNull();
+  });
+});
+
+describe('device conditions (Phase 4 adaptation)', () => {
+  const caps = detectCapabilities({ hardwareConcurrency: 16, devicePixelRatio: 2 });
+  it('a full or charging battery and no Save-Data impose nothing', () => {
+    expect(conditionsCeiling({ saveData: false }, QUALITY_LADDER)).toBe(0);
+    expect(
+      conditionsCeiling({ saveData: false, batteryLevel: 0.1, charging: true }, QUALITY_LADDER),
+    ).toBe(0);
+    expect(effectiveCeiling(caps, { saveData: false }, QUALITY_LADDER)).toBe(0);
+  });
+  it('Save-Data caps at Balanced; a draining battery steps down to Battery but never Minimal', () => {
+    expect(conditionsCeiling({ saveData: true }, QUALITY_LADDER)).toBe(2);
+    expect(
+      conditionsCeiling({ saveData: false, batteryLevel: 0.45, charging: false }, QUALITY_LADDER),
+    ).toBe(2);
+    const low = conditionsCeiling(
+      { saveData: false, batteryLevel: 0.15, charging: false },
+      QUALITY_LADDER,
+    );
+    expect(QUALITY_LADDER[low]!.label).toBe('Battery');
+    expect(QUALITY_LADDER[low]!.shadows).toBe(true);
+    expect(low).toBeLessThan(QUALITY_LADDER.length - 1);
+  });
+  it('the effective ceiling is the stricter of device and conditions', () => {
+    const weak = detectCapabilities({ hardwareConcurrency: 2 }); // low power → 2
+    expect(effectiveCeiling(weak, { saveData: false }, QUALITY_LADDER)).toBe(2);
+    expect(
+      effectiveCeiling(
+        weak,
+        { saveData: false, batteryLevel: 0.1, charging: false },
+        QUALITY_LADDER,
+      ),
+    ).toBe(3);
+    expect(effectiveCeiling(caps, { saveData: true }, QUALITY_LADDER)).toBe(2);
+  });
+  it('watchDeviceConditions reports once, follows battery events and stops after dispose', async () => {
+    const listeners = new Map<string, () => void>();
+    const battery = {
+      level: 0.9,
+      charging: true,
+      addEventListener: (t: string, fn: () => void) => listeners.set(t, fn),
+      removeEventListener: (t: string) => listeners.delete(t),
+    };
+    const seen: DeviceConditions[] = [];
+    const stop = watchDeviceConditions((c) => seen.push(c), {
+      navigator: {
+        getBattery: async () => battery,
+        connection: { saveData: true, addEventListener() {}, removeEventListener() {} },
+      } as never,
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(seen[0]).toEqual({ saveData: true });
+    expect(seen[1]).toEqual({ saveData: true, batteryLevel: 0.9, charging: true });
+    battery.level = 0.15;
+    battery.charging = false;
+    listeners.get('levelchange')!();
+    expect(seen[2]).toMatchObject({ batteryLevel: 0.15, charging: false });
+    stop();
+    expect(listeners.size).toBe(0);
+    battery.level = 0.05;
+    expect(seen).toHaveLength(3);
+  });
+  it('without the APIs it reports Save-Data from the media query only', () => {
+    const seen: DeviceConditions[] = [];
+    const stop = watchDeviceConditions((c) => seen.push(c), {
+      matchMedia: (q) => ({ matches: q.includes('reduced-data') }),
+    });
+    expect(seen).toEqual([{ saveData: true }]);
+    stop();
   });
 });

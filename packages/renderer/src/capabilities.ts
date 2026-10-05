@@ -106,3 +106,103 @@ function defaultEnvironment(): CapabilityProbeEnvironment {
     devicePixelRatio: typeof devicePixelRatio === 'number' ? devicePixelRatio : 1,
   };
 }
+
+/**
+ * Live device conditions (roadmap Phase 4 "better device performance adaptation"): unlike the
+ * one-off capability probe these change while the app runs, so the governor's ceiling follows
+ * them. Battery and Save-Data are honoured because a field session on a phone is the use case.
+ */
+export interface DeviceConditions {
+  /** 0–1 when the Battery Status API is available. */
+  batteryLevel?: number;
+  charging?: boolean;
+  /** `navigator.connection.saveData` or `prefers-reduced-data`. */
+  saveData: boolean;
+}
+
+/**
+ * The best rung the conditions allow (0 = no restriction). Shadows are never switched off by
+ * conditions — whether a shadow exists is decided by the Sun, not by the battery — so the worst
+ * answer here is the "Battery" rung, never "Minimal".
+ */
+export function conditionsCeiling(c: DeviceConditions, ladder: readonly QualityRung[]): number {
+  const worst = Math.max(
+    0,
+    ladder.findLastIndex((r) => r.shadows),
+  );
+  const balanced = Math.min(worst, 2);
+  let ceiling = 0;
+  if (c.saveData) ceiling = Math.max(ceiling, balanced);
+  if (c.charging === false && typeof c.batteryLevel === 'number') {
+    if (c.batteryLevel <= 0.2) ceiling = Math.max(ceiling, worst);
+    else if (c.batteryLevel <= 0.5) ceiling = Math.max(ceiling, balanced);
+  }
+  return ceiling;
+}
+
+/** Highest rung the governor may use right now: the device's static ceiling or the conditions', whichever is lower. */
+export function effectiveCeiling(
+  caps: RendererCapabilities,
+  conditions: DeviceConditions,
+  ladder: readonly QualityRung[],
+): number {
+  return Math.max(qualityCeiling(caps, ladder), conditionsCeiling(conditions, ladder));
+}
+
+interface BatteryManagerLike extends EventTarget {
+  level: number;
+  charging: boolean;
+}
+
+/**
+ * Watch the Battery Status API and Save-Data; calls `onChange` once immediately and again on
+ * every change. Returns a disposer. Browsers without the APIs get one call with `saveData` only.
+ */
+export function watchDeviceConditions(
+  onChange: (c: DeviceConditions) => void,
+  env: {
+    navigator?: Navigator & {
+      getBattery?: () => Promise<BatteryManagerLike>;
+      connection?: EventTarget & { saveData?: boolean };
+    };
+    matchMedia?: (q: string) => { matches: boolean } | null;
+  } = typeof navigator === 'undefined'
+    ? {}
+    : {
+        navigator,
+        matchMedia: (q) => (typeof window.matchMedia === 'function' ? window.matchMedia(q) : null),
+      },
+): () => void {
+  let disposed = false;
+  let battery: BatteryManagerLike | null = null;
+  const connection = env.navigator?.connection;
+  const current = (): DeviceConditions => ({
+    saveData:
+      connection?.saveData === true ||
+      (env.matchMedia?.('(prefers-reduced-data: reduce)')?.matches ?? false),
+    ...(battery ? { batteryLevel: battery.level, charging: battery.charging } : {}),
+  });
+  const emit = () => {
+    if (!disposed) onChange(current());
+  };
+  emit();
+  connection?.addEventListener?.('change', emit);
+  env.navigator
+    ?.getBattery?.()
+    .then((b) => {
+      if (disposed) return;
+      battery = b;
+      b.addEventListener('levelchange', emit);
+      b.addEventListener('chargingchange', emit);
+      emit();
+    })
+    .catch(() => {
+      /* battery status unavailable */
+    });
+  return () => {
+    disposed = true;
+    connection?.removeEventListener?.('change', emit);
+    battery?.removeEventListener('levelchange', emit);
+    battery?.removeEventListener('chargingchange', emit);
+  };
+}

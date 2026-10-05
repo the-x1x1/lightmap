@@ -81,9 +81,14 @@ elevation so cirrus stays pink after sunset while a stratus deck goes dark; **sh
 no low-Sun fade, camera-aware reach, and a measured shadow probe in the smoke harness
 (`RENDERING_ACCURACY.md`).
 
+Also delivered (unreleased): **device conditions** — the quality governor's ceiling follows the
+battery (draining and ≤ 50 % → Balanced at best; ≤ 20 % → Battery) and Save-Data /
+`prefers-reduced-data` (Balanced) while the app runs; shadows are never switched off by
+conditions (`conditionsCeiling`, `effectiveCeiling`, `watchDeviceConditions`).
+
 Remaining: improved terrain texture; detailed buildings where licensed; physically based
-atmospheric scattering; water shader; better device performance adaptation. Everything stays
-grounded: geometry and light direction are never altered for looks.
+atmospheric scattering; water shader. Everything stays grounded: geometry and light direction are
+never altered for looks.
 
 ## Phase 5 — Real references (future, requires licensing work)
 

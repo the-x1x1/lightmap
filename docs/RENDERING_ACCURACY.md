@@ -157,6 +157,11 @@ from fixture data says so.
 | 2       | 1 + licensed high-resolution imagery                                   | `IMAGERY_PROVIDER` configured                     |
 | 3       | Buildings/3D tiles, physically based scattering                        | Future                                            |
 
+The governor's ceiling is the stricter of the device probe (`qualityCeiling`: low-power GPU or a
+small maximum texture) and live conditions (`conditionsCeiling`: battery level while discharging,
+Save-Data). Conditions can take the view down to the Battery rung; only measured frame rate can
+take it to Minimal, where terrain shadows are off.
+
 ## How to verify
 
 - `pnpm test --filter @lightmap/astronomy` — USNO golden set.
