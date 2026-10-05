@@ -4,6 +4,11 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Moon phase calendar**: the Moon details list the next four principal phases from the selected
+  day (New, First quarter, Full, Last quarter, as dates in the planning zone). `nextMoonPhases()`
+  in `@lightmap/astronomy` bisects the elongation from the same Meeus series as the positions —
+  the published 2026 instants (3 Jan full 10:03, 18 Jan new 19:52, 31 May full 08:45, 15 Jun new
+  02:54 UTC) come out within two minutes.
 - **Moonrise and moonset on the timeline** (moon planning): grey ☾ / ☽ markers beside the sun's,
   clickable like them; only instants inside the civil day are placed.
 - **Forecast nudges on saved viewpoints**: a card whose date has come inside the forecast horizon

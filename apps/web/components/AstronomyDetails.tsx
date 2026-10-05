@@ -2,14 +2,41 @@
 import type { SceneState } from '@lightmap/scene';
 import { describeSeasonalEnvelope, explainScene, formatDeg } from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
-import { formatWallTime } from '@lightmap/astronomy';
+import { formatWallTime, nextMoonPhases, utcToWallClock } from '@lightmap/astronomy';
+import { useMemo } from 'react';
 import { useSeasonalEnvelope } from '@/features/planner/use-seasonal';
+
+const PHASE_LABEL = {
+  new: 'New',
+  'first-quarter': 'First quarter',
+  full: 'Full',
+  'last-quarter': 'Last quarter',
+} as const;
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** "Full 31 May · Last quarter 8 Jun · New 15 Jun · First quarter 21 Jun" in the planning zone. */
+export function describeNextPhases(from: Date, timeZone: string): string {
+  return nextMoonPhases(from, 4)
+    .map((e) => {
+      const w = utcToWallClock(e.at, timeZone);
+      return `${PHASE_LABEL[e.phase]} ${w.day} ${MONTHS[w.month - 1] ?? ''}`;
+    })
+    .join(' · ');
+}
 import { DayEventMarkers } from './Timeline';
 
 export function AstronomyDetails({ scene }: { scene: SceneState }) {
   const s = scene.solar;
   const tz = scene.timeZone;
   const seasons = useSeasonalEnvelope(scene);
+  // The next four principal phases from the selected day (night planning): per civil day.
+  const phaseFrom = scene.dayEvents.dayStart.getTime();
+  const hasMoon = scene.lunar !== null;
+  const nextPhases = useMemo(
+    () => (hasMoon ? describeNextPhases(new Date(phaseFrom), tz) : ''),
+    [hasMoon, phaseFrom, tz],
+  );
   return (
     <div className="space-y-3" data-testid="astronomy-details">
       <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
@@ -127,6 +154,9 @@ export function AstronomyDetails({ scene }: { scene: SceneState }) {
               value={`${scene.lunar.moonrise ? formatWallTime(scene.lunar.moonrise, tz) : '—'} / ${scene.lunar.moonset ? formatWallTime(scene.lunar.moonset, tz) : '—'}`}
             />
           </dl>
+          <p className="mt-1 text-xs text-[var(--lm-text-muted)]" data-testid="moon-next-phases">
+            Next: {nextPhases}
+          </p>
           <p className="mt-1 text-xs text-[var(--lm-text-muted)]">{scene.lunar.accuracyNote}</p>
         </details>
       ) : null}
