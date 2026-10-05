@@ -155,6 +155,15 @@ good it looks.
 In v0.1 **Real Reference never appears**: no imagery provider is contracted
 (`REFERENCE_IMAGERY_PROVIDER=none`). The UI works without it.
 
+### 6a. Seasonal envelope (plan §1 "seasonal path")
+
+The compass rose carries two faint rim arcs — where sunrise and where sunset fall across the
+year, from the June to the December solstice (the two bound every other day) — and "Sun & moon
+details" reads them out: "Across the year · Sunrise 64°–115° (ENE–ESE), sunset 245°–296°, noon
+45°–88°". Pure astronomy (`seasonalEnvelope()` in `@lightmap/scene`, solstice day events and
+sun positions), no terrain. Polar places name the condition instead ("June: midnight sun,
+December: polar night") when a solstice has no sunrise.
+
 ## 7. Confidence panel (plan §11)
 
 Independent dimensions, never a single percentage:

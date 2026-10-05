@@ -5,13 +5,23 @@
  * compass; in overlay mode it is the hero.
  */
 import { lightingFromScene } from '@lightmap/renderer';
-import type { SceneState } from '@lightmap/scene';
+import { rangeWidthDeg, type SceneState } from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
 import { sunPosition } from '@lightmap/astronomy';
 import { useMemo } from 'react';
+import { useSeasonalEnvelope } from '@/features/planner/use-seasonal';
+
+/** An SVG arc on a circle of radius `radius` about (c, c), clockwise from bearing a to b. */
+function bearingArc(c: number, radius: number, range: [number, number]): string {
+  const rad = (d: number) => ((d - 90) * Math.PI) / 180;
+  const [a, b] = range;
+  const large = rangeWidthDeg(range) > 180 ? 1 : 0;
+  return `M${(c + radius * Math.cos(rad(a))).toFixed(1)},${(c + radius * Math.sin(rad(a))).toFixed(1)} A${radius},${radius} 0 ${large} 1 ${(c + radius * Math.cos(rad(b))).toFixed(1)},${(c + radius * Math.sin(rad(b))).toFixed(1)}`;
+}
 
 export function SunDirectionOverlay({ scene, compact }: { scene: SceneState; compact: boolean }) {
   const light = lightingFromScene(scene);
+  const seasons = useSeasonalEnvelope(scene);
   const size = compact ? 132 : 300;
   const r = size / 2 - 14;
   const c = size / 2;
@@ -105,6 +115,21 @@ export function SunDirectionOverlay({ scene, compact }: { scene: SceneState; com
             {n}
           </text>
         ))}
+        {/* Seasonal envelope (plan §1): the year's sunrise and sunset bearings as rim arcs. */}
+        {[seasons.sunriseRange, seasons.sunsetRange].map((range, i) =>
+          range ? (
+            <path
+              key={i}
+              d={bearingArc(c, r + 3, range)}
+              fill="none"
+              stroke="var(--lm-sun)"
+              strokeOpacity={0.45}
+              strokeWidth={compact ? 2 : 3}
+              strokeLinecap="butt"
+              data-testid={i === 0 ? 'seasonal-sunrise-arc' : 'seasonal-sunset-arc'}
+            />
+          ) : null,
+        )}
         {path ? (
           <path
             d={path}

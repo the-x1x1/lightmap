@@ -13,3 +13,4 @@ export * from './horizon.ts';
 export * from './level.ts';
 export * from './orientation.ts';
 export * from './frame-marks.ts';
+export * from './seasonal.ts';
