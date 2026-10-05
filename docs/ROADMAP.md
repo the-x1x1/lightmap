@@ -162,8 +162,9 @@ Also delivered: **night planning** — the Moon on the compass rose, moonrise/mo
 timeline, the next four principal phases, and the **Milky Way core**: where the Galactic Centre
 stands and one verdict on whether the sky can show it (daylight / twilight / below the horizon /
 moonlit / low / visible; `milkyWayCore()` in `@lightmap/astronomy`, in the Moon details and on
-the planning card), and the **dark windows ahead** — the next nights the core can be shot, each a
-click away (`milkyWayWindows()`). Geometry only — no sky-brightness or light-pollution model.
+the planning card), the **dark windows ahead** — the next nights the core can be shot, each a
+click away (`milkyWayWindows()`) — and the core as a Light-finder body ("the core over that
+peak", dark-sky nights only). Geometry only — no sky-brightness or light-pollution model.
 
 Also delivered: **camera roll in the frame maths** (`frameCoordinates`/`directionFromFrame`
 optional roll, `levelLineSegment`, roll from the device orientation) — used by the field view

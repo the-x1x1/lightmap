@@ -295,7 +295,11 @@ No lens optical simulation (distortion, rendered blur) in v1.
   camera heading) and the elevation at which the body's upper limb touches the modelled skyline
   there (`ridgeContactElevationDeg`: ridge elevation − semidiameter − refraction) — every date the
   sun sets behind, or rises over, that ridge (plan §26). Terrain-only caveat shown.
-- **Body**: sun, or moon with a minimum illuminated fraction (default 80 %).
+- **Body**: sun; moon with a minimum illuminated fraction (default 80 %); or the **Milky Way
+  core** (the Galactic Centre, a fixed point on the sky that comes round four minutes earlier
+  each night), by default only in a dark sky — astronomical night, no Moon over 30 % lit above
+  the horizon — so "when is the core over that peak?" lists the shootable nights; rows found
+  with the filter off say "sky not dark". Moon and core are night planning (Pro).
 - **Range**: civil dates at the location, default today → +365 days, capped at 1100 days.
   Free plans search inside their date window; the range is clipped and explained, never refused.
 - **Tolerances**: azimuth ±2°, elevation ±1° by default; adjustable. Two detectors feed the

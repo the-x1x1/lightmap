@@ -2,10 +2,11 @@
  * Reverse planning (plan §26): "I want the sun *there* — when does that happen?"
  *
  * Given a viewpoint and a target direction (compass azimuth, optional elevation), scan a range
- * of civil dates and return every instant at which the Sun (or Moon) sits at that azimuth, with
- * the elevation it has at that moment. Callers filter by elevation tolerance to answer questions
- * such as "sun setting behind that ridge" (target elevation = the ridge's elevation angle from the
- * camera) or "full moon rising over the bay" (body = moon, minimum illumination).
+ * of civil dates and return every instant at which the Sun (or the Moon, or the Milky Way's core)
+ * sits at that azimuth, with the elevation it has at that moment. Callers filter by elevation
+ * tolerance to answer questions such as "sun setting behind that ridge" (target elevation = the
+ * ridge's elevation angle from the camera), "full moon rising over the bay" (body = moon, minimum
+ * illumination) or "the core standing over that peak" (body = core, dark sky only).
  *
  * Method: per civil day, sample the body's azimuth every 10 minutes, detect where the wrapped
  * difference to the target changes sign (ignoring the ±180° discontinuity), refine each crossing by
@@ -17,11 +18,13 @@
  * Cost: ~145 evaluations per day; a full year of Sun matches takes a few milliseconds.
  * Pure: no I/O, no Date.now().
  */
-import { moonPosition } from './lunar.ts';
+import { moonHorizonThresholdDeg, moonPosition } from './lunar.ts';
+import { galacticCentrePosition, milkyWayCoreFrom } from './night-sky.ts';
 import { sunPosition } from './solar.ts';
 import { addCivilDays, civilDateString, localDayBounds, type CivilTime } from './time.ts';
 
-export type CelestialBody = 'sun' | 'moon';
+/** The Sun, the Moon, or the Galactic Centre (the Milky Way's core, a fixed point on the sky). */
+export type CelestialBody = 'sun' | 'moon' | 'core';
 
 export interface DirectionTarget {
   /** Compass azimuth of the desired body position, degrees clockwise from north. */
@@ -50,6 +53,11 @@ export interface SolverInput {
   minElevationDegrees?: number;
   /** Moon only: skip instants when the illuminated fraction is below this (0–1). */
   minIlluminatedFraction?: number;
+  /**
+   * Core only: keep an instant only when the sky can show the band — astronomical night and no
+   * Moon brighter than 30 % above the horizon (default true; the core is invisible otherwise).
+   */
+  darkSkyOnly?: boolean;
   /** Safety cap on scanned days (default 1100 ≈ 3 years). */
   maxDays?: number;
 }
@@ -74,6 +82,8 @@ export interface DirectionMatch {
   withinTolerance: boolean;
   /** Moon only. */
   illuminatedFraction: number | null;
+  /** Core only: astronomical night and no bright Moon up at the instant (null for Sun and Moon). */
+  skyDark: boolean | null;
   /** Rising (elevation increasing) or setting at the instant. */
   trend: 'rising' | 'setting';
 }
@@ -105,8 +115,32 @@ function positionOf(body: CelestialBody, t: number, lat: number, lon: number) {
       illuminated: m.illuminatedFraction,
     };
   }
+  if (body === 'core') {
+    const c = galacticCentrePosition(new Date(t), lat, lon);
+    return { azimuth: c.azimuthDeg, elevation: c.elevationDeg, illuminated: null };
+  }
   const s = sunPosition(new Date(t), lat, lon);
   return { azimuth: s.azimuthDeg, elevation: s.elevationDeg, illuminated: null };
+}
+
+/** Core only: is the sky dark enough to show the band at this instant (Sun and Moon state)? */
+function skyDarkAt(
+  core: { azimuth: number; elevation: number },
+  t: number,
+  lat: number,
+  lon: number,
+): boolean {
+  const d = new Date(t);
+  const sunEl = sunPosition(d, lat, lon).elevationDeg;
+  const moon = moonPosition(d, lat, lon);
+  const moonUp = moon.elevationDeg > moonHorizonThresholdDeg(moon.distanceKm);
+  const v = milkyWayCoreFrom(
+    { azimuthDeg: core.azimuth, elevationDeg: core.elevation },
+    sunEl,
+    moonUp,
+    moon.illuminatedFraction,
+  ).verdict;
+  return v !== 'daylight' && v !== 'twilight' && v !== 'moonlit';
 }
 
 /** Bisection on a signed function between two instants that bracket a sign change. */
@@ -147,6 +181,7 @@ export function findDirectionMatches(input: SolverInput): SolverResult {
   const elTol = input.target.elevationToleranceDegrees ?? 1;
   const minEl = input.minElevationDegrees ?? -0.833;
   const minIllum = input.minIlluminatedFraction ?? 0;
+  const darkOnly = input.darkSkyOnly ?? true;
   const maxDays = input.maxDays ?? 1100;
 
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90)
@@ -163,6 +198,8 @@ export function findDirectionMatches(input: SolverInput): SolverResult {
   const record = (dayKey: string, tc: number, via: DirectionMatch['via']) => {
     const p = positionOf(body, tc, lat, lon);
     if (p.elevation < minEl || (p.illuminated ?? 1) < minIllum) return;
+    const skyDark = body === 'core' ? skyDarkAt(p, tc, lat, lon) : null;
+    if (skyDark === false && darkOnly) return;
     // The two detectors can find the same instant (body crossing the bearing exactly at the
     // target elevation); keep one.
     const dup = alignments.find(
@@ -184,6 +221,7 @@ export function findDirectionMatches(input: SolverInput): SolverResult {
       elevationErrorDegrees: elErr,
       withinTolerance: within,
       illuminatedFraction: p.illuminated,
+      skyDark,
       trend: after >= p.elevation ? 'rising' : 'setting',
     });
   };

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { computeDayEvents } from '../src/events.ts';
 import { moonPosition } from '../src/lunar.ts';
+import { galacticCentrePosition, milkyWayCore } from '../src/night-sky.ts';
 import { sunPosition } from '../src/solar.ts';
 import {
   elevationAtAzimuthByDay,
@@ -203,6 +204,55 @@ describe('reverse planning solver', () => {
     expect(bright.alignments.length).toBeLessThan(all.alignments.length);
     for (const a of bright.alignments) expect(a.illuminatedFraction!).toBeGreaterThanOrEqual(0.8);
     expect(bright.alignments.some((a) => a.date === '2026-05-27')).toBe(true);
+  });
+
+  it('core: the Galactic Centre over a bearing, dark-sky nights only', () => {
+    const range = { from: { year: 2026, month: 5, day: 1 }, to: { year: 2026, month: 8, day: 31 } };
+    // The core transits due south from Kailua; ask for it at 180° within ±2°, any elevation.
+    const dark = findDirectionMatches({
+      ...KAILUA,
+      ...range,
+      target: { azimuthDegrees: 180 },
+      body: 'core',
+    });
+    const all = findDirectionMatches({
+      ...KAILUA,
+      ...range,
+      target: { azimuthDegrees: 180 },
+      body: 'core',
+      darkSkyOnly: false,
+    });
+    // Every night has a transit; only the dark, Moon-free ones survive the default filter.
+    expect(all.alignments.length).toBeGreaterThanOrEqual(120);
+    expect(dark.alignments.length).toBeGreaterThan(20);
+    expect(dark.alignments.length).toBeLessThan(all.alignments.length);
+    for (const a of all.alignments) {
+      expect(a.body).toBe('core');
+      expect(a.illuminatedFraction).toBeNull();
+      expect(typeof a.skyDark).toBe('boolean');
+      const check = galacticCentrePosition(a.timestampUtc, KAILUA.latitude, KAILUA.longitude);
+      expect(Math.abs(wrapDelta(check.azimuthDeg - 180))).toBeLessThan(0.02);
+      // Transit height from Kailua: 90 − (21.4 + 29.0).
+      expect(a.elevationDegrees).toBeCloseTo(39.6, 0);
+    }
+    for (const a of dark.alignments) {
+      expect(a.skyDark).toBe(true);
+      expect(milkyWayCore(a.timestampUtc, KAILUA.latitude, KAILUA.longitude).verdict).toBe(
+        'visible',
+      );
+    }
+    // The new-Moon transit (15 June, ~00:40 HST) is in; the full-Moon one (31 May) is out.
+    expect(dark.alignments.some((a) => a.date === '2026-06-15')).toBe(true);
+    expect(dark.alignments.some((a) => a.date === '2026-05-31')).toBe(false);
+    expect(all.alignments.some((a) => a.date === '2026-05-31')).toBe(true);
+    // Sun and Moon matches do not carry a sky verdict.
+    const sun = findDirectionMatches({
+      ...KAILUA,
+      from: range.from,
+      to: range.from,
+      target: { azimuthDegrees: 90 },
+    });
+    expect(sun.alignments[0]?.skyDark).toBeNull();
   });
 
   it('respects maxDays and rejects inverted ranges', () => {

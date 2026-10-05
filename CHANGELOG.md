@@ -16,7 +16,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   edges to the minute and inside the stretch), each a click that jumps the planner to the core's
   peak — or why there are none (no astronomical night, core never up this season, the Moon, or
   only minutes at a time). `milkyWayWindows()`, tested at Kailua, London, the full-Moon nights
-  and the grazing cases.
+  and the grazing cases. The **Light finder** takes the core as a third body: "when does the
+  core stand over that peak?" — bearing/elevation matches like the Sun's, kept only in a dark
+  sky by default (`darkSkyOnly`, `skyDark` on each match).
 - **Moon phase calendar**: the Moon details list the next four principal phases from the selected
   day (New, First quarter, Full, Last quarter, as dates in the planning zone). `nextMoonPhases()`
   in `@lightmap/astronomy` bisects the elongation from the same Meeus series as the positions —

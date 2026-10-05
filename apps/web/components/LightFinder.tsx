@@ -82,6 +82,7 @@ export function LightFinder({
   const [azTol, setAzTol] = useState(2);
   const [elTol, setElTol] = useState(1);
   const [minIllum, setMinIllum] = useState(80);
+  const [darkOnly, setDarkOnly] = useState(true);
   const [from, setFrom] = useState(today);
   const [to, setTo] = useState(() => {
     const t = parseCivilDate(today)!;
@@ -95,7 +96,20 @@ export function LightFinder({
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const bodyState = body === 'moon' ? scene.lunar : scene.solar;
+  const bodyName = body === 'sun' ? 'sun' : body === 'moon' ? 'moon' : 'Milky Way core';
+  // Where the chosen body is right now (the Moon and the core ride on the lunar state).
+  const nowAz =
+    body === 'moon'
+      ? (scene.lunar?.azimuthDegrees ?? null)
+      : body === 'core'
+        ? (scene.nightSky?.azimuthDeg ?? null)
+        : scene.solar.azimuthDegrees;
+  const nowEl =
+    body === 'moon'
+      ? (scene.lunar?.elevationDegrees ?? null)
+      : body === 'core'
+        ? (scene.nightSky?.elevationDeg ?? null)
+        : scene.solar.elevationDegrees;
   const profile = scene.terrainHorizon?.profile ?? null;
   // A new place clears the sampled horizon; ridge mode cannot outlive it.
   useEffect(() => {
@@ -105,8 +119,7 @@ export function LightFinder({
     if (mode === 'pick' && finderTarget)
       return { az: finderTarget.azimuthDeg, el: finderTarget.elevationDeg };
     if (mode === 'pick' || mode === 'frame') return { az: camera.headingDeg, el: camera.pitchDeg };
-    if (mode === 'current' && bodyState)
-      return { az: bodyState.azimuthDegrees, el: bodyState.elevationDegrees };
+    if (mode === 'current' && nowAz !== null && nowEl !== null) return { az: nowAz, el: nowEl };
     if (mode === 'ridge' && profile) {
       // Bearing is typed (defaults to the camera heading); the elevation is where the sun's upper
       // limb touches the modelled skyline at that bearing.
@@ -122,7 +135,8 @@ export function LightFinder({
     finderTarget,
     camera.headingDeg,
     camera.pitchDeg,
-    bodyState,
+    nowAz,
+    nowEl,
     manualAz,
     manualEl,
     profile,
@@ -181,6 +195,7 @@ export function LightFinder({
         // horizon floor (−0.833°); the ridge target must still be reachable.
         ...(mode === 'ridge' ? { minElevationDegrees: target.el - elTol - 1 } : {}),
         ...(body === 'moon' ? { minIlluminatedFraction: minIllum / 100 } : {}),
+        ...(body === 'core' ? { darkSkyOnly: darkOnly } : {}),
         maxDays: 1100,
       });
       setResult({ res, clipped, ms });
@@ -216,8 +231,8 @@ export function LightFinder({
   return (
     <div className="space-y-3" data-testid="light-finder">
       <p className="text-sm text-[var(--lm-text-muted)]">
-        Find every moment when the {body === 'sun' ? 'sun' : 'moon'} sits at a chosen direction from
-        this viewpoint — for example setting behind a ridge, or rising over the bay.
+        Find every moment when the {bodyName} sits at a chosen direction from this viewpoint — for
+        example setting behind a ridge, rising over the bay, or standing over that peak.
       </p>
 
       {/* Body */}
@@ -236,6 +251,14 @@ export function LightFinder({
               ...(moonAllowed
                 ? {}
                 : { locked: true, lockedReason: 'Moon planning is part of Pro.' }),
+            },
+            {
+              value: 'core',
+              label: 'Milky Way core',
+              testId: 'finder-body-core',
+              ...(moonAllowed
+                ? {}
+                : { locked: true, lockedReason: 'Night planning is part of Pro.' }),
             },
           ]}
         />
@@ -297,7 +320,7 @@ export function LightFinder({
           <div className="flex items-center justify-between gap-2 text-xs text-[var(--lm-text-muted)]">
             <span>
               {finderPicking
-                ? 'Click the spot in the 3D view where the sun or moon should be.'
+                ? `Click the spot in the 3D view where the ${bodyName} should be.`
                 : finderTarget
                   ? `Picked ${Math.round(finderTarget.azimuthDeg)}° ${compassLabel(finderTarget.azimuthDeg)}, ${finderTarget.elevationDeg.toFixed(1)}° up — drag the ring in the view to adjust.`
                   : 'Nothing picked yet.'}
@@ -322,14 +345,17 @@ export function LightFinder({
         ) : null}
         {mode === 'ridge' ? (
           <p className="text-xs text-[var(--lm-text-muted)]">
-            Every moment the {body}&rsquo;s upper limb touches the modelled skyline at this bearing
-            — when it sets behind (or rises over) that ridge. Type the bearing; the elevation is
-            read from the sampled terrain ({profile ? `${target.el.toFixed(1)}° here` : '—'}).
-            Terrain only: trees and buildings are not in the model.
+            Every moment the {body === 'core' ? 'core' : `${body}’s upper limb`} touches the
+            modelled skyline at this bearing — when it sets behind (or rises over) that ridge. Type
+            the bearing; the elevation is read from the sampled terrain (
+            {profile ? `${target.el.toFixed(1)}° here` : '—'}). Terrain only: trees and buildings
+            are not in the model.
           </p>
         ) : null}
-        {mode === 'current' && !bodyState ? (
-          <p className="text-xs text-[var(--lm-text-muted)]">Moon data is not available here.</p>
+        {mode === 'current' && nowAz === null ? (
+          <p className="text-xs text-[var(--lm-text-muted)]">
+            {body === 'moon' ? 'Moon' : 'Milky Way core'} data is not available here.
+          </p>
         ) : null}
         <div className="grid grid-cols-2 gap-2">
           <label className="text-xs text-[var(--lm-text-muted)]">
@@ -452,6 +478,17 @@ export function LightFinder({
               />
             </label>
           ) : null}
+          {body === 'core' ? (
+            <label className="col-span-2 flex items-center gap-2 text-xs text-[var(--lm-text-muted)]">
+              <input
+                type="checkbox"
+                checked={darkOnly}
+                onChange={(e) => setDarkOnly(e.target.checked)}
+                data-testid="finder-dark-only"
+              />
+              Dark sky only — astronomical night, no Moon over 30 % lit above the horizon
+            </label>
+          ) : null}
         </div>
       </details>
 
@@ -499,7 +536,7 @@ export function LightFinder({
             onChange={(e) => setHideBehindTerrain(e.target.checked)}
             data-testid="finder-hide-terrain"
           />
-          Hide moments when the {body} is behind the terrain
+          Hide moments when the {bodyName} is behind the terrain
           <span className="sr-only">. {profile.caveat}</span>
         </label>
       ) : null}
@@ -517,7 +554,8 @@ export function LightFinder({
           {matches.length === 0 ? (
             <p className="text-sm text-[var(--lm-text-muted)]">
               Nothing in this range. Widen the tolerances, drop the elevation match, or extend the
-              dates — the {body} may never reach that direction from this latitude.
+              dates — the {bodyName} may never reach that direction from this latitude
+              {body === 'core' && darkOnly ? ', or never in a dark sky' : ''}.
             </p>
           ) : (
             <ol className="max-h-64 space-y-1 overflow-y-auto pr-1 text-sm">
@@ -537,6 +575,7 @@ export function LightFinder({
                       {m.illuminatedFraction !== null
                         ? ` · ${Math.round(m.illuminatedFraction * 100)} % lit`
                         : ''}
+                      {m.skyDark === false ? ' · sky not dark' : ''}
                       {mode !== 'ridge' && behindTerrain(m) ? (
                         <span className="ml-1 text-[color:#ffd27a]" title={profile?.caveat}>
                           · behind terrain
