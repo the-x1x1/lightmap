@@ -1,8 +1,15 @@
-import { isValidTimeZone, localDayBounds, parseCivilDate } from '@lightmap/astronomy';
+import {
+  civilDateString,
+  isValidTimeZone,
+  localDayBounds,
+  parseCivilDate,
+  utcToWallClock,
+} from '@lightmap/astronomy';
 import { cacheRepo } from '@lightmap/database';
 import { gridKey } from '@lightmap/geospatial';
 import { decideWeatherMode, forecastCacheKey, type WeatherSeries } from '@lightmap/weather';
-import { HttpError, errorResponse, json, num, str } from '@/lib/server/http';
+import { can } from '@lightmap/entitlements';
+import { HttpError, errorResponse, forbidByEntitlement, json, num, str } from '@/lib/server/http';
 import { chargeBudget, checkBurst, clientKey } from '@/lib/server/rate-limit';
 import { getServices } from '@/lib/server/services';
 import { requestContext } from '@/lib/server/session';
@@ -38,6 +45,15 @@ export async function GET(req: Request) {
     if (!decision.fetchWorthwhile) throw new HttpError(422, 'outside_horizon', decision.reason);
 
     const ctx = await requestContext();
+    // The reanalysis archive is "unrestricted date planning" (plan §38): the same window rule as
+    // saving a viewpoint, in the requested zone, so a Free plan cannot reach it round the UI.
+    if (decision.mode === 'RECENT_PAST' && -decision.leadHours > caps.historicalDays * 24) {
+      const window = can(ctx.entitlements, 'future_date_planning', {
+        targetDate: civilDateString(civil),
+        today: civilDateString(utcToWallClock(new Date(), tz)),
+      });
+      if (!window.allowed) throw forbidByEntitlement(window);
+    }
     const key = clientKey(req, ctx.user?.id ?? null);
     checkBurst(`weather:${key}`, 30);
     const cell = gridKey({ latitude: lat, longitude: lng });

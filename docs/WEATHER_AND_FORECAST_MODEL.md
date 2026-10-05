@@ -38,7 +38,10 @@ archive** (`archiveDays` in the capabilities; ERA5 from 1940 for Open-Meteo): re
 conditions, labelled "Observed · reanalysis", at MEDIUM confidence because the grid is coarse
 (≈ 10–25 km) and some fields are missing (no visibility, no precipitation probability). It is what
 happened, never a forecast, and "return later and see the forecast become more specific" is
-unaffected. Dates older than any archive stay `PAST`: a scenario, with the reason shown.
+unaffected. The archive is part of unrestricted date planning: `/api/weather` applies the plan's
+date-window rule to archive dates (403 with the upgrade reason for a Free plan beyond its 7 days
+back), the same rule the client's paywall shows. Dates older than any archive stay `PAST`: a
+scenario, with the reason shown.
 
 The API refuses to fetch when `fetchWorthwhile` is false (HTTP 422 `outside_horizon`); the client
 already knows it is in scenario mode and should not have asked.
