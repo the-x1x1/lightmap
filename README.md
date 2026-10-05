@@ -184,7 +184,8 @@ daily account-erasure / cache-purge job once the production database secret exis
 - **Real-reference imagery is disabled** until a licensed provider contract exists.
 - **Night sky**: Cesium's Moon mesh is hidden (it is lit by Cesium's own Sun and renders black at
   night); a moonlit atmosphere halo marks the Moon's position and lights the scene instead. Stars
-  are faint under software GL.
+  are faint under software GL. The Milky Way core verdict and dark windows are geometry (Sun
+  depth, Moon, altitude) — light pollution, airglow and haze are not modelled.
 - **Open-Meteo and Nominatim are development-tier** until commercial arrangements are made.
 - **Legal pages are drafts** pending counsel review; `docs/PRIVACY.md` is the engineering behaviour
   they describe.
