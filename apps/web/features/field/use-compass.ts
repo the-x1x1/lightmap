@@ -11,12 +11,7 @@ import { usePlannerStore } from '@/features/planner/store';
 
 /** 'no-compass': events arrive but carry no compass reference (desktop browsers, some Android builds). */
 export type CompassState =
-  | 'unsupported'
-  | 'idle'
-  | 'requesting'
-  | 'active'
-  | 'denied'
-  | 'no-compass';
+  'unsupported' | 'idle' | 'requesting' | 'active' | 'denied' | 'no-compass';
 
 interface OrientationEventLike extends Event {
   alpha: number | null;
