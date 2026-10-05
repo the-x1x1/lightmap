@@ -28,30 +28,34 @@ describe('shoot countdown on project cards (plan §1 item 10)', () => {
     expect(describeWhen(2)).toBe('in 2 days');
     expect(describeWhen(-1)).toBe('yesterday');
     expect(describeWhen(-3)).toBe('3 days ago');
-    expect(shortCivilDate('2026-10-13')).toBe('13 Oct');
-    expect(shortCivilDate('2026-09-01')).toBe('1 Sep');
-    expect(shortCivilDate('2027-09-01', true)).toBe('1 Sep 2027');
+    expect(shortCivilDate('2026-10-13', false, 'en-GB')).toBe('13 Oct');
+    expect(shortCivilDate('2026-10-13', false, 'en-US')).toBe('Oct 13');
+    expect(shortCivilDate('2026-09-01', false, 'en-GB')).toBe('1 Sep');
+    expect(shortCivilDate('2027-09-01', true, 'en-GB')).toBe('1 Sep 2027');
     expect(shortCivilDate('nonsense')).toBe('nonsense');
   });
 
-  it('says where the forecast stands for the date against the provider horizons (7 / 16 days)', () => {
-    const c = (shootDate: string) => shootCountdown(shootDate, today, OPEN_METEO_CAPABILITIES);
+  it('says where the forecast stands for the date against the provider horizons (7 / 15 days)', () => {
+    const c = (shootDate: string) =>
+      shootCountdown(shootDate, today, OPEN_METEO_CAPABILITIES, 'en-GB');
     expect(c('2026-10-17')).toEqual({
       days: 12,
       when: 'in 12 days',
       forecast: { kind: 'extended' },
       text: 'in 12 days · extended forecast available',
     });
-    expect(c('2026-10-12')?.text).toBe('in 7 days · forecast available');
-    expect(c('2026-10-13')?.text).toBe('in 8 days · extended forecast available');
-    expect(c('2026-10-21')?.text).toBe('in 16 days · extended forecast available');
-    expect(c('2026-10-22')).toEqual({
-      days: 17,
-      when: 'in 17 days',
+    // A day counts as inside a horizon only when its last hour is: 6 and 14 civil days ahead.
+    expect(c('2026-10-11')?.text).toBe('in 6 days · forecast available');
+    expect(c('2026-10-12')?.text).toBe('in 7 days · extended forecast available');
+    expect(c('2026-10-19')?.text).toBe('in 14 days · extended forecast available');
+    expect(c('2026-10-20')).toEqual({
+      days: 15,
+      when: 'in 15 days',
       forecast: { kind: 'ahead', opensOn: '2026-10-06', inDays: 1 },
-      text: 'in 17 days · forecast from tomorrow',
+      text: 'in 15 days · forecast from tomorrow',
     });
-    expect(c('2026-11-20')?.text).toBe('in 46 days · forecast from 4 Nov'); // 20 Nov − 16 days
+    expect(c('2026-10-21')?.text).toBe('in 16 days · forecast from 7 Oct');
+    expect(c('2026-11-20')?.text).toBe('in 46 days · forecast from 6 Nov'); // 20 Nov − 14 days
     expect(c('2026-10-05')?.text).toBe('today · forecast available');
     expect(c('2026-10-01')).toEqual({
       days: -4,

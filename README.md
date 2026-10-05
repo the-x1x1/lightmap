@@ -22,7 +22,7 @@ the shadow probe (a 20 m tower at Sun 11°, shadow measured against `h / tan(el)
   marked; every tick recomputes sun position in well under a millisecond, client-side.
 - Astronomy validated against the US Naval Observatory: sun direction within 0.02°, rise/set to the
   minute, correct on DST days, across the date line, and in polar day/night.
-- Weather: hourly forecast inside the provider horizon (Open-Meteo, 16 days), labelled honestly by
+- Weather: hourly forecast inside the provider horizon (Open-Meteo, 16 forecast days counting today), labelled honestly by
   confidence; beyond it, five deterministic scenarios (Clear · Mostly Clear · Partly Cloudy ·
   Overcast · Rain/Storm) that are never called a forecast.
 - Rendering: directional sunlight and terrain shadows from the computed sun vector, colour

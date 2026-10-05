@@ -66,10 +66,16 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   midnight — a sunset watched, not scrubbed; the clock waits while the thumb is held and
   continues from the drop point; a hidden tab does not make it leap (`usePlayDay`, `advance()`,
   tested; play, pause and pace in the E2E).
-- **Shoot countdown on project cards**: "Shoot 17 Oct · in 12 days · extended forecast
-  available" — civil days to the shoot date and where the provider's forecast stands for it
-  ("forecast from 13 Oct" while out of reach, green "forecast available" inside the reliable
-  horizon; `shootCountdown()`, tested; E2E).
+- **Forecast horizon stated as lead, not as the provider's day count**: Open-Meteo's 16 forecast
+  days include today, so the last day it serves is today + 15 — the declared horizon is now
+  15 × 24 h (the extended band is days 8–15) and a forecast request's `end_date` is clamped to
+  that last day, so a civil day running past it in UTC (any zone west of Greenwich) is cut
+  rather than refused (tested).
+- **Shoot countdown on project cards**: "Shoot 24 Oct · in 19 days · forecast from 9 Oct" —
+  civil days to the shoot date and where the provider's forecast stands for it ("extended
+  forecast available" once the whole day is within reach, green "forecast available" once it is
+  inside the reliable horizon — the planner's own rule, so the card agrees with the viewpoint
+  nudges; `shootCountdown()`, tested; E2E).
 - **Field conditions in the weather details**: the wind with the quarter it blows from ("4 m/s
   from the ENE", "calm"), the humidity, and visibility in sensible units ("600 m", "4.5 km",
   "24 km"); notes when there is something to act on — a fresh breeze and up ("weigh the tripod

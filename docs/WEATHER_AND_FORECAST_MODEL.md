@@ -19,14 +19,15 @@ use historical weather as a future forecast; label scenarios as scenarios.
 
 `decideWeatherMode(selected, now, capabilities)` is the single place the UX mode is chosen. The
 provider declares `reliableHorizonHours`, `maxHorizonHours` and `historicalDays`; Open-Meteo
-declares 7 days, 16 days and 92 days.
+declares 7 days, 15 days of lead (Open-Meteo's 16 forecast days count today, so the last day it
+serves is today + 15 in UTC) and 92 days.
 
 | Lead time (selected − now) | Mode                | Weather confidence | Fetch? | User-facing reason                                                                        |
 | -------------------------- | ------------------- | ------------------ | ------ | ----------------------------------------------------------------------------------------- |
 | ≤ 48 h ahead               | `FORECAST`          | HIGH               | yes    | "Forecast"                                                                                |
 | 48 h – 7 days ahead        | `FORECAST`          | MEDIUM             | yes    | "Forecast, N days ahead"                                                                  |
-| 8 – 16 days ahead          | `EXTENDED_FORECAST` | LOW                | yes    | "Extended forecast, N days ahead — low confidence"                                        |
-| > 16 days ahead            | `SCENARIO`          | SCENARIO           | no     | "Forecast unavailable this far ahead (N days) — compare scenarios"                        |
+| 8 – 15 days ahead          | `EXTENDED_FORECAST` | LOW                | yes    | "Extended forecast, N days ahead — low confidence"                                        |
+| > 15 days ahead            | `SCENARIO`          | SCENARIO           | no     | "Forecast unavailable this far ahead (N days) — compare scenarios"                        |
 | 0 – 92 days ago            | `RECENT_PAST`       | HIGH               | yes    | "Recent conditions from the provider archive"                                             |
 | 92 days – 1940 (archive)   | `RECENT_PAST`       | MEDIUM             | yes    | "Observed conditions N days ago from the reanalysis archive (coarse grid; no visibility)" |
 | Older than the archive     | `PAST`              | SCENARIO           | no     | "Historical weather for N days ago is not loaded — showing a scenario"                    |
@@ -140,7 +141,9 @@ of the direct beam regardless of its total cover.
 - Adapter: `OpenMeteoProvider` (`api.open-meteo.com`, or `customer-api.open-meteo.com` with an API
   key). Hourly fields: cloud cover (total/low/mid/high), precipitation probability and amount,
   humidity, visibility, wind, weather code, DNI, diffuse and shortwave radiation.
-- Horizon: 16 days hourly; LightMap treats ≤ 7 days as reliable. Recent past: `past_days` up
+- Horizon: 16 forecast days hourly, today included, so 15 days of lead; a request's `end_date`
+  is clamped to the last served UTC day, so a civil day that runs past it (any zone west of
+  Greenwich) is cut rather than refused. LightMap treats ≤ 7 days as reliable. Recent past: `past_days` up
   to 92 on the forecast endpoint; older dates from `archive-api.open-meteo.com/v1/archive`
   (`customer-archive-api` with a key; ERA5, ~5 days behind real time) with the fields the archive
   has (no visibility, no precipitation probability).

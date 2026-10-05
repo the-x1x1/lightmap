@@ -1,20 +1,10 @@
 'use client';
-import { useMemo } from 'react';
+import { utcToLocalSelection } from '@lightmap/astronomy';
 import type { ProjectDto } from '@/lib/api-types';
 import { shootCountdown, shortCivilDate } from '@/features/projects/shoot-countdown';
 import { useCapabilities } from '@/features/planner/use-scene';
 import { deviceTimeZone } from '@/features/planner/store';
 import { cx } from '@lightmap/ui';
-
-/** Today's civil date where the reader is (the card is read on the device, not at the place). */
-function todayOnDevice(): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: deviceTimeZone(),
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
-}
 
 export function ProjectCard({
   project,
@@ -26,17 +16,15 @@ export function ProjectCard({
   onSelect: () => void;
 }) {
   const caps = useCapabilities();
-  const weather = caps.data?.weather ?? null;
   const shootDate = project.shootDate;
-  // "Shoot 17 Oct · in 12 days · forecast from 13 Oct": the date's distance and the forecast's reach.
-  const { countdown, label } = useMemo(() => {
-    if (!shootDate) return { countdown: null, label: null };
-    const today = todayOnDevice();
-    return {
-      countdown: shootCountdown(shootDate, today, weather),
-      label: shortCivilDate(shootDate, shootDate.slice(0, 4) !== today.slice(0, 4)),
-    };
-  }, [shootDate, weather]);
+  // "Shoot 24 Oct · in 19 days · forecast from 9 Oct": the date's distance and the forecast's
+  // reach, from today's civil date where the reader is (the card is read on the device, not at
+  // the place). Recomputed on every render — a drawer left open across midnight stays right.
+  const today = utcToLocalSelection(new Date(), deviceTimeZone()).date;
+  const countdown = shootDate ? shootCountdown(shootDate, today, caps.data?.weather ?? null) : null;
+  const label = shootDate
+    ? shortCivilDate(shootDate, shootDate.slice(0, 4) !== today.slice(0, 4))
+    : null;
   return (
     <button
       type="button"

@@ -287,7 +287,7 @@ test('sign in (dev), create a project, save the viewpoint, reload and reopen it'
   await expect(page.getByTestId('project-notes-status')).toHaveText('Saved.');
   await page.getByTestId('project-shoot-date').fill('2026-12-21');
   // The card says the date, how far off it is and where the forecast stands for it.
-  await expect(page.getByTestId('project-card')).toContainText('Shoot 21 Dec');
+  await expect(page.getByTestId('project-card')).toContainText(/Shoot (21 Dec|Dec 21)/);
   await expect(page.getByTestId('project-countdown')).toHaveText(
     /· (in \d+ days|tomorrow|today|yesterday|\d+ days ago)/,
   );

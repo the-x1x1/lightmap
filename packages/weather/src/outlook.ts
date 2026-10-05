@@ -56,10 +56,13 @@ export function hourlyOutlook(
     if (prev && prev.start.getTime() === start.getTime()) starts.pop();
     starts.push({ h, start });
   }
+  const exact = new Map(frames.map((f) => [Date.parse(f.timestamp), f]));
   for (const { h, start } of starts) {
     const t = start.getTime();
     if (t < first || t > last) continue; // only hours the provider actually covered
-    const f = interpolateFrame(frames, start);
+    // The provider's own frame for the hour when it has one (a null stays null there); a blend
+    // only for an hour the frames straddle.
+    const f = exact.get(t) ?? interpolateFrame(frames, start);
     if (!f) continue;
     const params = parametersForForecast(f);
     out.push({
@@ -92,8 +95,8 @@ export interface HourRun {
 /**
  * Contiguous runs of consecutive hours for which `pick` holds — "humidity at or over 95 %
  * 02:00–06:00", "wind at or over 8 m/s 13:00–16:00". Each run is [fromHour, toHour] inclusive;
- * a missing hour (the provider did not cover it) breaks a run. Hours whose field is unknown
- * never qualify.
+ * a missing hour (the provider did not cover it) or one whose field the provider left unknown
+ * breaks a run — nothing is assumed about it.
  */
 export function hourRuns(
   hours: readonly OutlookHour[],

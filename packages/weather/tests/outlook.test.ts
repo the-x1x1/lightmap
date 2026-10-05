@@ -134,14 +134,13 @@ describe('hourRuns / humidHours / windyHours', () => {
   it('groups consecutive qualifying hours; a miss or an unknown value breaks a run', () => {
     const frames: WeatherFrame[] = [];
     for (let u = 10; u <= 33; u++) {
-      // Local 00..23; the provider's range ends at 23:00, so the last run is a single hour.
+      // Local 00..23, one frame per hour; the provider's range ends at 23:00.
       const local = u - 10;
       frames.push(
         frame(u, 20, {
           humidity: local <= 5 || local >= 22 ? 96 : local === 8 || local === 10 ? 95 : 70,
-          // 18:00 and 19:00 unknown: the blend leaves an hour null only when both frames around
-          // it are (18:00); at 19:00 the value is taken from 20:00.
-          windSpeed: local >= 12 && local <= 16 ? 9 : local === 18 || local === 19 ? null : 3,
+          // The provider left 18:00 unknown: the hour's own frame is used as it is, not blended.
+          windSpeed: local >= 12 && local <= 16 ? 9 : local === 18 ? null : 3,
         }),
       );
     }

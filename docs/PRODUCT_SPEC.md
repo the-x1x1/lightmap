@@ -103,7 +103,7 @@ instant, "now", and the provider's declared horizon. Details are in
 | Mode                | When                                                        | What the user sees                                                                              |
 | ------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | `FORECAST`          | ≤ 7 days ahead                                              | "Forecast" badge (HIGH ≤ 48 h, MEDIUM after). Forecast-driven atmosphere is shown first.        |
-| `EXTENDED_FORECAST` | 8–16 days ahead                                             | "Extended forecast — low confidence" badge. Still forecast-driven.                              |
+| `EXTENDED_FORECAST` | 8–15 days ahead                                             | "Extended forecast — low confidence" badge. Still forecast-driven.                              |
 | `SCENARIO`          | Beyond the provider horizon, no provider, or provider error | "Forecast unavailable this far ahead — compare scenarios." Scenario buttons take over.          |
 | `RECENT_PAST`       | ≤ 92 days ago                                               | "Recent conditions from the provider archive." (HIGH)                                           |
 | `RECENT_PAST`       | 92 days ago – the start of the reanalysis archive (1940)    | "Observed · reanalysis" badge (MEDIUM: coarse grid, no visibility). Observed, never a forecast. |
@@ -474,14 +474,17 @@ location, UTC instant (rendered in the location's zone), camera and scenario exa
 
 **As the shoot approaches** (North Star: "return later and see the forecast become more
 specific"): a project card with a shoot date counts down to it and says where the forecast stands
-for that date — "Shoot 17 Oct · in 12 days · extended forecast available", "· forecast from
-13 Oct" while the date is still beyond the provider's reach, "· forecast available" (green) inside
-the reliable horizon, "today", "tomorrow", "3 days ago" (`shootCountdown()`, civil days on the
-reader's device, the year added when it is not this year; tested) — and how many of its viewpoints
+for that date — "Shoot 24 Oct · in 19 days · forecast from 9 Oct" while the date is still beyond
+the provider's reach, "· extended forecast available" once its whole day is within the 15-day
+lead (14 civil days ahead), "· forecast available" (green) once its whole day is inside the
+reliable horizon (6 days ahead with Open-Meteo — the same rule as the ◉ count below, so the card
+never promises a forecast the evening's viewpoint will not get), "today", "tomorrow", "3 days
+ago" (`shootCountdown()`, civil days on the reader's device in the reader's locale, the year added
+when it is not this year; tested) — and how many of its viewpoints
 now sit inside the reliable forecast window ("◉ 2 inside the forecast window", counted by the
 server against the provider's horizon), and each saved viewpoint card compares the weather basis it was saved with against what
 the provider can give today — "◉ Forecast available now — open to see it" once a scenario-saved
-date is inside the reliable horizon, "Extended forecast available (low confidence)" in days 8–16,
+date is inside the reliable horizon, "Extended forecast available (low confidence)" in days 8–15,
 "Date has passed — observed conditions on open" afterwards (`forecastNudge()`, from the same
 horizon rule as the planner). A viewpoint planned after civil dusk also carries a night line —
 "✦ Milky Way core 36° up SSW · dark sky", or "· Moon 97 % lit", "· twilight", "· low in haze",

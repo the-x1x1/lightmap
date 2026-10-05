@@ -13,7 +13,7 @@ import type {
 
 export const FIXTURE_CAPABILITIES: WeatherCapabilities = {
   providerId: 'fixture',
-  maxHorizonHours: 16 * 24,
+  maxHorizonHours: 15 * 24, // as Open-Meteo: 16 forecast days counting today
   reliableHorizonHours: 7 * 24,
   historicalDays: 30,
   archiveDays: 3650,

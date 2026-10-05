@@ -3,7 +3,7 @@
  * SCENARIO". Pure, unit tested, and the single place the UX mode is decided.
  *
  *  - FORECAST           within the provider's reliable horizon (default 7 days)
- *  - EXTENDED_FORECAST  beyond reliable but within what the provider returns (day 8–16):
+ *  - EXTENDED_FORECAST  beyond reliable but within what the provider returns (day 8–15):
  *                       shown as a forecast with a clear "low confidence" badge
  *  - SCENARIO           beyond the provider's horizon, or no provider, or provider error
  *  - RECENT_PAST        the provider serves observed/analysis data: HIGH confidence within the

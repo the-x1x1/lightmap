@@ -6,9 +6,12 @@
  * and an `apikey` parameter. `meta.commercialReview` is `conditional` until a subscription is
  * active — env validation warns in production without `OPEN_METEO_API_KEY`.
  *
- * Forecast horizon: up to 16 days hourly. LightMap treats ≤ 7 days as reliable and 8–16 as
- * "extended, low confidence" (docs/WEATHER_AND_FORECAST_MODEL.md). Archive: recent past via
- * `past_days` up to 92 days.
+ * Forecast horizon: 16 forecast days hourly, counting today — the last day served is today + 15
+ * (UTC, the zone every request asks for). LightMap therefore declares 15 × 24 h and treats ≤ 7 days
+ * as reliable and 8–15 as "extended, low confidence" (docs/WEATHER_AND_FORECAST_MODEL.md); a
+ * request's `end_date` is clamped to that last day so a civil day that runs past it in UTC (any
+ * zone west of Greenwich) still fetches instead of failing. Archive: recent past via `past_days`
+ * up to 92 days.
  */
 import type {
   WeatherCapabilities,
@@ -17,9 +20,14 @@ import type {
   WeatherSeries,
 } from '../model.ts';
 
+/** Forecast days Open-Meteo serves, today included. */
+export const OPEN_METEO_FORECAST_DAYS = 16;
+
 export const OPEN_METEO_CAPABILITIES: WeatherCapabilities = {
   providerId: 'open-meteo',
-  maxHorizonHours: 16 * 24,
+  // Any instant within 15 × 24 h of now falls on a UTC date no later than today + 15, the last
+  // of the 16 forecast days (today included).
+  maxHorizonHours: (OPEN_METEO_FORECAST_DAYS - 1) * 24,
   reliableHorizonHours: 7 * 24,
   historicalDays: 92,
   // ERA5 reanalysis from 1940 (archive-api.open-meteo.com), ~5 days behind real time; the
@@ -125,8 +133,11 @@ export class OpenMeteoProvider implements WeatherProvider {
     url.searchParams.set('timezone', 'UTC');
     url.searchParams.set('timeformat', 'iso8601');
     url.searchParams.set('wind_speed_unit', 'ms');
+    // The last UTC date the forecast endpoint serves; a civil day straddling it is cut there.
+    const lastDay = new Date(this.now().getTime() + (OPEN_METEO_FORECAST_DAYS - 1) * 86_400_000);
+    const end = to.getTime() > lastDay.getTime() ? lastDay : to;
     url.searchParams.set('start_date', isoDate(from));
-    url.searchParams.set('end_date', isoDate(to));
+    url.searchParams.set('end_date', isoDate(from.getTime() > end.getTime() ? from : end));
     if (this.apiKey) url.searchParams.set('apikey', this.apiKey);
     return this.request(url, lat, lng, opts?.signal);
   }

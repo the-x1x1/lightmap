@@ -91,6 +91,35 @@ describe('Open-Meteo normalisation', () => {
     expect(new OpenMeteoProvider().getCapabilities().commercialReview).toBe('conditional');
   });
 
+  it('never asks the forecast endpoint for a day past its sixteenth (today included)', async () => {
+    const seen: string[] = [];
+    const fetchImpl = (async (url: string | URL | Request) => {
+      seen.push(urlOf(url));
+      return new Response(JSON.stringify(sample), { status: 200 });
+    }) as typeof fetch;
+    const now = () => new Date('2026-05-31T20:00:00Z');
+    const p = new OpenMeteoProvider({ fetchImpl, now });
+    // Kailua's civil day 15 days ahead (15 June HST) ends at 09:59 UTC on 16 June: cut to 15 June.
+    await p.getForecast(
+      21.397,
+      -157.727,
+      new Date('2026-06-15T10:00:00Z'),
+      new Date('2026-06-16T09:59:00Z'),
+    );
+    expect(seen[0]).toContain('start_date=2026-06-15');
+    expect(seen[0]).toContain('end_date=2026-06-15');
+    // A day well inside the horizon is requested as asked.
+    await p.getForecast(
+      21.397,
+      -157.727,
+      new Date('2026-06-02T10:00:00Z'),
+      new Date('2026-06-03T09:59:00Z'),
+    );
+    expect(seen[1]).toContain('end_date=2026-06-03');
+    // The declared horizon matches: 15 days of lead at most.
+    expect(p.getCapabilities().maxHorizonHours).toBe(15 * 24);
+  });
+
   it('serves history beyond 92 days from the reanalysis archive without the fields it lacks', async () => {
     const seen: string[] = [];
     const fetchImpl = (async (url: string | URL | Request) => {

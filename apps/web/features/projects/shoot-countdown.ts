@@ -1,7 +1,7 @@
 /**
  * "Return later as a shoot approaches and see the forecast become more specific" (plan §1,
  * item 10), on the project card: how far off the project's shoot date is, and when the
- * provider's forecast reaches it — "Shoot 17 Oct · in 12 days · forecast from 13 Oct". Civil
+ * provider's forecast reaches it — "Shoot 24 Oct · in 19 days · forecast from 9 Oct". Civil
  * dates only (the shoot date is a date, the reader's "today" is a date), so no zone arithmetic.
  * Pure, unit-tested.
  */
@@ -40,18 +40,21 @@ function isoFromUtcDay(t: number): string {
   return new Date(t).toISOString().slice(0, 10);
 }
 
-/** "13 Oct" — the short civil date for a card line; "13 Oct 2027" with `withYear`. */
-export function shortCivilDate(iso: string, withYear = false): string {
+/**
+ * "13 Oct" — the short civil date for a card line, in the reader's locale ("Oct 13" for en-US);
+ * "13 Oct 2027" with `withYear`. Tests pass a locale; the card leaves it to the browser.
+ */
+export function shortCivilDate(iso: string, withYear = false, locale?: string): string {
   const t = utcDay(iso);
   if (t === null) return iso;
-  return new Intl.DateTimeFormat('en-GB', {
+  return new Intl.DateTimeFormat(locale, {
     day: 'numeric',
     month: 'short',
     ...(withYear ? { year: 'numeric' } : {}),
     timeZone: 'UTC',
   })
     .format(new Date(t))
-    .replace(/ Sept\b/, ' Sep');
+    .replace(/\bSept\b/, 'Sep');
 }
 
 /** Whole civil days from `today` to `shootDate`, both YYYY-MM-DD; null when either is malformed. */
@@ -72,22 +75,27 @@ export function describeWhen(days: number): string {
 
 /**
  * The countdown and the forecast's standing for the shoot date. The provider's horizons are in
- * hours from "now"; a shoot `d` days ahead is inside the horizon when its day starts within it,
- * so the day count is compared with the horizon floored to whole days (16 and 7 for Open-Meteo).
- * `caps` null (no provider known yet) leaves the forecast part out.
+ * hours from "now" and the planner classifies an instant (`decideWeatherMode`); a shoot day is
+ * called inside a horizon only when the whole day is — its last hour still within reach at any
+ * time of today — so the card never promises a forecast the evening's viewpoint will not get:
+ * with Open-Meteo's 7 and 15 days of lead that is 6 and 14 civil days ahead, the same rule as the
+ * "inside the forecast window" count. `caps` null (no provider known yet) leaves the forecast
+ * part out.
  */
 export function shootCountdown(
   shootDate: string,
   today: string,
   caps: Pick<WeatherCapabilities, 'maxHorizonHours' | 'reliableHorizonHours'> | null,
+  /** For the "forecast from <date>" wording; the reader's own locale when omitted. */
+  locale?: string,
 ): ShootCountdown | null {
   const days = civilDaysUntil(shootDate, today);
   if (days === null) return null;
   const when = describeWhen(days);
   let forecast: ShootCountdown['forecast'] = null;
   if (caps) {
-    const reach = Math.floor(caps.maxHorizonHours / 24);
-    const reliable = Math.floor(caps.reliableHorizonHours / 24);
+    const reach = Math.floor(caps.maxHorizonHours / 24) - 1;
+    const reliable = Math.floor(caps.reliableHorizonHours / 24) - 1;
     if (days < 0) forecast = { kind: 'past' };
     else if (days <= reliable) forecast = { kind: 'available' };
     else if (days <= reach) forecast = { kind: 'extended' };
@@ -106,6 +114,6 @@ export function shootCountdown(
           ? ' · extended forecast available'
           : forecast.inDays === 1
             ? ' · forecast from tomorrow'
-            : ` · forecast from ${shortCivilDate(forecast.opensOn)}`;
+            : ` · forecast from ${shortCivilDate(forecast.opensOn, false, locale)}`;
   return { days, when, forecast, text: `${when}${tail}` };
 }
