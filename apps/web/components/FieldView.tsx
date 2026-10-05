@@ -21,25 +21,8 @@ import {
 import type { SceneState } from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
 import { usePlannerStore } from '@/features/planner/store';
-import { compassSupported, useCompass } from '@/features/field/use-compass';
+import { useCompass } from '@/features/field/use-compass';
 import { Button } from '@lightmap/ui';
-
-/**
- * A phone (coarse pointer + compass) in a secure context with a camera API. Whether a camera
- * exists is only known when it is asked for; a laptop webcam without a compass is not useful here.
- */
-export function fieldViewSupported(): boolean {
-  return (
-    typeof window !== 'undefined' &&
-    window.isSecureContext &&
-    typeof navigator !== 'undefined' &&
-    typeof navigator.mediaDevices?.getUserMedia === 'function' &&
-    compassSupported() &&
-    (typeof window.matchMedia === 'function'
-      ? window.matchMedia('(pointer: coarse)').matches
-      : false)
-  );
-}
 
 /** Frame coordinates (−1…1, y up) → SVG units: the viewBox is `100·aspect` wide and 100 tall, so circles stay round. */
 const sy = (y: number) => ((1 - y) / 2) * 100;

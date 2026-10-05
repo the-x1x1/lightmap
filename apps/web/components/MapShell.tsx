@@ -27,7 +27,6 @@ import { SheetPeek } from './SheetPeek';
 import { AccountMenu, AccountPanel } from './AccountMenu';
 import { DevBanner } from './DevBanner';
 import { OfflineState } from './states/OfflineState';
-import { FieldView } from './FieldView';
 import { EmptyState } from './states/EmptyState';
 import { ErrorState } from './states/ErrorState';
 import { Paywall } from './Paywall';
@@ -44,6 +43,8 @@ const ClimatologyPanel = dynamic(() =>
 );
 const HourlyOutlook = dynamic(() => import('./HourlyOutlook').then((m) => m.HourlyOutlook));
 const WeatherDetails = dynamic(() => import('./WeatherDetails').then((m) => m.WeatherDetails));
+// Only phones open the field view; its camera and compass code stays out of the first load.
+const FieldView = dynamic(() => import('./FieldView').then((m) => m.FieldView));
 const ProjectDrawer = dynamic(() => import('./ProjectDrawer').then((m) => m.ProjectDrawer));
 const PerfPanel = dynamic(() => import('./PerfPanel').then((m) => m.PerfPanel));
 

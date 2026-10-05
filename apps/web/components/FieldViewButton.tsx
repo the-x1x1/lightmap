@@ -1,7 +1,7 @@
 'use client';
 /** Field view (Phase 9): opens the live camera with the planned sun marked on it. */
 import { useEffect, useState } from 'react';
-import { fieldViewSupported } from '@/components/FieldView';
+import { fieldViewSupported } from '@/features/field/support';
 import { usePlannerStore } from '@/features/planner/store';
 import { Button } from '@lightmap/ui';
 
