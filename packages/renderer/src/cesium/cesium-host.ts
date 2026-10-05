@@ -474,7 +474,7 @@ export class CesiumSceneHost implements SceneHost {
       );
     // Two shared dash materials, assigned only when an entity's kind changes (a material
     // assignment makes the visualizer rebuild); positions follow the radius like the sun's.
-    this.nightMaterials ??= {
+    const materials = (this.nightMaterials ??= {
       moon: new C.PolylineDashMaterialProperty({
         color: C.Color.fromCssColorString('#d8dde6').withAlpha(0.55),
         gapColor: C.Color.TRANSPARENT,
@@ -485,8 +485,7 @@ export class CesiumSceneHost implements SceneHost {
         gapColor: C.Color.TRANSPARENT,
         dashLength: 8,
       }),
-    };
-    const materials = this.nightMaterials;
+    });
     this.nightEntities.forEach((e, i) => {
       const np = o.nightPaths[i];
       if (np && np.points.length > 1) {
