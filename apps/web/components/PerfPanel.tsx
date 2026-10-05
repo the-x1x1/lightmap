@@ -22,7 +22,7 @@ export function PerfPanel({
   getStats: () => HostStats | null;
   qualityLabel: string;
   rendererMode: string;
-  capabilities: { webgl2: boolean; gpu: string | undefined } | null;
+  capabilities: { webgl2: boolean; webgpu?: boolean; gpu: string | undefined } | null;
   weatherCached: boolean | null;
 }) {
   const [stats, setStats] = useState<HostStats | null>(null);
@@ -50,13 +50,17 @@ export function PerfPanel({
     ['Quality', qualityLabel],
     ['FPS', stats ? stats.fps.toFixed(0) : '—'],
     [
+      'Draw calls',
+      stats?.drawCalls !== null && stats?.drawCalls !== undefined ? String(stats.drawCalls) : '—',
+    ],
+    [
       'Terrain tiles',
       stats ? `${stats.terrainTilesLoaded} shown · ${stats.terrainTilesLoading} loading` : '—',
     ],
     [
-      'WebGL2 / GPU',
+      'WebGL2 / WebGPU / GPU',
       capabilities
-        ? `${capabilities.webgl2 ? 'yes' : 'no'} · ${capabilities.gpu ?? 'unknown'}`
+        ? `${capabilities.webgl2 ? 'yes' : 'no'} · ${capabilities.webgpu ? 'yes' : 'no'} · ${capabilities.gpu ?? 'unknown'}`
         : '—',
     ],
     ['Weather cache', weatherCached === null ? '—' : weatherCached ? 'hit' : 'miss/fresh'],

@@ -44,8 +44,10 @@ describe('detectCapabilities (ported from WorldView)', () => {
       hardwareConcurrency: 8,
       matchMedia: () => ({ matches: false }),
       devicePixelRatio: 2,
+      hasWebGpu: true,
     });
     expect(caps.webgl2).toBe(true);
+    expect(caps.webgpu).toBe(true);
     expect(caps.gpu).toBe('ANGLE (Apple, Apple M2)');
     expect(caps.lowPower).toBe(false);
     expect(caps.maxTextureSize).toBe(8192);
@@ -56,6 +58,7 @@ describe('detectCapabilities (ported from WorldView)', () => {
   it('no WebGL2 → overlay mode; low-power heuristics cap quality', () => {
     const none = detectCapabilities({ createCanvas: () => ({ getContext: () => null }) });
     expect(none.webgl2).toBe(false);
+    expect(none.webgpu).toBe(false);
     expect(resolveRenderMode(none)).toBe('OVERLAY');
     expect(resolveRenderMode(none, '3D')).toBe('OVERLAY');
     const gl = fakeGl('SwiftShader', 2048);

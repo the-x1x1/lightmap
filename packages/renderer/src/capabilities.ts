@@ -11,6 +11,8 @@ import type { QualityRung } from './quality-governor.ts';
 
 export interface RendererCapabilities {
   webgl2: boolean;
+  /** `navigator.gpu` exists (plan §27 debug panel); the renderer itself is WebGL2 for now. */
+  webgpu: boolean;
   /** Battery saver / integrated GPU heuristic. */
   lowPower: boolean;
   /** GPU renderer string as WebGL reports it, when exposed. */
@@ -32,6 +34,8 @@ export interface CapabilityProbeEnvironment {
   deviceMemoryGb?: number;
   matchMedia?: (q: string) => { matches: boolean } | null;
   devicePixelRatio?: number;
+  /** Whether a WebGPU adapter entry point exists. */
+  hasWebGpu?: boolean;
 }
 
 /** Probe once with a throwaway canvas; the context is released afterwards. */
@@ -68,6 +72,7 @@ export function detectCapabilities(
   const touch = env.matchMedia?.('(pointer: coarse)')?.matches ?? false;
   return {
     webgl2,
+    webgpu: env.hasWebGpu ?? false,
     lowPower,
     gpu,
     maxTextureSize,
@@ -97,9 +102,10 @@ export function qualityCeiling(caps: RendererCapabilities, ladder: readonly Qual
 
 function defaultEnvironment(): CapabilityProbeEnvironment {
   if (typeof document === 'undefined') return {};
-  const nav = navigator as Navigator & { deviceMemory?: number };
+  const nav = navigator as Navigator & { deviceMemory?: number; gpu?: unknown };
   return {
     createCanvas: () => document.createElement('canvas'),
+    hasWebGpu: nav.gpu !== undefined && nav.gpu !== null,
     hardwareConcurrency: nav.hardwareConcurrency,
     ...(typeof nav.deviceMemory === 'number' ? { deviceMemoryGb: nav.deviceMemory } : {}),
     matchMedia: (q) => (typeof window.matchMedia === 'function' ? window.matchMedia(q) : null),

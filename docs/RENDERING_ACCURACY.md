@@ -166,7 +166,9 @@ take it to Minimal, where terrain shadows are off.
 
 - `pnpm test --filter @lightmap/astronomy` — USNO golden set.
 - `pnpm test --filter @lightmap/renderer` — sun vector mapping, lighting parameters, controller.
-- Dev perf panel (press `` ` `` in development): shows Δ between LightMap's sun vector and Cesium's
-  own ephemeris; expect < 0.5°.
+- Dev perf panel (press `` ` `` in development; plan §27): renderer mode, quality rung, FPS, draw
+  calls (Cesium's command list for the last frame), terrain tiles shown/loading, WebGL2 / WebGPU /
+  GPU string, weather cache hit, and Δ between LightMap's sun vector and Cesium's own ephemeris
+  (expect < 0.5°).
 - Manual: set Kailua, 31 May 2026 12:30 → sun 89° (near zenith, shadows nearly vertical); 18:45 →
   golden, shadows long toward the ENE; 19:30 → blue hour, no direct light.

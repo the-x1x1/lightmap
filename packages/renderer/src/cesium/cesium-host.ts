@@ -638,6 +638,10 @@ export class CesiumSceneHost implements SceneHost {
       };
     };
     const surface = globe._surface;
+    // Cesium refills the frame's command list at the start of each render, so between frames it
+    // holds the last frame's draw commands: the "draw calls" figure the debug panel wants (§27).
+    const commands = (this.scene as unknown as { frameState?: { commandList?: unknown[] } })
+      .frameState?.commandList;
     const sunWC = (
       this.scene as unknown as {
         context?: { uniformState?: { sunDirectionWC?: Cesium.Cartesian3 } };
@@ -650,7 +654,7 @@ export class CesiumSceneHost implements SceneHost {
         (surface?._tileLoadQueueHigh?.length ?? 0) +
         (surface?._tileLoadQueueMedium?.length ?? 0) +
         (surface?._tileLoadQueueLow?.length ?? 0),
-      drawCalls: null,
+      drawCalls: Array.isArray(commands) ? commands.length : null,
       cesiumSunDirectionEcef: sunWC ? { x: sunWC.x, y: sunWC.y, z: sunWC.z } : null,
     };
   }

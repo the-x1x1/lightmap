@@ -4,6 +4,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Dev perf panel** completes plan §27: draw calls (Cesium's per-frame command list) and the
+  WebGPU capability flag beside FPS, terrain tiles, WebGL2/GPU and the weather-cache state.
 - **Preferences (plan §17)**: an "Account & plan" section — signed in or not — for distances
   (metric or imperial: the depth-of-field figures and focus box, the planning card, weather
   visibility and wind), which zone times are shown in (the place's own or the device's; switching
