@@ -2,7 +2,12 @@
 import type { SceneState } from '@lightmap/scene';
 import { describeSeasonalEnvelope, explainScene, formatDeg } from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
-import { formatWallTime, nextMoonPhases, utcToWallClock } from '@lightmap/astronomy';
+import {
+  formatWallTime,
+  nextMoonPhases,
+  utcToWallClock,
+  type MilkyWayCoreState,
+} from '@lightmap/astronomy';
 import { useMemo } from 'react';
 import { useSeasonalEnvelope } from '@/features/planner/use-seasonal';
 import { DayEventMarkers } from './Timeline';
@@ -15,6 +20,15 @@ const PHASE_LABEL = {
 } as const;
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** "36° up SSW — Astronomical night, core 36° up, Moon down" / "below the horizon — …". */
+export function describeMilkyWay(n: MilkyWayCoreState): string {
+  const where =
+    n.elevationDeg > 0
+      ? `${Math.round(n.elevationDeg)}° up ${compassLabel(n.azimuthDeg)}`
+      : 'below the horizon';
+  return `${where} — ${n.reason}`;
+}
 
 /** "Full 31 May · Last quarter 8 Jun · New 15 Jun · First quarter 21 Jun" in the planning zone. */
 export function describeNextPhases(from: Date, timeZone: string): string {
@@ -157,6 +171,19 @@ export function AstronomyDetails({ scene }: { scene: SceneState }) {
           <p className="mt-1 text-xs text-[var(--lm-text-muted)]" data-testid="moon-next-phases">
             Next: {nextPhases}
           </p>
+          {scene.nightSky ? (
+            <p
+              className={
+                scene.nightSky.verdict === 'visible'
+                  ? 'mt-1 text-xs text-[var(--lm-ok)]'
+                  : 'mt-1 text-xs text-[var(--lm-text-muted)]'
+              }
+              data-testid="milky-way"
+              data-verdict={scene.nightSky.verdict}
+            >
+              Milky Way core: {describeMilkyWay(scene.nightSky)}
+            </p>
+          ) : null}
           <p className="mt-1 text-xs text-[var(--lm-text-muted)]">{scene.lunar.accuracyNote}</p>
         </details>
       ) : null}

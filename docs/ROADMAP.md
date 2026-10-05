@@ -158,6 +158,12 @@ Also delivered: the **seasonal envelope** — the year's sunrise/sunset bearings
 from the two solstices, as rim arcs on the compass rose and a line in the sun details
 (`seasonalEnvelope()`; plan §1 "seasonal path").
 
+Also delivered: **night planning** — the Moon on the compass rose, moonrise/moonset on the
+timeline, the next four principal phases, and the **Milky Way core**: where the Galactic Centre
+stands and one verdict on whether the sky can show it (daylight / twilight / below the horizon /
+moonlit / low / visible; `milkyWayCore()` in `@lightmap/astronomy`, in the Moon details and on
+the planning card). Geometry only — no sky-brightness or light-pollution model.
+
 Also delivered: **camera roll in the frame maths** (`frameCoordinates`/`directionFromFrame`
 optional roll, `levelLineSegment`, roll from the device orientation) — used by the field view
 so a hand-held phone's tilt is honoured. The planner's saved camera stays roll-free; a rolled

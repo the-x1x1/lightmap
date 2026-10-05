@@ -134,12 +134,23 @@ selected day ("Next: Last quarter 8 Jun · New 14 Jun · First quarter 21 Jun ·
 the planning zone) — `nextMoonPhases()` from the same lunar series as the positions, within a
 couple of minutes of the almanac.
 
+The Moon section ends with the **Milky Way core** line (plan §38 night planning): where the
+Galactic Centre stands for the selected instant and whether the sky can show it — "36° up SSW —
+Astronomical night, core 36° up, Moon down" — with one verdict in the order a photographer rules
+things out: _daylight_ (Sun above −6°), _twilight_ (above −18°), _below the horizon_, _moonlit_
+(Moon up and more than 30 % lit), _low_ (under 10°, in the thick air) or _visible_. The line is
+green only on _visible_. `milkyWayCoreFrom()` in `@lightmap/astronomy`: the J2000 direction of
+Sgr A\* precessed to the date, the observer's sidereal time, and the Sun and Moon the scene already
+has. It is not a sky-brightness model — light pollution, airglow and haze stay the photographer's
+call — and it says so in the accuracy docs.
+
 **Export card** (Pro, entitlement `export_preview`): one PNG (1200 px wide) built in the browser
 from the current frame (captured at 1280 px from the renderer, or the sky-gradient band when the
 3D preview is unavailable) plus the facts above — place, coordinates, zone, date/time, sun
 elevation/azimuth, light phase and colour temperature, sunrise/sunset, golden and blue hour, solar
 noon, moon, camera heading/pitch/lens and — with the camera tools — the photographer's real lens,
-aperture, focus distance and sharp range ("Depth of field"). The card always shows the source label as a text badge, the
+aperture, focus distance and sharp range ("Depth of field"), the "Milky Way core" line once the
+Sun is below −6°, and the year's envelope ("Across the year"). The card always shows the source label as a text badge, the
 weather line prefixed **Forecast (provider)** / **Observed** / **Scenario (not a forecast)**, the
 five confidence dimensions, the honesty note for the source mode, provider attribution, and
 "Made with LightMap · URL · timestamp". Nothing on the card is generated; the file name is

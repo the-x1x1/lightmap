@@ -63,6 +63,9 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
   await expect(page.getByTestId('moon-next-phases')).toContainText(
     /Last quarter [78] Jun · New 14 Jun/,
   );
+  // Night planning: at noon the Milky Way line rules the sky out before anything else.
+  await expect(page.getByTestId('milky-way')).toHaveAttribute('data-verdict', 'daylight');
+  await expect(page.getByTestId('milky-way')).toContainText('Milky Way core:');
 
   // Source + confidence.
   const source = page.getByTestId('source-mode').first();

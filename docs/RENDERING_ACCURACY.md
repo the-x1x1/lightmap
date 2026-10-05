@@ -22,17 +22,18 @@ The label is never a percentage. The confidence panel shows the independent dime
 Computed by `@lightmap/astronomy` from published algorithms (Meeus; Astronomical Almanac) and
 validated against the US Naval Observatory (`packages/astronomy/tests/fixtures/usno-golden.json`):
 
-| Quantity                                         | Accuracy vs USNO                                                                    | Notes                                                                      |
-| ------------------------------------------------ | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| Sun azimuth/elevation                            | direction within 0.02° (elevation within 0.01°)                                     | Geocentric apparent; refraction available separately for horizon display   |
-| Sunrise, sunset, civil twilight, solar noon      | ±1 minute (±2 at 70° latitude where the Sun grazes the threshold)                   | USNO rounds to the minute                                                  |
-| Nautical/astronomical twilight, golden/blue hour | Same method, thresholds −12°/−18°, −4°…+6°/−6°…−4°                                  | Window definitions are photographic conventions, documented in `events.ts` |
-| Polar day/night                                  | Exact detection; USNO wording reproduced                                            | Solar noon still reported in polar night (twilight peak)                   |
-| Moon azimuth/elevation                           | ±0.02°                                                                              | Meeus ch. 47 (abbreviated ELP-2000/82), nutation, topocentric parallax     |
-| Moon illumination and phase name                 | ±1 %; USNO naming convention                                                        | Principal phase named from its instant for ~1 day                          |
-| Moonrise/set                                     | ±1 min                                                                              |                                                                            |
-| Principal phase instants (New/Quarter/Full)      | ±2 min against the almanac                                                          | Elongation bisected on the same series (`nextMoonPhases`)                  |
-| Time zone conversion                             | Exact for IANA zones via `Intl`; DST gap → shift forward, overlap → earlier instant | Zone lookup from coordinates is geo-tz (ODbL boundaries)                   |
+| Quantity                                           | Accuracy vs USNO                                                                    | Notes                                                                                                                 |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Sun azimuth/elevation                              | direction within 0.02° (elevation within 0.01°)                                     | Geocentric apparent; refraction available separately for horizon display                                              |
+| Sunrise, sunset, civil twilight, solar noon        | ±1 minute (±2 at 70° latitude where the Sun grazes the threshold)                   | USNO rounds to the minute                                                                                             |
+| Nautical/astronomical twilight, golden/blue hour   | Same method, thresholds −12°/−18°, −4°…+6°/−6°…−4°                                  | Window definitions are photographic conventions, documented in `events.ts`                                            |
+| Polar day/night                                    | Exact detection; USNO wording reproduced                                            | Solar noon still reported in polar night (twilight peak)                                                              |
+| Moon azimuth/elevation                             | ±0.02°                                                                              | Meeus ch. 47 (abbreviated ELP-2000/82), nutation, topocentric parallax                                                |
+| Moon illumination and phase name                   | ±1 %; USNO naming convention                                                        | Principal phase named from its instant for ~1 day                                                                     |
+| Moonrise/set                                       | ±1 min                                                                              |                                                                                                                       |
+| Principal phase instants (New/Quarter/Full)        | ±2 min against the almanac                                                          | Elongation bisected on the same series (`nextMoonPhases`)                                                             |
+| Galactic Centre (Milky Way core) azimuth/elevation | ≈0.1° (precession to date; no nutation or aberration)                               | Sgr A* J2000 via Meeus 21.3–21.4; visibility verdict is geometry only (Sun depth, Moon, altitude), not sky brightness |
+| Time zone conversion                               | Exact for IANA zones via `Intl`; DST gap → shift forward, overlap → earlier instant | Zone lookup from coordinates is geo-tz (ODbL boundaries)                                                              |
 
 ## What is simulated
 

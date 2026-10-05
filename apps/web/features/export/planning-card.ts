@@ -153,6 +153,15 @@ export function buildPlanningCard(
       value: `${lensMm.toFixed(lensMm < 10 ? 1 : 0)} mm f/${opts.camera.aperture} at ${dist(opts.camera.focusDistanceM)}: sharp ${dist(dof.nearM)}–${dist(dof.farM)}${dof.infinitySharp ? '' : ` · hyperfocal ${dist(dof.hyperfocalM)}`}`,
     });
   }
+  // Night planning: the Milky Way core once the Sun is well down (with the lunar state).
+  if (scene.nightSky && scene.nightSky.sunElevationDeg <= -6)
+    facts.push({
+      label: 'Milky Way core',
+      value:
+        scene.nightSky.elevationDeg > 0
+          ? `${Math.round(scene.nightSky.elevationDeg)}° up ${compassLabel(scene.nightSky.azimuthDeg)} · ${scene.nightSky.reason}`
+          : scene.nightSky.reason,
+    });
   // The year's envelope: where sunrise and sunset can fall here at all (plan §1 "seasonal path").
   facts.push({
     label: 'Across the year',

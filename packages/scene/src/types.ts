@@ -4,7 +4,7 @@
  * read it; nothing combines weather, astronomy and camera values anywhere else.
  */
 import type { HorizonProfile, TerrainSunEvents } from './horizon.ts';
-import type { LunarState, SolarState, DayEvents } from '@lightmap/astronomy';
+import type { DayEvents, LunarState, MilkyWayCoreState, SolarState } from '@lightmap/astronomy';
 import type { GeoPoint } from '@lightmap/geospatial';
 import type {
   AtmosphereParameters,
@@ -135,6 +135,8 @@ export interface SceneState {
   camera: CameraState;
   solar: SolarState;
   lunar: LunarState | null;
+  /** Milky Way core (night planning); present with the lunar state. */
+  nightSky: MilkyWayCoreState | null;
   dayEvents: DayEvents;
   atmosphere: AtmosphereState;
   environment: EnvironmentState;

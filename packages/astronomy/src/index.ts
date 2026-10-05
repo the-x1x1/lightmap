@@ -55,3 +55,4 @@ export {
   type SolverResult,
 } from './solver.ts';
 export * from './phases.ts';
+export * from './night-sky.ts';

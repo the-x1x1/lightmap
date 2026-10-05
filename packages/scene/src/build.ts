@@ -5,6 +5,8 @@
  */
 import {
   astronomy as defaultAstronomy,
+  galacticCentrePosition,
+  milkyWayCoreFrom,
   utcToWallClock,
   type AstronomyService,
   type DayEvents,
@@ -143,6 +145,15 @@ export function buildSceneState(inputs: SceneInputs): SceneState {
   };
   const solar = svc.getSolarState(solarInput);
   const lunar = inputs.includeLunar ? svc.getLunarState(solarInput) : null;
+  // Night planning rides with the lunar state: the Milky Way core and whether the sky is dark.
+  const nightSky = lunar
+    ? milkyWayCoreFrom(
+        galacticCentrePosition(utc, location.point.latitude, location.point.longitude),
+        solar.elevationDegrees,
+        lunar.isAboveHorizon,
+        lunar.illuminatedFraction,
+      )
+    : null;
   const wall = utcToWallClock(utc, timeZone);
   const dayEvents =
     inputs.dayEvents &&
@@ -184,6 +195,7 @@ export function buildSceneState(inputs: SceneInputs): SceneState {
     camera: inputs.camera,
     solar,
     lunar,
+    nightSky,
     dayEvents,
     atmosphere,
     environment: inputs.environment,

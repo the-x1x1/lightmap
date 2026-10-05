@@ -4,6 +4,13 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Milky Way core** (night planning): the Moon details and the planning card say where the
+  Galactic Centre stands for the selected instant and whether the sky can show it — "36° up SSW —
+  Astronomical night, core 36° up, Moon down" — with one verdict (daylight, twilight, below the
+  horizon, moonlit, low, visible) in the order a photographer rules things out. `milkyWayCore()`
+  / `milkyWayCoreFrom()` in `@lightmap/astronomy`: Sgr A\* precessed from J2000 (Meeus ch. 21),
+  the observer's sidereal time, the scene's own Sun and Moon. Not a sky-brightness model (light
+  pollution and airglow are not modelled), and the docs say so.
 - **Moon phase calendar**: the Moon details list the next four principal phases from the selected
   day (New, First quarter, Full, Last quarter, as dates in the planning zone). `nextMoonPhases()`
   in `@lightmap/astronomy` bisects the elongation from the same Meeus series as the positions —
