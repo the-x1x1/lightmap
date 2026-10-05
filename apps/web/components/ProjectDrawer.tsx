@@ -15,6 +15,7 @@ import { ApiRequestError } from '@/lib/client/api';
 import type { ViewpointDto } from '@/lib/api-types';
 import { Button } from '@lightmap/ui';
 import { ProjectCard } from './ProjectCard';
+import { ProjectNotes } from './ProjectNotes';
 import { SavedViewpointCard } from './SavedViewpointCard';
 import { ErrorState } from './states/ErrorState';
 import { EmptyState } from './states/EmptyState';
@@ -98,6 +99,7 @@ export function ProjectDrawer({
     }
   }
 
+  const selectedProject = project.data?.project ?? null;
   // Group shot variants under their parent; variants of a deleted/unknown parent surface top-level.
   const all = project.data?.project.viewpoints ?? [];
   const ids = new Set(all.map((v) => v.id));
@@ -305,6 +307,18 @@ export function ProjectDrawer({
               Delete project
             </Button>
           </div>
+          {selectedProject ? (
+            <ProjectNotes
+              key={selectedProject.id}
+              project={selectedProject}
+              busy={m.update.isPending}
+              onSave={(patch) =>
+                m.update.mutateAsync({ id: selectedProject.id, ...patch }).then(() => {
+                  setStatus('Project details saved.');
+                })
+              }
+            />
+          ) : null}
           {scene ? (
             <form
               className="flex gap-2"

@@ -238,11 +238,19 @@ test('sign in (dev), create a project, save the viewpoint, reload and reopen it'
   await page.getByTestId('viewpoint-label').fill('Beach, 9am');
   await page.getByTestId('viewpoint-save').click();
   await expect(page.getByTestId('viewpoint-card')).toContainText('Beach, 9am');
+  // Notes and the shoot date are edited in place and survive a reload.
+  await page.getByTestId('project-notes').locator('summary').click();
+  await page.getByTestId('project-notes-text').fill('Park at the boat ramp; permit in the bag.');
+  await page.getByTestId('project-notes-text').blur();
+  await expect(page.getByTestId('project-notes-status')).toHaveText('Saved.');
+  await page.getByTestId('project-shoot-date').fill('2026-12-21');
+  await expect(page.getByTestId('project-card')).toContainText('Shoot 2026-12-21');
 
   await page.reload();
   await page.getByTestId('panel-tab-projects').click();
   await page.getByTestId('project-card').click();
   await expect(page.getByTestId('viewpoint-card')).toContainText('Beach, 9am');
+  await expect(page.getByTestId('project-notes')).toContainText('Park at the boat ramp');
   await page.getByTestId('viewpoint-open').click();
   await expect(page.getByTestId('timeline-time')).toHaveText('09:00');
   await expect(page.getByTestId('location-label')).toContainText('Beach, 9am');

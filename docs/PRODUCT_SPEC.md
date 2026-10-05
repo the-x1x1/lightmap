@@ -388,7 +388,11 @@ events in `buildSceneState` (`packages/scene/tests/{horizon,scene}.test.ts`).
 
 Account required. Limits come from the entitlement snapshot, never from UI constants.
 
-**Project**: `name`, optional `description`/notes, optional `shootDate`, `archivedAt`.
+**Project**: `name`, optional `description`/notes, optional `shootDate`, `archivedAt`. The
+selected project's "Notes & shoot date" section edits both in place (`PATCH /api/projects/:id`):
+notes (≤ 2000 characters — access, parking, permits, the shot list) save when the field loses
+focus or on Ctrl/⌘+Enter, the date on change; the status under the field says unsaved / saving /
+saved / not saved, and the project card shows the shoot date.
 
 **Viewpoint**: `label`, `latitude`, `longitude`, `elevationM` (nullable), `timezone`,
 `headingDeg`, `pitchDeg`, `fieldOfViewDeg`, `focalLengthEquivalentMm` (nullable),
