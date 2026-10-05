@@ -72,7 +72,8 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
 
   // Scrubbing changes the light continuously.
   await setDateTime(page, '2026-05-31', 19 * 60 + 30);
-  await expect(page.getByTestId('preview-light')).toContainText('blue hour');
+  // The Light stat shows the colour temperature; the phase is its sub-line.
+  await expect(page.getByTestId('preview-light-sub')).toContainText('blue hour');
   await expect(overlay).toHaveAttribute('data-sun-elevation', /^-/);
 });
 
@@ -174,6 +175,8 @@ test('sign in (dev), create a project, save the viewpoint, reload and reopen it'
   await page.getByTestId('panel-tab-account').click();
   await page.getByTestId('dev-login-email').fill(`e2e-${Date.now()}@example.com`);
   await page.getByTestId('dev-login-submit').click();
+  // Dev sign-in finishes with a full page load; clicking the tab before it lands is lost.
+  await expect(page.getByTestId('account-button')).toHaveAttribute('data-signed-in', 'true');
   await page.getByTestId('panel-tab-account').click();
   await expect(page.getByTestId('account-panel')).toBeVisible();
   await page.getByTestId('panel-tab-plan').click();

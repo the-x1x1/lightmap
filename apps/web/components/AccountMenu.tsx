@@ -29,6 +29,7 @@ export function AccountMenu() {
           className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-sm font-semibold ring-1 ring-inset ring-white/10 hover:bg-white/15 focus-visible:outline-none focus-visible:[box-shadow:var(--lm-focus)]"
           aria-label="Account"
           data-testid="account-button"
+          data-signed-in={account.signedIn ? 'true' : 'false'}
         >
           {account.signedIn ? (
             initial

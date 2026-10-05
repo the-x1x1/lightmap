@@ -197,7 +197,14 @@ function Stat({
       <div className="font-mono text-base tabular-nums" data-testid={testId}>
         {value}
       </div>
-      {sub ? <div className="truncate text-[11px] text-[var(--lm-text-muted)]">{sub}</div> : null}
+      {sub ? (
+        <div
+          className="truncate text-[11px] text-[var(--lm-text-muted)]"
+          data-testid={testId ? `${testId}-sub` : undefined}
+        >
+          {sub}
+        </div>
+      ) : null}
     </div>
   );
 }
