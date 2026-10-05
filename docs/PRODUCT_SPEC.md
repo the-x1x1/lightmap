@@ -246,6 +246,10 @@ No lens optical simulation (distortion, rendered blur) in v1.
   azimuth, pitch → elevation), the body's current position, or typed azimuth/elevation. Elevation
   matching can be switched off ("any elevation above the horizon"). Picking switches the camera to
   viewpoint mode; a new place clears the pick.
+- **On the ridge** (with a sampled terrain horizon): the target is a bearing (defaulting to the
+  camera heading) and the elevation at which the body's upper limb touches the modelled skyline
+  there (`ridgeContactElevationDeg`: ridge elevation − semidiameter − refraction) — every date the
+  sun sets behind, or rises over, that ridge (plan §26). Terrain-only caveat shown.
 - **Body**: sun, or moon with a minimum illuminated fraction (default 80 %).
 - **Range**: civil dates at the location, default today → +365 days, capped at 1100 days.
   Free plans search inside their date window; the range is clipped and explained, never refused.

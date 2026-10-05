@@ -18,6 +18,11 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   `@vitest/mocker` redirect mocks — dev-only, closed anyway); nodemailer 10.0.9+ across the workspace (GHSA-v53p-9fqp-m79j and
   GHSA-prgh-xp8r-p3m5, high: address-parser denial of service; plus three moderate advisories).
   Only `createTransport`/`sendMail` are used, unchanged across the major.
+- **Light finder: "On the ridge"** — a new target mode with a sampled terrain horizon: type a
+  bearing (defaults to the camera heading) and the finder searches for the moments the sun's (or
+  moon's) upper limb touches the modelled skyline there — the plan's "every date the sun sets
+  behind that ridge". `ridgeContactElevationDeg()` in `@lightmap/scene`, the inverse of
+  `aboveTerrain`, tested to ±0.01°.
 - **Field view (Phase 9 AR sun alignment)**: on a phone in viewpoint mode, "Field view (camera)"
   shows the live back camera with the planned sun and moon marked, the sun's path for the day,
   true level, the modelled ridge and an edge arrow with the turn needed when the sun is out of

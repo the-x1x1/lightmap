@@ -159,6 +159,9 @@ start`).
       motion access), hold the phone up and turn — the heading readout follows the compass within
       a few degrees and tilting changes the pitch; drag the map and it stops following; on a
       desktop browser the button is absent or reports "no compass heading".
+- [ ] Light finder "On the ridge": at a mountain location in the 3D view, choose "On the ridge",
+      keep the camera bearing, search a month — results cluster at the terrain sunset/sunrise
+      times (compare with the "last light over terrain" row), none are tagged behind terrain.
 - [ ] Field view (phone, HTTPS): in viewpoint mode tap "Field view (camera)", allow the camera —
       the live feed appears with the sun marker where the sun actually is when the planner is set
       to "Now" (nudge the field of view until a distant landmark sits where it does in the feed);

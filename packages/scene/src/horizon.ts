@@ -269,3 +269,19 @@ export function terrainSunEvents(
     differsFromAstronomical: firstLightDiffers || lastLightDiffers || visible.length > 1,
   };
 }
+
+/**
+ * The geometric elevation of the Sun's centre when its upper limb just touches the terrain
+ * horizon at `azimuthDeg` — the "sun on the ridge" moment the light finder can search for
+ * (plan §26: "every date the sun sets behind that ridge"). Inverse of `aboveTerrain`'s test,
+ * solved by fixed-point iteration on refraction (which contracts quickly here).
+ */
+export function ridgeContactElevationDeg(
+  profile: Pick<HorizonProfile, 'stepDeg' | 'elevationDeg'>,
+  azimuthDeg: number,
+): number {
+  const ridge = horizonElevationAt(profile, azimuthDeg);
+  let geometric = ridge - SUN_SEMIDIAMETER_DEG;
+  for (let i = 0; i < 8; i++) geometric = ridge - SUN_SEMIDIAMETER_DEG - refractionDeg(geometric);
+  return geometric;
+}

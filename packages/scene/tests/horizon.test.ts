@@ -7,6 +7,7 @@ import {
   horizonProfileFromSamples,
   horizonRingDistances,
   horizonSamplePoints,
+  ridgeContactElevationDeg,
   seaHorizonDipDeg,
   terrainSunEvents,
   type HorizonSample,
@@ -183,5 +184,34 @@ describe('terrain sun events at the edges of the day', () => {
     expect(formatDeg(-0.06)).toBe('-0.1');
     expect(formatDeg(8.48)).toBe('8.5');
     expect(formatDeg(0)).toBe('0.0');
+  });
+});
+
+describe('ridgeContactElevationDeg', () => {
+  it('puts the upper limb exactly on the ridge: just above it clears, just below it does not', () => {
+    const profile = {
+      stepDeg: 3,
+      elevationDeg: new Array<number>(120).fill(0).map((_, i) => (i >= 80 && i <= 100 ? 6 : 0)),
+    };
+    const full = {
+      ...profile,
+      distanceM: new Array<number | null>(120).fill(null),
+      origin: { latitude: 0, longitude: 0 },
+      originGroundM: 0,
+      eyeHeightM: 1.7,
+      maxDistanceM: 40_000,
+      coverage: 1,
+      maxElevationDeg: 6,
+      source: { providerId: 'test', resolutionM: null },
+      caveat: '',
+    };
+    for (const az of [270, 255, 90]) {
+      const e = ridgeContactElevationDeg(profile, az);
+      expect(aboveTerrain(full, az, e + 0.01)).toBe(true);
+      expect(aboveTerrain(full, az, e - 0.01)).toBe(false);
+    }
+    // Against a 6° ridge the contact elevation is a little under 6° (semidiameter and refraction).
+    expect(ridgeContactElevationDeg(profile, 270)).toBeLessThan(6);
+    expect(ridgeContactElevationDeg(profile, 270)).toBeGreaterThan(5.5);
   });
 });

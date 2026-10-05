@@ -3,7 +3,9 @@
  * Light finder — reverse planning (plan §26). "I want the sun *there*: when does that happen?"
  *
  * The target direction comes from the current sun/moon position, from the centre of the
- * viewpoint camera's frame (heading = azimuth, pitch = elevation), or from typed values. The
+ * viewpoint camera's frame (heading = azimuth, pitch = elevation), from typed values, or — with
+ * a sampled terrain horizon — "on the ridge": the sun's upper limb touching the skyline at a
+ * bearing, i.e. every date it sets (or rises) behind that ridge. The
  * solver runs client-side in `@lightmap/astronomy` (a year of Sun alignments is a few ms), so no
  * request leaves the browser. Free plans search inside their date window; Pro searches years.
  */
@@ -17,7 +19,7 @@ import {
   utcToWallClock,
   type CelestialBody,
 } from '@lightmap/astronomy';
-import { aboveTerrain, type SceneState } from '@lightmap/scene';
+import { aboveTerrain, ridgeContactElevationDeg, type SceneState } from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
 import { Button, RadioGroup } from '@lightmap/ui';
 import { usePlannerStore } from '@/features/planner/store';
@@ -25,7 +27,7 @@ import { useSolver } from '@/features/finder/use-solver';
 import type { SerializedMatch, SolverResultDto } from '@/features/finder/solver-types';
 import { Paywall } from './Paywall';
 
-type TargetMode = 'pick' | 'frame' | 'current' | 'manual';
+type TargetMode = 'pick' | 'frame' | 'current' | 'manual' | 'ridge';
 
 export interface LightFinderProps {
   scene: SceneState;
@@ -89,16 +91,33 @@ export function LightFinder({
   const [error, setError] = useState<string | null>(null);
 
   const bodyState = body === 'moon' ? scene.lunar : scene.solar;
+  const profile = scene.terrainHorizon?.profile ?? null;
   const target = useMemo(() => {
     if (mode === 'pick' && finderTarget)
       return { az: finderTarget.azimuthDeg, el: finderTarget.elevationDeg };
     if (mode === 'pick' || mode === 'frame') return { az: camera.headingDeg, el: camera.pitchDeg };
     if (mode === 'current' && bodyState)
       return { az: bodyState.azimuthDegrees, el: bodyState.elevationDegrees };
+    if (mode === 'ridge' && profile) {
+      // Bearing is typed (defaults to the camera heading); the elevation is where the sun's upper
+      // limb touches the modelled skyline at that bearing.
+      const az = Number(manualAz);
+      const bearing = Number.isFinite(az) ? az : camera.headingDeg;
+      return { az: bearing, el: ridgeContactElevationDeg(profile, bearing) };
+    }
     const az = Number(manualAz);
     const el = Number(manualEl);
     return { az: Number.isFinite(az) ? az : 0, el: Number.isFinite(el) ? el : 0 };
-  }, [mode, finderTarget, camera.headingDeg, camera.pitchDeg, bodyState, manualAz, manualEl]);
+  }, [
+    mode,
+    finderTarget,
+    camera.headingDeg,
+    camera.pitchDeg,
+    bodyState,
+    manualAz,
+    manualEl,
+    profile,
+  ]);
 
   function run() {
     void search();
@@ -166,7 +185,6 @@ export function LightFinder({
     setMinutes(sel.minutes);
   }
 
-  const profile = scene.terrainHorizon?.profile ?? null;
   const [hideBehindTerrain, setHideBehindTerrain] = useState(false);
   const behindTerrain = (m: SerializedMatch) =>
     profile !== null && !aboveTerrain(profile, m.azimuthDegrees, m.elevationDegrees);
@@ -217,6 +235,8 @@ export function LightFinder({
           value={mode}
           onChange={(m) => {
             setMode(m);
+            // Ridge mode starts from the camera heading so "the ridge I'm looking at" is one tap.
+            if (m === 'ridge') setManualAz(camera.headingDeg.toFixed(0));
             if (m === 'pick') {
               if (!finderTarget) setFinderPicking(true);
             } else {
@@ -241,6 +261,17 @@ export function LightFinder({
             { value: 'frame', label: 'Centre of frame', testId: 'finder-mode-frame' },
             { value: 'current', label: 'Where it is now', testId: 'finder-mode-current' },
             { value: 'manual', label: 'Type a bearing', testId: 'finder-mode-manual' },
+            {
+              value: 'ridge',
+              label: 'On the ridge',
+              testId: 'finder-mode-ridge',
+              ...(profile
+                ? {}
+                : {
+                    locked: true,
+                    lockedReason: 'Needs the terrain horizon, which is sampled in the 3D view.',
+                  }),
+            },
           ]}
         />
         {mode === 'pick' ? (
@@ -270,6 +301,14 @@ export function LightFinder({
             camera at the spot first.
           </p>
         ) : null}
+        {mode === 'ridge' ? (
+          <p className="text-xs text-[var(--lm-text-muted)]">
+            Every moment the {body}&rsquo;s upper limb touches the modelled skyline at this bearing
+            — when it sets behind (or rises over) that ridge. Type the bearing; the elevation is
+            read from the sampled terrain ({profile ? `${target.el.toFixed(1)}° here` : '—'}).
+            Terrain only: trees and buildings are not in the model.
+          </p>
+        ) : null}
         {mode === 'current' && !bodyState ? (
           <p className="text-xs text-[var(--lm-text-muted)]">Moon data is not available here.</p>
         ) : null}
@@ -283,8 +322,8 @@ export function LightFinder({
               max={360}
               step={0.5}
               className="lm-input mt-1 w-full"
-              value={mode === 'manual' ? manualAz : target.az.toFixed(1)}
-              readOnly={mode !== 'manual'}
+              value={mode === 'manual' || mode === 'ridge' ? manualAz : target.az.toFixed(1)}
+              readOnly={mode !== 'manual' && mode !== 'ridge'}
               onChange={(e) => setManualAz(e.target.value)}
               data-testid="finder-azimuth"
             />
