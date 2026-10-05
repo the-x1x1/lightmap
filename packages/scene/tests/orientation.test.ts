@@ -60,7 +60,11 @@ describe('device orientation → camera pointing', () => {
   it('blendHeading crosses north without the 359→0 jump', () => {
     expect(blendHeading(350, 10, 0.5)).toBeCloseTo(0, 6);
     expect(blendHeading(10, 350, 0.5)).toBeCloseTo(0, 6);
-    expect(blendHeading(90, 100, 0.25)).toBeCloseTo(92.5, 1); // unit-circle blend, near-linear for small steps
+    expect(blendHeading(90, 100, 0.25)).toBeCloseTo(92.5, 9);
+    // A 180° turn must not stall: after a few samples the blend has clearly moved.
+    let h = 270;
+    for (let i = 0; i < 5; i++) h = blendHeading(h, 90, 0.35);
+    expect(Math.abs(h - 90)).toBeLessThan(60);
     expect(blendHeading(0, 180, 0.5)).toBe(180); // opposite headings: take the new one
     expect(blendHeading(45, 45, 0.3)).toBeCloseTo(45, 6);
   });

@@ -81,15 +81,14 @@ export function cameraPointingFromOrientation(o: OrientationAngles): CameraPoint
 }
 
 /**
- * Smooth a heading series without the 359→0 jump: exponential blend on the unit circle.
- * `weight` is the share of the new reading (0–1).
+ * Smooth a heading series without the 359→0 jump: move `weight` (0–1) of the way from the
+ * previous heading to the next along the shorter arc. (A vector average would stall on a 180°
+ * turn — the two unit vectors cancel — so the blend is done on the angle itself.)
  */
 export function blendHeading(previousDeg: number, nextDeg: number, weight: number): number {
   const w = Math.max(0, Math.min(1, weight));
-  const p = previousDeg * DEG;
-  const n = nextDeg * DEG;
-  const x = (1 - w) * Math.cos(p) + w * Math.cos(n);
-  const y = (1 - w) * Math.sin(p) + w * Math.sin(n);
-  if (Math.abs(x) < 1e-12 && Math.abs(y) < 1e-12) return nextDeg;
-  return normalizeHeading(Math.atan2(y, x) / DEG);
+  let d = (((nextDeg - previousDeg) % 360) + 360) % 360;
+  if (d > 180) d -= 360;
+  if (Math.abs(Math.abs(d) - 180) < 1e-9) return normalizeHeading(nextDeg); // opposite: take the new one
+  return normalizeHeading(previousDeg + w * d);
 }

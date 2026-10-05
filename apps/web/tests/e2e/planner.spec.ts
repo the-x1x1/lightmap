@@ -219,3 +219,38 @@ test('mobile: bottom sheet collapses and the map remains usable', async ({ page,
   await page.getByRole('button', { name: 'Expand panel' }).click();
   await expect(page.getByTestId('timeline')).toBeVisible();
 });
+
+test('mobile: "Point with phone" follows synthetic orientation readings and stops on manual input', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(!isMobile, 'mobile project only');
+  await page.goto('/');
+  await pickKailua(page);
+  await page.getByTestId('camera-mode-viewpoint').click();
+  await page.getByTestId('compass-toggle').click();
+  await expect(page.getByTestId('compass-toggle')).toHaveText('Stop following phone');
+  // An upright phone whose back camera points west: W3C alpha 90, beta 90 (absolute).
+  const fire = (alpha: number, beta: number) =>
+    page.evaluate(
+      ([a, b]) => {
+        const e = new Event('deviceorientationabsolute') as Event & Record<string, unknown>;
+        Object.assign(e, { alpha: a, beta: b, gamma: 0, absolute: true });
+        window.dispatchEvent(e);
+      },
+      [alpha, beta] as const,
+    );
+  await fire(90, 90);
+  await expect(page.getByTestId('camera-heading')).toContainText('270° W');
+  await expect(page.getByTestId('compass-status')).toContainText('Following the phone');
+  // Readings are smoothed and throttled: a quarter turn to the south arrives over a few samples.
+  for (let i = 0; i < 12; i++) {
+    await page.waitForTimeout(100);
+    await fire(180, 90);
+  }
+  await expect(page.getByTestId('camera-heading')).toContainText(/^(17[5-9]|18[0-5])° S/);
+  // The heading slider is manual input: the follow ends.
+  await setRangeValue(page.locator('#lm-heading'), 90);
+  await expect(page.getByTestId('compass-toggle')).toHaveText('Point with phone');
+  await expect(page.getByTestId('camera-heading')).toContainText('90° E');
+});
