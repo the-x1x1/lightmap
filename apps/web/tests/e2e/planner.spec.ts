@@ -149,6 +149,19 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
   await expect(page.getByTestId('timeline-rate')).toHaveText('60 min/s');
   await page.getByTestId('timeline-rate').click();
   await expect(page.getByTestId('timeline-rate')).toHaveText('2 min/s');
+
+  // "Tonight": today's date at the beach and the start of astronomical night there, which at
+  // Kailua falls between 19:00 and 21:00 the whole year round.
+  await page.getByTestId('date-tonight').click();
+  const todayAtKailua = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Pacific/Honolulu',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+  await expect(page.getByTestId('date-input')).toHaveValue(todayAtKailua);
+  await expect(page.getByTestId('timeline-time')).toHaveText(/^(19|20):\d\d$/);
+  await expect(page.getByTestId('preview-light-sub')).toContainText(/night|astronomical twilight/);
   await setDateTime(page, '2026-05-31', 19 * 60 + 30);
 });
 

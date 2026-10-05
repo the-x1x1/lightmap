@@ -97,7 +97,8 @@ Run against a built app with `WEATHER_PROVIDER=fixture`, `GEOCODER_PROVIDER=fixt
    `preview-sunset` 19:09, sun elevation ≈ 89°, the seasonal arcs are on the rose and the details
    read "Sunrise 64°–115°" / "noon 45°–88°", a source badge is shown → switch Clear → Overcast
    → assert the grade/atmosphere readouts changed → play the day from 18:00: the clock runs on
-   its own (10 min/s), pause holds it, the pace button cycles 10 → 60 → 2 min/s.
+   its own (10 min/s), pause holds it, the pace button cycles 10 → 60 → 2 min/s → "Tonight"
+   lands on today's date at the beach between 19:00 and 21:00, in astronomical twilight or night.
 2. **Long-range date is a scenario**: choose a date beyond 16 days; the weather badge contains
    "scenario" / "unavailable this far ahead" and never a bare "Forecast" claim.
 3. **Forecast comparison**: choose a date inside the horizon; the (fixture) forecast badge appears;
