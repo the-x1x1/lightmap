@@ -210,8 +210,8 @@ aims the camera where the phone's back camera points (`cameraPointingFromOrienta
 `blendHeading`, `useCompass`), the first piece of field mode.
 
 **AR sun alignment — delivered (unreleased)**: the field view puts the planned sun, its path for
-the day, true level and the modelled ridge over the phone's live camera, with an edge arrow when
-the sun is out of frame (`sunPathInFrame`, `edgeIndicator`, `defaultCameraFeedFovDeg`;
+the day, true level, the modelled ridge and — on a dark sky — the Milky Way core over the phone's
+live camera, with an edge arrow when the sun (or the core) is out of frame (`sunPathInFrame`, `edgeIndicator`, `defaultCameraFeedFovDeg`;
 `FieldView`). Frames never leave the device.
 
 Capacitor or React Native wrapper only after PWA usage proves demand: native install, a native

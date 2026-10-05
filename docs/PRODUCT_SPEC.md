@@ -263,7 +263,10 @@ focal-length preset, and mode.
 - **Field view** (viewpoint mode, phones with a camera, HTTPS): the live back-camera feed with
   the planned sun (and moon) marked on it, the sun's path for the day as a dotted arc, true level
   and the modelled ridge, and an edge arrow with the turn needed when the sun is out of frame
-  ("sun 40° right, 12° up"). Heading and pitch follow the phone (the compass starts with the
+  ("sun 40° right, 12° up"). On a dark sky (Sun below −6°, core up) the Milky Way core is marked
+  the same way — a four-point star in the frame, full on _visible_, faint otherwise, or an edge
+  arrow ("core 30° left") when it is out of frame — so a night shooter can hold the phone up
+  and see where the band will stand at the planned time. Heading and pitch follow the phone (the compass starts with the
   view); "Now" jumps the planner to the present; the feed's field of view starts at a phone-camera
   default (`defaultCameraFeedFovDeg`: 69° across the long side) and can be nudged ±3° until the
   frame matches the eye. The frames never leave the device — nothing is captured, stored or sent

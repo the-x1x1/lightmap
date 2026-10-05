@@ -1,9 +1,9 @@
 'use client';
 /**
  * Field view (roadmap Phase 9 "AR sun alignment"): the phone's live camera behind the planned
- * sun and moon, the sun's path for the day, true level and the modelled skyline — so you can stand
- * at the spot, hold the phone up like a camera and see where the light will be at the planned
- * time. The camera frames never leave the device: nothing is captured, stored or sent.
+ * sun and moon (and, on a dark sky, the Milky Way core), the sun's path for the day, true level
+ * and the modelled skyline — so you can stand at the spot, hold the phone up like a camera and
+ * see where the light will be at the planned time. The camera frames never leave the device: nothing is captured, stored or sent.
  *
  * Heading and pitch come from the compass (`useCompass`); the feed's field of view starts at a
  * sensible default for a phone's main camera and can be nudged until the frame matches the eye.
@@ -173,6 +173,17 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
         ),
       )
     : null;
+  // The Milky Way core on a dark sky (night planning): a star in the frame, or an edge arrow to
+  // it — the night shooter's "where will the core be?" with the phone held up.
+  const core =
+    scene.nightSky && scene.nightSky.elevationDeg > 0 && scene.solar.elevationDegrees <= -6
+      ? scene.nightSky
+      : null;
+  const coreMark = core
+    ? inFrame(frameCoordinates(frame, core.azimuthDeg, core.elevationDeg, aspect, roll))
+    : null;
+  const coreEdge =
+    core && !sunUp ? edgeIndicator(frame, core.azimuthDeg, core.elevationDeg, aspect, roll) : null;
   const path = sunPathInFrame(
     frame,
     scene.location.point,
@@ -316,6 +327,17 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
                 data-testid="field-view-moon"
               />
             ) : null}
+            {coreMark && core ? (
+              <path
+                d={`M${sx(coreMark.x)} ${sy(coreMark.y) - 3} Q${sx(coreMark.x)} ${sy(coreMark.y)} ${sx(coreMark.x) + 3} ${sy(coreMark.y)} Q${sx(coreMark.x)} ${sy(coreMark.y)} ${sx(coreMark.x)} ${sy(coreMark.y) + 3} Q${sx(coreMark.x)} ${sy(coreMark.y)} ${sx(coreMark.x) - 3} ${sy(coreMark.y)} Q${sx(coreMark.x)} ${sy(coreMark.y)} ${sx(coreMark.x)} ${sy(coreMark.y) - 3} Z`}
+                fill="#c9b8ff"
+                fillOpacity={core.verdict === 'visible' ? 0.95 : 0.45}
+                stroke="rgba(0,0,0,0.6)"
+                strokeWidth={0.4}
+                data-testid="field-view-core"
+                data-verdict={core.verdict}
+              />
+            ) : null}
             {sun ? (
               <g data-testid="field-view-sun">
                 <circle
@@ -350,6 +372,31 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
                 {sunEdge.turnRightDeg >= 0 ? 'right' : 'left'}
                 {Math.abs(sunEdge.tiltUpDeg) > 5
                   ? `, ${Math.abs(Math.round(sunEdge.tiltUpDeg))}° ${sunEdge.tiltUpDeg > 0 ? 'up' : 'down'}`
+                  : ''}
+              </span>
+            </div>
+          ) : null}
+          {core && !coreMark && coreEdge ? (
+            <div
+              className="pointer-events-none absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center text-[#c9b8ff]"
+              style={{
+                left: `${Math.min(92, Math.max(8, px(coreEdge.x)))}%`,
+                top: `${Math.min(90, Math.max(10, sy(coreEdge.y)))}%`,
+              }}
+              data-testid="field-view-core-edge"
+            >
+              <span
+                aria-hidden
+                className="block text-3xl leading-none"
+                style={{ transform: `rotate(${coreEdge.angleDeg}deg)` }}
+              >
+                ↑
+              </span>
+              <span className="rounded-full bg-black/60 px-2 py-0.5 text-[11px]">
+                core {Math.abs(Math.round(coreEdge.turnRightDeg))}°{' '}
+                {coreEdge.turnRightDeg >= 0 ? 'right' : 'left'}
+                {Math.abs(coreEdge.tiltUpDeg) > 5
+                  ? `, ${Math.abs(Math.round(coreEdge.tiltUpDeg))}° ${coreEdge.tiltUpDeg > 0 ? 'up' : 'down'}`
                   : ''}
               </span>
             </div>

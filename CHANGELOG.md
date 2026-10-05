@@ -8,7 +8,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   Galactic Centre stands for the selected instant and whether the sky can show it — "36° up SSW —
   Astronomical night, core 36° up, Moon down" — with one verdict (daylight, twilight, below the
   horizon, moonlit, low, visible) in the order a photographer rules things out; the compass rose
-  marks the core as a four-point star on a dark sky. `milkyWayCore()`
+  and the field view mark the core as a four-point star on a dark sky (the field view adds an
+  edge arrow to it when it is out of frame). `milkyWayCore()`
   / `milkyWayCoreFrom()` in `@lightmap/astronomy`: Sgr A\* precessed from J2000 (Meeus ch. 21),
   the observer's sidereal time, the scene's own Sun and Moon. Not a sky-brightness model (light
   pollution and airglow are not modelled), and the docs say so. **Dark windows ahead**: the Moon
