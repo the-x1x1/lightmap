@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDb, type DbHandle } from '../../src/client.ts';
 import { loadMigrations, migrate } from '../../src/migrate.ts';
 import {
+  ArchivedError,
   NotFoundError,
   PROFILE_DEFAULTS,
   cacheRepo,
@@ -151,11 +152,15 @@ run('repositories (integration)', () => {
     const shelf = await projects.list(alice, undefined, { archived: true });
     expect(shelf.find((x) => x.id === p.id)?.viewpointCount).toBe(1);
     expect((await projects.get(alice, p.id)).viewpoints).toHaveLength(1);
+    // The shelf uses no plan: its viewpoints leave the total, and it takes no new ones.
+    expect(await vps.countTotal(alice)).toBe(0);
+    await expect(vps.create(alice, p.id, input)).rejects.toBeInstanceOf(ArchivedError);
     await expect(projects.update(bob, p.id, { archived: false })).rejects.toBeInstanceOf(
       NotFoundError,
     );
     const restored = await projects.update(alice, p.id, { archived: false });
     expect(restored.archivedAt).toBeNull();
+    expect(await vps.countTotal(alice)).toBe(1);
     expect((await projects.list(alice)).some((x) => x.id === p.id)).toBe(true);
     expect(await projects.count(alice)).toBe(before);
     await projects.remove(alice, p.id);

@@ -291,6 +291,7 @@ export function ProjectDrawer({
           <Paywall compact reason={projectDecision.reason ?? ''} />
         ) : null}
         <ArchivedProjects
+          busy={m.update.isPending}
           onRestore={(id) =>
             m.update
               .mutateAsync({ id, archived: false })
@@ -313,43 +314,45 @@ export function ProjectDrawer({
             >
               Saved viewpoints
             </h3>
-            <Button
-              size="sm"
-              variant="ghost"
-              title="Keep the project and its viewpoints out of the way; it frees the plan's project slot"
-              disabled={m.update.isPending}
-              onClick={() => {
-                void m.update
-                  .mutateAsync({ id: selectedId, archived: true })
-                  .then(() => {
-                    setSelectedId(null);
-                    setStatus('Project archived. Find it under “Archived projects”.');
-                    focusHeading('lm-projects-h');
-                  })
-                  .catch(handle);
-              }}
-              data-testid="project-archive"
-            >
-              Archive
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                if (confirm('Delete this project and its viewpoints?')) {
-                  void m.remove
-                    .mutateAsync(selectedId)
+            <div className="flex gap-1">
+              <Button
+                size="sm"
+                variant="ghost"
+                title="Keep the project and its viewpoints out of the way; it frees the plan's project slot"
+                disabled={m.update.isPending}
+                onClick={() => {
+                  void m.update
+                    .mutateAsync({ id: selectedId, archived: true })
                     .then(() => {
                       setSelectedId(null);
-                      setStatus('Project deleted.');
+                      setStatus('Project archived. Find it under “Archived projects”.');
                       focusHeading('lm-projects-h');
                     })
                     .catch(handle);
-                }
-              }}
-            >
-              Delete project
-            </Button>
+                }}
+                data-testid="project-archive"
+              >
+                Archive
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  if (confirm('Delete this project and its viewpoints?')) {
+                    void m.remove
+                      .mutateAsync(selectedId)
+                      .then(() => {
+                        setSelectedId(null);
+                        setStatus('Project deleted.');
+                        focusHeading('lm-projects-h');
+                      })
+                      .catch(handle);
+                  }
+                }}
+              >
+                Delete project
+              </Button>
+            </div>
           </div>
           {selectedProject ? (
             <ProjectNotes
@@ -455,7 +458,13 @@ export function ProjectDrawer({
  * Archived projects, fetched only when the list is opened: each can be restored (it comes back
  * to the active list, selected). Archiving is reversible; deleting is not.
  */
-function ArchivedProjects({ onRestore }: { onRestore: (id: string) => Promise<unknown> }) {
+function ArchivedProjects({
+  onRestore,
+  busy,
+}: {
+  onRestore: (id: string) => Promise<unknown>;
+  busy: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const archived = useArchivedProjects(open);
   const list = archived.data?.projects ?? [];
@@ -493,6 +502,7 @@ function ArchivedProjects({ onRestore }: { onRestore: (id: string) => Promise<un
               size="sm"
               variant="secondary"
               onClick={() => void onRestore(p.id)}
+              disabled={busy}
               aria-label={`Restore ${p.name}`}
               data-testid="archived-project-restore"
             >

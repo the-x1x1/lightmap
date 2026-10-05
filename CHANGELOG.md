@@ -30,8 +30,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   sky by default (`darkSkyOnly`; each match says `dark`, `daylight`, `twilight` or `moonlit`).
 - **Archive projects**: a project can be archived and restored (`archivedAt`, `PATCH
 /api/projects/:id {archived}`, `GET /api/projects?archived=1`); archived projects are kept
-  with their viewpoints, hidden from the active list and not counted toward the plan's project
-  limit — a Free account can shelve a finished shoot and start the next. Integration-tested; E2E.
+  with their viewpoints, hidden from the active list and — with their viewpoints — not counted
+  toward the plan's limits, so a Free account can shelve a finished shoot and start the next; an
+  archived project takes no new viewpoints (409) until restored. Integration-tested; E2E.
 - **Shot list**: a project exported as plain text to copy or download — the call sheet for the
   day, one block per viewpoint in time order (variants under their parent) with the camera, the
   Sun, the day's sunrise/sunset, the Moon and the Milky Way core for night shots, the weather
@@ -58,9 +59,11 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   in `@lightmap/astronomy` bisects the elongation from the same Meeus series as the positions —
   the published 2026 instants (3 Jan full 10:03, 18 Jan new 19:52, 31 May full 08:45, 15 Jun new
   02:54 UTC) come out within two minutes.
-- **Light windows with their lengths** in the Sun & moon details: "Golden hour 05:48–06:36 (48
-  min) · 18:21–19:09 (48 min); blue hour …" (`describeLightWindows()`, tested at Kailua, Tromsø
-  and in polar night).
+- **Light windows with their lengths** in the Sun & moon details: "Golden hour 05:33–06:20 (47
+  min) · 18:37–19:24 (47 min); blue hour 05:23–05:33 (10 min) · …" in the package's bands
+  (golden −4°…+6°, blue −6°…−4°), sampled over the day so midnight-sun and polar-twilight
+  windows are listed too (`describeLightWindows()`, tested at Kailua, Tromsø, Oslo and in polar
+  night). The planning card's blue hour now uses the same band.
 - **Night on the timeline**: ☆ / ★ markers where astronomical night ends and begins (plan §4's
   "night" marker), beside dawn and dusk.
 - **Moonrise and moonset on the timeline** (moon planning): grey ☾ / ☽ markers beside the sun's,

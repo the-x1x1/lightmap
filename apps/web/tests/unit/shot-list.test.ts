@@ -7,6 +7,7 @@ const project: ProjectDto = {
   name: 'Kailua weekend',
   description: 'Park at the boat ramp.\nPermit in the bag.',
   shootDate: '2026-06-15',
+  archivedAt: null,
   createdAt: '2026-05-01T00:00:00Z',
   updatedAt: '2026-05-01T00:00:00Z',
   viewpointCount: 3,

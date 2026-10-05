@@ -176,7 +176,14 @@ export function AstronomyDetails({ scene, windowEnd = null }: AstronomyDetailsPr
   const s = scene.solar;
   const tz = scene.timeZone;
   const seasons = useSeasonalEnvelope(scene);
-  const lightWindows = describeLightWindows(scene.dayEvents, tz);
+  // Sampled over the day (a few ms): once per place, day and zone, never per scrub tick.
+  const lat = scene.location.point.latitude;
+  const lng = scene.location.point.longitude;
+  const dayEvents = scene.dayEvents;
+  const lightWindows = useMemo(
+    () => describeLightWindows(dayEvents, { latitude: lat, longitude: lng }, tz),
+    [dayEvents, lat, lng, tz],
+  );
   return (
     <div className="space-y-3" data-testid="astronomy-details">
       <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">

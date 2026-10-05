@@ -42,6 +42,11 @@ export class NotFoundError extends Error {
   readonly code = 'NOT_FOUND' as const;
 }
 
+/** The project exists and is the caller's, but is archived: restore it before saving into it. */
+export class ArchivedError extends Error {
+  readonly code = 'ARCHIVED' as const;
+}
+
 export interface ProjectInput {
   name: string;
   description?: string | null;
@@ -192,11 +197,13 @@ export function viewpointsRepo(db: Db) {
         .where(and(eq(viewpoints.projectId, projectId), eq(viewpoints.userId, userId)));
       return Number(r?.n ?? 0);
     },
+    /** Viewpoints in the user's active projects (an archived shoot does not use up the plan). */
     async countTotal(userId: string): Promise<number> {
       const [r] = await db
         .select({ n: count() })
         .from(viewpoints)
-        .where(eq(viewpoints.userId, userId));
+        .innerJoin(projects, eq(projects.id, viewpoints.projectId))
+        .where(and(eq(viewpoints.userId, userId), isNull(projects.archivedAt)));
       return Number(r?.n ?? 0);
     },
     async get(
@@ -223,13 +230,15 @@ export function viewpointsRepo(db: Db) {
       input: ViewpointInput,
       snapshot?: SnapshotInput,
     ): Promise<Viewpoint> {
-      // Ownership of the project is verified in the same statement.
+      // Ownership of the project is verified in the same statement; an archived project takes
+      // no new viewpoints (a stale tab could otherwise save into the shelf).
       const [owner] = await db
-        .select({ id: projects.id })
+        .select({ id: projects.id, archivedAt: projects.archivedAt })
         .from(projects)
         .where(and(eq(projects.id, projectId), eq(projects.userId, userId)))
         .limit(1);
       if (!owner) throw new NotFoundError('project not found');
+      if (owner.archivedAt) throw new ArchivedError('project is archived');
       // A variant's parent must be the caller's own viewpoint in the same project, and itself a
       // top-level viewpoint (one level only: a variant of a variant is a variant of the parent).
       let parentViewpointId: string | null = input.parentViewpointId ?? null;

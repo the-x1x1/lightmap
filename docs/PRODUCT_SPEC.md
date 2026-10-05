@@ -147,8 +147,12 @@ the planning zone) — `nextMoonPhases()` from the same lunar series as the posi
 couple of minutes of the almanac.
 
 Under the Sun rows, one line gives the day's windows with their lengths — "Golden hour
-05:48–06:36 (48 min) · 18:21–19:09 (48 min); blue hour 05:23–05:48 (25 min) · 19:09–19:33 (24
-min)" (`describeLightWindows()`; a window that does not occur is left out).
+05:33–06:20 (47 min) · 18:37–19:24 (47 min); blue hour 05:23–05:33 (10 min) · 19:24–19:33 (10
+min)" — in the bands the astronomy package defines (golden −4°…+6°, blue −6°…−4°, the same the
+light phase and the planning card use). The day is sampled, so a window that straddles midnight
+(the midnight-sun golden light at Tromsø, "00:00–02:56 · 22:35–24:00") or never crosses an edge
+inside the day is still listed, clamped to the day (`describeLightWindows()`); a day with
+neither has no line.
 
 The Moon section ends with the **Milky Way core** line (plan §38 night planning): where the
 Galactic Centre stands for the selected instant and whether the sky can show it — "36° up SSW —
@@ -407,8 +411,9 @@ saved / not saved, and the project card shows the shoot date.
 
 **Archive**: a project can be archived (kept with its viewpoints, hidden from the active list,
 listed under "Archived projects" with a Restore button) — reversible, unlike delete. Archived
-projects do not count toward the plan's project limit, so a Free account can shelve a finished
-shoot and start the next; their viewpoints still count toward the viewpoint totals.
+projects and their viewpoints do not count toward the plan's limits, so a Free account can
+shelve a finished shoot and start the next; an archived project takes no new viewpoints until it
+is restored (`409 project_archived`), and archive/restore are audited.
 
 **Shot list** (Pro, entitlement `export_preview`): the selected project as plain text to copy or
 download (`<name>-shot-list.txt`) — the call sheet for the day: one block per viewpoint in time

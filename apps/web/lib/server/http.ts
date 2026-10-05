@@ -1,6 +1,6 @@
 import 'server-only';
 import { NextResponse, after } from 'next/server';
-import { NotFoundError } from '@lightmap/database';
+import { ArchivedError, NotFoundError } from '@lightmap/database';
 import type { EntitlementDecision } from '@lightmap/entitlements';
 import { getServices } from './services.ts';
 
@@ -44,6 +44,16 @@ export function errorResponse(error: unknown): NextResponse {
     return NextResponse.json(
       { error: { code: 'not_found', message: 'Not found' } },
       { status: 404 },
+    );
+  if (error instanceof ArchivedError)
+    return NextResponse.json(
+      {
+        error: {
+          code: 'project_archived',
+          message: 'This project is archived. Restore it to save into it.',
+        },
+      },
+      { status: 409 },
     );
   // The reporter logs (and forwards to the DSN when configured); nothing else touches the error.
   reportError(error, { where: 'api' });

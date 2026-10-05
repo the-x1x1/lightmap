@@ -11,7 +11,8 @@ export async function GET(req: Request) {
   try {
     const ctx = await requireUser();
     // `?archived=1` lists the archived projects instead of the active ones.
-    const archived = new URL(req.url).searchParams.get('archived') === '1';
+    const archivedParam = new URL(req.url).searchParams.get('archived');
+    const archived = archivedParam === '1' || archivedParam === 'true';
     // "Return later as the shoot approaches": count the viewpoints a forecast now covers.
     const now = new Date();
     const horizonHours = getServices().weather.getCapabilities().reliableHorizonHours;

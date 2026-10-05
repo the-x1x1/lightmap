@@ -51,7 +51,16 @@ export async function PATCH(req: Request, { params }: Params) {
       }
       return out;
     });
-    const p = await projectsRepo(requireDb()).update(ctx.user.id, id, patch);
+    const db = requireDb();
+    const p = await projectsRepo(db).update(ctx.user.id, id, patch);
+    if (patch.archived !== undefined)
+      await auditRepo(db).record(
+        patch.archived ? 'project.archived' : 'project.restored',
+        ctx.user.id,
+        {
+          projectId: id,
+        },
+      );
     return json({ project: projectDto(p) });
   } catch (e) {
     return errorResponse(e);

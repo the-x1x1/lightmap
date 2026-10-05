@@ -120,8 +120,9 @@ export function buildPlanningCard(
       value: `${t(ev.goldenHourMorningStart)}–${t(ev.goldenHourMorningEnd)} · ${t(ev.goldenHourEveningStart)}–${t(ev.goldenHourEveningEnd)}`,
     },
     {
+      // The package's band (−6°…−4°), the same the details line and the light phase use.
       label: 'Blue hour',
-      value: `${t(ev.dawn)}–${t(ev.sunrise)} · ${t(ev.sunset)}–${t(ev.civilDusk)}`,
+      value: `${t(ev.dawn)}–${t(ev.goldenHourMorningStart)} · ${t(ev.goldenHourEveningEnd)}–${t(ev.civilDusk)}`,
     },
     { label: 'Solar noon', value: `${t(ev.solarNoon)} · max ${ev.maxElevationDeg.toFixed(1)}°` },
   ];
