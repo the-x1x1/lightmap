@@ -193,7 +193,7 @@ export function Timeline({
             type="button"
             onClick={play.toggle}
             aria-pressed={play.playing}
-            aria-label={play.playing ? 'Pause' : 'Play the day'}
+            aria-label="Play the day"
             title={
               play.playing
                 ? 'Pause'
@@ -212,7 +212,7 @@ export function Timeline({
           <button
             type="button"
             onClick={play.cycleRate}
-            aria-label={`Playback pace ${describeRate(play.rate)}; change`}
+            aria-label={`Playback pace: ${play.rate} day-minutes per second. Change pace`}
             title="Playback pace: day-minutes per second"
             className="h-9 rounded-[var(--lm-radius-sm)] px-1.5 font-mono text-xs tabular-nums text-[var(--lm-text-faint)] hover:text-[var(--lm-text)] focus-visible:outline-none focus-visible:[box-shadow:var(--lm-focus)]"
             data-testid="timeline-rate"
@@ -248,6 +248,10 @@ export function Timeline({
           step={1}
           value={Math.min(minutes, 1439)}
           onChange={(e) => setMinutes(Number(e.target.value))}
+          // While the thumb is held the playing clock waits, so a drag lands where the finger stops.
+          onPointerDown={() => play.hold(true)}
+          onPointerUp={() => play.hold(false)}
+          onPointerCancel={() => play.hold(false)}
           onKeyDown={(e) => {
             // Page keys jump an hour; Home/End go to sunrise/sunset when known.
             if (e.key === 'PageUp') {
@@ -290,6 +294,7 @@ export function Timeline({
                 ? '; the sun does not rise here today'
                 : ''}
           {markers.length > 0 ? '. Square brackets jump to the previous or next event.' : '.'}
+          {' The play button runs the clock by itself; its pace button sets the speed.'}
         </p>
         <div className="relative mt-0.5 h-8" aria-hidden>
           {markers.map((mk) => {

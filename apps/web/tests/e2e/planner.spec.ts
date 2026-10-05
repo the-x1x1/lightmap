@@ -136,7 +136,8 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
   await expect(page.getByTestId('timeline-rate')).toHaveText('10 min/s');
   await play.click();
   await expect(play).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByTestId('timeline-time')).toHaveText(/^18:(0[5-9]|1\d|2\d)$/, {
+  // Any later minute of the hour: the window stays valid for the whole wait (18:01–18:59).
+  await expect(page.getByTestId('timeline-time')).toHaveText(/^18:(0[1-9]|[1-5]\d)$/, {
     timeout: 5000,
   });
   await play.click();
@@ -447,7 +448,8 @@ test.describe('preferences', () => {
     await setDateTime(page, soon.toISOString().slice(0, 10), 14 * 60);
     await page.getByTestId('details-weather').locator('summary').click();
     const weather = page.getByTestId('weather-details');
-    // The fixture blows 4 m/s from 60°: "9 mph from the ENE" (moderate — no field note).
+    // The fixture blows 4 m/s from 60°: "9 mph from the ENE" — a moderate breeze, and its
+    // humidity stays at or under 85 %, so no field note even in the small hours.
     await expect(weather).toContainText(/\d+ mph from the ENE/);
     await expect(weather).not.toContainText('m/s');
     await expect(weather).toContainText(/\d+ mi/);

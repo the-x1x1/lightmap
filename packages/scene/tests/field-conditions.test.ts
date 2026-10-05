@@ -37,9 +37,11 @@ describe('wind (Beaufort bands)', () => {
     expect(windStrength(3.4)).toBe('moderate');
     expect(windStrength(7.9)).toBe('moderate');
     expect(windStrength(8)).toBe('fresh');
-    expect(windStrength(13.8)).toBe('fresh');
-    expect(windStrength(13.9)).toBe('strong');
-    expect(windStrength(17.1)).toBe('strong');
+    expect(windStrength(10.7)).toBe('fresh');
+    expect(windStrength(10.8)).toBe('strong');
+    expect(windStrength(13.8)).toBe('strong');
+    expect(windStrength(13.9)).toBe('near-gale');
+    expect(windStrength(17.1)).toBe('near-gale');
     expect(windStrength(17.2)).toBe('gale');
     expect(windStrength(30)).toBe('gale');
   });
@@ -63,7 +65,8 @@ describe('wind (Beaufort bands)', () => {
 
   it('warns from a fresh breeze up', () => {
     expect(describeWind(9, 270).note).toMatch(/^fresh — weigh the tripod down/);
-    expect(describeWind(15, 270).note).toMatch(/^strong — tripod shake likely/);
+    expect(describeWind(12, 270).note).toMatch(/^strong — tripod shake likely/);
+    expect(describeWind(15, 270).note).toMatch(/^near gale — a weighted tripod/);
     expect(describeWind(20, 270).note).toMatch(/^gale — hand-held only/);
   });
 });
@@ -73,29 +76,45 @@ describe('visibility', () => {
     expect(formatVisibility(600)).toBe('600 m');
     expect(formatVisibility(4_500)).toBe('4.5 km');
     expect(formatVisibility(24_000)).toBe('24 km');
+    // No "1000 m" and no "10.0 km" at the steps.
+    expect(formatVisibility(999.4)).toBe('999 m');
+    expect(formatVisibility(999.6)).toBe('1.0 km');
+    expect(formatVisibility(9_949)).toBe('9.9 km');
+    expect(formatVisibility(9_950)).toBe('10 km');
   });
-  it('imperial: feet to the hundred below half a mile, then miles', () => {
+  it('imperial: feet (to ten in fog, to a hundred above a thousand) below half a mile, then miles', () => {
+    expect(formatVisibility(12, 'imperial')).toBe('40 ft');
     expect(formatVisibility(600, 'imperial')).toBe('2000 ft');
+    expect(formatVisibility(804, 'imperial')).toBe('2600 ft');
+    expect(formatVisibility(805, 'imperial')).toBe('0.5 mi');
     expect(formatVisibility(4_500, 'imperial')).toBe('2.8 mi');
+    expect(formatVisibility(16_000, 'imperial')).toBe('9.9 mi');
+    expect(formatVisibility(16_020, 'imperial')).toBe('10 mi');
     expect(formatVisibility(24_000, 'imperial')).toBe('15 mi');
   });
 });
 
 describe('moisture on the glass', () => {
-  it('fog is visibility under a kilometre or a fog code, whatever the humidity', () => {
+  it('fog is a fog code, or visibility under a kilometre with nothing falling', () => {
     expect(isFog(frame({ visibility: 999 }))).toBe(true);
+    expect(isFog(frame({ visibility: 999, weatherCode: null }))).toBe(true);
     expect(isFog(frame({ visibility: 1000 }))).toBe(false);
     expect(isFog(frame({ weatherCode: 45 }))).toBe(true);
-    expect(isFog(frame({ weatherCode: 48 }))).toBe(true);
+    expect(isFog(frame({ weatherCode: 48, visibility: null }))).toBe(true);
+    // Heavy rain or snow cuts the view too; that is not fog.
+    expect(isFog(frame({ visibility: 500, weatherCode: 65 }))).toBe(false);
+    expect(isFog(frame({ visibility: 500, weatherCode: 75 }))).toBe(false);
     expect(moistureRisk(frame({ visibility: 500, humidity: 60 }), 30)).toBe('fog');
     expect(moistureRisk(frame({ weatherCode: 45, humidity: null }), 30)).toBe('fog');
   });
 
-  it('dew is likely near saturation, by day or night', () => {
-    expect(moistureRisk(frame({ humidity: 95 }), 40)).toBe('dew-likely');
+  it('near saturation: dew at night, mist by day', () => {
+    expect(moistureRisk(frame({ humidity: 95 }), -1)).toBe('dew-likely');
     expect(moistureRisk(frame({ humidity: 98, cloudCoverTotal: 100, windSpeed: 12 }), -20)).toBe(
       'dew-likely',
     );
+    expect(moistureRisk(frame({ humidity: 95 }), 0)).toBe('mist');
+    expect(moistureRisk(frame({ humidity: 97 }), 40)).toBe('mist');
     expect(moistureRisk(frame({ humidity: 94 }), 40)).toBeNull();
   });
 
@@ -130,8 +149,11 @@ describe('fieldConditions', () => {
       note: 'near saturation — dew on the glass is likely; a lens warmer or a deep hood helps',
     });
     expect(fieldConditions(frame({ visibility: 300 }), 5)[1]?.note).toMatch(/^fog — lenses mist/);
+    expect(fieldConditions(frame({ humidity: 96 }), 20)[1]?.note).toMatch(
+      /^near saturation — mist/,
+    );
     expect(fieldConditions(frame({ humidity: 88, windSpeed: 1 }), -5)[1]?.note).toMatch(
-      /^a calm, clear night this humid/,
+      /^a calm, mostly clear night this humid/,
     );
   });
 

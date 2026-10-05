@@ -78,8 +78,10 @@ button beside the clock runs the timeline by itself at a chosen pace — 2, 10 o
 per real second (a golden hour in half a minute; the whole day in 2½ minutes or in 24 s), cycled
 by the pace button — and starts over at midnight, so a sunset can be watched again. The clock
 moves through the store like a scrub, so the sun, shadows, sky, markers and the preview all
-follow; a drag while playing is honoured and playback continues from where the thumb was dropped.
-Playback stops when the timeline leaves the screen (`usePlayDay`, `advance()`; tested).
+follow; while the thumb is held the clock waits, and playback continues from where it was
+dropped. A hidden tab's throttled ticks count for at most a second each, so coming back finds the
+clock near where it was. Playback stops when the plan panel is left (`usePlayDay`, `advance()`;
+tested). A 25-hour (fall-back) day plays as 24 and wraps there, as the timeline's range does.
 
 Date is chosen with a date control (±1 day, a date input, "Now", and "Tonight" — today at the
 start of astronomical night here, an hour after sunset where the sky never gets that dark, 21:00
@@ -132,13 +134,15 @@ the locked block with the paywall reason.
 **Weather details** (any plan). The details drawer lists what the frame says beyond the light:
 cloud cover, the direct and diffuse shares, haze, the WMO conditions, rain chance, visibility
 ("600 m", "4.5 km", "24 km"; feet and miles on imperial), **wind** with the quarter it blows from
-("4 m/s from the ENE"; "calm" below 0.5 m/s) and **humidity**. Two field notes follow when there is
-something to act on (plan §1 B's humidity, fog and wind): from a fresh breeze up (Beaufort 5,
-8 m/s) the wind line says so — "weigh the tripod down; clouds streak in a long exposure", then
-"tripod shake likely; find a lee", then "hand-held only" from a gale — and the humidity line calls
-**fog** (visibility under 1 km or a fog code: "lenses mist within minutes"), **dew likely** at
-≥ 95 % whatever the sky, or **dew possible** on a calm (Beaufort ≤ 2), mostly clear (≤ 50 %) night
-at ≥ 85 %, since cloud and wind both keep a surface from cooling below the dew point
+("4 m/s from the ENE"; "calm" below 0.5 m/s) and **humidity**. Up to two field notes follow when
+there is something to act on (plan §1 B's humidity, fog and wind): from a fresh breeze up
+(Beaufort 5, 8 m/s) the wind line says so — "weigh the tripod down; clouds streak in a long
+exposure" (fresh), "tripod shake likely; find a lee" (strong, Beaufort 6), "a weighted tripod in a
+lee at best" (near gale, 7), "hand-held only" (gale, 8 and up) — and the humidity line calls
+**fog** (a fog code, or visibility under 1 km with nothing falling: "lenses mist within minutes"),
+**dew likely** at ≥ 95 % after sunset (by day the same air is **mist**: "glass from a cool car or
+bag fogs at once"), or **dew possible** on a calm (Beaufort ≤ 2), mostly clear (≤ 50 %) night at
+≥ 85 %, since cloud and wind both keep a surface from cooling below the dew point
 (`fieldConditions()` in `@lightmap/scene`, tested). Scenario days carry no frame and no notes.
 
 **Typical for this month** (Pro, entitlement `climatology`). Under the scenario buttons: the share

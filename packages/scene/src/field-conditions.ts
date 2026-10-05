@@ -11,19 +11,24 @@ import { compassLabel } from '@lightmap/geospatial';
 import type { WeatherFrame } from '@lightmap/weather';
 import { M_PER_MI, feetFromMetres, type DistanceUnits } from './optics.ts';
 
-export type WindStrength = 'calm' | 'light' | 'moderate' | 'fresh' | 'strong' | 'gale';
+export type WindStrength =
+  'calm' | 'light' | 'moderate' | 'fresh' | 'strong' | 'near-gale' | 'gale';
 
-/** Beaufort 0 / 1–2 / 3–4 / 5–6 / 7 / 8 and above, from the speed in m/s. */
+/**
+ * Beaufort's names from the speed in m/s: 0 calm; 1–2 light (air, breeze); 3–4 moderate (gentle,
+ * moderate); 5 fresh; 6 strong; 7 near gale; 8 and above gale.
+ */
 export function windStrength(mps: number): WindStrength {
   if (mps < 0.5) return 'calm';
   if (mps < 3.4) return 'light';
   if (mps < 8) return 'moderate';
-  if (mps < 13.9) return 'fresh';
-  if (mps < 17.2) return 'strong';
+  if (mps < 10.8) return 'fresh';
+  if (mps < 13.9) return 'strong';
+  if (mps < 17.2) return 'near-gale';
   return 'gale';
 }
 
-export type MoistureRisk = 'fog' | 'dew-likely' | 'dew-possible' | null;
+export type MoistureRisk = 'fog' | 'mist' | 'dew-likely' | 'dew-possible' | null;
 
 export interface FieldLine {
   label: 'Wind' | 'Humidity';
@@ -34,7 +39,7 @@ export interface FieldLine {
 }
 
 const MPH_PER_MPS = 3600 / M_PER_MI;
-/** Dew is likely once the air is this close to saturation, whatever the sky. */
+/** The air is within about a degree of its dew point from here: dew at night, mist by day. */
 export const DEW_LIKELY_HUMIDITY = 95;
 /** On a calm, mostly clear night, surfaces cool below the dew point from here up. */
 export const DEW_POSSIBLE_HUMIDITY = 85;
@@ -48,17 +53,20 @@ export function formatWindSpeed(mps: number, units: DistanceUnits = 'metric'): s
 
 /**
  * Visibility in the chosen units: metres below a kilometre, a tenth of a kilometre below ten,
- * whole kilometres above ("600 m", "4.5 km", "24 km"); imperial as feet below half a mile, then
- * miles to a tenth below ten and whole miles above.
+ * whole kilometres above ("600 m", "4.5 km", "24 km"); imperial as feet below half a mile (to
+ * ten feet in dense fog, to a hundred above a thousand), then miles to a tenth below ten and
+ * whole miles above. The rounding steps are chosen so no value prints as "1000 m" or "10.0 km".
  */
 export function formatVisibility(m: number, units: DistanceUnits = 'metric'): string {
   if (units === 'metric') {
-    if (m < 1000) return `${Math.round(m)} m`;
-    if (m < 10_000) return `${(m / 1000).toFixed(1)} km`;
+    if (m < 999.5) return `${Math.round(m)} m`;
+    if (m < 9950) return `${(m / 1000).toFixed(1)} km`;
     return `${Math.round(m / 1000)} km`;
   }
-  if (m < M_PER_MI / 2) return `${Math.round(feetFromMetres(m) / 100) * 100} ft`;
-  if (m < 10 * M_PER_MI) return `${(m / M_PER_MI).toFixed(1)} mi`;
+  const ft = feetFromMetres(m);
+  if (m < M_PER_MI / 2)
+    return `${ft < 1000 ? Math.round(ft / 10) * 10 : Math.round(ft / 100) * 100} ft`;
+  if (m < 9.95 * M_PER_MI) return `${(m / M_PER_MI).toFixed(1)} mi`;
   return `${Math.round(m / M_PER_MI)} mi`;
 }
 
@@ -68,6 +76,7 @@ const WIND_NOTE: Record<WindStrength, string | null> = {
   moderate: null,
   fresh: 'fresh — weigh the tripod down; clouds streak in a long exposure',
   strong: 'strong — tripod shake likely; find a lee',
+  'near-gale': 'near gale — a weighted tripod in a lee at best; spray and dust fly',
   gale: 'gale — hand-held only; spray and dust fly',
 };
 
@@ -85,19 +94,21 @@ export function describeWind(
   return { label: 'Wind', value, note: WIND_NOTE[strength] };
 }
 
-/** Fog by the frame's own evidence: the WMO visibility threshold or a fog weather code. */
+/**
+ * Fog by the frame's own evidence: a fog weather code, or visibility under the WMO kilometre
+ * when nothing is falling (a precipitation code, 51 and up, means rain or snow cut the view).
+ */
 export function isFog(frame: Pick<WeatherFrame, 'visibility' | 'weatherCode'>): boolean {
-  return (
-    (frame.visibility !== null && frame.visibility < FOG_VISIBILITY_M) ||
-    frame.weatherCode === 45 ||
-    frame.weatherCode === 48
-  );
+  if (frame.weatherCode === 45 || frame.weatherCode === 48) return true;
+  const precipitating = frame.weatherCode !== null && frame.weatherCode >= 51;
+  return !precipitating && frame.visibility !== null && frame.visibility < FOG_VISIBILITY_M;
 }
 
 /**
- * The moisture risk for the glass. Fog outranks dew; dew is "possible" only when the night is
- * calm (Beaufort ≤ 2) and no more than half covered, since cloud and wind both keep a surface
- * from cooling below the dew point.
+ * The moisture risk for the glass. Fog outranks the rest. Near saturation the night brings dew
+ * (a lens radiates below the dew point) and the day mist in the air; dew is "possible" only when
+ * the night is calm (Beaufort ≤ 2) and no more than half covered, since cloud and wind both keep
+ * a surface from cooling below the dew point.
  */
 export function moistureRisk(
   frame: Pick<
@@ -108,7 +119,7 @@ export function moistureRisk(
 ): MoistureRisk {
   if (isFog(frame)) return 'fog';
   if (frame.humidity === null) return null;
-  if (frame.humidity >= DEW_LIKELY_HUMIDITY) return 'dew-likely';
+  if (frame.humidity >= DEW_LIKELY_HUMIDITY) return sunElevationDeg < 0 ? 'dew-likely' : 'mist';
   const calm = frame.windSpeed !== null && frame.windSpeed < 3.4; // Beaufort 0–2
   if (
     frame.humidity >= DEW_POSSIBLE_HUMIDITY &&
@@ -122,8 +133,9 @@ export function moistureRisk(
 
 const MOISTURE_NOTE: Record<Exclude<MoistureRisk, null>, string> = {
   fog: 'fog — lenses mist within minutes; keep a cloth and a lens warmer to hand',
+  mist: 'near saturation — mist in the air; glass from a cool car or bag fogs at once',
   'dew-likely': 'near saturation — dew on the glass is likely; a lens warmer or a deep hood helps',
-  'dew-possible': 'a calm, clear night this humid — dew on the glass is possible after dark',
+  'dew-possible': 'a calm, mostly clear night this humid — dew on the glass is possible',
 };
 
 /**

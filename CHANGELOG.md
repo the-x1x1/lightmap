@@ -62,16 +62,18 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 - **"Tonight"** beside "Now": today at the start of astronomical night at the place (`setTonight`,
   tested).
 - **Play the day**: a play/pause button beside the timeline clock runs the day by itself at 2, 10
-  or 60 day-minutes per second (the pace button cycles them) and starts over at midnight — a
-  sunset watched, not scrubbed; a drag while playing is honoured (`usePlayDay`, `advance()`,
-  tested; E2E).
+  or 60 day-minutes per second (the pace button cycles them, mid-play too) and starts over at
+  midnight — a sunset watched, not scrubbed; the clock waits while the thumb is held and
+  continues from the drop point; a hidden tab does not make it leap (`usePlayDay`, `advance()`,
+  tested; play, pause and pace in the E2E).
 - **Field conditions in the weather details**: the wind with the quarter it blows from ("4 m/s
   from the ENE", "calm"), the humidity, and visibility in sensible units ("600 m", "4.5 km",
   "24 km"); notes when there is something to act on — a fresh breeze and up ("weigh the tripod
-  down; clouds streak in a long exposure" → "tripod shake likely" → "hand-held only"), fog
-  ("lenses mist within minutes"), dew likely at ≥ 95 % humidity, dew possible on a calm, mostly
-  clear night from 85 % (`fieldConditions()`, Beaufort bands and the WMO fog threshold, tested).
-  Scenario days say nothing: there is no frame.
+  down; clouds streak in a long exposure" → "tripod shake likely" → "a weighted tripod in a lee at
+  best" → "hand-held only"), fog ("lenses mist within minutes"; rain or snow cutting the view is
+  not called fog), dew likely at ≥ 95 % humidity after sunset (mist in the air by day), dew
+  possible on a calm, mostly clear night from 85 % (`fieldConditions()`, Beaufort's bands and the
+  WMO fog threshold, tested). Scenario days say nothing: there is no frame.
 - **Dark-sky cloud in the hourly outlook**: a line with the forecast cloud over the night's
   dark-sky spells and the clearest hour — "is the core window going to be clear?"
   (`cloudOverSpells`, tested).

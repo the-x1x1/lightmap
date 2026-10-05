@@ -97,13 +97,16 @@ overhead, cooling through 7800–9000 K in twilight). The curve is configurable.
 ### 4a. Field conditions from the frame
 
 Beside the light, the weather details read the frame for the shoot itself (`fieldConditions()` in
-`@lightmap/scene`, pure, tested): the **wind** in Beaufort's bands (calm < 0.5 m/s, light < 3.4,
-moderate < 8, fresh < 13.9, strong < 17.2, gale above) with the quarter it blows from, warning
-from fresh up; and the **humidity** with a moisture call for the glass — fog when visibility is
-under the WMO kilometre or the code is 45/48, dew likely at ≥ 95 % relative humidity (within
-about a degree of the dew point), dew possible at ≥ 85 % only after sunset with the wind under
-Beaufort 3 and no more than half cloud, the conditions under which a surface radiates below the
-dew point. Nothing is said when the frame lacks the field, and nothing at all for a scenario.
+`@lightmap/scene`, pure, tested): the **wind** in Beaufort's bands and names (calm < 0.5 m/s;
+light 1–2, < 3.4; moderate 3–4, < 8; fresh 5, < 10.8; strong 6, < 13.9; near gale 7, < 17.2; gale
+8 and above) with the quarter it blows from, warning from fresh up; and the **humidity** with a
+moisture call for the glass — fog when the code is 45/48, or visibility is under the WMO
+kilometre with no precipitation code (rain and snow cut the view too, and are not fog); at
+≥ 95 % relative humidity (within about a degree of the dew point) dew likely after sunset, when a
+lens radiates below the dew point, and mist in the air by day; dew possible at ≥ 85 % only after
+sunset with the wind under Beaufort 3 and no more than half cloud, the conditions under which a
+surface radiates below the dew point. Nothing is said when the frame lacks the field, and
+nothing at all for a scenario.
 
 ## 5. Scenario parameter table
 
