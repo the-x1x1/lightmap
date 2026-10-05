@@ -1,6 +1,6 @@
 {
   "name": "@lightmap/scene",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "SceneState: the single model combining location, time, camera, solar, lunar, atmosphere, environment, source and confidence.",
   "license": "SEE LICENSE IN ../../LICENSE",

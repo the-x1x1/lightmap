@@ -1,6 +1,6 @@
 {
   "name": "@lightmap/auth",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Account service: Auth.js (passwordless email, optional Google, dev sign-in) behind a LightMap-owned interface.",
   "license": "SEE LICENSE IN ../../LICENSE",

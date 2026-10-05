@@ -1,6 +1,6 @@
 {
   "name": "@lightmap/astronomy",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Sun and moon ephemeris, day events, twilight, golden and blue hour.",
   "license": "SEE LICENSE IN ../../LICENSE",

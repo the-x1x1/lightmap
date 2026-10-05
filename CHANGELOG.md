@@ -2,7 +2,7 @@
 
 All notable changes. Versions follow semver; `pnpm release <version>` prepends entries from commits.
 
-## Unreleased
+## v0.2.0 — 2026-10-05
 
 - **Milky Way core** (night planning): the Moon details and the planning card say where the
   Galactic Centre stands for the selected instant and whether the sky can show it — "36° up SSW —
