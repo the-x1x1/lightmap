@@ -81,6 +81,9 @@ describe('buildPlanningCard', () => {
     const cam = card.facts.find((f) => f.label === 'Camera')!.value;
     expect(cam).toContain('Viewpoint · 270° W · pitch 5° · 24 mm');
     expect(card.facts.some((f) => f.label === 'Moon')).toBe(true);
+    expect(card.facts.find((f) => f.label === 'Across the year')!.value).toBe(
+      'Sunrise 64°–115° (ENE–ESE), sunset 245°–296° (WSW–WNW), noon 45°–88°',
+    );
     expect(card.fileName).toBe('lightmap-kailua-beach-2026-05-31-1230.png');
   });
 
