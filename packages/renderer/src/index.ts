@@ -1,5 +1,6 @@
 export * from './sun-vector.ts';
 export * from './lighting.ts';
+export * from './sky-model.ts';
 export * from './camera-math.ts';
 export * from './quality-governor.ts';
 export * from './capabilities.ts';

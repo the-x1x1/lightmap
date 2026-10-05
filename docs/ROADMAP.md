@@ -91,8 +91,14 @@ battery (draining and ≤ 50 % → Balanced at best; ≤ 20 % → Battery) and S
 `prefers-reduced-data` (Balanced) while the app runs; shadows are never switched off by
 conditions (`conditionsCeiling`, `effectiveCeiling`, `watchDeviceConditions`).
 
-Remaining: improved terrain texture; detailed buildings where licensed; physically based
-atmospheric scattering; water shader. Everything stays grounded: geometry and light direction are
+Also delivered (unreleased): a **single-scattering Rayleigh + Mie sky model** (`sky-model.ts`)
+behind the sky gradient of overlay mode, the preview chrome and the planning card — the blue
+overhead, its paling with haze and the hue of the sunrise/sunset glow come from the geometry and
+the scenario; hand-set colours remain for twilight, night and the daytime horizon
+(`RENDERING_ACCURACY.md`).
+
+Remaining: improved terrain texture; detailed buildings where licensed; the scattering model in
+Cesium's own dome (needs the smoke harness); water shader. Everything stays grounded: geometry and light direction are
 never altered for looks.
 
 ## Phase 5 — Real references (future, requires licensing work)

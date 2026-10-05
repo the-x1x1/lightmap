@@ -86,8 +86,26 @@ sunset. **Caveat:** real values vary with aerosol, altitude and humidity by hund
 Cesium's sky atmosphere with `dynamicLighting = SCENE_LIGHT` follows our light, giving a horizon
 glow on the Sun's side and darkness opposite. Hue/saturation/brightness shifts encode cloud and
 haze; fog density encodes visibility. **Claim:** sky is bright/blue when clear and grey/flat when
-overcast; twilight colours sit on the correct side of the sky. **Caveat:** not a spectral
-scattering model (Phase 4); no real cloud shapes.
+overcast; twilight colours sit on the correct side of the sky. **Caveat:** Cesium's dome is its own
+single-scattering model (not spectral); no real cloud shapes.
+
+**Sky gradient (overlay mode, preview chrome, planning card).** The three colours of the clear
+sky come from LightMap's own single-scattering model (`packages/renderer/src/sky-model.ts`,
+Phase 4 "atmospheric scattering"): Rayleigh (λ⁻⁴, sea-level 5.8/13.5/33.1 × 10⁻⁶ m⁻¹ at
+680/550/440 nm, 8 km scale height) plus Mie (21 × 10⁻⁶ m⁻¹, 1.2 km, Cornette–Shanks g = 0.76)
+integrated along the view ray through a spherical 80 km atmosphere with the Sun's transmittance
+at every sample, the aerosol density scaled by the scenario's haze. The three gradient stops are
+sampled away from the Sun's aureole (overhead ≥ 40° from the Sun; the glow 25° around from it),
+tone-mapped on luminance only so chromaticity is the physics', with one fixed exposure (a
+mid-afternoon zenith lands on a mid-blue). **Claim:** the blue overhead and its paling with haze,
+the brightening toward the horizon, and the hue of the sunrise/sunset glow and how haze deepens it
+follow the geometry and the scenario rather than a palette. **Caveat:** single scattering — no
+ozone, no multiple scattering — so it is not trusted for the zenith within a few degrees of
+sunset, for the daytime horizon (which it yellows) or for twilight and night, where the long-
+standing hand-set colours take over by a smooth blend (`skyGradientFor`). Checked in
+`sky-model.test.ts`: Rayleigh ordering and ratio, horizon brighter/paler than zenith, sunset
+reddening on the Sun's side, haze paling, Earth-shadow darkness, azimuth symmetry, exposure
+anchor. The Cesium dome does not use this model yet (a smoke-harness job on the PC).
 
 Two corrections compensate for the single-scattering model, both driven by the true Sun elevation
 and never by taste: (1) **twilight** — the dome collapses within a degree of the light setting, so
@@ -150,12 +168,12 @@ from fixture data says so.
 
 ## Quality ladder (plan §6)
 
-| Quality | What renders                                                           | When                                              |
-| ------- | ---------------------------------------------------------------------- | ------------------------------------------------- |
-| 0       | Sun/shadow overlay on a sky gradient; all numbers                      | No WebGL2, or renderer failure — always available |
-| 1       | 3D terrain with directional light, shadows, atmosphere, scenario grade | Default with terrain                              |
-| 2       | 1 + licensed high-resolution imagery                                   | `IMAGERY_PROVIDER` configured                     |
-| 3       | Buildings/3D tiles, physically based scattering                        | Future                                            |
+| Quality | What renders                                                           | When                                               |
+| ------- | ---------------------------------------------------------------------- | -------------------------------------------------- |
+| 0       | Sun/shadow overlay on a sky gradient; all numbers                      | No WebGL2, or renderer failure — always available  |
+| 1       | 3D terrain with directional light, shadows, atmosphere, scenario grade | Default with terrain                               |
+| 2       | 1 + licensed high-resolution imagery                                   | `IMAGERY_PROVIDER` configured                      |
+| 3       | Buildings/3D tiles, physically based scattering in the 3D dome         | Future (the sky gradient's scattering model is in) |
 
 The governor's ceiling is the stricter of the device probe (`qualityCeiling`: low-power GPU or a
 small maximum texture) and live conditions (`conditionsCeiling`: battery level while discharging,

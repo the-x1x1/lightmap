@@ -183,13 +183,17 @@ describe('lightingFromScene', () => {
     const rgb = (s: string) => s.match(/\d+/g)!.map(Number) as [number, number, number];
     const c = rgb(zenithClear);
     const o = rgb(zenithOver);
-    expect(c[2] - c[0]).toBeGreaterThan(80); // blue dominant
+    expect(c[2] - c[0]).toBeGreaterThan(60); // blue dominant (the scattering model's zenith)
     expect(Math.abs(o[0] - o[2])).toBeLessThan(30); // grey
     const [nz] = skyGradientFor(-25, 0, 0.2, 1);
     expect(rgb(nz)[0]).toBeLessThan(20); // night is dark
     const [, , horizonSunset] = skyGradientFor(-2, 0.05, 0.9, 1);
     const h = rgb(horizonSunset);
     expect(h[0]).toBeGreaterThan(h[2]); // warm glow at the horizon
+    // Haze pales the overhead blue (the scattering model's Mie term).
+    const clearZ = rgb(skyGradientFor(40, 0, 0.5, 1, 0.1)[0]);
+    const hazyZ = rgb(skyGradientFor(40, 0, 0.5, 1, 0.7)[0]);
+    expect(hazyZ[2] - hazyZ[0]).toBeLessThan(clearZ[2] - clearZ[0]);
   });
 });
 
