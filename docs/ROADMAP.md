@@ -138,7 +138,10 @@ Also delivered: **horizon levelling** — a level & thirds guide in the viewpoin
 true-level line, the modelled skyline and one-click horizon placement on a third
 (`levelLineY`, `pitchForHorizonAt`, `skylinePath`; tested against `frameCoordinates`).
 
-Next: camera roll (tilted horizons) and a live device-level reading once the PWA has field mode.
+Also delivered: **camera roll in the frame maths** (`frameCoordinates`/`directionFromFrame`
+optional roll, `levelLineSegment`, roll from the device orientation) — used by the field view
+so a hand-held phone's tilt is honoured. The planner's saved camera stays roll-free; a rolled
+3D preview (Cesium camera roll) remains future.
 
 ## Phase 7 — Long-range climatology (delivered, unreleased)
 

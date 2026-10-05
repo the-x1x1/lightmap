@@ -225,7 +225,11 @@ focal-length preset, and mode.
   (`Permissions-Policy: camera=(self)`). Without camera access the marks still follow the compass
   over a dark frame; without a compass (or after a manual nudge) ◀ ▶ ▲ ▼ aim the camera by 5°
   and "Follow phone" resumes. One compass follow serves both "Point with phone" and the field
-  view; hiding the page pauses it and showing it resumes it. Escape closes the view. `sunPathInFrame()` and `edgeIndicator()` in `@lightmap/scene`.
+  view; hiding the page pauses it and showing it resumes it. Escape closes the view. The phone's
+  **roll** about the line of sight (from the same orientation reading) tilts every mark the other
+  way, so a hand-held phone that is not quite level still puts the sun, the level line and the
+  ridge where they are in the picture (`frameCoordinates`/`directionFromFrame` take an optional
+  roll; `levelLineSegment`). The planner's own camera stays roll-free. `sunPathInFrame()` and `edgeIndicator()` in `@lightmap/scene`.
 - **Level & thirds guide** (viewpoint mode, free): a rule-of-thirds grid, the true-level line
   (elevation 0; with no roll it is straight, at `y = −tan(pitch) / tan(½·vFOV)`) and the modelled
   terrain skyline — the same sampled ridge the "behind terrain" timings use, labelled "terrain

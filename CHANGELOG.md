@@ -18,6 +18,11 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   `@vitest/mocker` redirect mocks — dev-only, closed anyway); nodemailer 10.0.9+ across the workspace (GHSA-v53p-9fqp-m79j and
   GHSA-prgh-xp8r-p3m5, high: address-parser denial of service; plus three moderate advisories).
   Only `createTransport`/`sendMail` are used, unchanged across the major.
+- **Roll-aware field view**: the phone's roll about its line of sight (from the orientation
+  reading, smoothed) tilts the sun marker, the sun path, the level line and the ridge the other
+  way, so a hand-held phone that is not quite level still marks the picture correctly.
+  `frameCoordinates()`/`directionFromFrame()` gained an optional roll (round-trip tested),
+  `levelLineSegment()`, `cameraPointingFromOrientation().rollDeg`.
 - **Light finder: "On the ridge"** — a new target mode with a sampled terrain horizon: type a
   bearing (defaults to the camera heading) and the finder searches for the moments the sun's (or
   moon's) upper limb touches the modelled skyline there — the plan's "every date the sun sets

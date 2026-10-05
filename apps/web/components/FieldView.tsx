@@ -14,7 +14,7 @@ import {
   defaultCameraFeedFovDeg,
   edgeIndicator,
   frameCoordinates,
-  levelLineY,
+  levelLineSegment,
   skylinePath,
   sunPathInFrame,
 } from '@lightmap/scene';
@@ -53,7 +53,7 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
   const profile = usePlannerStore((s) => s.horizonProfile);
   const setNow = usePlannerStore((s) => s.setNow);
   const rotateCamera = usePlannerStore((s) => s.rotateCamera);
-  const { start, stop, state: compassState } = useCompass();
+  const { start, stop, state: compassState, rollDeg } = useCompass();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hostRef = useRef<HTMLDivElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
@@ -171,13 +171,23 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
   // The same refracted elevation the path uses, so the marker sits on its own path.
   const sunUp = scene.solar.isAboveHorizon;
   const sunEl = scene.solar.apparentElevationDegrees;
+  // The phone's roll tilts every mark the other way; the planner camera itself has no roll.
+  const roll = compassState === 'active' ? rollDeg : 0;
   const sun = sunUp
-    ? inFrame(frameCoordinates(frame, scene.solar.azimuthDegrees, sunEl, aspect))
+    ? inFrame(frameCoordinates(frame, scene.solar.azimuthDegrees, sunEl, aspect, roll))
     : null;
-  const sunEdge = sunUp ? edgeIndicator(frame, scene.solar.azimuthDegrees, sunEl, aspect) : null;
+  const sunEdge = sunUp
+    ? edgeIndicator(frame, scene.solar.azimuthDegrees, sunEl, aspect, roll)
+    : null;
   const moon = scene.lunar?.isAboveHorizon
     ? inFrame(
-        frameCoordinates(frame, scene.lunar.azimuthDegrees, scene.lunar.elevationDegrees, aspect),
+        frameCoordinates(
+          frame,
+          scene.lunar.azimuthDegrees,
+          scene.lunar.elevationDegrees,
+          aspect,
+          roll,
+        ),
       )
     : null;
   const path = sunPathInFrame(
@@ -185,10 +195,10 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
     scene.location.point,
     scene.dayEvents.dayStart,
     scene.dayEvents.dayEnd,
-    { stepMinutes: 10, aspect },
+    { stepMinutes: 10, aspect, rollDeg: roll },
   );
-  const levelY = levelLineY(frame, aspect);
-  const sky = profile ? skylinePath(frame, profile, aspect) : [];
+  const level = levelLineSegment(frame, aspect, roll);
+  const sky = profile ? skylinePath(frame, profile, aspect, 48, roll) : [];
   const tz = scene.location.timeZone;
 
   const cameraNote =
@@ -288,12 +298,12 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
                 vectorEffect="non-scaling-stroke"
               />
             ) : null}
-            {levelY !== null ? (
+            {level ? (
               <line
-                x1={0}
-                x2={W}
-                y1={sy(levelY)}
-                y2={sy(levelY)}
+                x1={sx(level.x1)}
+                x2={sx(level.x2)}
+                y1={sy(level.y1)}
+                y2={sy(level.y2)}
                 stroke="white"
                 strokeOpacity={0.8}
                 strokeWidth={1.5}
@@ -438,9 +448,10 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
         </div>
         <p className="w-full text-[11px] text-[var(--lm-text-muted)]">
           Heading {Math.round(camera.headingDeg)}° {compassLabel(camera.headingDeg)} · pitch{' '}
-          {Math.round(camera.pitchDeg)}°. Nudge the field of view until the horizon and real objects
-          sit where they do in the feed. Dotted: the sun&rsquo;s path today; white line: true level;
-          terrain line: modelled ridge (terrain only). The camera picture never leaves this phone.
+          {Math.round(camera.pitchDeg)}°{roll ? ` · roll ${Math.round(roll)}°` : ''}. Nudge the
+          field of view until the horizon and real objects sit where they do in the feed. Dotted:
+          the sun&rsquo;s path today; white line: true level; terrain line: modelled ridge (terrain
+          only). The camera picture never leaves this phone.
         </p>
       </div>
     </div>

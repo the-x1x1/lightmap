@@ -26,11 +26,12 @@ export function sunPathInFrame(
   point: { latitude: number; longitude: number },
   start: Date,
   end: Date,
-  opts: { stepMinutes?: number; aspect?: number; frameMargin?: number } = {},
+  opts: { stepMinutes?: number; aspect?: number; frameMargin?: number; rollDeg?: number } = {},
 ): FramePathPoint[][] {
   const step = Math.max(1, opts.stepMinutes ?? 10) * 60_000;
   const aspect = opts.aspect ?? 3 / 2;
   const margin = opts.frameMargin ?? 0.3;
+  const roll = opts.rollDeg ?? 0;
   const runs: FramePathPoint[][] = [];
   let run: FramePathPoint[] = [];
   for (let t = start.getTime(); t <= end.getTime(); t += step) {
@@ -38,7 +39,7 @@ export function sunPathInFrame(
     const p = sunPosition(at, point.latitude, point.longitude);
     const f =
       p.elevationDeg >= -1
-        ? frameCoordinates(camera, p.azimuthDeg, p.apparentElevationDeg, aspect)
+        ? frameCoordinates(camera, p.azimuthDeg, p.apparentElevationDeg, aspect, roll)
         : null;
     if (f && Math.abs(f.x) <= 1 + margin && Math.abs(f.y) <= 1 + margin) {
       run.push({ x: f.x, y: f.y, at });
@@ -72,8 +73,9 @@ export function edgeIndicator(
   azimuthDeg: number,
   elevationDeg: number,
   aspect = 3 / 2,
+  rollDeg = 0,
 ): EdgeIndicator | null {
-  const f = frameCoordinates(camera, azimuthDeg, elevationDeg, aspect);
+  const f = frameCoordinates(camera, azimuthDeg, elevationDeg, aspect, rollDeg);
   if (f && Math.abs(f.x) <= 1 && Math.abs(f.y) <= 1) return null;
   const turnRightDeg = relativeBearing(camera.headingDeg, azimuthDeg);
   const tiltUpDeg = elevationDeg - camera.pitchDeg;
@@ -84,6 +86,13 @@ export function edgeIndicator(
   const halfH = Math.atan(Math.tan(halfW * DEG) / aspect) / DEG;
   let dx = turnRightDeg / halfW;
   let dy = tiltUpDeg / halfH;
+  if (rollDeg) {
+    // The arrow lives in the (rolled) frame: turn the world direction with the roll.
+    const r = rollDeg * DEG;
+    const c = Math.cos(r);
+    const s = Math.sin(r);
+    [dx, dy] = [dx * c - dy * s, dx * s + dy * c];
+  }
   if (Math.abs(dx) < 1e-9 && Math.abs(dy) < 1e-9) dx = 1;
   const k = 1 / Math.max(Math.abs(dx), Math.abs(dy));
   dx *= k;

@@ -430,3 +430,31 @@ describe('sensor formats', () => {
     );
   });
 });
+
+describe('camera roll in the frame', () => {
+  const cam = { headingDeg: 90, pitchDeg: 5, fovDeg: 60 };
+  it('a clockwise roll (right edge down) lifts the right side of the horizon in the frame', () => {
+    const flat = frameCoordinates(cam, 110, 0, 3 / 2, 0)!;
+    const rolled = frameCoordinates(cam, 110, 0, 3 / 2, 30)!;
+    expect(rolled.y).toBeGreaterThan(flat.y);
+    const left = frameCoordinates(cam, 70, 0, 3 / 2, 30)!;
+    expect(left.y).toBeLessThan(flat.y);
+    // The frame centre is unmoved by roll.
+    const centre = frameCoordinates(cam, 90, 5, 3 / 2, 30)!;
+    expect(centre.x).toBeCloseTo(0, 9);
+    expect(centre.y).toBeCloseTo(0, 9);
+  });
+  it('directionFromFrame inverts frameCoordinates with roll', () => {
+    for (const roll of [-45, -10, 0, 12.5, 60])
+      for (const [az, el] of [
+        [95, 2],
+        [70, -8],
+        [110, 20],
+      ] as const) {
+        const f = frameCoordinates(cam, az, el, 16 / 9, roll)!;
+        const back = directionFromFrame(cam, f.x, f.y, 16 / 9, roll);
+        expect(back.azimuthDeg).toBeCloseTo(az, 7);
+        expect(back.elevationDeg).toBeCloseTo(el, 7);
+      }
+  });
+});

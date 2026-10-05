@@ -21,6 +21,18 @@ describe('device orientation → camera pointing', () => {
     // Flat on a table, screen up: the camera looks straight down.
     expect(abs(0, 0, 0).pitchDeg).toBeCloseTo(-90, 6);
   });
+  it('reports roll: upright facing north, rolled 30° clockwise (right edge down)', () => {
+    // Euler angles found numerically for that pose (R = Rz·Rx·Ry).
+    const p = abs(90, 120, -90);
+    expect(p.headingDeg).toBeCloseTo(0, 6);
+    expect(p.pitchDeg).toBeCloseTo(0, 6);
+    expect(p.rollDeg).toBeCloseTo(30, 6);
+    expect(abs(0, 90, 0).rollDeg).toBeCloseTo(0, 6);
+    // Landscape facing north, top of the phone to the left: rolled 90° counter-clockwise.
+    const landscape = abs(90, 0, -90);
+    expect(landscape.headingDeg).toBeCloseTo(0, 6);
+    expect(landscape.rollDeg).toBeCloseTo(-90, 6);
+  });
   it('matches an independently computed general case', () => {
     const p = abs(30, 100, -45);
     expect(p.headingDeg).toBeCloseTo(15.439, 2);

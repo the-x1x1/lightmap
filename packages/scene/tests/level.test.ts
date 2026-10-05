@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { HORIZON_PLACEMENTS, levelLineY, pitchForHorizonAt, skylinePath } from '../src/level.ts';
+import {
+  HORIZON_PLACEMENTS,
+  levelLineSegment,
+  levelLineY,
+  pitchForHorizonAt,
+  skylinePath,
+} from '../src/level.ts';
 import { directionFromFrame, frameCoordinates } from '../src/camera.ts';
 
 const cam = (pitchDeg: number, fovDeg = 60, headingDeg = 120) => ({ headingDeg, pitchDeg, fovDeg });
@@ -62,5 +68,21 @@ describe('horizon levelling', () => {
     const edge = path[0]!;
     expect(centre.y).toBeGreaterThan(0.15);
     expect(edge.y).toBeCloseTo(0, 9);
+  });
+});
+
+describe('level line with roll', () => {
+  it('matches levelLineY without roll and tilts up to the right with a clockwise roll', () => {
+    const c = { headingDeg: 0, pitchDeg: 8, fovDeg: 60 };
+    const flat = levelLineSegment(c, 3 / 2, 0)!;
+    expect(flat.y1).toBeCloseTo(levelLineY(c, 3 / 2)!, 9);
+    expect(flat.y2).toBeCloseTo(flat.y1, 9);
+    const rolled = levelLineSegment(c, 3 / 2, 20)!;
+    expect(rolled.y2).toBeGreaterThan(rolled.y1);
+    // A level point (the camera bearing at elevation 0) lies on the segment's line.
+    const pt = frameCoordinates(c, 0, 0, 3 / 2, 20)!;
+    const onLine = rolled.y1 + ((pt.x + 1) / 2) * (rolled.y2 - rolled.y1);
+    expect(pt.y).toBeCloseTo(onLine, 6);
+    expect(levelLineSegment({ ...c, pitchDeg: 60 }, 3 / 2, 0)).toBeNull();
   });
 });

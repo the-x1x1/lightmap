@@ -50,7 +50,9 @@ let writing = false;
 /** The follow was interrupted by the page being hidden and should resume when it is shown. */
 let pausedByHide = false;
 let generation = 0;
-let last: { t: number; heading: number; pitch: number } | null = null;
+let last: { t: number; heading: number; pitch: number; roll: number } | null = null;
+/** Smoothed roll of the phone about its line of sight (field view only; the planner camera has no roll). */
+let rollDeg = 0;
 let silence: ReturnType<typeof setTimeout> | null = null;
 let detach: () => void = () => {};
 let unsubscribeStore: () => void = () => {};
@@ -59,6 +61,10 @@ let pageHooksInstalled = false;
 function setState(next: CompassState): void {
   if (state === next) return;
   state = next;
+  notify();
+}
+
+function notify(): void {
   for (const l of listeners) l();
 }
 
@@ -71,6 +77,10 @@ function stop(): void {
   if (silence) clearTimeout(silence);
   silence = null;
   last = null;
+  if (rollDeg !== 0) {
+    rollDeg = 0;
+    notify();
+  }
   if (state !== 'unsupported') setState('idle');
 }
 
@@ -105,7 +115,8 @@ function onReading(e: Event): void {
   const pitch = prev
     ? prev.pitch + (pointing.pitchDeg - prev.pitch) * SMOOTHING
     : pointing.pitchDeg;
-  last = { t: now, heading, pitch };
+  const roll = prev ? blendRoll(prev.roll, pointing.rollDeg, SMOOTHING) : pointing.rollDeg;
+  last = { t: now, heading, pitch, roll };
   const store = usePlannerStore.getState();
   writing = true;
   try {
@@ -114,7 +125,17 @@ function onReading(e: Event): void {
   } finally {
     writing = false;
   }
+  if (Math.abs(roll - rollDeg) > 0.05) {
+    rollDeg = roll;
+    notify();
+  }
   setState('active');
+}
+
+/** Roll is −180…180: blend on the circle so −179 → 179 does not swing through 0. */
+function blendRoll(prevDeg: number, nextDeg: number, weight: number): number {
+  const h = blendHeading(prevDeg, nextDeg, weight);
+  return h > 180 ? h - 360 : h;
 }
 
 function attach(): void {
@@ -209,6 +230,7 @@ export const compassController = {
   start,
   stop,
   getState: (): CompassState => state,
+  getRollDeg: (): number => rollDeg,
   subscribe(listener: () => void): () => void {
     listeners.add(listener);
     return () => {
@@ -218,12 +240,24 @@ export const compassController = {
 };
 
 const getServerState = (): CompassState => 'idle';
+const getServerRoll = (): number => 0;
 
-export function useCompass(): { state: CompassState; start: () => void; stop: () => void } {
+export function useCompass(): {
+  state: CompassState;
+  /** Phone roll about the line of sight while following, degrees (right edge down = positive). */
+  rollDeg: number;
+  start: () => void;
+  stop: () => void;
+} {
   const current = useSyncExternalStore(
     compassController.subscribe,
     compassController.getState,
     getServerState,
+  );
+  const roll = useSyncExternalStore(
+    compassController.subscribe,
+    compassController.getRollDeg,
+    getServerRoll,
   );
   const startCb = useCallback(() => compassController.start(), []);
   const stopCb = useCallback(() => compassController.stop(), []);
@@ -232,5 +266,5 @@ export function useCompass(): { state: CompassState; start: () => void; stop: ()
     current === 'idle' && typeof window !== 'undefined' && !compassSupported()
       ? 'unsupported'
       : current;
-  return { state: resolved, start: startCb, stop: stopCb };
+  return { state: resolved, rollDeg: roll, start: startCb, stop: stopCb };
 }

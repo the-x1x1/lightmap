@@ -25,6 +25,38 @@ export function levelLineY(camera: FrameCamera, aspect = 3 / 2): number | null {
   return y === 0 ? 0 : y; // no -0 at zero pitch
 }
 
+/**
+ * True level as a segment across the frame for a rolled camera (positive roll = right edge
+ * down, so the line rises to the right). Endpoints in frame coordinates at x = −1 and x = +1;
+ * null when level misses the frame entirely. With no roll this is the horizontal line at
+ * `levelLineY`.
+ */
+export function levelLineSegment(
+  camera: FrameCamera,
+  aspect = 3 / 2,
+  rollDeg = 0,
+): { x1: number; y1: number; x2: number; y2: number } | null {
+  const DEG = Math.PI / 180;
+  const halfW = Math.tan((camera.fovDeg * DEG) / 2);
+  const halfH = halfW / aspect;
+  // In the tangent plane level is the line ty = −tan(pitch) before roll; rolling by θ maps
+  // (tx, ty) → (tx·c − ty·s, tx·s + ty·c), so the line keeps direction (c, s) through (0, −tan p)·R.
+  const t0 = -Math.tan(camera.pitchDeg * DEG);
+  const r = rollDeg * DEG;
+  const c = Math.cos(r);
+  const s = Math.sin(r);
+  const px = -t0 * s; // the point (0, t0) after roll
+  const py = t0 * c;
+  if (Math.abs(c) < 1e-9) return null; // vertical level line: a 90° roll; not drawn
+  // Parametrise by tx: ty = py + (tx − px)·(s / c); evaluate at the frame's left/right edges.
+  const slope = s / c;
+  const yAt = (tx: number) => (py + (tx - px) * slope) / halfH;
+  const y1 = yAt(-halfW);
+  const y2 = yAt(halfW);
+  if ((y1 < -1 && y2 < -1) || (y1 > 1 && y2 > 1)) return null;
+  return { x1: -1, y1, x2: 1, y2 };
+}
+
 /** The pitch (degrees) that puts true level at frame height `y` (−1 bottom … +1 top). */
 export function pitchForHorizonAt(y: number, fovDeg: number, aspect = 3 / 2): number {
   return Math.atan(-y * halfHeightTan(fovDeg, aspect)) / DEG;
@@ -48,6 +80,7 @@ export function skylinePath(
   profile: Pick<HorizonProfile, 'stepDeg' | 'elevationDeg'>,
   aspect = 3 / 2,
   steps = 48,
+  rollDeg = 0,
 ): Array<{ x: number; y: number }> {
   const out: Array<{ x: number; y: number }> = [];
   // Sweep a little past the edges in bearing so the line reaches both sides of the frame.
@@ -55,7 +88,7 @@ export function skylinePath(
   for (let i = 0; i <= steps; i++) {
     const rel = -half + (2 * half * i) / steps;
     const az = (((camera.headingDeg + rel) % 360) + 360) % 360;
-    const p = frameCoordinates(camera, az, horizonElevationAt(profile, az), aspect);
+    const p = frameCoordinates(camera, az, horizonElevationAt(profile, az), aspect, rollDeg);
     if (p && Math.abs(p.x) <= 1.2) out.push(p);
   }
   return out;

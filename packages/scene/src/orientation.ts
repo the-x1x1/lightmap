@@ -30,6 +30,12 @@ export interface CameraPointing {
   headingDeg: number;
   /** Elevation of the back camera's line of sight, −90–90 (0 = level). */
   pitchDeg: number;
+  /**
+   * Roll about the line of sight, degrees, positive when the phone's right edge is lower than
+   * its left (clockwise seen from behind the camera); 0 when the device's top-bottom axis is
+   * upright in portrait, ±90 in landscape. −180–180.
+   */
+  rollDeg: number;
 }
 
 /**
@@ -64,7 +70,12 @@ export function cameraPointingFromOrientation(o: OrientationAngles): CameraPoint
   const up = -zz;
   const headingDeg = normalizeHeading(Math.atan2(east, north) / DEG);
   const pitchDeg = Math.asin(Math.max(-1, Math.min(1, up))) / DEG;
-  return { headingDeg, pitchDeg };
+  // Roll: compare the device's right (x) and top (y) axes against the vertical. Their z
+  // components (first/second column of R, third row) are sb·… and cb·… terms:
+  const xz = -cb * sg; // z component of the device x axis in Earth frame
+  const yz = sb; // z component of the device y axis
+  const rollDeg = Math.atan2(-xz, yz) / DEG;
+  return { headingDeg, pitchDeg, rollDeg };
 }
 
 /**

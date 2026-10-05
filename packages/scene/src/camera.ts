@@ -89,6 +89,7 @@ export function frameCoordinates(
   azimuthDeg: number,
   elevationDeg: number,
   aspect = 3 / 2,
+  rollDeg = 0,
 ): { x: number; y: number } | null {
   const DEG = Math.PI / 180;
   const rel = relativeBearing(camera.headingDeg, azimuthDeg) * DEG;
@@ -102,9 +103,19 @@ export function frameCoordinates(
   const y2 = dy * Math.cos(p) - dz * Math.sin(p);
   const z2 = dy * Math.sin(p) + dz * Math.cos(p);
   if (z2 <= 1e-6) return null;
+  // Roll (camera tilted clockwise by rollDeg, seen from behind, right edge down): the world
+  // turns counter-clockwise in the frame, applied in the tangent plane before the aspect.
+  let tx = dx / z2;
+  let ty = y2 / z2;
+  if (rollDeg) {
+    const r = rollDeg * DEG;
+    const c = Math.cos(r);
+    const s = Math.sin(r);
+    [tx, ty] = [tx * c - ty * s, tx * s + ty * c];
+  }
   const halfW = Math.tan((camera.fovDeg * DEG) / 2);
   const halfH = halfW / aspect;
-  return { x: dx / z2 / halfW, y: y2 / z2 / halfH };
+  return { x: tx / halfW, y: ty / halfH };
 }
 
 /**
@@ -117,13 +128,23 @@ export function directionFromFrame(
   x: number,
   y: number,
   aspect = 3 / 2,
+  rollDeg = 0,
 ): { azimuthDeg: number; elevationDeg: number } {
   const DEG = Math.PI / 180;
   const halfW = Math.tan((camera.fovDeg * DEG) / 2);
   const halfH = halfW / aspect;
-  // Direction in the pitched camera frame (forward = +z), then undo the pitch rotation.
-  const dx = x * halfW;
-  const y2 = y * halfH;
+  // Tangent-plane point, un-rolled, then direction in the pitched camera frame (forward = +z),
+  // then undo the pitch rotation.
+  let tx = x * halfW;
+  let ty = y * halfH;
+  if (rollDeg) {
+    const r = rollDeg * DEG;
+    const c = Math.cos(r);
+    const s = Math.sin(r);
+    [tx, ty] = [tx * c + ty * s, -tx * s + ty * c];
+  }
+  const dx = tx;
+  const y2 = ty;
   const z2 = 1;
   const p = camera.pitchDeg * DEG;
   const dy = y2 * Math.cos(p) + z2 * Math.sin(p);
