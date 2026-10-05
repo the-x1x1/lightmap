@@ -29,8 +29,7 @@ export interface RendererInfo {
   capture: (maxWidth?: number) => Promise<string | null>;
   /** Terrain heights at a tile level, for the terrain horizon; null when no host is running. */
   sampleHeights:
-    | ((points: readonly GeoPoint[], level: number) => Promise<Array<number | null>>)
-    | null;
+    ((points: readonly GeoPoint[], level: number) => Promise<Array<number | null>>) | null;
 }
 
 export interface WorldMapProps {

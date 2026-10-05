@@ -9,13 +9,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { blendHeading, cameraPointingFromOrientation, clampPitch } from '@lightmap/scene';
 import { usePlannerStore } from '@/features/planner/store';
 
+/** 'no-compass': events arrive but carry no compass reference (desktop browsers, some Android builds). */
 export type CompassState =
   | 'unsupported'
   | 'idle'
   | 'requesting'
   | 'active'
   | 'denied'
-  /** Events arrive but carry no compass reference (desktop browsers, some Android builds). */
   | 'no-compass';
 
 interface OrientationEventLike extends Event {
