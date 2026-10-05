@@ -177,7 +177,7 @@ daily account-erasure / cache-purge job once the production database secret exis
   scenes are labelled _Estimated Preview_. Terrain relief and light direction are still real.
 - **No buildings or vegetation.** Shadows come from terrain only.
 - **Sky is a model, not a spectral simulation**; clouds are procedural coverage, not forecast shapes.
-- **Moon accuracy is ±0.3°** (sun is ±0.01°); adequate for framing, not for eclipses.
+- **Moon accuracy is ±0.02°** (sun ±0.01°); ample for framing, not an eclipse ephemeris.
 - **Real-reference imagery is disabled** until a licensed provider contract exists.
 - **Night sky**: Cesium's Moon mesh is hidden (it is lit by Cesium's own Sun and renders black at
   night); a moonlit atmosphere halo marks the Moon's position and lights the scene instead. Stars

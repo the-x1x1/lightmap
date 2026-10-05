@@ -18,6 +18,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   `@vitest/mocker` redirect mocks — dev-only, closed anyway); nodemailer 10.0.9+ across the workspace (GHSA-v53p-9fqp-m79j and
   GHSA-prgh-xp8r-p3m5, high: address-parser denial of service; plus three moderate advisories).
   Only `createTransport`/`sendMail` are used, unchanged across the major.
+- **Moon accuracy 0.3° → 0.02°**: the lunar position now follows Meeus ch. 47 (abbreviated
+  ELP-2000/82: 60 terms in longitude/distance, 60 in latitude, planetary and flattening terms,
+  nutation, true obliquity), reproducing Meeus's worked example 47.a to the unit of the published
+  sums. Rise/set ±1 min, illumination ±1 %; the accuracy note in the UI says so.
 - **Planning card**: with the camera tools, the card carries a "Depth of field" row — the real
   lens on the chosen sensor, aperture, focus distance and the sharp range (hyperfocal when the
   far limit is finite).

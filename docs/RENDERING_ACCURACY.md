@@ -28,9 +28,9 @@ validated against the US Naval Observatory (`packages/astronomy/tests/fixtures/u
 | Sunrise, sunset, civil twilight, solar noon      | ±1 minute (±2 at 70° latitude where the Sun grazes the threshold)                   | USNO rounds to the minute                                                  |
 | Nautical/astronomical twilight, golden/blue hour | Same method, thresholds −12°/−18°, −4°…+6°/−6°…−4°                                  | Window definitions are photographic conventions, documented in `events.ts` |
 | Polar day/night                                  | Exact detection; USNO wording reproduced                                            | Solar noon still reported in polar night (twilight peak)                   |
-| Moon azimuth/elevation                           | ±0.3°                                                                               | Low-precision Almanac series; topocentric parallax applied                 |
-| Moon illumination and phase name                 | ±2–3 %; USNO naming convention                                                      | Principal phase named from its instant for ~1 day                          |
-| Moonrise/set                                     | ±3 min                                                                              |                                                                            |
+| Moon azimuth/elevation                           | ±0.02°                                                                              | Meeus ch. 47 (abbreviated ELP-2000/82), nutation, topocentric parallax     |
+| Moon illumination and phase name                 | ±1 %; USNO naming convention                                                        | Principal phase named from its instant for ~1 day                          |
+| Moonrise/set                                     | ±1 min                                                                              |                                                                            |
 | Time zone conversion                             | Exact for IANA zones via `Intl`; DST gap → shift forward, overlap → earlier instant | Zone lookup from coordinates is geo-tz (ODbL boundaries)                   |
 
 ## What is simulated

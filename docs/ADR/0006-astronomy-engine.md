@@ -27,8 +27,11 @@ documented algorithm, and forbids pasting source from websites.
      Every constant is a published one; nothing was copied from a website or a library.
 2. **Validated against the US Naval Observatory** (`tests/fixtures/usno-golden.json`): event times
    within ±1 min (±2 min above 66° latitude), sun direction within 0.02° (angular separation),
-   moon illumination within 3 %. Stated accuracy: **sun ≈ 0.01°, moon ≈ 0.3°** (rise/set ±3 min,
-   illumination ±2 %), for 1950–2050. The moon's accuracy note is surfaced in the UI.
+   moon illumination within 3 %. The Moon follows Meeus ch. 47 (abbreviated ELP-2000/82, 60 + 60
+   terms with the planetary and flattening additions, nutation, true obliquity) and reproduces
+   Meeus's worked example 47.a to the unit of the published sums (`tests/lunar-meeus.test.ts`).
+   Stated accuracy: **sun ≈ 0.01°, moon ≈ 0.02°** (rise/set ±1 min, illumination ±1 %), for
+   1950–2050. The moon's accuracy note is surfaced in the UI.
 3. **Zero runtime dependencies.** The package has no `dependencies`; it runs in the browser, in
    Node tests and in scripts identically.
 4. **Behind an interface.** `AstronomyService` (`getSolarState`, `getLunarState`, `getDayEvents`)
@@ -47,8 +50,9 @@ documented algorithm, and forbids pasting source from websites.
 - No licence to audit for the most important calculation in the product; no bundle weight from an
   ephemeris library.
 - The golden test set doubles as living documentation of accuracy; adding a location is a JSON row.
-- Lunar accuracy (0.3°) is adequate for "where will the moon be in frame" and honest about its
-  limits; it is not an eclipse ephemeris. The UI says so.
+- Lunar accuracy (0.02°, from the 0.3° low-precision series it replaced in October 2026) is ample
+  for "where will the moon be in frame" and honest about its limits; it is not an eclipse
+  ephemeris. The UI says so.
 - Validity range is 1950–2050 for the stated accuracy; beyond it results degrade gracefully but are
   not guaranteed. Reverse planning (Phase 6) stays well inside it.
 - Refraction and horizon dip are approximations (standard atmosphere, sea-level horizon); the

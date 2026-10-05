@@ -90,7 +90,7 @@ export interface AstronomyService {
 }
 
 export const LUNAR_ACCURACY_NOTE =
-  'Moon position ±0.3°, illumination ±2 %, rise/set ±3 min (Astronomical Almanac low-precision series).';
+  'Moon position ±0.02°, illumination ±1 %, rise/set ±1 min (Meeus ch. 47 abbreviated ELP-2000/82 series).';
 
 const COMPASS16 = [
   'N',

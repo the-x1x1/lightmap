@@ -99,7 +99,7 @@ describe('MeeusAstronomyService', () => {
     expect(before.phaseName).toBe('Waxing Gibbous');
     expect(l.illuminatedFraction).toBeGreaterThan(0.98);
     expect(l.phaseName).toBe('Full Moon');
-    expect(l.accuracyNote).toContain('±0.3°');
+    expect(l.accuracyNote).toContain('±0.02°');
     expect(l.moonrise === null || l.moonrise instanceof Date).toBe(true);
   });
 
