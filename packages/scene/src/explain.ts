@@ -48,7 +48,7 @@ export function explainScene(s: SceneState): ExplanationLine[] {
     lines.push({
       label: 'Moon',
       value: s.lunar.isAboveHorizon
-        ? `${Math.round(s.lunar.illuminatedFraction * 100)} % lit, ${s.lunar.elevationDegrees.toFixed(0)}° up in the ${compassLabel(s.lunar.azimuthDegrees)} — the only direct light`
+        ? `${Math.round(s.lunar.illuminatedFraction * 100)} % lit, ${s.lunar.elevationDegrees.toFixed(0)}° up in the ${compassLabel(s.lunar.azimuthDegrees)} — ${s.terrainHorizon?.moonAboveTerrain === false ? 'behind the terrain here' : 'the only direct light'}`
         : `below the horizon — no moonlight`,
       basis: 'astronomy',
     });
