@@ -258,6 +258,19 @@ test('sign in (dev), create a project, save the viewpoint, reload and reopen it'
   await expect(page.getByTestId('timeline-time')).toHaveText('09:00');
   await expect(page.getByTestId('location-label')).toContainText('Beach, 9am');
 
+  // A viewpoint link (the shot list carries one per block) reopens it straight from the URL and
+  // then drops the parameter so a reload does not reopen it.
+  const projectsRes = await page.request.get('/api/projects');
+  const { projects } = (await projectsRes.json()) as { projects: Array<{ id: string }> };
+  const detailRes = await page.request.get(`/api/projects/${projects[0]!.id}`);
+  const { project } = (await detailRes.json()) as {
+    project: { viewpoints: Array<{ id: string }> };
+  };
+  await page.goto(`/?viewpoint=${project.viewpoints[0]!.id}`);
+  await expect(page.getByTestId('location-label')).toContainText('Beach, 9am');
+  await expect(page.getByTestId('timeline-time')).toHaveText('09:00');
+  await expect(page).toHaveURL(/^(?!.*viewpoint=)/);
+
   // Preferences live in the profile once signed in: wipe the device copy and they come back
   // from the account (GET /api/account/profile) on the next load.
   await page.getByTestId('panel-tab-account').click();

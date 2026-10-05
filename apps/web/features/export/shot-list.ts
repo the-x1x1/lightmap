@@ -16,6 +16,7 @@ import {
 import { brand } from '@lightmap/config';
 import { compassLabel } from '@lightmap/geospatial';
 import type { ProjectDto, ViewpointDto } from '@/lib/api-types';
+import { viewpointUrl } from '@/features/projects/open-viewpoint';
 
 export interface ShotListOptions {
   /** Shown in the footer. */
@@ -42,8 +43,8 @@ function weatherLine(v: ViewpointDto): string {
   }
 }
 
-/** One viewpoint's block, in the place's own zone. */
-export function shotBlock(v: ViewpointDto): string[] {
+/** One viewpoint's block, in the place's own zone; with `appUrl`, a link that reopens it. */
+export function shotBlock(v: ViewpointDto, appUrl?: string): string[] {
   const at = new Date(v.selectedDatetimeUtc);
   const tz = v.timezone;
   const w = utcToWallClock(at, tz);
@@ -71,6 +72,7 @@ export function shotBlock(v: ViewpointDto): string[] {
     );
   }
   lines.push(`  Weather: ${weatherLine(v)}`);
+  if (appUrl) lines.push(`  Open:    ${viewpointUrl(appUrl, v.id)}`);
   return lines;
 }
 
@@ -95,9 +97,9 @@ export function buildShotList(
   if (project.description)
     out.push('Notes:', ...project.description.split('\n').map((l) => `  ${l}`), '');
   for (const p of parents) {
-    out.push(...shotBlock(p), '');
+    out.push(...shotBlock(p, opts.appUrl), '');
     const variants = viewpoints.filter((v) => v.parentViewpointId === p.id).sort(byTime);
-    for (const v of variants) out.push(...shotBlock(v).map((l) => `    ${l}`), '');
+    for (const v of variants) out.push(...shotBlock(v, opts.appUrl).map((l) => `    ${l}`), '');
   }
   out.push(
     `Sun and Moon from ephemeris; the Milky Way core from geometry (no sky-brightness model). Weather lines say what the viewpoint was saved with — a scenario is not a forecast.`,

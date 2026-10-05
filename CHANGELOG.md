@@ -31,7 +31,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 - **Shot list**: a project exported as plain text to copy or download — the call sheet for the
   day, one block per viewpoint in time order (variants under their parent) with the camera, the
   Sun, the day's sunrise/sunset, the Moon and the Milky Way core for night shots, the weather
-  basis it was saved with and the project notes (`buildShotList()`, tested; Pro export).
+  basis it was saved with and the project notes (`buildShotList()`, tested; Pro export). Each
+  block carries a `/?viewpoint=<id>` link that reopens the viewpoint for its owner
+  (`useViewpointLink`; the drawer's "Open" and the link share `restoreInputFor()`, tested).
 - **Project notes and shoot date** are editable in place from the selected project (plan §4
   "Projects: name, optional shoot date, notes" — the API had them, the UI did not): notes save on
   blur or Ctrl/⌘+Enter, the date once it has settled, chained so the last edit wins, with an

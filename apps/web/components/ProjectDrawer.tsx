@@ -5,13 +5,12 @@
  */
 import { useState } from 'react';
 import type { SceneState } from '@lightmap/scene';
-import { horizontalFovDeg } from '@lightmap/scene';
-import { isScenarioId } from '@lightmap/weather';
 import { usePlannerStore } from '@/features/planner/store';
 import { useAccount } from '@/features/account/use-account';
 import { useProject, useProjectMutations, useProjects } from '@/features/projects/use-projects';
 import { viewpointPayload } from '@/features/projects/viewpoint-payload';
 import { buildShotList } from '@/features/export/shot-list';
+import { restoreInputFor } from '@/features/projects/open-viewpoint';
 import { ApiRequestError } from '@/lib/client/api';
 import type { ViewpointDto } from '@/lib/api-types';
 import { Button } from '@lightmap/ui';
@@ -199,31 +198,7 @@ export function ProjectDrawer({
   }
 
   function open(v: ViewpointDto) {
-    restore({
-      location: {
-        point: {
-          latitude: v.latitude,
-          longitude: v.longitude,
-          ...(v.elevationM !== null ? { elevationM: v.elevationM } : {}),
-        },
-        timeZone: v.timezone,
-        label: v.label,
-        source: 'saved',
-      },
-      utc: new Date(v.selectedDatetimeUtc),
-      camera: {
-        eye: { latitude: v.latitude, longitude: v.longitude },
-        eyeHeightM: 1.7,
-        headingDeg: v.headingDeg,
-        pitchDeg: v.pitchDeg,
-        fovDeg: v.focalLengthEquivalentMm
-          ? horizontalFovDeg(v.focalLengthEquivalentMm)
-          : v.fieldOfViewDeg,
-        focalLengthMm: v.focalLengthEquivalentMm,
-        mode: 'viewpoint',
-      },
-      scenario: v.weatherScenario && isScenarioId(v.weatherScenario) ? v.weatherScenario : null,
-    });
+    restore(restoreInputFor(v));
     setStatus(`Opened “${v.label}” in the planner.`);
     setPanel('plan');
   }

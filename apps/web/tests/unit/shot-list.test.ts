@@ -85,6 +85,8 @@ describe('shot list', () => {
     expect(variantAt).toBeGreaterThan(noon);
     expect(dusk).toBeGreaterThan(variantAt);
     expect(text).toContain('  Weather: Forecast at save time (check again before the day)');
+    expect(text).toContain('  Open:    https://app.example/?viewpoint=v3');
+    expect(shotBlock(base).some((l) => l.startsWith('  Open:'))).toBe(false);
     expect(text).toContain('a scenario is not a forecast.');
     expect(
       text.endsWith('Made with LightMap · https://app.example · 2026-05-02T00:00:00.000Z'),

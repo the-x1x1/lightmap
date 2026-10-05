@@ -16,6 +16,7 @@ import { darkSkySpells } from '@/features/planner/dark-sky-band';
 import { useAccount } from '@/features/account/use-account';
 import { usePreferencesSync } from '@/features/account/use-preferences';
 import { useProductEvents } from '@/features/analytics/use-product-events';
+import { useViewpointLink } from '@/features/projects/use-viewpoint-link';
 import { Button, cx } from '@lightmap/ui';
 import { WorldMap, type RendererInfo } from './WorldMap';
 import { LocationSearch } from './LocationSearch';
@@ -81,6 +82,8 @@ export function MapShell() {
   const account = useAccount();
   // Units, time-zone mode and default lens: this device's, then the profile's once signed in.
   usePreferencesSync();
+  // A `/?viewpoint=<id>` link reopens a saved viewpoint once the account is known.
+  useViewpointLink(account.signedIn);
   const [rendererInfo, setRendererInfo] = useState<RendererInfo>({
     mode: 'loading',
     qualityLabel: '—',
