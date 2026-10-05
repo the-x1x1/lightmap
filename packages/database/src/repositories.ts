@@ -74,7 +74,9 @@ export function projectsRepo(db: Db) {
         .select({
           project: projects,
           viewpointCount: count(viewpoints.id),
-          upcomingViewpointCount: sql<number>`count(${viewpoints.id}) filter (where ${viewpoints.selectedDatetimeUtc} >= ${from} and ${viewpoints.selectedDatetimeUtc} <= ${to})`,
+          // The bounds go through the column's own driver mapping (`gte`/`lte`): a bare Date in
+          // a sql template reaches postgres-js unserialised and the query fails.
+          upcomingViewpointCount: sql<number>`count(${viewpoints.id}) filter (where ${and(gte(viewpoints.selectedDatetimeUtc, from), lte(viewpoints.selectedDatetimeUtc, to))})`,
         })
         .from(projects)
         .leftJoin(viewpoints, eq(viewpoints.projectId, projects.id))
