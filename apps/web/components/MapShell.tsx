@@ -12,6 +12,7 @@ import { DEFAULT_RENDER_SETTINGS } from '@lightmap/scene';
 import { effectiveTimeZone, usePlannerStore } from '@/features/planner/store';
 import { useScene } from '@/features/planner/use-scene';
 import { useTerrainHorizon } from '@/features/planner/use-terrain-horizon';
+import { darkSkySpells } from '@/features/planner/dark-sky-band';
 import { useAccount } from '@/features/account/use-account';
 import { usePreferencesSync } from '@/features/account/use-preferences';
 import { useProductEvents } from '@/features/analytics/use-product-events';
@@ -129,6 +130,20 @@ export function MapShell() {
           }
         : null,
     [hasLunar, moonriseMs, moonsetMs],
+  );
+  // Dark-sky spells of the civil day (night planning) for the timeline band: per place and day.
+  const dayStartMs = dayEvents?.dayStart.getTime() ?? null;
+  const dayEndMs = dayEvents?.dayEnd.getTime() ?? null;
+  const darkSky = useMemo(
+    () =>
+      hasLunar && location && dayStartMs !== null && dayEndMs !== null
+        ? darkSkySpells(
+            { dayStart: new Date(dayStartMs), dayEnd: new Date(dayEndMs) },
+            location.point.latitude,
+            location.point.longitude,
+          )
+        : null,
+    [hasLunar, location, dayStartMs, dayEndMs],
   );
   // Terrain horizon around the pin (sampled through the renderer; nothing on the ellipsoid).
   useTerrainHorizon({
@@ -358,6 +373,7 @@ export function MapShell() {
                   terrain={terrainMarkers}
                   terrainVisible={scene?.terrainHorizon?.sunEvents.visible ?? null}
                   moon={moonMarkers}
+                  darkSky={darkSky}
                 />
                 {scene && isEnabled('reversePlanning') ? (
                   <NextOccurrence

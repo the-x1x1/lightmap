@@ -51,7 +51,10 @@ The most important interaction. The timeline is a range input over the civil day
 Markers drawn along the track: dawn (civil), sunrise, morning golden hour, solar noon, evening
 golden hour, sunset, blue hour, civil/nautical/astronomical dusk, night; with moon planning,
 moonrise and moonset in grey (☾ / ☽); with a terrain horizon, ▲ / ▽ Ridge. Markers move when
-the date or location changes.
+the date or location changes. With moon planning the night portions of the track carry a faint
+violet **dark-sky band** over the spells when the Milky Way core can be shot (astronomical night,
+core 10° up, no bright Moon — the same rule as the dark windows), so the scrubber shows the
+shootable hours at a glance.
 
 Scrubbing updates the astronomical state synchronously on every tick (target < 16 ms); expensive
 visual refresh (terrain re-light, shadow map) is debounced.

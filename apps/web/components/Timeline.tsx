@@ -10,6 +10,7 @@ import type { DayEvents } from '@lightmap/astronomy';
 import { formatWallTime } from '@lightmap/astronomy';
 import { usePlannerStore } from '@/features/planner/store';
 import { terrainShade } from '@/features/planner/terrain-shade';
+import { darkSkyBand, type Spell } from '@/features/planner/dark-sky-band';
 import { cx } from '@lightmap/ui';
 
 export interface TimelineProps {
@@ -26,6 +27,8 @@ export interface TimelineProps {
   terrainVisible?: ReadonlyArray<{ from: Date; to: Date }> | null | undefined;
   /** Moonrise / moonset for the day (moon planning), as extra grey markers. */
   moon?: { moonrise: Date | null; moonset: Date | null } | null | undefined;
+  /** Spells (UTC) when the Milky Way core can be shot: a faint violet band on the night track. */
+  darkSky?: ReadonlyArray<Spell> | null | undefined;
   className?: string | undefined;
 }
 
@@ -127,6 +130,7 @@ export function Timeline({
   terrain,
   terrainVisible,
   moon,
+  darkSky,
   className,
 }: TimelineProps) {
   const minutes = usePlannerStore((s) => s.minutes);
@@ -147,6 +151,11 @@ export function Timeline({
     () => (dayEvents && terrainVisible ? terrainShade(dayEvents, terrainVisible) : null),
     [dayEvents, terrainVisible],
   );
+  const band = useMemo(
+    () => (dayEvents && darkSky ? darkSkyBand(dayEvents, [...darkSky]) : null),
+    [dayEvents, darkSky],
+  );
+  const track = [band, shade, gradient].filter((l) => l !== null).join(', ');
   // `minutes` is elapsed time since local midnight; on a DST day that is not the wall clock, so
   // the label comes from the instant itself whenever the day's bounds are known.
   const timeLabel = dayEvents
@@ -174,9 +183,10 @@ export function Timeline({
         <div
           aria-hidden
           className="pointer-events-none absolute left-0 right-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full opacity-90"
-          style={{ background: shade ? `${shade}, ${gradient}` : gradient }}
+          style={{ background: track }}
           data-testid="timeline-track"
           data-terrain-shade={shade ? 'true' : undefined}
+          data-dark-sky={band ? 'true' : undefined}
         />
         <input
           id={id}

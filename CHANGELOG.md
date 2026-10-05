@@ -18,7 +18,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   edges to the minute and inside the stretch), each a click that jumps the planner to the core's
   peak — or why there are none (no astronomical night, core never up this season, the Moon, or
   only minutes at a time). `milkyWayWindows()`, tested at Kailua, London, the full-Moon nights
-  and the grazing cases. The **Light finder** takes the core as a third body: "when does the
+  and the grazing cases. The timeline track carries a faint violet **dark-sky band** over the
+  night's shootable spells (`darkSkySpells()`/`darkSkyBand()`, tested). The **Light finder** takes the core as a third body: "when does the
   core stand over that peak?" — bearing/elevation matches like the Sun's, kept only in a dark
   sky by default (`darkSkyOnly`, `skyDark` on each match).
 - **Day-of-year slider** under the date control: scrub the seasons the way the timeline scrubs
