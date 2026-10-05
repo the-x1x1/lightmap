@@ -251,19 +251,18 @@ function start(): void {
   }
 }
 
-/** The single page-wide compass follow. */
-export const compassController = {
-  start,
-  stop,
-  getState: (): CompassState => state,
-  getRollDeg: (): number => rollDeg,
-  subscribe(listener: () => void): () => void {
-    listeners.add(listener);
-    return () => {
-      listeners.delete(listener);
-    };
-  },
+/** Store-style accessors (plain functions, so they can be handed to `useSyncExternalStore`). */
+const getState = (): CompassState => state;
+const getRollDeg = (): number => rollDeg;
+const subscribe = (listener: () => void): (() => void) => {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 };
+
+/** The single page-wide compass follow. */
+export const compassController = { start, stop, getState, getRollDeg, subscribe };
 
 const getServerState = (): CompassState => 'idle';
 const getServerRoll = (): number => 0;
@@ -275,16 +274,8 @@ export function useCompass(): {
   start: () => void;
   stop: () => void;
 } {
-  const current = useSyncExternalStore(
-    compassController.subscribe,
-    compassController.getState,
-    getServerState,
-  );
-  const roll = useSyncExternalStore(
-    compassController.subscribe,
-    compassController.getRollDeg,
-    getServerRoll,
-  );
+  const current = useSyncExternalStore(subscribe, getState, getServerState);
+  const roll = useSyncExternalStore(subscribe, getRollDeg, getServerRoll);
   const startCb = useCallback(() => compassController.start(), []);
   const stopCb = useCallback(() => compassController.stop(), []);
   // Before the first start the controller does not know whether the device qualifies.
