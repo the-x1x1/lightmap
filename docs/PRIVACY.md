@@ -130,3 +130,9 @@ party.
 Auth.js session and CSRF cookies only, `HttpOnly`, `SameSite=Lax`, `Secure` in production. No
 advertising or cross-site tracking cookies. Per-viewer conveniences (collapsed sheet, last tab) may
 use `localStorage`; they never contain coordinates.
+
+**Offline cache.** In production a service worker keeps a copy of the signed-in user's own
+projects and viewpoints (which do contain coordinates), their session and entitlements in the
+browser's Cache Storage on that device, so saved plans open without a network. Nothing is sent
+anywhere by it. The copy is deleted on sign-out, on an account-deletion request and when the
+session is found signed out; clearing the site's data in the browser removes it too.

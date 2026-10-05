@@ -23,7 +23,7 @@ export const config = {
   matcher: [
     {
       source:
-        '/((?!api|_next/static|_next/image|cesium|favicon.ico|icon.svg|robots.txt|manifest.webmanifest).*)',
+        '/((?!api|_next/static|_next/image|cesium|favicon.ico|icon.svg|robots.txt|manifest.webmanifest|sw.js).*)',
       missing: [
         { type: 'header', key: 'next-router-prefetch' },
         { type: 'header', key: 'purpose', value: 'prefetch' },

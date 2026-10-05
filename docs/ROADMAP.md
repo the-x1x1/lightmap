@@ -4,18 +4,18 @@ Phases follow the master plan (§25). Status as of v0.1.0. A phase is "delivered
 items exist, are tested and are documented; "plumbing" means the code paths work end to end in test
 mode but production configuration is still outstanding.
 
-| Phase | Goal                                        | Status                                                                                      |
-| ----- | ------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| 0     | Foundation                                  | **Delivered in v0.1.0**                                                                     |
-| 1     | Lighting MVP                                | **Delivered in v0.1.0**                                                                     |
-| 2     | Weather                                     | **Delivered in v0.1.0**                                                                     |
-| 3     | Accounts, projects, billing                 | **Delivered as plumbing in v0.1.0**; production configuration outstanding                   |
-| 4     | Visual quality                              | Started: export, twilight/haze, layered clouds delivered (unreleased)                       |
-| 5     | Real references                             | Future — blocked on licensing                                                               |
-| 6     | Advanced camera planning / reverse planning | **Solver, Light finder, point-in-view, variants, "this light" chip delivered (unreleased)** |
-| 7     | Long-range climatology                      | **Delivered (unreleased)** — Open-Meteo/ERA5, Pro entitlement                               |
-| 8     | High-fidelity environment reconstruction    | Future                                                                                      |
-| 9     | Native mobile                               | Future — PWA installable baseline shipped; demand measured first                            |
+| Phase | Goal                                        | Status                                                                                            |
+| ----- | ------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 0     | Foundation                                  | **Delivered in v0.1.0**                                                                           |
+| 1     | Lighting MVP                                | **Delivered in v0.1.0**                                                                           |
+| 2     | Weather                                     | **Delivered in v0.1.0**                                                                           |
+| 3     | Accounts, projects, billing                 | **Delivered as plumbing in v0.1.0**; production configuration outstanding                         |
+| 4     | Visual quality                              | Started: export, twilight/haze, layered clouds delivered (unreleased)                             |
+| 5     | Real references                             | Future — blocked on licensing                                                                     |
+| 6     | Advanced camera planning / reverse planning | **Solver, Light finder, point-in-view, variants, "this light" chip, DOF, levelling (unreleased)** |
+| 7     | Long-range climatology                      | **Delivered (unreleased)** — Open-Meteo/ERA5, Pro entitlement                                     |
+| 8     | High-fidelity environment reconstruction    | Future                                                                                            |
+| 9     | Native mobile                               | Started — PWA installable baseline and offline project cache (unreleased); native later           |
 
 ## Phase 0 — Foundation (delivered)
 
@@ -151,7 +151,10 @@ direction or erase uncertainty labels.
 The PWA baseline exists (unreleased): a complete manifest (`id`, scope, 192/512 PNG icons plus a
 maskable variant, `display_override`), an apple-touch-icon, `start_url=/?source=pwa` so installed
 launches can be counted. No service worker yet — the app needs the network for terrain and weather;
-an offline project cache is the first Phase 9 deliverable. Capacitor or React Native wrapper only
+an offline project cache is the first Phase 9 deliverable — **delivered (unreleased)**: a
+hand-written service worker keeps the planner shell and the user's own projects/viewpoints for
+offline use, never caches third-party map/terrain/weather data, clears user data on sign-out and
+account deletion, and an offline banner says when cached data is on screen. Capacitor or React Native wrapper only
 after PWA usage proves demand: native install, offline project cache, compass, device orientation,
 AR sun alignment, field mode.
 

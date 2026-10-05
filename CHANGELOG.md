@@ -14,6 +14,13 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   rule-of-thirds grid, the true-level line and the modelled terrain skyline (dotted, "terrain
   only"), with buttons that pitch the camera so level sits on the low third, the centre or the
   high third. `levelLineY()`, `pitchForHorizonAt()`, `skylinePath()` in `@lightmap/scene`.
+- **Offline project cache (Phase 9)**: in production a service worker (`public/sw.js`) keeps the
+  planner page, its chunks and the signed-in user's own projects, viewpoints, session and
+  entitlements, so saved plans open in the field with no signal — astronomy, the light finder,
+  DOF and the level guide work offline; weather falls back to scenarios. Third-party
+  map/terrain/weather data is never cached; user data is dropped on sign-out, account deletion
+  or a signed-out session. An offline banner shows the age of cached data. Unit-tested in a VM
+  sandbox (`sw.test.ts`).
 
 ## v0.1.0 — 2026-09-25
 

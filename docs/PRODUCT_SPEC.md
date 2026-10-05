@@ -310,6 +310,17 @@ is deleted with its parent. One level only: a variant of a variant is re-parente
 viewpoint. The drawer offers "+ Variant" on a card when the planner currently sits at that
 viewpoint's place (within ~5 m).
 
+**Offline in the field** (roadmap Phase 9, installed PWA or any browser in production): a service
+worker (`public/sw.js`) keeps the planner page, its hashed chunks and the signed-in user's own
+projects, viewpoints, session, entitlements and capabilities as last fetched. Offline, saved
+projects open and reopening a viewpoint works; sun and moon positions, the timeline, the light
+finder, depth of field and the level guide all run in the browser; weather falls back to
+scenarios and the 3D globe to the overlay. Saving, editing and deleting need a connection. A
+banner says "Offline · saved data from 14:05 · …" whenever cached data is on screen. Third-party
+map, terrain and weather responses are never cached (licences and freshness). The cache of
+user data is dropped on sign-out, on account deletion and whenever the session comes back signed
+out.
+
 No collaboration or sharing in v0.1.
 
 ## 10. Accounts (plan §16)
