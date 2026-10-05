@@ -377,17 +377,25 @@ export function moonPosition(date: Date, latitudeDeg: number, longitudeDeg: numb
   };
 }
 
-/** Moonrise / moonset within [start, end) using the topocentric upper-limb threshold (+0.125° ≈ refraction − semidiameter − parallax handled above). */
+/**
+ * Moonrise / moonset within [start, end): the instants the Moon's upper limb touches the apparent
+ * horizon. Meeus 15.1 gives the *geocentric* threshold h0 = 0.7275π − 0°34′ (parallax,
+ * semidiameter and refraction folded together); `moonPosition` already applies parallax, so for
+ * its topocentric altitude the threshold is −(0.2725π + 0°34′) ≈ −0.83°, the semidiameter plus
+ * horizon refraction.
+ */
 export function moonRiseSet(
   start: Date,
   end: Date,
   latitudeDeg: number,
   longitudeDeg: number,
 ): { moonrise: Date | null; moonset: Date | null; alwaysUp: boolean; alwaysDown: boolean } {
-  const threshold = 0.125; // Meeus 15.1: h0 = 0.7275π − 0°34′, ≈ +0.125° for topocentric altitude after our parallax step
   const step = 10 * 60_000;
-  const f = (t: number) =>
-    moonPosition(new Date(t), latitudeDeg, longitudeDeg).topocentricElevationDeg - threshold;
+  const f = (t: number) => {
+    const m = moonPosition(new Date(t), latitudeDeg, longitudeDeg);
+    const parallaxDeg = Math.asin(EARTH_EQUATORIAL_RADIUS_KM / m.distanceKm) * RAD;
+    return m.topocentricElevationDeg + 0.2725 * parallaxDeg + 34 / 60;
+  };
   let moonrise: Date | null = null;
   let moonset: Date | null = null;
   let anyUp = false;
