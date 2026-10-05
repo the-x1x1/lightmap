@@ -16,8 +16,8 @@ Full-screen map with the planning controls in a bottom sheet (mobile) or a compa
 | Sheet / panel | Selected location label, date control, time readout, timeline scrubber, weather mode/scenario controls, preview panel, "Save to project"                                                                                                                                                           |
 
 The sheet can be dragged up for details (the handle takes a swipe or a tap; collapsed, a glance
-line shows local time · light phase · sun bearing · weather basis and opens the sheet when
-tapped); the preview can expand full-screen; scenario controls scroll horizontally on narrow
+line shows local time · light phase · sun bearing (or, on a dark sky, "✦ core" and its bearing)
+· weather basis and opens the sheet when tapped); the preview can expand full-screen; scenario controls scroll horizontally on narrow
 screens. On phones every field is 16 px so iOS does not zoom on focus, the sheet and top bar
 respect the safe-area insets (`viewport-fit=cover`), and taps tolerate 10 px of finger wobble
 before they count as drags. Projects are accessible without leaving the current

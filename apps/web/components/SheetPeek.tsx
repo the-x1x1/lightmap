@@ -1,9 +1,9 @@
 'use client';
 /**
  * What the collapsed bottom sheet shows on a phone (plan §20): the one line a photographer glances
- * at while looking at the map — local time, light phase, where the sun is, and what the weather
- * basis is — as a button that opens the sheet. Nothing here is interactive beyond that, so the
- * inert body underneath loses nothing.
+ * at while looking at the map — local time, light phase, where the sun is (or, on a dark sky, the
+ * Milky Way core), and what the weather basis is — as a button that opens the sheet. Nothing here
+ * is interactive beyond that, so the inert body underneath loses nothing.
  */
 import type { SceneState } from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
@@ -49,7 +49,9 @@ export function SheetPeek({ scene, onOpen }: { scene: SceneState | null; onOpen:
             {PHASE_LABEL[scene.solar.phase]}
             {scene.solar.elevationDegrees > -0.833
               ? ` · Sun ${Math.round(scene.solar.azimuthDegrees)}° ${compassLabel(scene.solar.azimuthDegrees)}`
-              : ''}
+              : scene.nightSky?.verdict === 'visible'
+                ? ` · ✦ core ${Math.round(scene.nightSky.azimuthDeg)}° ${compassLabel(scene.nightSky.azimuthDeg)}`
+                : ''}
             {' · '}
             {weatherWord(scene)}
           </span>
