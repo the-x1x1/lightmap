@@ -8,48 +8,20 @@ import {
   formatMilkyWayWindow,
   formatWallTime,
   milkyWayWindows,
-  nextMoonPhases,
   utcToLocalSelection,
   utcToWallClock,
   type LunarState,
-  type MilkyWayCoreState,
 } from '@lightmap/astronomy';
 import { useMemo, useState } from 'react';
 import { usePlannerStore } from '@/features/planner/store';
 import { useSettled } from '@/lib/use-settled';
+import {
+  DARK_WINDOW_NIGHTS,
+  describeMilkyWay,
+  describeNextPhases,
+} from '@/features/planner/night-text';
 import { useSeasonalEnvelope } from '@/features/planner/use-seasonal';
 import { DayEventMarkers } from './Timeline';
-
-/** How far ahead the dark-window scan looks: a lunation and a half, so a Moon-free run is always inside it. */
-export const DARK_WINDOW_NIGHTS = 45;
-
-const PHASE_LABEL = {
-  new: 'New',
-  'first-quarter': 'First quarter',
-  full: 'Full',
-  'last-quarter': 'Last quarter',
-} as const;
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-/** "36° up SSW — Astronomical night, core 36° up, Moon down" / "below the horizon — …". */
-export function describeMilkyWay(n: MilkyWayCoreState): string {
-  const where =
-    n.elevationDeg > 0
-      ? `${Math.round(n.elevationDeg)}° up ${compassLabel(n.azimuthDeg)}`
-      : 'below the horizon';
-  return `${where} — ${n.reason}`;
-}
-
-/** "Full 31 May · Last quarter 8 Jun · New 15 Jun · First quarter 21 Jun" in the planning zone. */
-export function describeNextPhases(from: Date, timeZone: string): string {
-  return nextMoonPhases(from, 4)
-    .map((e) => {
-      const w = utcToWallClock(e.at, timeZone);
-      return `${PHASE_LABEL[e.phase]} ${w.day} ${MONTHS[w.month - 1] ?? ''}`;
-    })
-    .join(' · ');
-}
 
 /**
  * The nights ahead on which the core can be shot, each a click away (the planner jumps to the
