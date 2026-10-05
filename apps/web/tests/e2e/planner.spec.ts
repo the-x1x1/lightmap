@@ -115,6 +115,31 @@ test('camera rotates and the heading readout follows', async ({ page }) => {
   await expect(page.getByTestId('camera-controls')).toContainText('35 mm');
 });
 
+test('level & thirds guide: status follows the pitch and the buttons place the horizon', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await pickKailua(page);
+  await page.getByTestId('camera-mode-viewpoint').click();
+  await page.getByTestId('level-guide-toggle').check();
+  const status = page.getByTestId('level-status');
+  await expect(status).toHaveText('Level through the centre');
+  await page.getByTestId('level-low-third').click();
+  await expect(status).toHaveText('Level on the low third');
+  // Horizon on the low third means the camera looks up.
+  const pitch = await page
+    .locator('#lm-pitch')
+    .evaluate((el) => (el as HTMLInputElement).valueAsNumber);
+  expect(pitch).toBeGreaterThan(0);
+  await page.getByTestId('level-high-third').click();
+  await expect(status).toHaveText('Level on the high third');
+  // The lines themselves draw only on the 3D globe (the overlay has no frame to level).
+  const map = page.getByTestId('world-map');
+  if ((await map.getAttribute('data-renderer-mode')) === '3D') {
+    await expect(page.getByTestId('level-line')).toBeAttached();
+  }
+});
+
 test('light finder: sunset due west from Kailua exists and jumps the planner to it', async ({
   page,
 }) => {
