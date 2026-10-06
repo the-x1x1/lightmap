@@ -1,6 +1,6 @@
 {
   "name": "@lightmap/observability",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "description": "Structured logging, error reporting and privacy-conscious analytics interfaces.",
   "license": "SEE LICENSE IN ../../LICENSE",

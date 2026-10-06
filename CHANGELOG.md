@@ -2,6 +2,16 @@
 
 All notable changes. Versions follow semver; `pnpm release <version>` prepends entries from commits.
 
+## v0.2.1 — 2026-10-06
+
+- renderer: the map view stays a readable chart at night — flat, dimmed basemap once the Sun is down (90 % at dusk → 45 % in astronomical night) instead of a black globe; the viewpoint view keeps true lighting (globeShadingFor, setGlobeShading; tested); docs (c11348f)
+- fix(shell): overflow-clip on the map shell and the map — a focus() or scrollIntoView() below the sheet's fold scrolled the hidden-overflow box, shifting map and sheet up behind a black band (fb58487)
+- timeline: marker labels fit the measured track — words where they clear each other, glyphs on a second row where they do not, a bare tick where even that would touch; sunrise and sunset win the space (markerLabels, tested); changelog for the browser-pass fixes (419b123)
+- fix(search): choosing a place no longer searches for its own label and reopens the list over the map; the box names a place picked on the globe or reopened from a project (285da28)
+- fix(database): the project list's forecast-window count passes its bounds through the column mapping — a bare Date in a sql template reached postgres-js unserialised and failed every GET /api/projects (CI integration failure since 93cd3e2) (7ae29a0)
+- fix(auth): without a database the session endpoint answers null/200 the way Auth.js does for a visitor, so SessionProvider settles on signed-out instead of logging ClientFetchError on every load; other auth routes still say accounts are off (503) (21be578)
+- fix(renderer): a scene applied after the host was torn down is dropped (StrictMode replays effects: the destroyed Cesium scene has no globe, and setAtmosphere crashed the whole page on the first location pick); setAtmosphere tolerates a scene without a globe; isDestroyed on SceneHost (tested) (60d82a5)
+
 ## v0.2.0 — 2026-10-05
 
 - **Milky Way core** (night planning): the Moon details and the planning card say where the
