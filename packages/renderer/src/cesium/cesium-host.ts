@@ -38,6 +38,12 @@ export interface CesiumHostOptions {
   requestRenderMode?: boolean;
   msaaSamples?: number;
   onError?: (message: string, error: unknown) => void;
+  /**
+   * Cesium stops its render loop after a render error. The host reports it here (instead of
+   * Cesium's own modal error panel, which would sit over the page and swallow every click) so the
+   * app can tear the 3D view down and fall back to the map overlay.
+   */
+  onRenderLoopStopped?: (error: unknown) => void;
 }
 
 export async function loadCesium(): Promise<CesiumModule> {
@@ -63,6 +69,7 @@ export class CesiumSceneHost implements SceneHost {
   private readonly grade: Cesium.PostProcessStage;
   private readonly gradeUniforms: Record<string, unknown>;
   private readonly onError: ((message: string, error: unknown) => void) | undefined;
+  private readonly onRenderLoopStopped: CesiumHostOptions['onRenderLoopStopped'];
   private readonly ionToken: string | undefined;
   private pickHandler: Cesium.ScreenSpaceEventHandler | null = null;
   private pickListeners = new Set<(p: GeoPoint & { viaTerrain: boolean }) => void>();
@@ -93,6 +100,7 @@ export class CesiumSceneHost implements SceneHost {
   constructor(C: CesiumModule, options: CesiumHostOptions) {
     this.C = C;
     this.onError = options.onError;
+    this.onRenderLoopStopped = options.onRenderLoopStopped;
     this.ionToken = options.ionToken;
     if (options.ionToken) C.Ion.defaultAccessToken = options.ionToken;
 
@@ -108,6 +116,9 @@ export class CesiumSceneHost implements SceneHost {
         webgl: { preserveDrawingBuffer: true, powerPreference: 'high-performance' },
       },
       shouldAnimate: false,
+      // No modal "An error occurred while rendering" panel over the app: `renderError` below
+      // hands the failure to the host's owner, which falls back to the overlay map.
+      showRenderLoopErrors: false,
     });
     this.scene = this.widget.scene;
     this.widget.useBrowserRecommendedResolution = false;
@@ -217,6 +228,7 @@ export class CesiumSceneHost implements SceneHost {
 
     scene.renderError.addEventListener((_s: unknown, error: unknown) => {
       this.onError?.('Renderer error', error);
+      this.onRenderLoopStopped?.(error);
     });
   }
 

@@ -584,17 +584,18 @@ Details in
 
 Every provider failure resolves to a usable state with a specific message.
 
-| Failure                           | Behaviour                                                                                                                                       |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Weather provider error or timeout | Badge: "Live forecast unavailable right now — showing your selected scenario." Weather confidence becomes SCENARIO. Scrubbing continues.        |
-| Weather requested beyond horizon  | The client never asks; the API returns 422 `outside_horizon` if it does.                                                                        |
-| Terrain provider unavailable      | Render on the flat WGS84 ellipsoid; terrain confidence LOW; source label degrades to Estimated Preview.                                         |
-| Imagery tiles fail                | Fall back to the bundled Natural Earth II basemap; environment confidence drops.                                                                |
-| Geocoder unavailable              | Search shows "Place search unavailable — paste coordinates instead"; coordinate entry and map clicks keep working.                              |
-| Billing provider unavailable      | Checkout/portal show an error; **no entitlement is ever granted** because the server snapshot is derived only from stored subscription records. |
-| Real imagery unavailable          | Always true in v0.1; simulation is unaffected.                                                                                                  |
-| No WebGL                          | Quality-0 map lighting overlay with sun arrow, shadow arrow, twilight band and sky gradient.                                                    |
-| Database unavailable              | Anonymous planning still works (no persistence); saving and sign-in report the outage.                                                          |
+| Failure                           | Behaviour                                                                                                                                                                                                                                                     |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Weather provider error or timeout | Badge: "Live forecast unavailable right now — showing your selected scenario." Weather confidence becomes SCENARIO. Scrubbing continues.                                                                                                                      |
+| Weather requested beyond horizon  | The client never asks; the API returns 422 `outside_horizon` if it does.                                                                                                                                                                                      |
+| Terrain provider unavailable      | Render on the flat WGS84 ellipsoid; terrain confidence LOW; source label degrades to Estimated Preview.                                                                                                                                                       |
+| Imagery tiles fail                | Fall back to the bundled Natural Earth II basemap; environment confidence drops.                                                                                                                                                                              |
+| Geocoder unavailable              | Search shows "Place search unavailable — paste coordinates instead"; coordinate entry and map clicks keep working.                                                                                                                                            |
+| Billing provider unavailable      | Checkout/portal show an error; **no entitlement is ever granted** because the server snapshot is derived only from stored subscription records.                                                                                                               |
+| Real imagery unavailable          | Always true in v0.1; simulation is unaffected.                                                                                                                                                                                                                |
+| No WebGL                          | Quality-0 map lighting overlay with sun arrow, shadow arrow, twilight band and sky gradient.                                                                                                                                                                  |
+| 3D render loop stops              | Cesium halts after a render error (a lost or failing WebGL context); the 3D view is torn down and the Quality-0 overlay takes over, with a line saying so. Cesium's own modal error panel is never shown — it would sit over the app and swallow every click. |
+| Database unavailable              | Anonymous planning still works (no persistence); saving and sign-in report the outage.                                                                                                                                                                        |
 
 Generic "Something went wrong" is not acceptable when a recovery message exists.
 

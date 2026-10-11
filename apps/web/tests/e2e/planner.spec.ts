@@ -34,6 +34,8 @@ async function setDateTime(page: Page, date: string, minutes: number) {
 }
 
 test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async ({ page }) => {
+  // The acceptance story has grown (seasons, night planning, playback): give it room on CI.
+  test.slow();
   await page.goto('/');
   await expect(page.getByTestId('map-shell')).toBeVisible();
   await pickKailua(page);
@@ -59,7 +61,7 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
   await expect(overlay).toHaveAttribute('data-sun-elevation', /^89\./);
   // The year's sunrise/sunset swing (solstice bounds): arcs on the rose, numbers in the details.
   await expect(overlay.getByTestId('seasonal-sunrise-arc')).toBeAttached();
-  await page.getByTestId('details-astronomy').locator('summary').click();
+  await page.getByTestId('details-astronomy').locator(':scope > summary').click();
   await expect(page.getByTestId('light-windows')).toHaveText(
     'Golden hour 05:33–06:20 (47 min) · 18:37–19:24 (47 min); blue hour 05:23–05:33 (10 min) · 19:24–19:33 (10 min)',
   );
@@ -72,7 +74,7 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
   // The phase calendar from the selected day: the Full Moon of 31 May (08:45 UTC = 30 May HST)
   // has passed, so the next principal phases start with the last quarter (8 June 10:01 UTC —
   // a minute past midnight HST, so either date is accepted) and the new Moon of 14 June HST.
-  await page.getByTestId('moon-details').locator('summary').click();
+  await page.getByTestId('moon-details').locator(':scope > summary').click();
   await expect(page.getByTestId('moon-next-phases')).toContainText(
     /Last quarter [78] Jun · New 14 Jun/,
   );
@@ -258,6 +260,9 @@ test('light finder: sunset due west from Kailua exists and jumps the planner to 
 test('sign in (dev), create a project, save the viewpoint, reload and reopen it', async ({
   page,
 }) => {
+  // One long account story — sign-in, project, viewpoint, notes, archive, restore, preferences,
+  // two reloads — against `next dev` on a cold runner; it ran past the 90 s budget in CI.
+  test.slow();
   await page.goto('/');
   // Sign in first: dev sign-in finishes with a full page load, which would drop a picked place.
   await page.getByTestId('panel-tab-account').click();
@@ -281,7 +286,7 @@ test('sign in (dev), create a project, save the viewpoint, reload and reopen it'
   await expect(page.getByTestId('shot-list-locked')).toBeVisible();
   await expect(page.getByTestId('shot-list-copy')).toHaveCount(0);
   // Notes and the shoot date are edited in place and survive a reload.
-  await page.getByTestId('project-notes').locator('summary').click();
+  await page.getByTestId('project-notes').locator(':scope > summary').click();
   await page.getByTestId('project-notes-text').fill('Park at the boat ramp; permit in the bag.');
   await page.getByTestId('project-notes-text').blur();
   await expect(page.getByTestId('project-notes-status')).toHaveText('Saved.');
@@ -325,7 +330,7 @@ test('sign in (dev), create a project, save the viewpoint, reload and reopen it'
   await page.getByTestId('project-archive').click();
   await expect(page.getByTestId('project-card')).toHaveCount(0);
   await expect(page.getByTestId('project-name')).toBeEnabled();
-  await page.getByTestId('archived-projects').locator('summary').click();
+  await page.getByTestId('archived-projects').locator(':scope > summary').click();
   await expect(page.getByTestId('archived-project')).toContainText('Kailua sunrise');
   await page.getByTestId('archived-project-restore').click();
   await expect(page.getByTestId('project-card')).toContainText('Kailua sunrise');
@@ -467,7 +472,7 @@ test.describe('preferences', () => {
     const soon = new Date();
     soon.setDate(soon.getDate() + 2);
     await setDateTime(page, soon.toISOString().slice(0, 10), 14 * 60);
-    await page.getByTestId('details-weather').locator('summary').click();
+    await page.getByTestId('details-weather').locator(':scope > summary').click();
     const weather = page.getByTestId('weather-details');
     // The fixture blows 4 m/s from 60°: "9 mph from the ENE" — a moderate breeze, and its
     // humidity stays at or under 85 %, so no field note even in the small hours.

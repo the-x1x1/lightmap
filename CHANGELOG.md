@@ -71,6 +71,11 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   02:54 UTC) come out within two minutes.
 - **"Tonight"** beside "Now": today at the start of astronomical night at the place (`setTonight`,
   tested).
+- **A failed 3D render loop falls back to the overlay map** instead of Cesium's modal "An error
+  occurred while rendering" panel, which sat over the app and swallowed every click (seen on
+  CI's mobile run); `showRenderLoopErrors` is off and the host reports the stop to the app.
+  E2E: the details-panel locators name the direct `summary` (nested panels made them ambiguous);
+  the two long stories are marked slow for cold runners.
 - **The map stays readable at night**: the overhead map is a chart, so once the Sun is down it is
   shown flat and dimmed (90 % at dusk → 45 % in astronomical night) instead of lit by a light
   that is below the horizon, which left it black; the viewpoint view keeps true lighting
