@@ -71,6 +71,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   02:54 UTC) come out within two minutes.
 - **"Tonight"** beside "Now": today at the start of astronomical night at the place (`setTonight`,
   tested).
+- **Security**: `sharp` ≥ 0.35.5 (librsvg, GHSA-wq5f-xc86-pv6w) and `source-map-js` ≥ 1.2.2
+  (GHSA-68fv-2mgg-jv7q) via pnpm overrides; both arrive transitively (Next.js, Vitest coverage).
 - **A failed 3D render loop falls back to the overlay map** instead of Cesium's modal "An error
   occurred while rendering" panel, which sat over the app and swallowed every click (seen on
   CI's mobile run); `showRenderLoopErrors` is off and the host reports the stop to the app.
