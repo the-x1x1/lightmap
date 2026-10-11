@@ -94,25 +94,6 @@ export function useRenderer(opts: UseRendererOptions): RendererHandle {
             console.warn('[renderer]', message, error);
             setState((s) => ({ ...s, error: message }));
           },
-          // Cesium's render loop stops after a render error (a lost or failing WebGL context):
-          // tear the 3D view down and fall back to the overlay map, which needs no GPU.
-          onRenderLoopStopped: () => {
-            if (cancelled) return;
-            for (const d of disposers) d();
-            disposers = [];
-            controllerRef.current?.destroy();
-            controllerRef.current = null;
-            setState({
-              mode: 'OVERLAY',
-              error:
-                'The 3D preview stopped on this device. The map overlay still shows sun direction and light.',
-              capabilities: caps,
-              qualityLabel: '—',
-              stats: null,
-              controller: null,
-              host: null,
-            });
-          },
         });
         if (cancelled) {
           host.destroy();

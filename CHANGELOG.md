@@ -77,9 +77,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   CI's emulated phone it failed both mobile E2E tests).
 - **Security**: `sharp` ≥ 0.35.5 (librsvg, GHSA-wq5f-xc86-pv6w) and `source-map-js` ≥ 1.2.2
   (GHSA-68fv-2mgg-jv7q) via pnpm overrides; both arrive transitively (Next.js, Vitest coverage).
-- **A failed 3D render loop falls back to the overlay map** instead of Cesium's modal "An error
-  occurred while rendering" panel, which sat over the app and swallowed every click (seen on
-  CI's mobile run); `showRenderLoopErrors` is off and the host reports the stop to the app.
+- **No more modal Cesium error panel**: a failed 3D render loop shows the app's own renderer
+  notice instead of Cesium's "An error occurred while rendering" panel, which sat over the app
+  and swallowed every click (seen on CI's mobile run).
   E2E: the details-panel locators name the direct `summary` (nested panels made them ambiguous);
   the two long stories are marked slow for cold runners.
 - **The map stays readable at night**: the overhead map is a chart, so once the Sun is down it is
