@@ -71,6 +71,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   02:54 UTC) come out within two minutes.
 - **"Tonight"** beside "Now": today at the start of astronomical night at the place (`setTonight`,
   tested).
+- **"Point with phone" no longer gives up for good** when the first compass reading is slow: after
+  2.5 s it says no heading has arrived yet but keeps listening, and a later reading starts the
+  follow (a slow sensor, or a phone picked up late, used to need the button tapped again — and on
+  CI's emulated phone it failed both mobile E2E tests).
 - **Security**: `sharp` ≥ 0.35.5 (librsvg, GHSA-wq5f-xc86-pv6w) and `source-map-js` ≥ 1.2.2
   (GHSA-68fv-2mgg-jv7q) via pnpm overrides; both arrive transitively (Next.js, Vitest coverage).
 - **A failed 3D render loop falls back to the overlay map** instead of Cesium's modal "An error

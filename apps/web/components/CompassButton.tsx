@@ -6,7 +6,8 @@ import { Button } from '@lightmap/ui';
 const NOTES: Record<string, string> = {
   denied:
     'Motion & orientation access was not allowed. Enable it in the browser settings and try again.',
-  'no-compass': 'This device gives no compass heading, so the camera cannot follow it.',
+  'no-compass':
+    'No compass heading yet — this device may not have one. Still listening; tap Point with phone to wait again.',
   requesting: 'Waiting for the first reading… hold the phone up like a camera.',
   active: 'Following the phone. Drag, use a slider or tap Stop to take over.',
 };

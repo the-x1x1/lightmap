@@ -39,7 +39,7 @@ export function compassSupported(): boolean {
 /** Share of the new reading per update: steady enough to read, quick enough to follow a pan. */
 const SMOOTHING = 0.35;
 const MIN_INTERVAL_MS = 80;
-/** Give up on the compass when no usable reading arrives in this long. */
+/** Say "no compass" when no usable reading arrives in this long (listening continues). */
 const SILENCE_MS = 2500;
 
 const listeners = new Set<() => void>();
@@ -87,10 +87,9 @@ function stop(): void {
 function armSilence(): void {
   if (silence) clearTimeout(silence);
   silence = setTimeout(() => {
-    if (active) {
-      stop();
-      setState('no-compass');
-    }
+    // No usable reading yet: say so, but keep listening — a slow sensor's first reading (or a
+    // phone picked up late) still starts the follow. Stop, manual input or hiding the page end it.
+    if (active) setState('no-compass');
   }, SILENCE_MS);
 }
 
@@ -218,7 +217,14 @@ function start(): void {
     setState('unsupported');
     return;
   }
-  if (active) return;
+  if (active) {
+    // Already listening (the "no compass" note is showing): wait for a reading again.
+    if (state !== 'active') {
+      setState('requesting');
+      armSilence();
+    }
+    return;
+  }
   installPageHooks();
   active = true;
   pausedByHide = false;

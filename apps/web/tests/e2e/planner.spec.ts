@@ -379,7 +379,6 @@ test('mobile: "Point with phone" follows synthetic orientation readings and stop
   await pickKailua(page);
   await page.getByTestId('camera-mode-viewpoint').click();
   await page.getByTestId('compass-toggle').click();
-  await expect(page.getByTestId('compass-toggle')).toHaveText('Stop following phone');
   // An upright phone whose back camera points west: W3C alpha 90, beta 90 (absolute).
   const fire = (alpha: number, beta: number) =>
     page.evaluate(
@@ -391,6 +390,7 @@ test('mobile: "Point with phone" follows synthetic orientation readings and stop
       [alpha, beta] as const,
     );
   await fire(90, 90);
+  await expect(page.getByTestId('compass-toggle')).toHaveText('Stop following phone');
   await expect(page.getByTestId('camera-heading')).toContainText('270° W');
   await expect(page.getByTestId('compass-status')).toContainText('Following the phone');
   // Readings are smoothed and throttled: a quarter turn to the south arrives over a few samples.
