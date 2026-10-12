@@ -160,9 +160,8 @@ export function ProjectDrawer({
   const ids = new Set(all.map((v) => v.id));
   const byTime = (a: ViewpointDto, b: ViewpointDto) =>
     Date.parse(a.selectedDatetimeUtc) - Date.parse(b.selectedDatetimeUtc);
-  const topLevel = all
-    .filter((v) => !v.parentViewpointId || !ids.has(v.parentViewpointId))
-    .sort(order === 'time' ? byTime : () => 0);
+  const unsorted = all.filter((v) => !v.parentViewpointId || !ids.has(v.parentViewpointId));
+  const topLevel = order === 'time' ? unsorted.sort(byTime) : unsorted;
   const variantsOf = new Map<string, ViewpointDto[]>();
   for (const v of all)
     if (v.parentViewpointId && ids.has(v.parentViewpointId))
