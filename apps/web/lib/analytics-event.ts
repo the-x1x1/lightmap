@@ -33,6 +33,7 @@ const LOCATION_SOURCES = ['search', 'map-click', 'coordinates', 'device', 'saved
 export const EXPORT_KINDS = [
   'card',
   'shot-list',
+  'shot-list-pdf',
   'calendar',
   'finder-text',
   'finder-calendar',

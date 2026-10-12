@@ -341,6 +341,7 @@ test('sign in (dev), create a project, save the viewpoint, reload and reopen it'
   // The shot list is a Pro export: a Free account sees the reason, not the buttons.
   await expect(page.getByTestId('shot-list-locked')).toBeVisible();
   await expect(page.getByTestId('shot-list-copy')).toHaveCount(0);
+  await expect(page.getByTestId('shot-list-pdf')).toHaveCount(0);
   // So is the week ahead: named with its reason, never silently absent.
   await expect(page.getByTestId('week-ahead-locked')).toBeAttached();
   await expect(page.getByTestId('week-ahead')).toHaveCount(0);

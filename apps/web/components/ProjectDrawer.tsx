@@ -20,6 +20,9 @@ import {
 } from '@/features/projects/use-projects';
 import { viewpointPayload } from '@/features/projects/viewpoint-payload';
 import { buildShotList } from '@/features/export/shot-list';
+import { buildShotListPdf } from '@/features/export/shot-list-pdf';
+import { jpegFromDataUrl } from '@/features/export/jpeg';
+import type { PdfImage } from '@/features/export/pdf';
 import { buildCalendar } from '@/features/export/calendar';
 import { downloadBlob, fileStem } from '@/features/export/download';
 import { restoreInputFor } from '@/features/projects/open-viewpoint';
@@ -162,6 +165,31 @@ export function ProjectDrawer({
     );
     setStatus('Shot list downloaded.');
     track('export_made', { kind: 'shot-list' });
+  }
+  // The same list as a PDF with each viewpoint's saved thumbnail under its block.
+  async function downloadShotListPdf() {
+    if (!selectedProject) return;
+    setError(null);
+    setStatus('Preparing the PDF…');
+    const thumbnails = new Map<string, PdfImage>();
+    for (const v of selectedProject.viewpoints) {
+      if (!v.thumbnailDataUrl) continue;
+      const image = await jpegFromDataUrl(v.thumbnailDataUrl);
+      if (image) thumbnails.set(v.id, image);
+    }
+    const bytes = buildShotListPdf(selectedProject, selectedProject.viewpoints, {
+      appUrl: window.location.origin,
+      generatedAt: new Date(),
+      units,
+      forecastAround,
+      thumbnails,
+    });
+    downloadBlob(
+      new Blob([bytes], { type: 'application/pdf' }),
+      `${fileStem(selectedProject.name, 'project')}-shot-list.pdf`,
+    );
+    setStatus('Shot list PDF downloaded.');
+    track('export_made', { kind: 'shot-list-pdf' });
   }
   // The same shots as calendar events (one per viewpoint, re-importing updates them).
   function downloadCalendar() {
@@ -429,6 +457,15 @@ export function ProjectDrawer({
                     data-testid="shot-list-download"
                   >
                     Download .txt
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => void downloadShotListPdf()}
+                    title="The same list as a PDF, with each viewpoint’s saved preview under its block"
+                    data-testid="shot-list-pdf"
+                  >
+                    Download PDF
                   </Button>
                   <Button
                     size="sm"

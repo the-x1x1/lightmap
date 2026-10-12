@@ -65,7 +65,8 @@ the app's own origin.
   `preview_expanded` — map or viewpoint camera; `viewpoint_saved` — whether it is a shot variant;
   `project_created` — nothing; `upgrade_started` — monthly or yearly; `subscription_started`
   (server-side, from the Stripe webhook) — the plan key; `export_made` — which kind of export
-  (card, shot list, calendar, finder text or calendar, dark-windows calendar, week-ahead text),
+  (card, shot list as text or PDF, calendar, finder text or calendar, dark-windows calendar,
+  week-ahead text),
   never its content; `week_ahead_opened` — nothing. Never a label, a note, a search query, a
   precise coordinate or an email address.
 

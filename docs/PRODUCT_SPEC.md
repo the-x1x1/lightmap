@@ -603,6 +603,12 @@ link per block (`/?viewpoint=<id>`) that reopens the viewpoint in the planner fo
 owner (fetched owner-scoped, restored like "Open", the parameter then dropped from the address);
 signed out, the planner says to sign in first, and a viewpoint the account cannot see (deleted,
 or someone else's) is said so, never silently ignored.
+The same list downloads as a **PDF** (`<name>-shot-list.pdf`): A4 pages in Courier so the
+columns hold, each viewpoint's saved preview thumbnail under its block (the planner's own
+picture, re-encoded as JPEG in the browser; text alone when a viewpoint has none), variants
+indented, the notes and the same honesty footer — written by a small dependency-free writer
+(`buildPdf()`: WinAnsi text with substitutes for the planner's symbols, DCT images, exact
+cross-reference offsets; `buildShotListPdf()`; both tested, and the output checked with qpdf).
 The same shots download as a calendar file (`<name>.ics`, RFC 5545): one event per viewpoint
 from 30 minutes before the planned instant (time to set up) to 15 after, a reminder an hour
 before the planned instant (`TRIGGER:-PT30M` against the event's start), the coordinates as LOCATION and GEO, the shot-list block as the description and the
