@@ -4,6 +4,11 @@
  * Accessible without leaving the current location. Requires an account; the paywall explains limits.
  */
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { utcToWallClock } from '@lightmap/astronomy';
+import { windowOutlook } from '@lightmap/weather';
+import { weatherQueryKey } from '@/features/planner/weather-query';
+import type { WeatherResponse } from '@/lib/api-types';
 import type { SceneState } from '@lightmap/scene';
 import { usePlannerStore } from '@/features/planner/store';
 import { useAccount } from '@/features/account/use-account';
@@ -113,12 +118,26 @@ export function ProjectDrawer({
   // The shot list (plan §4 "save to a shoot"): the whole project as text to copy or download —
   // part of the Pro export entitlement, like the planning card.
   const shotListDecision = account.can('export_preview');
+  // The forecast around a shot when its day is already in the query cache (the planner or the
+  // week ahead fetched it): read at export time, never fetched for the list.
+  const queryClient = useQueryClient();
+  function forecastAround(v: ViewpointDto) {
+    const w = utcToWallClock(new Date(v.selectedDatetimeUtc), v.timezone);
+    const date = `${w.year}-${String(w.month).padStart(2, '0')}-${String(w.day).padStart(2, '0')}`;
+    const data = queryClient.getQueryData<WeatherResponse>(
+      weatherQueryKey({ latitude: v.latitude, longitude: v.longitude }, date, v.timezone),
+    );
+    if (!data || data.frames.length === 0) return null;
+    const at = Date.parse(v.selectedDatetimeUtc);
+    return windowOutlook(data.frames, new Date(at - 30 * 60_000), new Date(at + 30 * 60_000));
+  }
   function shotListText(): string | null {
     if (!selectedProject) return null;
     return buildShotList(selectedProject, selectedProject.viewpoints, {
       appUrl: typeof window !== 'undefined' ? window.location.origin : '',
       generatedAt: new Date(),
       units,
+      forecastAround,
     });
   }
   async function copyShotList() {

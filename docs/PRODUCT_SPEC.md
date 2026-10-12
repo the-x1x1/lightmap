@@ -272,6 +272,8 @@ share (overcast noon ≈ 18 klx, EV 12.8; storm ≈ 9 klx); at night a full Moon
 ≈ 0.26 lx (EV −3.5), falling steeply with phase, over a 0.002 lx starlight-and-airglow floor
 (EV −10.3). EV = log2(E·ISO/250). It is labelled an estimate everywhere and the card's notes and
 the shot list's footer say it is not a meter reading; light pollution is not modelled. The shot
+list adds a "Now:" line with the forecast around the shot when the planner already holds that
+day's frames (read at export time, never fetched for the list). The shot
 list uses the saved scenario's cloud, or for a viewpoint saved on a forecast or observed day the
 total cloud its snapshot carried (`cloudCoverAtSave` on the viewpoint DTO, from the snapshot's
 weather state — the Weather line shows it too: "Forecast at save time (40 % cloud; check again

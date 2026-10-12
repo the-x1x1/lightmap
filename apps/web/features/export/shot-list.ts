@@ -22,7 +22,13 @@ import {
   formatHeight,
   type DistanceUnits,
 } from '@lightmap/scene';
-import { isScenarioId, parametersForForecast, scenarioById } from '@lightmap/weather';
+import {
+  WINDOW_VERDICT_TEXT,
+  isScenarioId,
+  parametersForForecast,
+  scenarioById,
+  type WindowOutlook,
+} from '@lightmap/weather';
 import type { ProjectDto, ViewpointDto } from '@/lib/api-types';
 import { viewpointUrl } from '@/features/projects/open-viewpoint';
 
@@ -32,6 +38,11 @@ export interface ShotListOptions {
   generatedAt: Date;
   /** Heights in metres (default) or feet. */
   units?: DistanceUnits;
+  /**
+   * The forecast around a viewpoint's instant when the planner already holds that day's frames
+   * (never fetched for the list); null or absent gives no line.
+   */
+  forecastAround?: (v: ViewpointDto) => Pick<WindowOutlook, 'verdict' | 'meanCloudCover'> | null;
 }
 
 function civil(d: Date, tz: string): string {
@@ -62,6 +73,7 @@ export function shotBlock(
   v: ViewpointDto,
   appUrl?: string,
   units: DistanceUnits = 'metric',
+  forecastAround?: ShotListOptions['forecastAround'],
 ): string[] {
   const at = new Date(v.selectedDatetimeUtc);
   const tz = v.timezone;
@@ -92,6 +104,11 @@ export function shotBlock(
     );
   }
   lines.push(`  Weather: ${weatherLine(v)}`);
+  const now = forecastAround?.(v) ?? null;
+  if (now)
+    lines.push(
+      `  Now:     forecast ${Math.round(now.meanCloudCover)} % cloud around the shot, ${WINDOW_VERDICT_TEXT[now.verdict]}`,
+    );
   // An incident-light estimate under the saved scenario, or the cloud the forecast or the
   // observation carried at save time; without either it reads as a clear sky and says so. The
   // footer says it is not a meter.
@@ -145,10 +162,13 @@ export function buildShotList(
   if (project.description)
     out.push('Notes:', ...project.description.split('\n').map((l) => `  ${l}`), '');
   for (const p of parents) {
-    out.push(...shotBlock(p, opts.appUrl, opts.units), '');
+    out.push(...shotBlock(p, opts.appUrl, opts.units, opts.forecastAround), '');
     const variants = viewpoints.filter((v) => v.parentViewpointId === p.id).sort(byTime);
     for (const v of variants)
-      out.push(...shotBlock(v, opts.appUrl, opts.units).map((l) => `    ${l}`), '');
+      out.push(
+        ...shotBlock(v, opts.appUrl, opts.units, opts.forecastAround).map((l) => `    ${l}`),
+        '',
+      );
   }
   out.push(
     `Sun and Moon from ephemeris; the Milky Way core from geometry (no sky-brightness model). Weather lines say what the viewpoint was saved with — a scenario is not a forecast. Light is an incident-light estimate (no light pollution), not a meter reading.`,

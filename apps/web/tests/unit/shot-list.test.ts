@@ -107,6 +107,17 @@ describe('shot list', () => {
     expect(cloudy.find((l) => l.startsWith('  Light:'))).toMatch(
       /\(90 % cloud at save time, estimate\)$/,
     );
+    // The forecast around the shot when the caller can supply it from the planner's cache.
+    const withNow = shotBlock(later, undefined, 'metric', () => ({
+      verdict: 'clear',
+      meanCloudCover: 12.4,
+    }));
+    expect(withNow.find((l) => l.startsWith('  Now:'))).toBe(
+      '  Now:     forecast 12 % cloud around the shot, clear — direct light',
+    );
+    expect(
+      shotBlock(later, undefined, 'metric', () => null).some((l) => l.startsWith('  Now:')),
+    ).toBe(false);
     expect(text).toContain('  Open:    https://app.example/?viewpoint=v3');
     expect(shotBlock(base).some((l) => l.startsWith('  Open:'))).toBe(false);
     // No shoot date: no stray blank line between the title and the count; imperial heights.
