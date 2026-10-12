@@ -33,6 +33,8 @@ export interface SmokeInputs {
   stripeWebhookUnsigned: SmokeResponse;
   /** GET /api/location/search?q=Kailua (optional: costs a geocoder call). */
   search?: SmokeResponse;
+  /** GET /api/weather for today at Kailua (optional: one provider call, cached per cell and day). */
+  weather?: SmokeResponse;
 }
 
 export type SmokeLevel = 'ok' | 'warn' | 'fail';
@@ -192,6 +194,38 @@ export function evaluateSmoke(i: SmokeInputs): SmokeFinding[] {
       else if (!Array.isArray(results) || results.length === 0)
         add('search.results', 'warn', 'no results for the probe query');
       else add('search', 'ok', `${results.length} results from ${String(provider?.['id'])}`);
+    }
+  }
+
+  // Today's weather from the live provider (optional): hourly frames with the air on them.
+  if (i.weather) {
+    if (expectStatus('weather', i.weather, 200)) {
+      const w = parseJson(i.weather.body);
+      const frames = w?.['frames'];
+      const providerId = String(w?.['providerId']);
+      if (providerId === 'fixture') add('weather.provider', 'fail', 'fixture weather');
+      else if (!Array.isArray(frames) || frames.length < 12)
+        add(
+          'weather.frames',
+          'fail',
+          `${Array.isArray(frames) ? frames.length : 0} frames for the day`,
+        );
+      else {
+        const f = frames[0] as Record<string, unknown>;
+        const hasAir = typeof f['temperature'] === 'number' && typeof f['dewPoint'] === 'number';
+        if (!hasAir)
+          add(
+            'weather.air',
+            'warn',
+            'frames carry no temperature/dew point (cache older than v3?)',
+          );
+        else
+          add(
+            'weather',
+            'ok',
+            `${frames.length} frames from ${providerId}, mode ${String(w?.['mode'])}`,
+          );
+      }
     }
   }
 

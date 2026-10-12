@@ -165,6 +165,38 @@ describe('production smoke checks (plan §43)', () => {
     expect(g.find((x) => x.check === 'health')?.detail).toContain('ECONNREFUSED');
   });
 
+  it('the optional weather probe wants a live provider, a day of frames and the air on them', () => {
+    const i = good();
+    const frame = { timestamp: 't', cloudCoverTotal: 10, temperature: 21.5, dewPoint: 15 };
+    i.weather = res(200, {
+      providerId: 'fixture',
+      mode: 'FORECAST',
+      frames: Array(24).fill(frame),
+    });
+    expect(fails(evaluateSmoke(i))).toContain('weather.provider');
+    i.weather = res(200, { providerId: 'open-meteo', mode: 'FORECAST', frames: [frame, frame] });
+    expect(fails(evaluateSmoke(i))).toContain('weather.frames');
+    const bare = { timestamp: 't', cloudCoverTotal: 10 };
+    i.weather = res(200, {
+      providerId: 'open-meteo',
+      mode: 'FORECAST',
+      frames: Array(24).fill(bare),
+    });
+    const warnOnly = evaluateSmoke(i);
+    expect(fails(warnOnly)).toEqual([]);
+    expect(warnOnly.find((x) => x.check === 'weather.air')?.level).toBe('warn');
+    i.weather = res(200, {
+      providerId: 'open-meteo',
+      mode: 'FORECAST',
+      frames: Array(24).fill(frame),
+    });
+    const f = evaluateSmoke(i);
+    expect(fails(f)).toEqual([]);
+    expect(f.find((x) => x.check === 'weather')?.detail).toContain('24 frames from open-meteo');
+    i.weather = res(503, {});
+    expect(fails(evaluateSmoke(i))).toContain('weather');
+  });
+
   it('the optional search probe must come from a live geocoder', () => {
     const i = good();
     i.search = res(200, { results: [{}], provider: { id: 'fixture', isFixture: true } });

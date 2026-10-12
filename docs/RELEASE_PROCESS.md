@@ -72,8 +72,11 @@ approval):
    version, no fixture mode), the plan §29 security headers and a CSP without `unsafe-eval`,
    capabilities (no dev banner, no dev sign-in), manifest and an uncacheable service worker, the
    privacy page, and that `/api/account/profile` answers 401 and an unsigned Stripe event 400
-   (`packages/observability/src/smoke.ts`, unit tested); any `FAIL` stops the release, warnings
-   (no billing, no database, bracketed legal placeholders) are printed;
+   (`packages/observability/src/smoke.ts`, unit tested); with `--search` a live geocoder query
+   and with `--weather` today's frames for Kailua from the live provider (a fail on the fixture
+   or fewer than twelve frames, a warning when the frames carry no air temperature — a cache
+   older than key v3); any `FAIL` stops the release, warnings (no billing, no database,
+   bracketed legal placeholders) are printed;
 6. GitHub release with generated notes.
 
 Order matters: migrate before deploy so the new code never meets an old schema; migrations must

@@ -58,6 +58,10 @@ const [home, health, capabilities, manifest, serviceWorker, privacy, profile, we
 const search = flags.includes('--search')
   ? await probe('/api/location/search?q=Kailua')
   : undefined;
+const today = new Date().toISOString().slice(0, 10);
+const weather = flags.includes('--weather')
+  ? await probe(`/api/weather?lat=21.3970&lng=-157.7270&date=${today}&tz=UTC`)
+  : undefined;
 
 const findings = evaluateSmoke({
   expectedVersion: version,
@@ -70,6 +74,7 @@ const findings = evaluateSmoke({
   profileUnauthenticated: profile,
   stripeWebhookUnsigned: webhook,
   ...(search ? { search } : {}),
+  ...(weather ? { weather } : {}),
 });
 for (const f of findings) {
   const tag = f.level === 'fail' ? 'FAIL' : f.level === 'warn' ? 'warn' : ' ok ';
