@@ -19,6 +19,7 @@ const caps: CapabilitiesResponse = {
       isFixture: false,
     },
     buildings: { kind: 'none', attribution: '', providerId: 'no-buildings' },
+    landCover: { kind: 'none', attribution: '', providerId: 'no-land-cover' },
     geocoderId: 'nominatim',
     geocoderIsFixture: false,
     referenceImagery: false,
@@ -61,5 +62,26 @@ describe('environmentFromCapabilities', () => {
       ).buildingsAvailable,
     ).toBe(true);
     expect(environmentFromCapabilities(null, null).terrainAvailable).toBe(false);
+    // The land-cover source is named for the preview basis; none when not configured.
+    expect(env.landCover).toBeNull();
+    expect(
+      environmentFromCapabilities(
+        {
+          ...caps,
+          providers: {
+            ...caps.providers,
+            landCover: {
+              kind: 'xyz',
+              url: 'https://lc.example/{z}/{x}/{y}.png',
+              maxZoom: 12,
+              palette: 'copernicus',
+              attribution: '© Copernicus Service information 2019',
+              providerId: 'xyz-land-cover',
+            },
+          },
+        },
+        3,
+      ).landCover,
+    ).toBe('copernicus');
   });
 });
