@@ -218,7 +218,8 @@ aims the camera where the phone's back camera points (`cameraPointingFromOrienta
 **AR sun alignment — delivered (unreleased)**: the field view puts the planned sun, its path for
 the day, true level, the modelled ridge and — on a dark sky — the Milky Way core over the phone's
 live camera, with an edge arrow when the sun (or the core) is out of frame (`sunPathInFrame`, `edgeIndicator`, `defaultCameraFeedFovDeg`;
-`FieldView`). Frames never leave the device.
+`FieldView`), plus the sun as it is now and a clock line ("planned in 1 h 12 min") when the
+planner is off the present. Frames never leave the device.
 
 Capacitor or React Native wrapper only after PWA usage proves demand: native install, a native
 camera with a known field of view, full field mode.

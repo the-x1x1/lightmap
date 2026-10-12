@@ -355,7 +355,13 @@ focal-length preset, and mode.
   arrow ("core 30° left") when it is out of frame — and the core's dotted violet **track** over
   the night's dark hours (`corePathInFrame`: Sun below −18°, core above the horizon; geometry,
   not a visibility verdict), so a night shooter can hold the phone up, see where the band will
-  stand at the planned time and where it goes through the night. Heading and pitch follow the phone (the compass starts with the
+  stand at the planned time and where it goes through the night. A clock line under the planned
+  time says how far the planner is from the present — "Now 17:30 · planned in 1 h 12 min" or
+  "32 min ago" (`describePlannedOffset`, live within a minute and a half: "Live — the marks show
+  the sky as it is now") — and, while they differ and the sun is up, a hollow dashed ring marks
+  **the sun now** beside the planned sun, so standing at the spot early you see both where the
+  light is and where it will be (the present is re-read every 30 s while the view is open).
+  Heading and pitch follow the phone (the compass starts with the
   view); "Now" jumps the planner to the present; the feed's field of view starts at a phone-camera
   default (`defaultCameraFeedFovDeg`: 69° across the long side) and can be nudged ±3° until the
   frame matches the eye. The frames never leave the device — nothing is captured, stored or sent

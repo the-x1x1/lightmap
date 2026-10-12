@@ -9,7 +9,7 @@
  * sensible default for a phone's main camera and can be nudged until the frame matches the eye.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { formatWallTime } from '@lightmap/astronomy';
+import { formatWallTime, sunPosition } from '@lightmap/astronomy';
 import {
   coreTrackPosition,
   defaultCameraFeedFovDeg,
@@ -26,7 +26,11 @@ import type { SceneState } from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
 import { usePlannerStore } from '@/features/planner/store';
 import { useCompass } from '@/features/field/use-compass';
+import { describePlannedOffset } from '@/features/field/planned-offset';
 import { Button } from '@lightmap/ui';
+
+/** How often the "sun now" mark and the clock line catch up with the present while the view is open. */
+const NOW_TICK_MS = 30_000;
 
 /** Frame coordinates (−1…1, y up) → SVG units: the viewBox is `100·aspect` wide and 100 tall, so circles stay round. */
 const sy = (y: number) => ((1 - y) / 2) * 100;
@@ -52,6 +56,13 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
   const [video, setVideo] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
   const [host, setHost] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
   const [fovDeg, setFovDeg] = useState<number | null>(null);
+  // The present, so the view can show the sun where it is right now beside where it will be at
+  // the planned instant (standing at the spot an hour early, the two differ by 15°).
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), NOW_TICK_MS);
+    return () => clearInterval(id);
+  }, []);
   // Sky tracks for the civil day, sampled once per place and day (the Moon's 144 positions are
   // a few milliseconds) and projected into the frame on every render as the phone turns.
   const lat = scene.location.point.latitude;
@@ -205,6 +216,16 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
     : null;
   const coreEdge =
     core && !sunUp ? edgeIndicator(frame, core.azimuthDeg, core.elevationDeg, aspect, roll) : null;
+  // The sun as it is now (a hollow ring) when the planner is not on the present: the same
+  // horizon rule as the planned sun, from the same ephemeris.
+  const plannedOffset = describePlannedOffset(scene.utc.getTime(), nowMs);
+  const sunNowPos = useMemo(() => sunPosition(new Date(nowMs), lat, lng), [nowMs, lat, lng]);
+  const sunNowUp = plannedOffset !== null && sunNowPos.apparentElevationDeg > -0.2667;
+  const sunNow = sunNowUp
+    ? inFrame(
+        frameCoordinates(frame, sunNowPos.azimuthDeg, sunNowPos.apparentElevationDeg, aspect, roll),
+      )
+    : null;
   const path = projectTrack(frame, tracks.sun, { aspect, rollDeg: roll });
   // The Moon's path while it is up, and the core's track over the dark hours (both with the
   // lunar state) — for composing before they rise; the markers say what is up now.
@@ -249,6 +270,17 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
             {sunUp
               ? `sun ${Math.round(scene.solar.azimuthDegrees)}° ${compassLabel(scene.solar.azimuthDegrees)}, ${Math.round(sunEl)}° up`
               : `sun ${Math.abs(Math.round(sunEl))}° below the horizon`}
+          </div>
+          <div
+            className="text-xs text-[var(--lm-text-muted)]"
+            data-testid="field-view-clock"
+            data-live={plannedOffset === null ? 'true' : 'false'}
+          >
+            {plannedOffset === null
+              ? 'Live — the marks show the sky as it is now'
+              : `Now ${formatWallTime(new Date(nowMs), tz)} · planned ${plannedOffset}${
+                  sunNowUp ? ' · ○ the sun now' : ''
+                }`}
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
@@ -380,6 +412,19 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
                 strokeWidth={0.4}
                 data-testid="field-view-core"
                 data-verdict={core.verdict}
+              />
+            ) : null}
+            {sunNow ? (
+              <circle
+                cx={sx(sunNow.x)}
+                cy={sy(sunNow.y)}
+                r={2.4}
+                fill="none"
+                stroke="var(--lm-sun)"
+                strokeOpacity={0.9}
+                strokeWidth={0.6}
+                strokeDasharray="1.2 0.8"
+                data-testid="field-view-sun-now"
               />
             ) : null}
             {sun ? (
