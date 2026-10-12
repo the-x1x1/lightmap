@@ -15,3 +15,4 @@ export * from './orientation.ts';
 export * from './frame-marks.ts';
 export * from './seasonal.ts';
 export * from './field-conditions.ts';
+export * from './exposure.ts';

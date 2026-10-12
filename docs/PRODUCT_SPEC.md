@@ -229,6 +229,23 @@ minutes at a time. `milkyWayWindows()` scans from local noon (so no night is spl
 Sun first, asking for the Moon only inside dark hours with the core up, so the 45 nights cost a
 few tens of milliseconds, memoised per place and civil day.
 
+**Exposure estimate**: an **Exposure (est.)** row in the Sun details — "EV 14.8 · 1/500 s f/8
+ISO 100" — the incident illuminance the sky puts on the ground at the planned instant as an
+exposure value at ISO 100 with one starting setting (f/8 ISO 100 by day, f/4 ISO 400 around
+sunset, f/2.8 ISO 3200 at night), the same on the planning card ("Exposure (est.)") and in the
+shot list ("Light: ~EV 12.8 · 1/125 s f/8 ISO 100 (overcast scenario, estimate)"). The model
+(`estimateExposure()` in `@lightmap/scene`, tested against the classic marks): a clear-sky
+daylight curve — direct normal ≈ 118 klx·e^(−0.19·(m−1)) over Kasten–Young air mass, times
+sin(elevation), plus a diffuse term ≈ 12 klx·sin(h)^0.7 — giving ≈ 130 klx overhead (EV 15.7),
+≈ 57 klx at 30°, 600 lx at sunset (EV 7.9); twilight falls a decade every 2.7° of depression
+(civil dusk ≈ 3.5 lx, EV 0.5); cloud scales the day by the scenario's or forecast's direct-light
+share (overcast noon ≈ 18 klx, EV 12.8; storm ≈ 9 klx); at night a full Moon overhead adds
+≈ 0.26 lx (EV −3.5), falling steeply with phase, over a 0.002 lx starlight-and-airglow floor
+(EV −10.3). EV = log2(E·ISO/250). It is labelled an estimate everywhere and the card's notes and
+the shot list's footer say it is not a meter reading; light pollution is not modelled. The shot
+list uses the saved scenario's cloud; a viewpoint saved on a forecast reads as a clear sky and
+says so.
+
 **Apparent sizes** (Phase 6 "the sun here in frame"; night planning): a **Sun disc** row and a
 **Moon disc** row give how wide each body looks from here for the selected instant — "0.53°";
 at a viewpoint the row adds the share of the frame width the disc covers through the current

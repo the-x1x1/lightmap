@@ -45,7 +45,11 @@ describe('shot list', () => {
     expect(day[4]).toMatch(/^ {2}Sun: {5}89° up, \d+° /);
     expect(day[5]).toBe('  Day:     sunrise 05:48 · sunset 19:09');
     expect(day.some((l) => l.startsWith('  Moon:'))).toBe(false);
-    expect(day.at(-1)).toBe('  Weather: Scenario (not a forecast): overcast');
+    expect(day.at(-2)).toBe('  Weather: Scenario (not a forecast): overcast');
+    // Overcast noon: an incident-light estimate under the saved scenario, labelled as such.
+    expect(day.at(-1)).toMatch(
+      /^ {2}Light: {3}~EV 1[23]\.\d · 1\/\d+ s f\/8 ISO 100 \(overcast scenario, estimate\)$/,
+    );
     // New-Moon night, 02:00 HST on 15 June: Moon down, core up in the SSW, dark sky.
     const night = shotBlock({ ...base, id: 'v2', selectedDatetimeUtc: '2026-06-15T12:00:00Z' });
     expect(night.find((l) => l.startsWith('  Moon:'))).toMatch(/^ {2}Moon: {4}down, \d+ % lit$/);

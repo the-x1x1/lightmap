@@ -1,6 +1,12 @@
 'use client';
 import type { SceneState } from '@lightmap/scene';
-import { describeSeasonalEnvelope, explainScene, formatDeg } from '@lightmap/scene';
+import {
+  describeExposure,
+  describeSeasonalEnvelope,
+  estimateExposure,
+  explainScene,
+  formatDeg,
+} from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
 import {
   civilDateString,
@@ -319,6 +325,22 @@ export function AstronomyDetails({ scene, windowEnd = null }: AstronomyDetailsPr
             .padStart(2, '0')}`}
         />
         <Row label="Colour temp." value={`${Math.round(scene.atmosphere.colorTemperatureK)} K`} />
+        <Row
+          label="Exposure (est.)"
+          value={describeExposure(
+            estimateExposure({
+              sunElevationDeg: s.elevationDegrees,
+              sunTransmittance: scene.atmosphere.parameters.sunTransmittance,
+              moon: scene.lunar
+                ? {
+                    elevationDeg: scene.lunar.elevationDegrees,
+                    illuminatedFraction: scene.lunar.illuminatedFraction,
+                  }
+                : null,
+            }),
+          )}
+          testId="exposure"
+        />
         <Row
           label="Sun disc"
           value={describeDisc(

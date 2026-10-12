@@ -16,7 +16,13 @@ import {
 } from '@lightmap/astronomy';
 import { brand } from '@lightmap/config';
 import { compassLabel } from '@lightmap/geospatial';
-import { formatHeight, type DistanceUnits } from '@lightmap/scene';
+import {
+  describeExposure,
+  estimateExposure,
+  formatHeight,
+  type DistanceUnits,
+} from '@lightmap/scene';
+import { isScenarioId, scenarioById } from '@lightmap/weather';
 import type { ProjectDto, ViewpointDto } from '@/lib/api-types';
 import { viewpointUrl } from '@/features/projects/open-viewpoint';
 
@@ -82,6 +88,23 @@ export function shotBlock(
     );
   }
   lines.push(`  Weather: ${weatherLine(v)}`);
+  // An incident-light estimate under the saved scenario (a forecast's cloud is not stored with
+  // the viewpoint, so those read as a clear sky and say so); the footer says it is not a meter.
+  const scenarioId =
+    v.weatherScenario !== null && isScenarioId(v.weatherScenario) ? v.weatherScenario : null;
+  const scenarioBased = v.weatherMode === 'SCENARIO' && scenarioId !== null;
+  const moonNow = moonPosition(at, v.latitude, v.longitude);
+  const exposure = estimateExposure({
+    sunElevationDeg: sun.elevationDeg,
+    sunTransmittance: scenarioBased ? scenarioById(scenarioId).parameters.sunTransmittance : 1,
+    moon: {
+      elevationDeg: moonNow.topocentricElevationDeg,
+      illuminatedFraction: moonNow.illuminatedFraction,
+    },
+  });
+  lines.push(
+    `  Light:   ~${describeExposure(exposure)} (${scenarioBased ? `${scenarioById(scenarioId).label.toLowerCase()} scenario` : 'clear sky'}, estimate)`,
+  );
   if (appUrl) lines.push(`  Open:    ${viewpointUrl(appUrl, v.id)}`);
   return lines;
 }
@@ -113,7 +136,7 @@ export function buildShotList(
       out.push(...shotBlock(v, opts.appUrl, opts.units).map((l) => `    ${l}`), '');
   }
   out.push(
-    `Sun and Moon from ephemeris; the Milky Way core from geometry (no sky-brightness model). Weather lines say what the viewpoint was saved with — a scenario is not a forecast.`,
+    `Sun and Moon from ephemeris; the Milky Way core from geometry (no sky-brightness model). Weather lines say what the viewpoint was saved with — a scenario is not a forecast. Light is an incident-light estimate (no light pollution), not a meter reading.`,
     `Made with ${brand.name} · ${opts.appUrl} · ${opts.generatedAt.toISOString()}`,
   );
   return out.filter((l, i, a) => !(l === '' && a[i - 1] === '')).join('\n');

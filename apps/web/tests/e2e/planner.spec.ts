@@ -110,6 +110,8 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
   // Apparent sizes: the Sun at 1.014 AU, the Moon near apogee (406 000 km, 5 % narrower than
   // average); the widest of the twelve full Moons ahead is the December one, the narrowest June's.
   await expect(page.getByTestId('sun-disc')).toHaveText('0.53°');
+  // Noon under a nearly overhead Sun: a daylight exposure estimate at f/8 ISO 100.
+  await expect(page.getByTestId('exposure')).toHaveText(/^EV 1[1-6]\.\d · 1\/\d+ s f\/8 ISO 100$/);
   await expect(page.getByTestId('moon-disc')).toHaveText('0.49°');
   await expect(page.getByTestId('moon-distance')).toContainText('5 % narrower than average');
   await expect(page.getByTestId('full-moons')).toContainText(

@@ -166,6 +166,10 @@ the planning card), the **dark windows ahead** — the next nights the core can 
 click away (`milkyWayWindows()`) — and the core as a Light-finder body ("the core over that
 peak", dark-sky nights only). Geometry only — no sky-brightness or light-pollution model.
 
+Also delivered: an **exposure estimate** — the incident light at the planned instant as EV and
+one starting setting, from a clear-sky curve, the cloud's direct share, the Moon and starlight
+(`estimateExposure`; labelled an estimate, never a meter).
+
 Also delivered: **apparent sizes** — how wide the Sun and the Moon look from here and how much
 of the frame that is through the current lens; the Moon's distance against its mean and the
 widest/narrowest of the twelve full Moons ahead, each a click away (`moonApparentDiameterDeg`,

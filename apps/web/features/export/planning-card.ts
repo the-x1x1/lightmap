@@ -17,6 +17,8 @@ import {
   SOURCE_MODE_LABEL,
   circleOfConfusionMm,
   depthOfField,
+  describeExposure,
+  estimateExposure,
   fieldConditions,
   focalLengthForFov,
   describeSeasonalEnvelope,
@@ -115,6 +117,23 @@ export function buildPlanningCard(
     {
       label: 'Light',
       value: `${s.phase.replace('-', ' ')} · ${Math.round(a.colorTemperatureK)} K`,
+    },
+    {
+      // Incident-light model (clear-sky curve × the scenario's direct share; Moon and stars at
+      // night): a starting point, never a meter reading — the notes say so.
+      label: 'Exposure (est.)',
+      value: describeExposure(
+        estimateExposure({
+          sunElevationDeg: s.elevationDegrees,
+          sunTransmittance: a.parameters.sunTransmittance,
+          moon: scene.lunar
+            ? {
+                elevationDeg: scene.lunar.elevationDegrees,
+                illuminatedFraction: scene.lunar.illuminatedFraction,
+              }
+            : null,
+        }),
+      ),
     },
     { label: 'Sunrise / sunset', value: `${t(ev.sunrise)} / ${t(ev.sunset)}` },
     {
@@ -240,6 +259,9 @@ export function buildPlanningCard(
   if (!isForecast && !isPast)
     notes.push('Weather shown is a chosen scenario. No forecast exists this far ahead.');
   for (const l of field) if (l.note) notes.push(`${l.label}: ${l.note}.`);
+  notes.push(
+    'Exposure is an incident-light estimate (clear-sky model, the scenario or forecast cloud, moonlight and starlight; no light pollution) — meter the scene.',
+  );
   if (scene.environment.fixtureMode)
     notes.push('Development fixture data was active when this card was made.');
 
