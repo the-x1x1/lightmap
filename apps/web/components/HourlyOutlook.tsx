@@ -7,13 +7,15 @@
  * A visually hidden table carries the same numbers for assistive tech.
  */
 import { useMemo } from 'react';
-import { parseCivilDate, wallClockToUtc } from '@lightmap/astronomy';
+import { formatWallTime, parseCivilDate, wallClockToUtc } from '@lightmap/astronomy';
 import type { EntitlementDecision } from '@lightmap/entitlements';
 import { formatTemperature, formatWindSpeed, type SceneState } from '@lightmap/scene';
 import {
   HUMID_HOUR_THRESHOLD,
   FREEZING_HOUR_C,
+  WINDOW_VERDICT_TEXT,
   WINDY_HOUR_MPS,
+  windowOutlook,
   brightWindows,
   cloudOverSpells,
   hourlyOutlook,
@@ -66,6 +68,26 @@ export function HourlyOutlook({
     });
   }, [civil, frames, tz]);
   const windows = useMemo(() => brightWindows(hours), [hours]);
+  // The golden hours under this forecast — the question the outlook exists for.
+  const ev = scene.dayEvents;
+  const golden = useMemo(() => {
+    const spans: Array<{ label: string; start: Date; end: Date }> = [];
+    if (ev.goldenHourMorningStart && ev.goldenHourMorningEnd)
+      spans.push({
+        label: 'Morning',
+        start: ev.goldenHourMorningStart,
+        end: ev.goldenHourMorningEnd,
+      });
+    if (ev.goldenHourEveningStart && ev.goldenHourEveningEnd)
+      spans.push({
+        label: 'Evening',
+        start: ev.goldenHourEveningStart,
+        end: ev.goldenHourEveningEnd,
+      });
+    return spans
+      .map((s) => ({ ...s, outlook: windowOutlook(frames, s.start, s.end) }))
+      .filter((s) => s.outlook !== null);
+  }, [ev, frames]);
   const darkCloud = useMemo(
     () => (darkSky && darkSky.length ? cloudOverSpells(hours, darkSky) : null),
     [hours, darkSky],
@@ -167,6 +189,17 @@ export function HourlyOutlook({
               )
               .join(', ')}. Cloud only — the sun's own height is on the timeline.`}
       </p>
+      {golden.length ? (
+        <p className="text-xs text-[var(--lm-text-muted)]" data-testid="golden-outlook">
+          {golden
+            .map(
+              (g) =>
+                `${g.label} golden hour ${formatWallTime(g.start, tz)}–${formatWallTime(g.end, tz)}: ${Math.round(g.outlook!.meanCloudCover)} % cloud, ${WINDOW_VERDICT_TEXT[g.outlook!.verdict]}`,
+            )
+            .join(' · ')}
+          .
+        </p>
+      ) : null}
       {darkCloud ? (
         <p
           className={cx(

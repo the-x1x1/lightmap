@@ -201,3 +201,77 @@ export function cloudOverSpells(
   if (n === 0) return null;
   return { hours: n, meanCloudCover: sum / n, clearestHour, clearestCloud };
 }
+
+export type WindowVerdict = 'clear' | 'thin' | 'high-colour' | 'mixed' | 'clouded';
+
+export interface WindowOutlook {
+  /** Samples that fell inside the frames' range; 0 means the forecast does not cover the window. */
+  samples: number;
+  meanCloudCover: number;
+  /** 0–1 direct-light share the renderer would use, averaged over the window. */
+  meanDirect: number;
+  /** Mean cloud by layer, %, or null when the frames carry no layers. */
+  layers: { low: number; mid: number; high: number } | null;
+  verdict: WindowVerdict;
+}
+
+/**
+ * The forecast over one window of the day — the golden hour, say — sampled every `stepMin`
+ * minutes from the frames (the same blend the preview uses), with a verdict in the words a
+ * photographer uses: *clear* (direct light ≥ 70 %), *high-colour* (below that, with a deck
+ * that is mostly high cloud over a clear horizon — the low Sun lights it from below, colour
+ * likely), *thin* (≥ 45 %), *mixed* (≥ 25 %), *clouded*. Null when the frames do not cover the window at
+ * all; a scenario day has no frames and gets no outlook.
+ */
+export function windowOutlook(
+  frames: readonly WeatherFrame[],
+  start: Date,
+  end: Date,
+  stepMin = 10,
+): WindowOutlook | null {
+  if (frames.length === 0 || !(end.getTime() > start.getTime())) return null;
+  const first = Date.parse(frames[0]!.timestamp);
+  const last = Date.parse(frames[frames.length - 1]!.timestamp);
+  let n = 0;
+  let cloud = 0;
+  let direct = 0;
+  let low = 0;
+  let mid = 0;
+  let high = 0;
+  let layered = 0;
+  for (let t = start.getTime(); t <= end.getTime(); t += stepMin * 60_000) {
+    if (t < first || t > last) continue;
+    const f = interpolateFrame(frames, new Date(t));
+    if (!f) continue;
+    n++;
+    cloud += f.cloudCoverTotal;
+    direct += parametersForForecast(f).sunTransmittance;
+    if (f.cloudCoverLow !== null && f.cloudCoverMid !== null && f.cloudCoverHigh !== null) {
+      layered++;
+      low += f.cloudCoverLow;
+      mid += f.cloudCoverMid;
+      high += f.cloudCoverHigh;
+    }
+  }
+  if (n === 0) return null;
+  const meanDirect = direct / n;
+  const layers =
+    layered > 0 ? { low: low / layered, mid: mid / layered, high: high / layered } : null;
+  let verdict: WindowVerdict;
+  if (meanDirect >= 0.7) verdict = 'clear';
+  else if (layers && layers.high >= 40 && layers.low <= 30 && layers.mid <= 30)
+    verdict = 'high-colour';
+  else if (meanDirect >= 0.45) verdict = 'thin';
+  else if (meanDirect >= 0.25) verdict = 'mixed';
+  else verdict = 'clouded';
+  return { samples: n, meanCloudCover: cloud / n, meanDirect, layers, verdict };
+}
+
+/** "clear — direct light", "thin cloud — soft direct light", "high cloud — colour likely, little direct light", … */
+export const WINDOW_VERDICT_TEXT: Record<WindowVerdict, string> = {
+  clear: 'clear — direct light',
+  thin: 'thin cloud — softened direct light',
+  'high-colour': 'high cloud over a clear horizon — colour likely, little direct light',
+  mixed: 'broken cloud — direct light comes and goes',
+  clouded: 'clouded out — flat light',
+};

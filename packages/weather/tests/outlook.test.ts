@@ -7,6 +7,7 @@ import {
   hourlyOutlook,
   freezingHours,
   humidHours,
+  windowOutlook,
   windyHours,
 } from '../src/outlook.ts';
 
@@ -192,5 +193,82 @@ describe('hourRuns / humidHours / windyHours', () => {
     );
     expect(bare[0]!.temperature).toBeNull();
     expect(freezingHours(bare)).toEqual([]);
+  });
+});
+
+describe('windowOutlook (the golden hour under the forecast)', () => {
+  const day = (over: (localHour: number) => Partial<WeatherFrame>) => {
+    const frames: WeatherFrame[] = [];
+    for (let u = 10; u <= 33; u++) frames.push(frame(u, 20, over(u - 10)));
+    return frames;
+  };
+  // 18:30–19:30 HST on 31 May = 04:30–05:30 UTC on 1 June.
+  const start = new Date(Date.UTC(2026, 5, 1, 4, 30));
+  const end = new Date(Date.UTC(2026, 5, 1, 5, 30));
+
+  it('samples the window from the frames and names the light', () => {
+    const clear = windowOutlook(
+      day(() => ({ cloudCoverTotal: 5 })),
+      start,
+      end,
+    )!;
+    expect(clear.samples).toBe(7); // every 10 min, both ends included
+    expect(clear.meanCloudCover).toBe(5);
+    expect(clear.verdict).toBe('clear');
+    expect(clear.layers).toBeNull();
+    const dull = windowOutlook(
+      day(() => ({ cloudCoverTotal: 95 })),
+      start,
+      end,
+    )!;
+    expect(dull.verdict).toBe('clouded');
+    expect(dull.meanDirect).toBeLessThan(0.25);
+    // A high deck over a clear horizon: the sunset colours it.
+    const cirrus = windowOutlook(
+      day(() => ({
+        cloudCoverTotal: 80,
+        cloudCoverLow: 5,
+        cloudCoverMid: 10,
+        cloudCoverHigh: 75,
+      })),
+      start,
+      end,
+    )!;
+    expect(cirrus.layers).toEqual({ low: 5, mid: 10, high: 75 });
+    expect(cirrus.verdict).toBe('high-colour');
+    // The same cover as a low deck is just clouded out.
+    const stratus = windowOutlook(
+      day(() => ({ cloudCoverTotal: 80, cloudCoverLow: 75, cloudCoverMid: 10, cloudCoverHigh: 5 })),
+      start,
+      end,
+    )!;
+    expect(['mixed', 'clouded']).toContain(stratus.verdict);
+  });
+
+  it('blends across the hour and gives nothing outside the frames or for a scenario day', () => {
+    // Cloud 0 % at 18:00 and 19:00, 100 % at 20:00 local: the 18:30–19:30 window is partly into the climb.
+    const ramp = windowOutlook(
+      day((h) => ({ cloudCoverTotal: h >= 20 ? 100 : 0 })),
+      start,
+      end,
+    )!;
+    expect(ramp.meanCloudCover).toBeGreaterThan(0);
+    expect(ramp.meanCloudCover).toBeLessThan(50);
+    expect(windowOutlook([], start, end)).toBeNull();
+    expect(
+      windowOutlook(
+        day(() => ({})),
+        end,
+        start,
+      ),
+    ).toBeNull();
+    const before = new Date(Date.UTC(2026, 4, 31, 2, 0));
+    expect(
+      windowOutlook(
+        day(() => ({})),
+        before,
+        new Date(before.getTime() + 3_600_000),
+      ),
+    ).toBeNull();
   });
 });
