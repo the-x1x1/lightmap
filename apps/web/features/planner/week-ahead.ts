@@ -35,27 +35,33 @@ export interface WeekAheadRow {
   moon: { illuminatedFraction: number; upAtMidnight: boolean };
   /** The night that follows this day has a dark window with the Milky Way core up (`darkNights`). */
   darkSky: boolean;
+  /** The forecast over that night's dark window, from this day's frames (null without either). */
+  darkOutlook: WindowOutlook | null;
 }
 
 /**
  * The civil dates (planning zone) whose following night holds a Milky Way window — the same
- * 30-minute rule as the dark windows list — over the week from `from`. One scan, memoised by
+ * 30-minute rule as the dark windows list — with the night's window, over the week from `from`. One scan, memoised by
  * the caller: a few tens of milliseconds.
  */
 export function darkNights(
   place: { latitude: number; longitude: number },
   timeZone: string,
   from: { year: number; month: number; day: number },
-): Set<string> {
+): Map<string, { start: Date; end: Date }> {
   const noon = new Date(
     computeDayEvents({ ...place, timeZone, date: from }).dayStart.getTime() + 12 * 3_600_000,
   );
-  const out = new Set<string>();
+  const out = new Map<string, { start: Date; end: Date }>();
   for (const w of milkyWayWindows(noon, WEEK_AHEAD_DAYS, place.latitude, place.longitude).windows) {
     // A window after midnight belongs to the evening before it.
     const wall = utcToWallClock(w.start, timeZone);
     const civil = wall.hour < 12 ? addCivilDays(wall, -1) : wall;
-    out.add(civilDateString(civil));
+    const key = civilDateString(civil);
+    // One window per night; the first (the earlier) is kept, its end stretched by any later one.
+    const prev = out.get(key);
+    if (!prev) out.set(key, { start: w.start, end: w.end });
+    else if (w.end.getTime() > prev.end.getTime()) prev.end = w.end;
   }
   return out;
 }
@@ -70,7 +76,7 @@ export function weekAheadRows(
   timeZone: string,
   from: { year: number; month: number; day: number },
   framesByDate: ReadonlyMap<string, readonly WeatherFrame[]>,
-  dark: ReadonlySet<string> = new Set(),
+  dark: ReadonlyMap<string, { start: Date; end: Date }> = new Map(),
 ): WeekAheadRow[] {
   return Array.from({ length: WEEK_AHEAD_DAYS }, (_, i) => {
     const civil = addCivilDays(from, i);
@@ -94,6 +100,10 @@ export function weekAheadRows(
         upAtMidnight: midnight.topocentricElevationDeg > 0,
       },
       darkSky: dark.has(date),
+      darkOutlook: (() => {
+        const w = dark.get(date);
+        return w && frames.length ? windowOutlook(frames, w.start, w.end) : null;
+      })(),
     };
   });
 }

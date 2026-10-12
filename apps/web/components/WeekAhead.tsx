@@ -65,7 +65,7 @@ export function WeekAhead({
     () =>
       from && hasLunar
         ? darkNights({ latitude: lat, longitude: lng }, tz, from)
-        : new Set<string>(),
+        : new Map<string, { start: Date; end: Date }>(),
     [from, hasLunar, lat, lng, tz],
   );
   const weatherCaps = caps.data?.weather ?? null;
@@ -211,6 +211,11 @@ export function WeekAhead({
                 >
                   {r.darkSky ? '✦ ' : ''}
                   {Math.round(r.moon.illuminatedFraction * 100)} %{r.moon.upAtMidnight ? '' : ' ↓'}
+                  {r.darkOutlook ? (
+                    <span className={`ml-1 ${TONE[r.darkOutlook.verdict]}`}>
+                      {Math.round(r.darkOutlook.meanCloudCover)} %☁
+                    </span>
+                  ) : null}
                 </td>
               </tr>
             );
@@ -220,7 +225,8 @@ export function WeekAhead({
       <p className="mt-1 text-xs text-[var(--lm-text-muted)]">
         Cloud over each golden hour from the forecast; the extended range is low confidence, and
         beyond it there is no forecast to show. Moon: lit fraction that night, ↓ when it is down at
-        midnight, ✦ when the night has a dark window for the Milky Way core. Times are local ({tz}).
+        midnight, ✦ when the night has a dark window for the Milky Way core — with the forecast's
+        cloud over that window when the day's frames reach into it. Times are local ({tz}).
       </p>
     </details>
   );

@@ -95,6 +95,19 @@ describe('week ahead', () => {
     expect(dark.has('2026-06-15')).toBe(true);
     const rows = weekAheadRows(kailua, tz, { year: 2026, month: 6, day: 12 }, new Map(), dark);
     expect(rows.filter((r) => r.darkSky).length).toBe(dark.size);
+    // Each dark night carries its window (start before end, in the evening or after midnight),
+    // and with that day's frames the forecast over it.
+    const w = dark.get('2026-06-15')!;
+    expect(w.end.getTime()).toBeGreaterThan(w.start.getTime());
+    expect(rows.every((r) => r.darkOutlook === null)).toBe(true);
+    const withFrames = weekAheadRows(
+      kailua,
+      tz,
+      { year: 2026, month: 6, day: 12 },
+      new Map([['2026-06-15', day('2026-06-15', 10)]]),
+      dark,
+    );
+    expect(withFrames.find((r) => r.date === '2026-06-15')!.darkOutlook?.verdict).toBe('clear');
     expect(
       weekAheadRows(kailua, tz, { year: 2026, month: 6, day: 12 }, new Map()).every(
         (r) => !r.darkSky,
