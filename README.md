@@ -62,7 +62,8 @@ the shadow probe (a 20 m tower at Sun 11°, shadow measured against `h / tan(el)
   saved projects open offline; installable as a PWA.
 - Accounts (passwordless email, optional Google), projects with notes and a shoot date, saved
   viewpoints with thumbnails, planning-card, shot-list (text and PDF) and calendar (.ics) export; preferences (metric or imperial, times in the place's zone or your own,
-  the lens a new place starts with) kept on the device and in the profile.
+  the lens a new place starts with, the painted ground on or off) kept on the device and in the
+  profile.
 - Subscription plumbing in Stripe test mode with a central entitlement service (Free / Pro).
 - No uploads, no social feed, no location-discovery engine. It is a planning instrument.
 
