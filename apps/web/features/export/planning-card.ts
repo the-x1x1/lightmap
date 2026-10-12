@@ -20,6 +20,7 @@ import { compassLabel } from '@lightmap/geospatial';
 import { lightingFromScene } from '@lightmap/renderer';
 import {
   SOURCE_MODE_LABEL,
+  GALACTIC_CENTRE_DECLINATION_DEG,
   circleOfConfusionMm,
   depthOfField,
   describeExposure,
@@ -30,8 +31,10 @@ import {
   formatDeg,
   formatDistance,
   formatHeight,
+  formatShutterS,
   formatVisibility,
   seasonalEnvelope,
+  skyDriftShutterS,
   type DistanceUnits,
   type SceneState,
   type SourceMode,
@@ -179,6 +182,14 @@ export function buildPlanningCard(
       label: 'Depth of field',
       value: `${lensMm.toFixed(lensMm < 10 ? 1 : 0)} mm f/${opts.camera.aperture} at ${dist(opts.camera.focusDistanceM)}: sharp ${dist(dof.nearM)}–${dist(dof.farM)}${dof.infinitySharp ? '' : ` · hyperfocal ${dist(dof.hyperfocalM)}`}`,
     });
+    // At night the same lens sets how long the stars stay points (the 500 rule for this sensor).
+    if (s.elevationDegrees <= -12) {
+      const coc = circleOfConfusionMm(opts.camera.sensorWidthMm, opts.camera.sensorHeightMm);
+      facts.push({
+        label: 'Sky drift',
+        value: `stars stay points up to ${formatShutterS(skyDriftShutterS(lensMm, coc))} (the core ${formatShutterS(skyDriftShutterS(lensMm, coc, GALACTIC_CENTRE_DECLINATION_DEG))})`,
+      });
+    }
   }
   // Night planning: the Milky Way core once the Sun is well down (with the lunar state), and
   // the next nights it can be shot from here (the card is a plan to take along).

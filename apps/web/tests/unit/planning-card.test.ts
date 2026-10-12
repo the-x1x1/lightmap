@@ -226,5 +226,17 @@ describe('planning card — depth of field', () => {
     // Without camera options the card stays as before.
     const plain = buildPlanningCard(sc, { generatedAt: new Date('2026-05-30T20:00:00Z') });
     expect(plain.facts.some((f) => f.label === 'Depth of field')).toBe(false);
+    // By day no sky-drift fact; at night the lens sets how long the stars stay points.
+    expect(model.facts.some((f) => f.label === 'Sky drift')).toBe(false);
+    const night = buildPlanningCard(
+      scene({
+        utc: localSelectionToUtc({ year: 2026, month: 6, day: 15 }, 2 * 60, kailua.timeZone),
+      }),
+      {
+        generatedAt: new Date('2026-05-30T20:00:00Z'),
+        camera: { sensorWidthMm: 36, sensorHeightMm: 24, aperture: 2.8, focusDistanceM: 5 },
+      },
+    ).facts.find((f) => f.label === 'Sky drift');
+    expect(night?.value).toMatch(/^stars stay points up to 1\d s \(the core (1\d|2\d) s\)$/);
   });
 });

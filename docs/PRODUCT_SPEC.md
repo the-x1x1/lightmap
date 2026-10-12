@@ -298,7 +298,8 @@ from the current frame (captured at 1280 px from the renderer, or the sky-gradie
 3D preview is unavailable) plus the facts above — place, coordinates, zone, date/time, sun
 elevation/azimuth, light phase and colour temperature, sunrise/sunset, golden and blue hour, solar
 noon, moon, camera heading/pitch/lens and — with the camera tools — the photographer's real lens,
-aperture, focus distance and sharp range ("Depth of field"), the "Milky Way core" line once the
+aperture, focus distance and sharp range ("Depth of field"; at night also "Sky drift": how long
+the stars stay points with that lens and sensor), the "Milky Way core" line once the
 Sun is below −6°, the next two dark windows ("Dark windows"), the year's envelope ("Across
 the year") and, on a forecast or observed day, the frame's field conditions ("In the field":
 air with its dew point, wind with its quarter, humidity, visibility, with any cold/heat, wind or
