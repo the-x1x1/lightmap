@@ -46,6 +46,7 @@ const ClimatologyPanel = dynamic(() =>
   import('./ClimatologyPanel').then((m) => m.ClimatologyPanel),
 );
 const HourlyOutlook = dynamic(() => import('./HourlyOutlook').then((m) => m.HourlyOutlook));
+const WeekAhead = dynamic(() => import('./WeekAhead').then((m) => m.WeekAhead));
 const WeatherDetails = dynamic(() => import('./WeatherDetails').then((m) => m.WeatherDetails));
 // Only phones open the field view; its camera and compass code stays out of the first load.
 const FieldView = dynamic(() => import('./FieldView').then((m) => m.FieldView));
@@ -418,6 +419,9 @@ export function MapShell() {
                           }
                     }
                   />
+                ) : null}
+                {scene && !planLoading && account.snapshot ? (
+                  <WeekAhead scene={scene} decision={account.can('forecast_detail')} />
                 ) : null}
                 {scene ? (
                   <>

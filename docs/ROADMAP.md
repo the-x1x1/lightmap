@@ -46,7 +46,9 @@ horizon decision (`FORECAST` / `EXTENDED_FORECAST` / `SCENARIO` / `RECENT_PAST` 
 forecast badge with confidence; one fetch per 0.05° grid cell per civil day cached in
 `provider_cache`; client-side interpolation while scrubbing; scenario fallback outside the horizon
 and on provider failure; "compare scenario" pinning inside the window; fixture provider for
-development and tests, refused in production.
+development and tests, refused in production. Also delivered (unreleased): the hourly outlook
+with its golden-hour verdicts, field hours and the **week ahead** (the next seven days' golden
+hours under the forecast); air temperature and dew point on every frame.
 
 ## Phase 3 — Accounts, projects, billing (plumbing delivered)
 

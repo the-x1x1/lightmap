@@ -142,7 +142,17 @@ the tripod — "Freezing (≤ 0 °C) 00:00–06:00 (batteries, iced glass) · hu
 02:00–06:00 (dew or mist on the glass) · wind ≥ 8 m/s 13:00–17:00 (weigh the tripod)" — as runs
 of consecutive hours (`freezingHours`, `humidHours`, `windyHours`, tested; absent when no hour
 qualifies). The same numbers are available as a table, with the hour's air temperature and wind in
-the chosen units. Hours the provider did not cover are
+the chosen units.
+
+**The week ahead** (Pro, entitlement `forecast_detail`; `WeekAhead`). A collapsed block under the
+outlook answers "which evening this week?": the next seven civil days from today in the planning
+zone, each with its morning and evening golden hour (the time is a jump to that window) and the
+forecast's verdict on it in a word — _clear_, _thin cloud_, _high cloud — colour_, _broken
+cloud_, _clouded out_ — with the mean cloud (`weekAheadRows`, the same `windowOutlook` as the
+day's line; tested). Days are fetched only while the block is open and only inside the forecast
+horizon (one cached `/api/weather` call per day, the plan's weather budget applies); a day
+beyond the horizon reads "beyond the forecast", one still loading "loading…". The footer says the
+extended range is low confidence. Hours the provider did not cover are
 absent; DST gaps produce no duplicate rows (`hourlyOutlook`, tested). Free plans see the locked
 block with the paywall reason.
 
