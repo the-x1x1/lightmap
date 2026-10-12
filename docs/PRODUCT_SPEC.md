@@ -584,7 +584,10 @@ date is inside the reliable horizon, "Extended forecast available (low confidenc
 horizon rule as the planner). A viewpoint planned after civil dusk also carries a night line —
 "✦ Milky Way core 36° up SSW · dark sky", or "· Moon 97 % lit", "· twilight", "· low in haze",
 "core below the horizon" — the planner's own verdict from the saved place and instant
-(`nightTag()`), green when the sky is dark.
+(`nightTag()`), green when the sky is dark. When that day's frames for that place are already
+in the planner's query cache (the planner or the week ahead fetched them) the card also reads
+the forecast around its own hour — "Forecast around the shot: 20 % cloud, clear — direct light"
+(`windowOutlook` over ±30 min); a card never fetches on its own.
 
 **Shot variants** (plan §25 Phase 6): a viewpoint can hold variants — the same place and camera at
 other dates/times or scenarios ("07:10 vs 18:40 vs 4 August"). A variant is a viewpoint row with

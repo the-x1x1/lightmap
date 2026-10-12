@@ -1,10 +1,13 @@
 'use client';
 import type { ViewpointDto } from '@/lib/api-types';
 import { formatWallTime, utcToWallClock } from '@lightmap/astronomy';
-import { compassLabel } from '@lightmap/geospatial';
+import { compassLabel, gridKey } from '@lightmap/geospatial';
 import { Button } from '@lightmap/ui';
+import { WINDOW_VERDICT_TEXT, windowOutlook } from '@lightmap/weather';
+import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { useCapabilities } from '@/features/planner/use-scene';
+import type { WeatherResponse } from '@/lib/api-types';
 import { forecastNudge } from '@/features/projects/forecast-nudge';
 import { nightTag } from '@/features/projects/night-tag';
 import { PreviewSourceBadge } from './PreviewSourceBadge';
@@ -40,6 +43,22 @@ export function SavedViewpointCard({
     () => nightTag({ latitude, longitude, selectedDatetimeUtc }),
     [latitude, longitude, selectedDatetimeUtc],
   );
+  // The forecast around the shot when the planner already fetched that day for this place
+  // (the same query key as the planner and the week ahead): read from the cache, never fetched
+  // from a card — a drawer of twenty cards must not cost twenty calls.
+  const civilDate = `${w.year}-${String(w.month).padStart(2, '0')}-${String(w.day).padStart(2, '0')}`;
+  const cached = useQuery<WeatherResponse>({
+    queryKey: ['weather', gridKey({ latitude, longitude }), civilDate, viewpoint.timezone],
+    queryFn: () => Promise.reject(new Error('cache only')),
+    enabled: false,
+    staleTime: Infinity,
+  });
+  const frames = cached.data?.frames;
+  const around = useMemo(() => {
+    if (!frames || frames.length === 0) return null;
+    const at = Date.parse(selectedDatetimeUtc);
+    return windowOutlook(frames, new Date(at - 30 * 60_000), new Date(at + 30 * 60_000));
+  }, [frames, selectedDatetimeUtc]);
   const stamp = (d: Date, tz: string) => {
     const x = utcToWallClock(d, tz);
     return `${x.year}-${String(x.month).padStart(2, '0')}-${String(x.day).padStart(2, '0')} ${formatWallTime(d, tz)}`;
@@ -77,6 +96,12 @@ export function SavedViewpointCard({
                   : ''
               }`}
         </p>
+        {around ? (
+          <p className="mt-1 text-xs text-[var(--lm-text-muted)]" data-testid="viewpoint-forecast">
+            Forecast around the shot: {Math.round(around.meanCloudCover)} % cloud,{' '}
+            {WINDOW_VERDICT_TEXT[around.verdict]}.
+          </p>
+        ) : null}
         {night ? (
           <p
             className={
