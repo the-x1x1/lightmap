@@ -14,7 +14,8 @@ export function buildDarkWindowsCalendar(
   place: { label: string; latitude: number; longitude: number; timeZone: string },
   opts: { generatedAt: Date },
 ): string {
-  const cell = gridKey({ latitude: place.latitude, longitude: place.longitude });
+  // A comma-free cell: a UID is a text value and the RFC wants commas escaped.
+  const cell = gridKey({ latitude: place.latitude, longitude: place.longitude }).replace(',', '_');
   const events = windows.flatMap((w) => [
     'BEGIN:VEVENT',
     `UID:dark-${cell}-${icsUtc(w.start)}@${brand.slug}`,

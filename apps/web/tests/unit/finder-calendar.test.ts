@@ -35,7 +35,7 @@ describe('buildFinderCalendar', () => {
     );
     expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(2);
     const flat = ics.replace(/\r\n /g, '');
-    expect(flat).toContain('UID:finder-21.4000,-157.7500-moon-20260601T050900Z@');
+    expect(flat).toContain('UID:finder-21.4000_-157.7500-moon-20260601T050900Z@');
     expect(flat).toContain('DTSTART:20260601T043900Z');
     expect(flat).toContain('DTEND:20260601T052400Z');
     expect(flat).toContain('SUMMARY:Moon 110° ESE · Kailua Beach');

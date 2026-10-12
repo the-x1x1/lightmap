@@ -31,6 +31,8 @@ import { Paywall } from './Paywall';
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+const NO_FRAMES: ReadonlyMap<string, readonly WeatherFrame[]> = new Map();
+
 const TONE: Record<WindowVerdict, string> = {
   clear: 'text-[var(--lm-ok)]',
   'high-colour': 'text-[var(--lm-sun)]',
@@ -99,8 +101,9 @@ export function WeekAhead({
   const framesRef = useRef({ key: framesKey, map: framesByDate });
   framesRef.current = { key: framesKey, map: framesByDate };
   const rows = useMemo(() => {
-    const snap = framesRef.current;
-    const frames = snap.key === framesKey ? snap.map : new Map<string, readonly WeatherFrame[]>();
+    // framesKey names the fetched days the ref holds; it is what makes this memo recompute.
+    const frames =
+      framesRef.current.key === framesKey ? framesRef.current.map : framesRef.current.map;
     return from ? weekAheadRows({ latitude: lat, longitude: lng }, tz, from, frames, dark) : [];
   }, [from, lat, lng, tz, dark, framesKey]);
   if (!from) return null;

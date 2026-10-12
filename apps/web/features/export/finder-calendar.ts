@@ -24,7 +24,8 @@ export function buildFinderCalendar(
   opts: { body: 'sun' | 'moon' | 'core'; generatedAt: Date },
 ): string {
   const name = opts.body === 'sun' ? 'Sun' : opts.body === 'moon' ? 'Moon' : 'Milky Way core';
-  const cell = gridKey({ latitude: place.latitude, longitude: place.longitude });
+  // A comma-free cell: a UID is a text value and the RFC wants commas escaped.
+  const cell = gridKey({ latitude: place.latitude, longitude: place.longitude }).replace(',', '_');
   const events = matches.flatMap((m) => {
     const at = new Date(m.timestampUtc);
     const start = new Date(at.getTime() - SETUP_MINUTES * 60_000);

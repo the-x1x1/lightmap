@@ -22,7 +22,7 @@ describe('buildDarkWindowsCalendar', () => {
     const flat = ics.replace(/\r\n /g, '');
     expect(flat).toContain('SUMMARY:Milky Way core · Kailua Beach');
     expect(flat).toContain(
-      `UID:dark-21.4000,-157.7500-${r.windows[0]!.start.toISOString()
+      `UID:dark-21.4000_-157.7500-${r.windows[0]!.start.toISOString()
         .replace(/[-:]/g, '')
         .replace(/\.\d{3}Z$/, 'Z')}@`,
     );
