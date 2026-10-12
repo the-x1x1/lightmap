@@ -70,6 +70,7 @@ Keyboard, when the thumb has focus:
 | Key               | Effect          |
 | ----------------- | --------------- |
 | ← / →             | ±1 minute       |
+| Shift + ← / →     | ±10 minutes     |
 | PageUp / PageDown | ±1 hour         |
 | Home              | jump to sunrise |
 | End               | jump to sunset  |
@@ -693,7 +694,8 @@ Generic "Something went wrong" is not acceptable when a recovery message exists.
 
 - **Keyboard**: a skip link ("Skip to planning controls") is the first focusable element; the
   header (search, account) precedes the map in the DOM. The timeline is fully keyboard operable
-  (arrows, Page Up/Down, Home/End, `[`/`]` to the previous/next day event) with `aria-valuetext`.
+  (arrows, Shift+arrows for ten minutes, Page Up/Down, Home/End, `[`/`]` to the previous/next
+  day event) with `aria-valuetext`.
   Every single-choice group (view mode, lens, weather scenario, light-finder body and target) is a
   WAI-ARIA radio group with one Tab stop and arrow-key selection (`useRovingRadio` /
   `RadioGroup` in `@lightmap/ui`); locked options stay focusable and announce why ("Pro").

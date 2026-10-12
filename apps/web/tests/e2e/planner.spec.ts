@@ -71,6 +71,15 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
   await setDateTime(page, '2026-05-31', 12 * 60 + 30);
   await expect(page.getByTestId('timeline-time')).toHaveText('12:30');
   await expect(page.getByTestId('preview-time')).toHaveText('12:30');
+  // Keyboard on the thumb: Shift+arrow is ten minutes, Page Up an hour, and back.
+  await page.getByTestId('timeline-range').focus();
+  await page.keyboard.press('Shift+ArrowRight');
+  await expect(page.getByTestId('timeline-time')).toHaveText('12:40');
+  await page.keyboard.press('PageUp');
+  await expect(page.getByTestId('timeline-time')).toHaveText('13:40');
+  await page.keyboard.press('PageDown');
+  await page.keyboard.press('Shift+ArrowLeft');
+  await expect(page.getByTestId('timeline-time')).toHaveText('12:30');
   // The day-of-year slider scrubs the seasons and keeps the time: day 151 is 31 May; winter
   // solstice (day 355) drops the noon sun to ~45° at Kailua; back to 31 May for the rest.
   const year = page.getByTestId('year-range');

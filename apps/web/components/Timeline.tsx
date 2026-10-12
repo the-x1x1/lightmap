@@ -285,8 +285,14 @@ export function Timeline({
           onPointerUp={() => play.hold(false)}
           onPointerCancel={() => play.hold(false)}
           onKeyDown={(e) => {
-            // Page keys jump an hour; Home/End go to sunrise/sunset when known.
-            if (e.key === 'PageUp') {
+            // Page keys jump an hour, Shift+arrows ten minutes; Home/End go to sunrise/sunset.
+            if ((e.key === 'ArrowRight' || e.key === 'ArrowUp') && e.shiftKey) {
+              e.preventDefault();
+              setMinutes(minutes + 10);
+            } else if ((e.key === 'ArrowLeft' || e.key === 'ArrowDown') && e.shiftKey) {
+              e.preventDefault();
+              setMinutes(minutes - 10);
+            } else if (e.key === 'PageUp') {
               e.preventDefault();
               setMinutes(minutes + 60);
             } else if (e.key === 'PageDown') {
@@ -317,7 +323,8 @@ export function Timeline({
           data-testid="timeline-range"
         />
         <p id={`${id}-desc`} className="sr-only">
-          Drag to scrub through the day. Arrow keys move one minute, Page Up and Page Down one hour
+          Drag to scrub through the day. Arrow keys move one minute, Shift with an arrow ten, Page
+          Up and Page Down one hour
           {dayEvents?.sunrise && dayEvents.sunset
             ? ', Home jumps to sunrise, End to sunset'
             : dayEvents?.polar === 'midnight-sun'
