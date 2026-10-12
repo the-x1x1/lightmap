@@ -2,6 +2,7 @@
  * "Why does it look like this?" (plan §3.10): a compact, honest explanation assembled from the
  * SceneState. Pure; the UI renders the lines.
  */
+import { formatWallTime } from '@lightmap/astronomy';
 import { compassLabel } from '@lightmap/geospatial';
 import { scenarioById } from '@lightmap/weather';
 import { SOURCE_MODE_LABEL } from './confidence.ts';
@@ -45,10 +46,17 @@ export function explainScene(s: SceneState): ExplanationLine[] {
   }
   // At night the Moon is the light, and the sky's darkness is what the night shooter asks about.
   if (el <= -6 && s.lunar) {
+    // Behind the ridge: say when it clears, from the Moon's own terrain crossings today.
+    const clears = s.terrainHorizon?.moonEvents?.visible.find(
+      (v) => v.from.getTime() > s.utc.getTime(),
+    );
+    const behind = clears
+      ? `behind the terrain here until ${formatWallTime(clears.from, s.timeZone)}`
+      : 'behind the terrain here';
     lines.push({
       label: 'Moon',
       value: s.lunar.isAboveHorizon
-        ? `${Math.round(s.lunar.illuminatedFraction * 100)} % lit, ${Math.max(0, Math.round(s.lunar.elevationDegrees))}° up in the ${compassLabel(s.lunar.azimuthDegrees)} — ${s.terrainHorizon?.moonAboveTerrain === false ? 'behind the terrain here' : 'the only direct light'}`
+        ? `${Math.round(s.lunar.illuminatedFraction * 100)} % lit, ${Math.max(0, Math.round(s.lunar.elevationDegrees))}° up in the ${compassLabel(s.lunar.azimuthDegrees)} — ${s.terrainHorizon?.moonAboveTerrain === false ? behind : 'the only direct light'}`
         : `below the horizon — no moonlight`,
       basis: 'astronomy',
     });

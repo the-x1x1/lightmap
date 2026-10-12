@@ -277,6 +277,9 @@ describe('buildSceneState — Kailua Beach, 31 May 2026, 12:30 (acceptance case)
     const evening = mev.visible[1]!;
     expect(evening.from.getTime() - night.lunar!.moonrise!.getTime()).toBeGreaterThan(60 * 60_000);
     expect(mev.endsVisible).toBe(true);
+    // At 21:00 the Moon is up but behind the ridge: the explanation says until when.
+    const moonLine = explainScene(night).find((l) => l.label === 'Moon')!.value;
+    expect(moonLine).toMatch(/behind the terrain here until 2[01]:\d\d$/);
   });
 });
 
