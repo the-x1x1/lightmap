@@ -42,6 +42,10 @@ export class FixtureClimatologyProvider implements ClimatologyProvider {
     const absLat = Math.abs(lat);
     const winter = lat >= 0 ? [11, 12, 1, 2].includes(month) : [5, 6, 7, 8].includes(month);
     const baseCloud = 25 + absLat * 0.6 + (winter ? 15 : 0);
+    // Air: cooler toward the poles, a seasonal swing that grows with latitude (warmest in July
+    // north of the equator, January south of it) and a ±5 °C day; no extra draws.
+    const seasonal = -(4 + absLat * 0.25) * Math.cos(((month - 7) / 12) * 2 * Math.PI);
+    const baseAir = 27 - absLat * 0.4 + (lat >= 0 ? seasonal : -seasonal);
     const wetChance = absLat < 23 && [11, 12, 1, 2, 3].includes(month) ? 0.18 : 0.06;
     const days = new Date(Date.UTC(year, month, 0)).getUTCDate();
     const out: ClimatologyHour[] = [];
@@ -64,6 +68,7 @@ export class FixtureClimatologyProvider implements ClimatologyProvider {
             100,
             68 + 0.18 * cloud + (wet ? 12 : 0) + 14 * Math.cos(((h - 5) / 24) * 2 * Math.PI),
           ),
+          temperature: Math.round((baseAir + 5 * Math.sin(((h - 9) / 24) * 2 * Math.PI)) * 10) / 10,
         });
       }
     }

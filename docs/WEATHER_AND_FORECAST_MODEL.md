@@ -206,8 +206,11 @@ forecast nor a scenario.
   day) at the selected hour and the hour where it is most common ("Air at ≥ 95 % humidity: 8 % of
   the time at 12:00; most often at 05:00 (62 %)"; `humidityByHour()`, per-hour `humidShare` over
   the hours whose humidity is known). It is not a visibility or haze statistic — ERA5 carries no
-  visibility — and it is absent when the source gave no humidity. Summaries cached before this
-  field existed are re-fetched (cache key `v3`).
+  visibility — and it is absent when the source gave no humidity. Beneath it the **typical air**:
+  the mean 2 m temperature at the selected hour and the day's coldest and warmest hours ("Air:
+  typically 4 °C at 05:00; coldest 06:00 (−2 °C), warmest 15:00 (12 °C)"; `temperatureByHour()`,
+  per-hour `meanTemperature` over the hours whose temperature is known), absent when the source
+  gave none. Summaries cached before these fields existed are re-fetched (cache key `v4`).
 - **Never**: rendered with a Forecast badge, given a confidence above SCENARIO, or turned into a
   deterministic prediction (plan §4, §25 Phase 7). `ClimatologySummary.kind` is `'CLIMATOLOGY'` and
   its `label` is fixed to "Typical for this month" so the wording cannot drift.

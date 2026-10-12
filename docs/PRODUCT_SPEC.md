@@ -164,7 +164,10 @@ pattern ("clearest 07–10, cloudiest 14–17") only when the month has one, and
 of the selected night aggregated for the night shooter ("Dark hours (21:00–04:00): clear 41 % of
 the time, ~32 % mean cloud, overcast or storm 18 %"), and how often the air is near saturation
 by hour ("Air at ≥ 95 % humidity: 8 % of the time at 12:00; most often at 05:00 (62 %) — dew on
-the glass at night, mist by day"). Badge: **Climatology · not a forecast**. Each class is a button that compares that scenario; the
+the glass at night, mist by day"), and the **typical air** by hour from the archive's own
+temperature ("Air: typically 4 °C at 05:00; coldest 06:00 (−2 °C), warmest 15:00 (12 °C)";
+Fahrenheit on imperial) so a winter dawn or a summer night is dressed and powered for. Badge:
+**Climatology · not a forecast**. Each class is a button that compares that scenario; the
 most common one is marked, nothing is selected silently. Free plans see the locked block with the
 paywall reason. Rules and method in `WEATHER_AND_FORECAST_MODEL.md` §8.
 

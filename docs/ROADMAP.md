@@ -184,8 +184,9 @@ abstraction with a fixture), mean cloud and wet-day fraction, tap-to-compare, mo
 Never labelled a forecast, never above SCENARIO confidence (`WEATHER_AND_FORECAST_MODEL.md` §8).
 Pro entitlement `climatology`; cached 30 days per 0.5° cell. Also delivered: the **hour-of-day
 breakdown** (24 bars, clearest/cloudiest stretch, table alternative), the dark-hours line for
-night planning, and **near-saturated air by hour** (dew on the glass, morning mist) from ERA5's
-humidity. Future: haze/visibility climatology once a source with those fields is licensed.
+night planning, **near-saturated air by hour** (dew on the glass, morning mist) from ERA5's
+humidity, and the **typical air by hour** (the coldest and warmest hours of the day) from its
+temperature. Future: haze/visibility climatology once a source with those fields is licensed.
 
 ## Phase 8 — High-fidelity environment reconstruction (future)
 

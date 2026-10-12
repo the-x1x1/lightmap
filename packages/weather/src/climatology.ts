@@ -22,6 +22,8 @@ export interface ClimatologyHour {
   precipitationAmount: number | null;
   /** Relative humidity at 2 m, 0–100 %; absent or null when the source did not give it. */
   humidity?: number | null;
+  /** Air temperature at 2 m, °C; absent or null when the source did not give it. */
+  temperature?: number | null;
 }
 
 /** From this relative humidity the air is within about a degree of its dew point (field conditions use the same). */
@@ -84,6 +86,10 @@ export interface ClimatologyHourOfDay {
    * mist or low cloud by day. 0 when no humidity was known.
    */
   humidShare: number;
+  /** Hours in this slot with a known temperature. */
+  temperatureSamples: number;
+  /** Mean 2 m air temperature over those, °C; 0 when none was known. */
+  meanTemperature: number;
 }
 
 export interface ClimatologyCapabilities {
@@ -181,6 +187,8 @@ export function summarizeClimatology(
     wet: 0,
     rhN: 0,
     humid: 0,
+    tN: 0,
+    tSum: 0,
   }));
   for (const h of hours) {
     if (!Number.isFinite(h.cloudCoverTotal)) continue;
@@ -199,6 +207,11 @@ export function summarizeClimatology(
       if (typeof rh === 'number' && Number.isFinite(rh)) {
         slot.rhN++;
         if (rh >= HUMID_CLIMATOLOGY_THRESHOLD) slot.humid++;
+      }
+      const tC = h.temperature;
+      if (typeof tC === 'number' && Number.isFinite(tC)) {
+        slot.tN++;
+        slot.tSum += tC;
       }
     }
     if (hour < window.startHour || hour >= window.endHour) continue;
@@ -242,6 +255,8 @@ export function summarizeClimatology(
       wetShare: s.n > 0 ? s.wet / s.n : 0,
       humiditySamples: s.rhN,
       humidShare: s.rhN > 0 ? s.humid / s.rhN : 0,
+      temperatureSamples: s.tN,
+      meanTemperature: s.tN > 0 ? s.tSum / s.tN : 0,
     })),
     attribution: meta.attribution,
     license: meta.license,
@@ -352,8 +367,9 @@ export function suggestedScenario(summary: ClimatologySummary): WeatherScenarioI
 }
 
 /**
- * Cache key (v3: the hour-of-day rows carry humidity): provider, ~0.5° cell (climatology is smooth), month, year span, window and the zone
- * (the daylight window is local, so a cell straddling a zone boundary needs one row per zone).
+ * Cache key (v4: the hour-of-day rows carry humidity and temperature): provider, ~0.5° cell
+ * (climatology is smooth), month, year span, window and the zone (the daylight window is local,
+ * so a cell straddling a zone boundary needs one row per zone).
  */
 export function climatologyCacheKey(
   providerId: string,
@@ -365,8 +381,8 @@ export function climatologyCacheKey(
   timeZone = 'UTC',
 ): string {
   const cell = `${(Math.round(lat * 2) / 2).toFixed(1)},${(Math.round(lng * 2) / 2).toFixed(1)}`;
-  // `v2`: the summary gained `byHour`; rows written before that must not be served.
-  return `v3:${providerId}:${cell}:m${month}:${years.from}-${years.to}:h${window.startHour}-${window.endHour}:${timeZone}`;
+  // `v2`: the summary gained `byHour`; v3 humidity; v4 temperature — rows written before must not be served.
+  return `v4:${providerId}:${cell}:m${month}:${years.from}-${years.to}:h${window.startHour}-${window.endHour}:${timeZone}`;
 }
 
 /** Fetch the same month for several years and summarise. Concurrency-limited; partial years are dropped. */
@@ -443,4 +459,44 @@ export function humidityByHour(
   const sel = byHour.find((b) => b.hour === ((selectedHour % 24) + 24) % 24);
   const atHour = sel?.humiditySamples ? (sel.humidShare ?? 0) : null;
   return { atHour, peakHour: peak.hour, peakShare: peak.share };
+}
+
+/**
+ * Typical air by local hour from the per-hour breakdown: the mean at the selected hour (null
+ * when none was known there) and the coldest and warmest hours of the day with their means —
+ * "4 °C now; coldest 06:00 at −2 °C, warmest 15:00 at 12 °C". Null when no temperature was ever
+ * known (older cached summaries, a source without the field).
+ */
+export function temperatureByHour(
+  byHour: ReadonlyArray<
+    Partial<Pick<ClimatologyHourOfDay, 'temperatureSamples' | 'meanTemperature'>> & {
+      hour: number;
+    }
+  >,
+  selectedHour: number,
+): {
+  atHour: number | null;
+  coldestHour: number;
+  coldest: number;
+  warmestHour: number;
+  warmest: number;
+} | null {
+  let cold: { hour: number; t: number } | null = null;
+  let warm: { hour: number; t: number } | null = null;
+  for (const b of byHour) {
+    if (!(b.temperatureSamples && b.temperatureSamples > 0)) continue;
+    const t = b.meanTemperature ?? 0;
+    if (!cold || t < cold.t) cold = { hour: b.hour, t };
+    if (!warm || t > warm.t) warm = { hour: b.hour, t };
+  }
+  if (!cold || !warm) return null;
+  const sel = byHour.find((b) => b.hour === ((selectedHour % 24) + 24) % 24);
+  const atHour = sel?.temperatureSamples ? (sel.meanTemperature ?? 0) : null;
+  return {
+    atHour,
+    coldestHour: cold.hour,
+    coldest: cold.t,
+    warmestHour: warm.hour,
+    warmest: warm.t,
+  };
 }

@@ -12,11 +12,12 @@ import {
   hoursShare,
   humidityByHour,
   suggestedScenario,
+  temperatureByHour,
   type ClimatologySummary,
 } from '@lightmap/weather';
 import { useId } from 'react';
 import { utcToWallClock } from '@lightmap/astronomy';
-import type { SceneState } from '@lightmap/scene';
+import { formatTemperature, type DistanceUnits, type SceneState } from '@lightmap/scene';
 import type { EntitlementDecision } from '@lightmap/entitlements';
 import { Badge, cx } from '@lightmap/ui';
 import { usePlannerStore } from '@/features/planner/store';
@@ -47,6 +48,7 @@ export function ClimatologyPanel({
 }) {
   const month = Number(scene.localTime.date.slice(5, 7));
   const setScenario = usePlannerStore((s) => s.setScenario);
+  const units = usePlannerStore((s) => s.units);
   const q = useClimatology(scene.location, month, decision.allowed);
   const monthName = MONTHS[month - 1] ?? '';
   const hourTableId = useId();
@@ -139,6 +141,9 @@ export function ClimatologyPanel({
           ) : null}
           {Array.isArray(q.data.summary.byHour) ? (
             <HumidHours byHour={q.data.summary.byHour} selectedHour={selectedHour} />
+          ) : null}
+          {Array.isArray(q.data.summary.byHour) ? (
+            <AirHours byHour={q.data.summary.byHour} selectedHour={selectedHour} units={units} />
           ) : null}
           <p className="text-xs text-[var(--lm-text-muted)]" data-testid="climatology-summary">
             Daylight hours ({q.data.summary.window.startHour}:00–{q.data.summary.window.endHour}
@@ -308,6 +313,35 @@ function HumidHours({
         : ''}
       ; most often at {two(h.peakHour)} ({Math.round(h.peakShare * 100)} %) — dew on the glass at
       night, mist by day.
+    </p>
+  );
+}
+
+/**
+ * Typical air by hour: the mean at the selected hour and the day's coldest and warmest hours,
+ * from the archive's own temperature — "4 °C at 05:00; coldest 06:00 (−2 °C), warmest 15:00
+ * (12 °C)" — so a winter dawn or a summer night is planned for. History, not a forecast; absent
+ * when the source gave no temperature.
+ */
+function AirHours({
+  byHour,
+  selectedHour,
+  units,
+}: {
+  byHour: ClimatologySummary['byHour'];
+  selectedHour: number;
+  units: DistanceUnits;
+}) {
+  const t = temperatureByHour(byHour, selectedHour);
+  if (!t) return null;
+  return (
+    <p className="text-xs text-[var(--lm-text-muted)]" data-testid="climatology-air">
+      Air
+      {t.atHour !== null
+        ? `: typically ${formatTemperature(t.atHour, units)} at ${two(selectedHour)}`
+        : ''}
+      ; coldest {two(t.coldestHour)} ({formatTemperature(t.coldest, units)}), warmest{' '}
+      {two(t.warmestHour)} ({formatTemperature(t.warmest, units)}).
     </p>
   );
 }

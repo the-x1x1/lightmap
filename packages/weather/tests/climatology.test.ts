@@ -7,6 +7,7 @@ import {
   hoursShare,
   suggestedScenario,
   humidityByHour,
+  temperatureByHour,
   summarizeClimatology,
   type ClimatologyHour,
   type ClimatologyProvider,
@@ -145,7 +146,7 @@ describe('summarizeClimatology', () => {
     const a = climatologyCacheKey('p', 21.41, -157.72, 5, { from: 2015, to: 2024 });
     const b = climatologyCacheKey('p', 21.38, -157.68, 5, { from: 2015, to: 2024 });
     expect(a).toBe(b);
-    expect(a).toBe('v3:p:21.5,-157.5:m5:2015-2024:h6-20:UTC');
+    expect(a).toBe('v4:p:21.5,-157.5:m5:2015-2024:h6-20:UTC');
     expect(
       climatologyCacheKey(
         'p',
@@ -224,6 +225,7 @@ describe('normalizeArchive', () => {
         cloud_cover: [12, null, 88],
         precipitation: [0, 0.2, null],
         relative_humidity_2m: [96, 80, null],
+        temperature_2m: [24.5, 23, null],
       },
     });
     expect(rows).toEqual([
@@ -232,12 +234,14 @@ describe('normalizeArchive', () => {
         cloudCoverTotal: 12,
         precipitationAmount: 0,
         humidity: 96,
+        temperature: 24.5,
       },
       {
         timestamp: '2020-05-01T02:00:00.000Z',
         cloudCoverTotal: 88,
         precipitationAmount: null,
         humidity: null,
+        temperature: null,
       },
     ]);
   });
@@ -274,6 +278,54 @@ describe('humidity by hour of day (dew and mist climatology)', () => {
     expect(five.humiditySamples).toBe(4);
     expect(five.humidShare).toBeCloseTo(0.75, 9);
     expect(s.byHour[12]).toMatchObject({ humiditySamples: 0, humidShare: 0 });
+    // No temperature in these rows: counted as none, mean 0.
+    expect(five).toMatchObject({ temperatureSamples: 0, meanTemperature: 0 });
+  });
+});
+
+describe('temperature by hour of day (typical air)', () => {
+  it('averages the known temperatures per local hour and ignores the unknown ones', () => {
+    // Honolulu: local 05:00 is 15:00 UTC, local 14:00 is 00:00 UTC the next day.
+    const hours = [
+      ...[18, 19, 20, null].map((t, d) => ({
+        timestamp: new Date(Date.UTC(2020, 4, d + 1, 15)).toISOString(),
+        cloudCoverTotal: 20,
+        precipitationAmount: 0,
+        temperature: t,
+      })),
+      ...[27.5, 28.5].map((t, d) => ({
+        timestamp: new Date(Date.UTC(2020, 4, d + 2, 0)).toISOString(),
+        cloudCoverTotal: 40,
+        precipitationAmount: 0,
+        temperature: t,
+      })),
+    ];
+    const s = summarizeClimatology(hours, {
+      providerId: 'p',
+      latitude: 21.4,
+      longitude: -157.7,
+      month: 5,
+      timeZone: 'Pacific/Honolulu',
+      years: { from: 2020, to: 2020 },
+      attribution: '',
+      license: '',
+    });
+    expect(s.byHour[5]).toMatchObject({ samples: 4, temperatureSamples: 3, meanTemperature: 19 });
+    expect(s.byHour[14]).toMatchObject({ samples: 2, temperatureSamples: 2, meanTemperature: 28 });
+    expect(temperatureByHour(s.byHour, 5)).toEqual({
+      atHour: 19,
+      coldestHour: 5,
+      coldest: 19,
+      warmestHour: 14,
+      warmest: 28,
+    });
+    expect(temperatureByHour(s.byHour, 9)?.atHour).toBeNull();
+    expect(temperatureByHour(s.byHour, 29)?.atHour).toBe(19); // hours wrap
+  });
+
+  it('says nothing when no temperature was ever known (older cached summaries)', () => {
+    expect(temperatureByHour([{ hour: 5 }, { hour: 6, temperatureSamples: 0 }], 5)).toBeNull();
+    expect(temperatureByHour([], 5)).toBeNull();
   });
 });
 
