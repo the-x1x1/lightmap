@@ -538,6 +538,7 @@ export function MapShell() {
                               ? freeWindowEnd
                               : null
                           }
+                          exportAllowed={account.can('export_preview').allowed}
                         />
                       </div>
                     </details>

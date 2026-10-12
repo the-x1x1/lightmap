@@ -247,7 +247,10 @@ the selected day's evening, with astronomical night, the core 10° up and no Moo
 21°) · 4 Jun 21:06–22:58 (core to 28°) · 5 Jun 21:02–23:35 (core to 33°) · 33 more in 45
 nights". Each is a button: the planner jumps to the core's highest instant in that window. A
 Free plan sees the nights inside its date window and an honest count of the rest ("· 12 more
-beyond your window · Pro"), never the dates themselves. When there is none the line says which
+beyond your window · Pro"), never the dates themselves. With the export entitlement an "add to
+calendar" link downloads the listed windows as an `.ics` — one event per night from the window's
+start to its end, the core's peak in the description, a reminder an hour before, stable UIDs so
+re-importing updates (`buildDarkWindowsCalendar`, tested). When there is none the line says which
 thing rules every night out: no astronomical night (high
 summer at high latitudes), a core that never clears 10° in the dark (the northern winter; Britain
 all year), the Moon over every dark hour the core is up, or a core that clears 10° only for

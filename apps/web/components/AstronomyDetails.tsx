@@ -42,13 +42,23 @@ import {
 import { useSeasonalEnvelope } from '@/features/planner/use-seasonal';
 import { describeLightWindows } from '@/features/planner/light-windows';
 import { DayEventMarkers } from './Timeline';
+import { buildDarkWindowsCalendar } from '@/features/export/dark-windows-calendar';
+import { downloadBlob, fileStem } from '@/features/export/download';
 
 /**
  * The nights ahead on which the core can be shot, each a click away (the planner jumps to the
  * core's highest instant inside the window). Rendered only while the Moon details are open: the
  * 45-night scan is a few tens of milliseconds and is memoised per place and civil day.
  */
-function DarkWindows({ scene, windowEnd }: { scene: SceneState; windowEnd: string | null }) {
+function DarkWindows({
+  scene,
+  windowEnd,
+  exportAllowed,
+}: {
+  scene: SceneState;
+  windowEnd: string | null;
+  exportAllowed: boolean;
+}) {
   const setDate = usePlannerStore((s) => s.setDate);
   const setMinutes = usePlannerStore((s) => s.setMinutes);
   const tz = scene.timeZone;
@@ -107,6 +117,35 @@ function DarkWindows({ scene, windowEnd }: { scene: SceneState; windowEnd: strin
           {' '}
           · {beyond} more beyond your window · Pro
         </span>
+      ) : null}
+      {exportAllowed && inWindow.length > 0 ? (
+        <>
+          {' · '}
+          <button
+            type="button"
+            className="underline decoration-dotted underline-offset-2 hover:text-[var(--lm-text)]"
+            title="Download every dark window as calendar events (.ics)"
+            data-testid="milky-way-windows-calendar"
+            onClick={() => {
+              const ics = buildDarkWindowsCalendar(
+                inWindow,
+                {
+                  label: scene.location.label,
+                  latitude: lat,
+                  longitude: lng,
+                  timeZone: placeZone,
+                },
+                { generatedAt: new Date() },
+              );
+              downloadBlob(
+                new Blob([ics], { type: 'text/calendar;charset=utf-8' }),
+                `${fileStem(scene.location.label, 'place')}-milky-way.ics`,
+              );
+            }}
+          >
+            add to calendar
+          </button>
+        </>
       ) : null}
     </p>
   );
@@ -167,10 +206,12 @@ function MoonDetails({
   scene,
   lunar,
   windowEnd,
+  exportAllowed,
 }: {
   scene: SceneState;
   lunar: LunarState;
   windowEnd: string | null;
+  exportAllowed: boolean;
 }) {
   const tz = scene.timeZone;
   const [moonOpen, setMoonOpen] = useState(false);
@@ -256,7 +297,9 @@ function MoonDetails({
           Milky Way core: {describeMilkyWay(scene.nightSky)}
         </p>
       ) : null}
-      {scene.nightSky && moonOpen ? <DarkWindows scene={scene} windowEnd={windowEnd} /> : null}
+      {scene.nightSky && moonOpen ? (
+        <DarkWindows scene={scene} windowEnd={windowEnd} exportAllowed={exportAllowed} />
+      ) : null}
       <p className="mt-1 text-xs text-[var(--lm-text-muted)]">{lunar.accuracyNote}</p>
     </details>
   );
@@ -266,9 +309,15 @@ export interface AstronomyDetailsProps {
   scene: SceneState;
   /** Last civil date (place zone) a Free plan may plan for; null when the plan is unrestricted. */
   windowEnd?: string | null;
+  /** The `export_preview` entitlement: the dark windows' calendar file. */
+  exportAllowed?: boolean;
 }
 
-export function AstronomyDetails({ scene, windowEnd = null }: AstronomyDetailsProps) {
+export function AstronomyDetails({
+  scene,
+  windowEnd = null,
+  exportAllowed = false,
+}: AstronomyDetailsProps) {
   const s = scene.solar;
   const tz = scene.timeZone;
   const seasons = useSeasonalEnvelope(scene);
@@ -412,7 +461,14 @@ export function AstronomyDetails({ scene, windowEnd = null }: AstronomyDetailsPr
           <DayEventMarkers dayEvents={scene.dayEvents} timeZone={tz} />
         </div>
       </details>
-      {scene.lunar ? <MoonDetails scene={scene} lunar={scene.lunar} windowEnd={windowEnd} /> : null}
+      {scene.lunar ? (
+        <MoonDetails
+          scene={scene}
+          lunar={scene.lunar}
+          windowEnd={windowEnd}
+          exportAllowed={exportAllowed}
+        />
+      ) : null}
       <details className="group" data-testid="why-panel">
         <summary className="cursor-pointer text-xs uppercase tracking-wide text-[var(--lm-text-muted)]">
           Why does it look like this?
