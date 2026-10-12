@@ -12,8 +12,10 @@ import {
   EllipsoidTerrainProvider,
   NaturalEarthBasemap,
   NoBuildings,
+  NoLandCover,
   ReearthTerrainProvider,
   XyzBasemap,
+  XyzLandCover,
 } from './map-sources.ts';
 import { NominatimGeocoder } from './nominatim.ts';
 import type {
@@ -21,6 +23,8 @@ import type {
   BuildingsProvider,
   GeocodingProvider,
   ImageryProvider,
+  LandCoverDescriptor,
+  LandCoverProvider,
   MapTileProvider,
   ProviderMeta,
   TerrainProvider,
@@ -34,6 +38,8 @@ export interface GeospatialProviders {
   basemap: MapTileProvider;
   /** 3D buildings; `NoBuildings` unless configured. */
   buildings: BuildingsProvider;
+  /** Land cover for the ground texture; `NoLandCover` unless configured. */
+  landCover: LandCoverProvider;
   /** Null until a licensed provider contract exists (plan §7). */
   referenceImagery: ImageryProvider | null;
 }
@@ -98,12 +104,28 @@ export function createGeospatialProviders(
       ? new CesiumOsmBuildings()
       : new NoBuildings();
 
-  return { geocoder, timezone, terrain, basemap, buildings, referenceImagery: null };
+  const landCover: LandCoverProvider =
+    env.LANDCOVER_PROVIDER === 'xyz' && env.LANDCOVER_XYZ_URL && env.LANDCOVER_XYZ_ATTRIBUTION
+      ? new XyzLandCover({
+          url: env.LANDCOVER_XYZ_URL,
+          attribution: env.LANDCOVER_XYZ_ATTRIBUTION,
+          maxZoom: env.LANDCOVER_XYZ_MAX_ZOOM,
+          palette: env.LANDCOVER_PALETTE,
+        })
+      : new NoLandCover();
+
+  return { geocoder, timezone, terrain, basemap, buildings, landCover, referenceImagery: null };
 }
 
 /** Everything the UI must attribute for the active configuration. */
 export function activeAttributions(p: GeospatialProviders): ProviderMeta[] {
-  const list = [p.basemap.meta, p.terrain.meta, p.buildings.meta, p.geocoder.meta];
+  const list = [
+    p.basemap.meta,
+    p.terrain.meta,
+    p.buildings.meta,
+    p.landCover.meta,
+    p.geocoder.meta,
+  ];
   if (p.referenceImagery) list.push(p.referenceImagery.meta);
   return list.filter((m) => m.attribution.length > 0);
 }
@@ -117,6 +139,7 @@ export interface PublicProviderDescriptors {
     isFixture: boolean;
   };
   buildings: BuildingsDescriptor & { providerId: string };
+  landCover: LandCoverDescriptor & { providerId: string };
   geocoderId: string;
   geocoderIsFixture: boolean;
   referenceImagery: boolean;
@@ -137,6 +160,7 @@ export function publicDescriptors(p: GeospatialProviders): PublicProviderDescrip
       isFixture: p.basemap.meta.isFixture,
     },
     buildings: { ...p.buildings.descriptor(), providerId: p.buildings.meta.id },
+    landCover: { ...p.landCover.descriptor(), providerId: p.landCover.meta.id },
     geocoderId: p.geocoder.meta.id,
     geocoderIsFixture: p.geocoder.meta.isFixture,
     referenceImagery: p.referenceImagery !== null,

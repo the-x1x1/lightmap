@@ -17,10 +17,14 @@
  * real imagery layer, where one is licensed, still shows through where it matters — vegetation
  * hue, desert, farmland — and the procedural surface supplies the detail the basemap lacks.
  *
- * The one regional cue it takes is the bundled basemap's own colour around the place (sampled
- * once per place by the host): green leans the open ground to turf, tan to steppe and desert,
- * white to an ice sheet. A texture, not a land-cover dataset: it does not know a forest from a
- * field, a glacier from a snowfield, or a city at all. `RENDERING_ACCURACY.md` says so.
+ * The one regional cue it always takes is the bundled basemap's own colour around the place
+ * (sampled once per place by the host): green leans the open ground to turf, tan to steppe and
+ * desert, white to an ice sheet. With a land-cover tile source configured (texture pack stage
+ * 2, `land-cover.ts`) it also samples a **cover map** around the pin — canopy, built-up, bare
+ * ground and ice, cropland — and paints forest, fields, a city, desert and an ice sheet as
+ * what they are; where the map is unknown (no tiles, or beyond its reach) the procedural rules
+ * stand alone. Still a texture, not a classification of the pixel under the camera:
+ * `RENDERING_ACCURACY.md` says so.
  */
 export const GROUND_MATERIAL_TYPE = 'LightMapGround';
 
@@ -53,7 +57,14 @@ export const GROUND_UNIFORM_DEFAULTS = {
   u_wet: 0,
   /** Detail level from the quality rung: 0 base surface, 1 adds cloud shadows, 2 adds relief and the near grain. */
   u_detail: 2,
+  /** 1 when a cover map is loaded and its bounds set; 0 leaves the procedural rules alone. */
+  u_coverOn: 0,
 } as const;
+
+/** The cover map's sampler uniform (an image uniform in Cesium's material fabric: a canvas, or `Material.DefaultImageId`). */
+export const GROUND_COVER_IMAGE_UNIFORM = 'u_coverMap';
+/** The cover map's bounds uniform, a vec4 (Cartesian4): longitude in radians (west, east), mercator y (north, south). */
+export const GROUND_COVER_BOUNDS_UNIFORM = 'u_coverBounds';
 
 export const GROUND_MATERIAL_SOURCE = /* glsl */ `
 uniform float u_snowlineM;
@@ -68,6 +79,9 @@ uniform float u_cloudShadow;
 uniform float u_cloudTime;
 uniform float u_detail;
 uniform float u_wet;
+uniform float u_coverOn;
+uniform vec4 u_coverBounds;
+uniform sampler2D u_coverMap;
 // The camera's position in grain cells: whole cells and the fraction, set each frame.
 uniform vec3 u_cameraCell;
 uniform vec3 u_cameraFrac;
@@ -111,6 +125,23 @@ float lmNoiseAt(vec3 x, vec3 cell)
 float lmFbm(vec3 p)
 {
     return 0.5 * lmNoise(p) + 0.25 * lmNoise(p * 2.03 + 11.0) + 0.125 * lmNoise(p * 4.07 + 23.0) + 0.0625 * lmNoise(p * 8.11 + 37.0);
+}
+
+// Geodetic longitude/latitude of an ECEF position (WGS84; one Bowring step, < 1e-6 rad), then
+// the cover map's texel: x by longitude, y by mercator latitude, as the tiles are laid out.
+vec2 lmCoverUv(vec3 p)
+{
+    float a = 6378137.0;
+    float e2 = 0.00669437999014;
+    float lon = atan(p.y, p.x);
+    float r = length(p.xy);
+    float lat0 = atan(p.z, r * (1.0 - e2));
+    float sinL = sin(lat0);
+    float N = a / sqrt(1.0 - e2 * sinL * sinL);
+    float lat = atan(p.z + e2 * N * sinL, r);
+    float merc = log(tan(0.78539816 + 0.5 * lat));
+    return vec2((lon - u_coverBounds.x) / (u_coverBounds.y - u_coverBounds.x),
+                (u_coverBounds.z - merc) / (u_coverBounds.z - u_coverBounds.w));
 }
 
 czm_material czm_getMaterial(czm_materialInput materialInput)
@@ -157,6 +188,44 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float snowy = smoothstep(snowline - 220.0, snowline + 160.0, height) * (1.0 - smoothstep(0.85, 1.15, slope));
     snowy = max(snowy, u_ice * (1.0 - smoothstep(0.9, 1.2, slope)));  // an ice sheet is snow at any height
     ground = mix(ground, snow * (0.95 + 0.05 * grain), snowy);
+
+    // The land cover, where a map is loaded and this fragment lies inside it: what the open
+    // ground is. Canopy darkens and greens it with a crown-sized grain; fields are a patchwork
+    // of tones in cells a few hundred metres across; built-up ground is warm grey with a
+    // block-sized grain; bare is sand and rock by the region's aridity; ice is snow at any
+    // height. Rock on steep faces and the seasonal snow still win; unknown texels change nothing.
+    float known = 0.0;
+    if (u_coverOn > 0.5)
+    {
+        vec2 cuv = lmCoverUv(positionWC);
+        if (cuv.x > 0.0 && cuv.x < 1.0 && cuv.y > 0.0 && cuv.y < 1.0)
+        {
+            vec4 cv = texture(u_coverMap, cuv);
+            known = step(0.03, cv.a);
+            float canopy = cv.r;
+            float built = cv.g;
+            float bareC = smoothstep(0.3, 0.7, cv.b);
+            float iceC = smoothstep(0.75, 0.95, cv.b);
+            float crop = smoothstep(0.5, 0.9, cv.a);
+            float open = known * (1.0 - snowy) * (1.0 - rocky * 0.7);
+            float crowns = lmFbm(positionWC / 45.0 + 3.0);
+            vec3 forest = mix(vec3(0.13, 0.25, 0.10), vec3(0.27, 0.38, 0.17), crowns);
+            forest *= 0.9 + 0.2 * grain;
+            vec3 cell = floor(positionWC / 260.0);
+            float fieldTone = lmHash(cell + 7.0);
+            vec3 field = mix(vec3(0.50, 0.52, 0.28), vec3(0.72, 0.64, 0.40), fieldTone) * (0.9 + 0.2 * grain);
+            float block = lmHash(floor(positionWC / 24.0) + 11.0);
+            vec3 town = mix(vec3(0.46, 0.44, 0.42), vec3(0.58, 0.54, 0.50), block) * (0.9 + 0.15 * grain);
+            vec3 sand = mix(vec3(0.60, 0.56, 0.48), vec3(0.76, 0.66, 0.46), u_aridity) * (0.86 + 0.28 * grain);
+            ground = mix(ground, sand, open * bareC);
+            ground = mix(ground, field, open * crop);
+            ground = mix(ground, forest, open * canopy);
+            ground = mix(ground, town, open * built);
+            float icy = iceC * (1.0 - smoothstep(0.9, 1.2, slope));
+            ground = mix(ground, snow * (0.95 + 0.05 * grain), icy);
+            snowy = max(snowy, icy);
+        }
+    }
 
     // Close to the camera (a viewpoint's foreground) a metre-scale grain, fading out by 500 m so
     // it never shimmers at a distance. It is anchored to the ground, not the camera: the
@@ -215,7 +284,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
 
     material.diffuse = ground * u_brightness;
     // Rock and snow are what they are; open ground lets the basemap's own hue through.
-    float cover = max(rocky, max(snowy, alpine * 0.8));
+    float cover = max(rocky, max(snowy, max(alpine * 0.8, known * 0.9)));
     float alpha = u_strength * mix(0.75, 0.95, cover);
 #ifdef HAS_WATER_MASK
     alpha *= 1.0 - materialInput.waterMask;

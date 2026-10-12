@@ -14,15 +14,19 @@ import type {
   BasemapDescriptor,
   BuildingsDescriptor,
   GeoPoint,
+  LandCoverDescriptor,
   TerrainDescriptor,
 } from '@lightmap/geospatial';
 import { GRADE_FRAGMENT_SHADER } from '../shaders/grade.frag.ts';
 import {
+  GROUND_COVER_BOUNDS_UNIFORM,
+  GROUND_COVER_IMAGE_UNIFORM,
   GROUND_GRAIN_M,
   GROUND_MATERIAL_SOURCE,
   GROUND_MATERIAL_TYPE,
   GROUND_UNIFORM_DEFAULTS,
 } from '../shaders/ground.frag.ts';
+import { coverMapFromPixels, coverMosaicFor, tileUrl } from '../land-cover.ts';
 import { pickSurface } from '../pick.ts';
 import type { Vec3 } from '../sun-vector.ts';
 import type {
@@ -36,6 +40,7 @@ import type {
   HostQuality,
   HostShadows,
   HostStats,
+  LandCoverReading,
   SceneHost,
 } from './host.ts';
 
@@ -78,6 +83,11 @@ export class CesiumSceneHost implements SceneHost {
   private buildings: Cesium.Cesium3DTileset | null = null;
   private buildingsJob: Promise<void> | null = null;
   private groundTextureFailed = false;
+  private landCover: LandCoverDescriptor = { kind: 'none', attribution: '' };
+  /** The cover map's bounds once loaded (`u_coverBounds`), applied when the material exists. */
+  private coverBounds: [number, number, number, number] | null = null;
+  private coverCanvas: HTMLCanvasElement | null = null;
+  private coverLoadSeq = 0;
   private readonly onError: ((message: string, error: unknown) => void) | undefined;
   private ionToken: string | undefined;
   private pickHandler: Cesium.ScreenSpaceEventHandler | null = null;
@@ -318,6 +328,8 @@ export class CesiumSceneHost implements SceneHost {
           type: GROUND_MATERIAL_TYPE,
           uniforms: {
             ...GROUND_UNIFORM_DEFAULTS,
+            [GROUND_COVER_BOUNDS_UNIFORM]: new C.Cartesian4(0, 0, 0, 0),
+            [GROUND_COVER_IMAGE_UNIFORM]: C.Material.DefaultImageId,
             u_cameraCell: new C.Cartesian3(0, 0, 0),
             u_cameraFrac: new C.Cartesian3(0, 0, 0),
           },
@@ -326,6 +338,7 @@ export class CesiumSceneHost implements SceneHost {
         translucent: false,
       });
       globe.material = this.groundMaterial;
+      this.applyCoverMap();
     }
     const u = this.groundMaterial.uniforms as Record<string, number>;
     u['u_snowlineM'] = g.snowlineM;
@@ -675,6 +688,96 @@ export class CesiumSceneHost implements SceneHost {
   setIonToken(token: string | undefined): void {
     this.ionToken = token;
     if (token) this.C.Ion.defaultAccessToken = token;
+  }
+
+  setLandCover(d: LandCoverDescriptor): void {
+    if (JSON.stringify(d) === JSON.stringify(this.landCover)) return;
+    this.landCover = d;
+    // A new source (or none): whatever map was loaded is from the old one.
+    this.coverLoadSeq++;
+    this.coverBounds = null;
+    this.coverCanvas = null;
+    this.applyCoverMap();
+  }
+
+  /** Put the loaded cover map (or its absence) into the material's uniforms. */
+  private applyCoverMap(): void {
+    const C = this.C;
+    if (!this.groundMaterial) return;
+    const u = this.groundMaterial.uniforms as Record<string, unknown>;
+    if (this.coverBounds && this.coverCanvas) {
+      const [w, e, n, so] = this.coverBounds;
+      u[GROUND_COVER_BOUNDS_UNIFORM] = new C.Cartesian4(w, e, n, so);
+      u[GROUND_COVER_IMAGE_UNIFORM] = this.coverCanvas;
+      u['u_coverOn'] = 1;
+    } else {
+      u['u_coverOn'] = 0;
+      u[GROUND_COVER_IMAGE_UNIFORM] = C.Material.DefaultImageId;
+    }
+    this.scene.requestRender();
+  }
+
+  async loadLandCoverAround(p: GeoPoint): Promise<LandCoverReading | null> {
+    const d = this.landCover;
+    const url = d.url;
+    if (d.kind !== 'xyz' || !url || this.destroyed) return null;
+    const seq = ++this.coverLoadSeq;
+    const mosaic = coverMosaicFor(p, d.maxZoom ?? 12);
+    const cols = mosaic.x1 - mosaic.x0 + 1;
+    const rows = mosaic.y1 - mosaic.y0 + 1;
+    const TILE = 256;
+    // Tiles are fetched as images with CORS so the canvas stays readable; one that fails leaves
+    // its square unknown (transparent), which the shader treats as "no information".
+    const loadTile = (x: number, y: number) =>
+      new Promise<HTMLImageElement | null>((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = tileUrl(url, mosaic.zoom, x, y);
+      });
+    const jobs: Array<Promise<{ img: HTMLImageElement | null; x: number; y: number }>> = [];
+    for (let y = mosaic.y0; y <= mosaic.y1; y++)
+      for (let x = mosaic.x0; x <= mosaic.x1; x++)
+        jobs.push(loadTile(x, y).then((img) => ({ img, x, y })));
+    const tiles = await Promise.all(jobs);
+    if (this.destroyed || seq !== this.coverLoadSeq) return null;
+    if (tiles.every((t) => t.img === null)) return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = cols * TILE;
+    canvas.height = rows * TILE;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return null;
+    for (const t of tiles)
+      if (t.img)
+        ctx.drawImage(t.img, (t.x - mosaic.x0) * TILE, (t.y - mosaic.y0) * TILE, TILE, TILE);
+    let pixels: ImageData;
+    try {
+      pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    } catch {
+      // A tile host without CORS taints the canvas: nothing can be read.
+      return null;
+    }
+    const map = coverMapFromPixels(
+      pixels.data,
+      canvas.width,
+      canvas.height,
+      d.palette ?? 'worldcover',
+    );
+    if (map.known <= 0) return null;
+    // The packed map goes back into a canvas (the material's image uniform takes one). The
+    // tile rows run north to south, as the shader's mercator lookup expects (v = 0 at the north edge).
+    const out = document.createElement('canvas');
+    out.width = map.width;
+    out.height = map.height;
+    const octx = out.getContext('2d');
+    if (!octx) return null;
+    octx.putImageData(new ImageData(map.data, map.width, map.height), 0, 0);
+    if (this.destroyed || seq !== this.coverLoadSeq) return null;
+    this.coverCanvas = out;
+    this.coverBounds = [mosaic.westRad, mosaic.eastRad, mosaic.northMerc, mosaic.southMerc];
+    this.applyCoverMap();
+    return { known: map.known, shares: map.shares, metresPerPixel: mosaic.metresPerPixel };
   }
 
   async setBuildings(b: BuildingsDescriptor): Promise<void> {

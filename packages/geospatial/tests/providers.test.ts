@@ -118,6 +118,53 @@ describe('registry', () => {
     expect(noToken.buildings.meta.id).toBe('no-buildings');
   });
 
+  it('land cover: none by default; an XYZ source only with its URL and attribution, in a known legend', () => {
+    const none = createGeospatialProviders(parseEnv({}).env);
+    expect(publicDescriptors(none).landCover).toEqual({
+      kind: 'none',
+      attribution: '',
+      providerId: 'no-land-cover',
+    });
+    expect(activeAttributions(none).map((m) => m.id)).not.toContain('no-land-cover');
+    const wc = createGeospatialProviders(
+      parseEnv({
+        LANDCOVER_PROVIDER: 'xyz',
+        LANDCOVER_XYZ_URL: 'https://lc.example/{z}/{x}/{y}.png',
+        LANDCOVER_XYZ_ATTRIBUTION:
+          '© ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium',
+        LANDCOVER_XYZ_MAX_ZOOM: '13',
+      }).env,
+    );
+    const pub = publicDescriptors(wc);
+    expect(pub.landCover).toEqual({
+      kind: 'xyz',
+      url: 'https://lc.example/{z}/{x}/{y}.png',
+      maxZoom: 13,
+      palette: 'worldcover',
+      attribution:
+        '© ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium',
+      providerId: 'xyz-land-cover',
+    });
+    expect(activeAttributions(wc).map((m) => m.id)).toContain('xyz-land-cover');
+    const cgls = createGeospatialProviders(
+      parseEnv({
+        LANDCOVER_PROVIDER: 'xyz',
+        LANDCOVER_XYZ_URL: 'https://lc.example/{z}/{x}/{y}.png',
+        LANDCOVER_XYZ_ATTRIBUTION: '© Copernicus Service information 2019',
+        LANDCOVER_PALETTE: 'copernicus',
+      }).env,
+    );
+    expect(publicDescriptors(cgls).landCover.palette).toBe('copernicus');
+    expect(cgls.landCover.meta.name).toContain('Copernicus');
+    // Missing attribution: the provider is refused and the env says why.
+    const parsed = parseEnv({
+      LANDCOVER_PROVIDER: 'xyz',
+      LANDCOVER_XYZ_URL: 'https://lc.example/{z}/{x}/{y}.png',
+    });
+    expect(parsed.issues.map((i) => i.key)).toContain('LANDCOVER_XYZ_ATTRIBUTION');
+    expect(createGeospatialProviders(parsed.env).landCover.meta.id).toBe('no-land-cover');
+  });
+
   it('degrades to safe defaults when credentials are missing', () => {
     const env = parseEnv({
       TERRAIN_PROVIDER: 'cesium-ion',

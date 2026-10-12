@@ -12,6 +12,8 @@ import type {
   BasemapDescriptor,
   BuildingsDescriptor,
   BuildingsProvider,
+  LandCoverDescriptor,
+  LandCoverProvider,
   MapTileProvider,
   ProviderMeta,
   TerrainDescriptor,
@@ -250,6 +252,79 @@ export class CesiumOsmBuildings implements BuildingsProvider {
       kind: 'cesium-osm',
       assetId: CESIUM_OSM_BUILDINGS_ASSET_ID,
       attribution: this.meta.attribution,
+    };
+  }
+}
+
+export const NO_LAND_COVER_META: ProviderMeta = {
+  id: 'no-land-cover',
+  name: 'No land cover',
+  attribution: '',
+  license: 'n/a',
+  review: 'approved',
+  isFixture: false,
+  cache: { allowed: false, maxAgeSeconds: 0 },
+};
+
+export class NoLandCover implements LandCoverProvider {
+  readonly meta = NO_LAND_COVER_META;
+  descriptor(): LandCoverDescriptor {
+    return { kind: 'none', attribution: '' };
+  }
+}
+
+/** The published legends the renderer can read (`@lightmap/renderer` `land-cover.ts`). */
+export const LAND_COVER_PALETTES = ['worldcover', 'copernicus'] as const;
+export type LandCoverPaletteName = (typeof LAND_COVER_PALETTES)[number];
+
+/**
+ * An operator-configured land-cover tile source: ESA WorldCover (10 m, CC BY 4.0) or the
+ * Copernicus Global Land Cover (100 m, CC BY 4.0), rendered as XYZ tiles in the product's own
+ * legend colours. The data licences allow commercial use with attribution; the tile host's
+ * terms are the operator's to check (`DATA_SOURCES_AND_LICENSING.md`).
+ */
+export class XyzLandCover implements LandCoverProvider {
+  readonly meta: ProviderMeta;
+  private readonly opts: {
+    url: string;
+    attribution: string;
+    maxZoom: number;
+    palette: LandCoverPaletteName;
+    termsUrl?: string;
+  };
+  constructor(opts: {
+    url: string;
+    attribution: string;
+    maxZoom: number;
+    palette: LandCoverPaletteName;
+    termsUrl?: string;
+  }) {
+    this.opts = opts;
+    this.meta = {
+      id: 'xyz-land-cover',
+      name:
+        opts.palette === 'worldcover'
+          ? 'ESA WorldCover land cover (operator-configured tiles)'
+          : 'Copernicus Global Land Cover (operator-configured tiles)',
+      attribution: opts.attribution,
+      attributionUrl:
+        opts.palette === 'worldcover'
+          ? 'https://esa-worldcover.org/'
+          : 'https://land.copernicus.eu/global/products/lc',
+      license: 'CC BY 4.0 (data); tile host per operator',
+      review: 'conditional',
+      isFixture: false,
+      cache: { allowed: false, maxAgeSeconds: 0 },
+      ...(opts.termsUrl !== undefined ? { termsUrl: opts.termsUrl } : {}),
+    };
+  }
+  descriptor(): LandCoverDescriptor {
+    return {
+      kind: 'xyz',
+      url: this.opts.url,
+      maxZoom: this.opts.maxZoom,
+      palette: this.opts.palette,
+      attribution: this.opts.attribution,
     };
   }
 }

@@ -459,8 +459,13 @@
         // the camera instead — a shader error is a runtime error the harness fails on — and the
         // shot shows the surface (turf and scrub at sea level, no snow at 21° N in May).
         const Cesium = await import('@cesium/engine');
-        const { GROUND_MATERIAL_SOURCE, GROUND_UNIFORM_DEFAULTS, groundTextureFor } =
-          await import('@lightmap/renderer');
+        const {
+          GROUND_COVER_BOUNDS_UNIFORM,
+          GROUND_COVER_IMAGE_UNIFORM,
+          GROUND_MATERIAL_SOURCE,
+          GROUND_UNIFORM_DEFAULTS,
+          groundTextureFor,
+        } = await import('@lightmap/renderer');
         const probeParams = groundTextureFor(s1);
         const probeMaterial = new Cesium.Material({
           fabric: {
@@ -474,6 +479,10 @@
               u_cameraCell: new Cesium.Cartesian3(0, 0, 0),
               u_cameraFrac: new Cesium.Cartesian3(0, 0, 0),
               u_poleward: probeParams ? probeParams.poleward : 1,
+              // The cover map as the host declares it: a vec4 of bounds and an image uniform
+              // (the default image until a land-cover read lands; u_coverOn stays 0 here).
+              [GROUND_COVER_BOUNDS_UNIFORM]: new Cesium.Cartesian4(0, 0, 0, 0),
+              [GROUND_COVER_IMAGE_UNIFORM]: Cesium.Material.DefaultImageId,
             },
             source: GROUND_MATERIAL_SOURCE,
           },

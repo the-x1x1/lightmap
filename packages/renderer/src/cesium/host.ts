@@ -8,6 +8,7 @@ import type {
   GeoPoint,
   BasemapDescriptor,
   BuildingsDescriptor,
+  LandCoverDescriptor,
   TerrainDescriptor,
 } from '@lightmap/geospatial';
 import type { Vec3 } from '../sun-vector.ts';
@@ -131,6 +132,16 @@ export interface HostOverlay {
   visible: boolean;
 }
 
+/** What a land-cover read around the pin found (`land-cover.ts` `CoverMap` without the pixels). */
+export interface LandCoverReading {
+  /** Share of the mosaic's pixels the palette knew, 0–1. */
+  known: number;
+  /** Class shares over the known pixels. */
+  shares: Partial<Record<string, number>>;
+  /** Ground size of a cover-map pixel, metres. */
+  metresPerPixel: number;
+}
+
 /** The procedural ground surface's inputs (`ground-texture.ts`); null switches it off. */
 export interface HostGroundTexture {
   snowlineM: number;
@@ -179,6 +190,14 @@ export interface SceneHost {
   setBasemap(b: BasemapDescriptor): Promise<void>;
   /** 3D buildings over the terrain (lit and shadow-casting like it); `none` removes them. */
   setBuildings(b: BuildingsDescriptor): Promise<void>;
+  /** The land-cover tile source the ground texture may read (`none` clears any cover map). */
+  setLandCover(d: LandCoverDescriptor): void;
+  /**
+   * Read the land-cover tiles around a point into the ground material's cover map. Resolves to
+   * what was read (the known share and class shares) or null when there is no source, the
+   * tiles could not be fetched, or the palette knew none of their colours (the map is then off).
+   */
+  loadLandCoverAround(p: GeoPoint): Promise<LandCoverReading | null>;
   /** Sun disc / moon / stars in the sky (viewpoint mode; stars only when dark). */
   setCelestialBodies(v: { sun: boolean; moon: boolean; stars: boolean }): void;
   /** Screen position (0..1) of a world direction from the camera, or null when behind. */

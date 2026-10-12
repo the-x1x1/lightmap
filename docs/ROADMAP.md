@@ -111,14 +111,16 @@ material from the mesh's own height, slope and aspect; `RENDERING_ACCURACY.md` "
 texture") so the preview reads as ground rather than a grey plane under the coarse basemap;
 blended over the basemap so licensed imagery, where configured, still carries the hue.
 
-Remaining — the **texture pack**, in stages: (1) delivered above, the procedural surface,
-with the region's aridity and ice taken from the bundled basemap's colour (data-free);
-(2) a land-cover tint — a coarse public-domain land-cover raster (e.g. ESA WorldCover at 10 m
-is CC BY 4.0; Copernicus Global Land Cover 100 m is CC BY 4.0) sampled per tile to tell forest
-from field, desert from steppe, built-up from open, feeding the material's palette; (3) tiled
-detail textures (rock, grass, sand, snow) under a commercial-compatible licence, blended by
-the same masks, for close viewpoints; (4) a licensed aerial imagery basemap where the contract
-allows (`xyz-imagery`), which the material then only details. **Buildings** — delivered as an operator option (`BUILDINGS_PROVIDER=cesium-osm`: Cesium OSM
+The **texture pack**, in stages: (1) **delivered** above, the procedural surface, with the
+region's aridity and ice taken from the bundled basemap's colour (data-free); (2) **delivered
+(unreleased)** — the land-cover tint: an operator-configured land-cover tile source (ESA
+WorldCover at 10 m or the Copernicus Global Land Cover at 100 m, both CC BY 4.0,
+`LANDCOVER_PROVIDER=xyz`) read around the pin into a cover map the material samples, so forest,
+fields, a city, desert and an ice sheet read as what they are (`RENDERING_ACCURACY.md` "Ground
+texture", `DATA_SOURCES_AND_LICENSING.md`); (3) tiled detail textures (rock, grass, sand, snow)
+under a commercial-compatible licence, blended by the same masks, for close viewpoints — next;
+(4) a licensed aerial imagery basemap where the contract allows (`xyz-imagery`), which the
+material then only details. **Buildings** — delivered as an operator option (`BUILDINGS_PROVIDER=cesium-osm`: Cesium OSM
 Buildings through ion, lit and shadow-casting with the terrain, ODbL attribution shown;
 `RENDERING_ACCURACY.md`); the terrain horizon takes them in within 2.5 km of the pin, so "when does the
 sun clear that block" is answered in a city. The scattering model in

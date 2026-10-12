@@ -37,6 +37,12 @@ export interface Env {
   IMAGERY_PROVIDER: 'natural-earth' | 'cesium-ion' | 'xyz';
   /** 3D buildings in the preview: Cesium OSM Buildings through ion, or none. */
   BUILDINGS_PROVIDER: 'none' | 'cesium-osm';
+  /** Land cover for the ground texture: none | xyz (a tile source in a known legend). */
+  LANDCOVER_PROVIDER: 'none' | 'xyz';
+  LANDCOVER_XYZ_URL: string | undefined;
+  LANDCOVER_XYZ_ATTRIBUTION: string | undefined;
+  LANDCOVER_XYZ_MAX_ZOOM: number;
+  LANDCOVER_PALETTE: 'worldcover' | 'copernicus';
   IMAGERY_XYZ_URL: string | undefined;
   IMAGERY_XYZ_ATTRIBUTION: string | undefined;
   IMAGERY_XYZ_MAX_ZOOM: number;
@@ -179,6 +185,17 @@ export function parseEnv(raw: RawEnv): EnvResult {
       'none',
       issues,
     ),
+    LANDCOVER_PROVIDER: oneOf(raw, 'LANDCOVER_PROVIDER', ['none', 'xyz'] as const, 'none', issues),
+    LANDCOVER_XYZ_URL: str(raw, 'LANDCOVER_XYZ_URL'),
+    LANDCOVER_XYZ_ATTRIBUTION: str(raw, 'LANDCOVER_XYZ_ATTRIBUTION'),
+    LANDCOVER_XYZ_MAX_ZOOM: Number(str(raw, 'LANDCOVER_XYZ_MAX_ZOOM') ?? '12'),
+    LANDCOVER_PALETTE: oneOf(
+      raw,
+      'LANDCOVER_PALETTE',
+      ['worldcover', 'copernicus'] as const,
+      'worldcover',
+      issues,
+    ),
     IMAGERY_XYZ_URL: str(raw, 'IMAGERY_XYZ_URL'),
     IMAGERY_XYZ_ATTRIBUTION: str(raw, 'IMAGERY_XYZ_ATTRIBUTION'),
     IMAGERY_XYZ_MAX_ZOOM: Number(str(raw, 'IMAGERY_XYZ_MAX_ZOOM') ?? '18'),
@@ -284,6 +301,20 @@ export function parseEnv(raw: RawEnv): EnvResult {
       severity: 'error',
       message: 'required when BUILDINGS_PROVIDER=cesium-osm',
     });
+  }
+  if (env.LANDCOVER_PROVIDER === 'xyz') {
+    if (env.LANDCOVER_XYZ_URL === undefined)
+      issues.push({
+        key: 'LANDCOVER_XYZ_URL',
+        severity: 'error',
+        message: 'required when LANDCOVER_PROVIDER=xyz',
+      });
+    if (env.LANDCOVER_XYZ_ATTRIBUTION === undefined)
+      issues.push({
+        key: 'LANDCOVER_XYZ_ATTRIBUTION',
+        severity: 'error',
+        message: 'required when LANDCOVER_PROVIDER=xyz',
+      });
   }
   if (env.IMAGERY_PROVIDER === 'xyz') {
     if (env.IMAGERY_XYZ_URL === undefined)

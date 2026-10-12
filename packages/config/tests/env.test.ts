@@ -58,6 +58,12 @@ describe('parseEnv', () => {
     const b = parseEnv({ BUILDINGS_PROVIDER: 'cesium-osm' });
     expect(b.issues.map((i) => i.key)).toContain('CESIUM_ION_TOKEN');
     expect(parseEnv({}).env.BUILDINGS_PROVIDER).toBe('none');
+    expect(parseEnv({}).env.LANDCOVER_PROVIDER).toBe('none');
+    expect(parseEnv({}).env.LANDCOVER_PALETTE).toBe('worldcover');
+    expect(parseEnv({}).env.LANDCOVER_XYZ_MAX_ZOOM).toBe(12);
+    const lc = parseEnv({ LANDCOVER_PROVIDER: 'xyz' }).issues.map((i) => i.key);
+    expect(lc).toContain('LANDCOVER_XYZ_URL');
+    expect(lc).toContain('LANDCOVER_XYZ_ATTRIBUTION');
   });
 
   it('flags test-mode Stripe keys in production', () => {

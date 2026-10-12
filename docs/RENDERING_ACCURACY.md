@@ -191,9 +191,22 @@ they do not match the clouds drawn in the sky. Under rain the ground is darker a
 (the scenario's precipitation; snow apart). **Claim:** the surface lit by the true Sun, with
 shadows and horizon geometry untouched (the material runs before the globe's lighting and
 changes albedo only; the micro-relief uses the light direction but never the shadow map or
-the mesh). **Caveat:** a texture, not land cover — it does not know a forest from a
-field, a glacier from a snowfield, farmland, roads or a city, and the snowline is a rule of
-thumb, not a snow model; the preview source label does not rise because of it.
+the mesh). With a **land-cover source** configured (`LANDCOVER_PROVIDER=xyz`, texture pack
+stage 2; `land-cover.ts`), nine tiles of ESA WorldCover or the Copernicus Global Land Cover
+around the pin (zoom 12 near the equator, ≈ 38 m per pixel, reaching ≥ 12 km each way) are
+classified by their legend colours into a cover map the material samples by the fragment's
+own longitude and mercator latitude: closed and open forest darken and green the ground with
+a crown-sized grain, cropland becomes a patchwork of field tones in cells ≈ 260 m across,
+built-up ground a warm grey with a block-sized grain, bare ground sand and rock by the
+region's aridity, permanent snow and ice snow at any height; grass and wetland leave the
+procedural open ground. Steep rock and the seasonal snow still win, water stays with the
+water mask, and a texel the palette did not know (no tile, a wrong palette, beyond the
+map's reach) changes nothing. The read is re-done when the pin moves more than 0.05°; the
+cover's attribution joins the footer. **Caveat:** still a texture, not a classification of
+the pixel under the camera — the map is ≈ 40 m per pixel against 10 m data, tells nothing
+about a forest's species or a field's crop, and without a source it does not know a forest
+from a field, a glacier from a snowfield, farmland, roads or a city; the snowline is a rule
+of thumb, not a snow model; the preview source label does not rise because of it.
 
 ### Weather scenarios
 

@@ -86,6 +86,25 @@ export interface BuildingsProvider {
   descriptor(): BuildingsDescriptor;
 }
 
+/**
+ * Land cover for the ground texture (texture pack stage 2): a classified raster served as map
+ * tiles in its published palette, read around the pin by the renderer.
+ */
+export interface LandCoverDescriptor {
+  kind: 'none' | 'xyz';
+  /** XYZ template with `{z}`, `{x}`, `{y}` (or `{-y}`). */
+  url?: string;
+  maxZoom?: number;
+  /** Which legend the tiles are coloured by. */
+  palette?: 'worldcover' | 'copernicus';
+  attribution: string;
+}
+
+export interface LandCoverProvider {
+  readonly meta: ProviderMeta;
+  descriptor(): LandCoverDescriptor;
+}
+
 export interface MapTileProvider {
   readonly meta: ProviderMeta;
   descriptor(): BasemapDescriptor;

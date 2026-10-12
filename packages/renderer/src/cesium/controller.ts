@@ -15,6 +15,7 @@ import {
 import type {
   BasemapDescriptor,
   BuildingsDescriptor,
+  LandCoverDescriptor,
   TerrainDescriptor,
 } from '@lightmap/geospatial';
 import {
@@ -30,6 +31,7 @@ import type {
   HostGlobeShading,
   HostGradeUniforms,
   HostOverlay,
+  LandCoverReading,
   SceneHost,
 } from './host.ts';
 import type { OrbitView } from '../camera-math.ts';
@@ -69,6 +71,9 @@ export class SceneController {
   private lastTerrain: string | null = null;
   private lastBasemap: string | null = null;
   private lastBuildings: string | null = null;
+  private lastLandCover: string | null = null;
+  private landCoverKey: string | null = null;
+  private landCoverReading: LandCoverReading | null = null;
   private lastShadowKey: string | null = null;
   private lastShadingKey: string | null = null;
   private lastQualityKey: string | null = null;
@@ -113,11 +118,19 @@ export class SceneController {
     terrain: TerrainDescriptor,
     basemap: BasemapDescriptor,
     buildings: BuildingsDescriptor = { kind: 'none', attribution: '' },
+    landCover: LandCoverDescriptor = { kind: 'none', attribution: '' },
   ): Promise<void> {
     const tKey = JSON.stringify(terrain);
     const bKey = JSON.stringify(basemap);
     const uKey = JSON.stringify(buildings);
+    const lKey = JSON.stringify(landCover);
     const jobs: Promise<void>[] = [];
+    if (lKey !== this.lastLandCover) {
+      this.lastLandCover = lKey;
+      this.landCoverKey = null;
+      this.landCoverReading = null;
+      this.host.setLandCover(landCover);
+    }
     if (uKey !== this.lastBuildings) {
       this.lastBuildings = uKey;
       jobs.push(this.host.setBuildings(buildings));
@@ -135,6 +148,7 @@ export class SceneController {
     if (this.lastScene) {
       await this.refreshGroundHeight(this.lastScene);
       await this.refreshLandHint(this.lastScene);
+      await this.refreshLandCover(this.lastScene);
     }
   }
 
@@ -276,6 +290,7 @@ export class SceneController {
           this.pinRefreshPending = false;
           void this.refreshGroundHeight(scene);
           void this.refreshLandHint(scene);
+          void this.refreshLandCover(scene);
         }
       });
     }
@@ -409,6 +424,31 @@ export class SceneController {
       this.landHint = hint;
       if (this.lastScene) this.apply(this.lastScene);
     }
+  }
+
+  /** What the last land-cover read around the pin found; null without a source or a read. */
+  get landCover(): LandCoverReading | null {
+    return this.landCoverReading;
+  }
+
+  /**
+   * The ground texture's cover map from the land-cover tiles around the pin (texture pack
+   * stage 2): nine tiles per place, re-read when the pin moves more than a few kilometres
+   * (0.05°) — the map reaches 12 km, so a pan inside it keeps the same read.
+   */
+  private async refreshLandCover(scene: SceneState): Promise<void> {
+    if (this.lastLandCover === null || this.lastLandCover.includes('"kind":"none"')) return;
+    const key = `${(Math.round(scene.location.point.latitude * 20) / 20).toFixed(2)},${(Math.round(scene.location.point.longitude * 20) / 20).toFixed(2)}`;
+    if (key === this.landCoverKey) return;
+    this.landCoverKey = key;
+    let reading: LandCoverReading | null = null;
+    try {
+      reading = await this.host.loadLandCoverAround(scene.location.point);
+    } catch {
+      reading = null;
+    }
+    if (this.landCoverKey !== key || this.host.isDestroyed()) return;
+    this.landCoverReading = reading;
   }
 
   private async refreshGroundHeight(scene: SceneState): Promise<void> {
