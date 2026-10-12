@@ -57,6 +57,7 @@ export function ProjectDrawer({
   const restore = usePlannerStore((s) => s.restore);
   const setPanel = usePlannerStore((s) => s.setPanel);
   const units = usePlannerStore((s) => s.units);
+  const queryClient = useQueryClient();
 
   const focusHeading = (id: string) =>
     requestAnimationFrame(() => document.getElementById(id)?.focus({ preventScroll: true }));
@@ -120,7 +121,6 @@ export function ProjectDrawer({
   const shotListDecision = account.can('export_preview');
   // The forecast around a shot when its day is already in the query cache (the planner or the
   // week ahead fetched it): read at export time, never fetched for the list.
-  const queryClient = useQueryClient();
   function forecastAround(v: ViewpointDto) {
     const w = utcToWallClock(new Date(v.selectedDatetimeUtc), v.timezone);
     const date = `${w.year}-${String(w.month).padStart(2, '0')}-${String(w.day).padStart(2, '0')}`;
