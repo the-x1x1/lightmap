@@ -210,7 +210,10 @@ forecast nor a scenario.
   the mean 2 m temperature at the selected hour and the day's coldest and warmest hours ("Air:
   typically 4 °C at 05:00; coldest 06:00 (−2 °C), warmest 15:00 (12 °C)"; `temperatureByHour()`,
   per-hour `meanTemperature` over the hours whose temperature is known), absent when the source
-  gave none. Summaries cached before these fields existed are re-fetched (cache key `v4`).
+  gave none; and the **typical wind** the same way (`windByHour()`: per-hour `meanWindSpeed` and
+  `windyShare`, the share at or over 8 m/s — a fresh breeze, the field conditions' tripod limit —
+  with the calmest and windiest hours; the archive is asked for `wind_speed_10m` in m/s).
+  Summaries cached before these fields existed are re-fetched (cache key `v5`).
 - **Never**: rendered with a Forecast badge, given a confidence above SCENARIO, or turned into a
   deterministic prediction (plan §4, §25 Phase 7). `ClimatologySummary.kind` is `'CLIMATOLOGY'` and
   its `label` is fixed to "Typical for this month" so the wording cannot drift.

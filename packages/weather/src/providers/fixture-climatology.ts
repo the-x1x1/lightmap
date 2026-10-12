@@ -72,6 +72,11 @@ export class FixtureClimatologyProvider implements ClimatologyProvider {
           ),
           temperature:
             Math.round((baseAir + 5 * Math.sin(((lh - 9) / 24) * 2 * Math.PI)) * 10) / 10,
+          // Calm nights, an afternoon breeze that grows with the cloud's convection; no draws.
+          windSpeed:
+            Math.round(
+              (2.5 + 3 * Math.max(0, Math.sin(((lh - 8) / 24) * 2 * Math.PI)) + cloud / 40) * 10,
+            ) / 10,
         });
       }
     }

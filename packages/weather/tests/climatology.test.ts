@@ -8,6 +8,7 @@ import {
   suggestedScenario,
   humidityByHour,
   temperatureByHour,
+  windByHour,
   summarizeClimatology,
   type ClimatologyHour,
   type ClimatologyProvider,
@@ -146,7 +147,7 @@ describe('summarizeClimatology', () => {
     const a = climatologyCacheKey('p', 21.41, -157.72, 5, { from: 2015, to: 2024 });
     const b = climatologyCacheKey('p', 21.38, -157.68, 5, { from: 2015, to: 2024 });
     expect(a).toBe(b);
-    expect(a).toBe('v4:p:21.5,-157.5:m5:2015-2024:h6-20:UTC');
+    expect(a).toBe('v5:p:21.5,-157.5:m5:2015-2024:h6-20:UTC');
     expect(
       climatologyCacheKey(
         'p',
@@ -250,6 +251,7 @@ describe('normalizeArchive', () => {
         precipitation: [0, 0.2, null],
         relative_humidity_2m: [96, 80, null],
         temperature_2m: [24.5, 23, null],
+        wind_speed_10m: [3.2, 4, -1],
       },
     });
     expect(rows).toEqual([
@@ -259,6 +261,7 @@ describe('normalizeArchive', () => {
         precipitationAmount: 0,
         humidity: 96,
         temperature: 24.5,
+        windSpeed: 3.2,
       },
       {
         timestamp: '2020-05-01T02:00:00.000Z',
@@ -266,6 +269,7 @@ describe('normalizeArchive', () => {
         precipitationAmount: null,
         humidity: null,
         temperature: null,
+        windSpeed: 0,
       },
     ]);
   });
@@ -345,6 +349,46 @@ describe('temperature by hour of day (typical air)', () => {
     });
     expect(temperatureByHour(s.byHour, 9)?.atHour).toBeNull();
     expect(temperatureByHour(s.byHour, 29)?.atHour).toBe(19); // hours wrap
+  });
+
+  it('wind by hour: the mean, the fresh-breeze share and the calmest and windiest hours', () => {
+    const hours = [
+      ...[2, 3, null, 4].map((w, d) => ({
+        timestamp: new Date(Date.UTC(2020, 4, d + 1, 15)).toISOString(), // 05:00 HST
+        cloudCoverTotal: 20,
+        precipitationAmount: 0,
+        windSpeed: w,
+      })),
+      ...[6, 9, 12].map((w, d) => ({
+        timestamp: new Date(Date.UTC(2020, 4, d + 2, 0)).toISOString(), // 14:00 HST
+        cloudCoverTotal: 40,
+        precipitationAmount: 0,
+        windSpeed: w,
+      })),
+    ];
+    const s = summarizeClimatology(hours, {
+      providerId: 'p',
+      latitude: 21.4,
+      longitude: -157.7,
+      month: 5,
+      timeZone: 'Pacific/Honolulu',
+      years: { from: 2020, to: 2020 },
+      attribution: '',
+      license: '',
+    });
+    expect(s.byHour[5]).toMatchObject({ windSamples: 3, meanWindSpeed: 3, windyShare: 0 });
+    expect(s.byHour[14]).toMatchObject({ windSamples: 3, meanWindSpeed: 9 });
+    expect(s.byHour[14]!.windyShare).toBeCloseTo(2 / 3, 9);
+    expect(windByHour(s.byHour, 14)).toMatchObject({
+      calmestHour: 5,
+      calmest: 3,
+      windiestHour: 14,
+      windiest: 9,
+    });
+    expect(windByHour(s.byHour, 14)!.windiestShare).toBeCloseTo(2 / 3, 9);
+    expect(windByHour(s.byHour, 14)!.atHour?.meanWindSpeed).toBe(9);
+    expect(windByHour(s.byHour, 9)?.atHour).toBeNull();
+    expect(windByHour([{ hour: 1 }], 1)).toBeNull();
   });
 
   it('says nothing when no temperature was ever known (older cached summaries)', () => {

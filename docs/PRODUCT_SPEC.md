@@ -167,7 +167,10 @@ the time, ~32 % mean cloud, overcast or storm 18 %"), and how often the air is n
 by hour ("Air at ≥ 95 % humidity: 8 % of the time at 12:00; most often at 05:00 (62 %) — dew on
 the glass at night, mist by day"), and the **typical air** by hour from the archive's own
 temperature ("Air: typically 4 °C at 05:00; coldest 06:00 (−2 °C), warmest 15:00 (12 °C)";
-Fahrenheit on imperial) so a winter dawn or a summer night is dressed and powered for. Badge:
+Fahrenheit on imperial) so a winter dawn or a summer night is dressed and powered for, and the
+**typical wind** by hour from its 10 m wind ("Wind: typically 3 m/s at 06:00, a fresh breeze or
+more 4 % of the time; calmest 05:00 (2 m/s), windiest 15:00 (7 m/s)"; mph on imperial) for long
+exposures and drone flights. Badge:
 **Climatology · not a forecast**. Each class is a button that compares that scenario; the
 most common one is marked, nothing is selected silently. Free plans see the locked block with the
 paywall reason. Rules and method in `WEATHER_AND_FORECAST_MODEL.md` §8.

@@ -24,7 +24,12 @@ export interface ClimatologyHour {
   humidity?: number | null;
   /** Air temperature at 2 m, °C; absent or null when the source did not give it. */
   temperature?: number | null;
+  /** Wind speed at 10 m, m/s; absent or null when the source did not give it. */
+  windSpeed?: number | null;
 }
+
+/** Beaufort 5, a fresh breeze: from here the wind matters to a tripod (field conditions use the same). */
+export const WINDY_CLIMATOLOGY_MPS = 8;
 
 /** From this relative humidity the air is within about a degree of its dew point (field conditions use the same). */
 export const HUMID_CLIMATOLOGY_THRESHOLD = 95;
@@ -90,6 +95,12 @@ export interface ClimatologyHourOfDay {
   temperatureSamples: number;
   /** Mean 2 m air temperature over those, °C; 0 when none was known. */
   meanTemperature: number;
+  /** Hours in this slot with a known wind speed. */
+  windSamples: number;
+  /** Mean 10 m wind over those, m/s; 0 when none was known. */
+  meanWindSpeed: number;
+  /** Fraction of those at or over `WINDY_CLIMATOLOGY_MPS` (a fresh breeze); 0 when none was known. */
+  windyShare: number;
 }
 
 export interface ClimatologyCapabilities {
@@ -189,6 +200,9 @@ export function summarizeClimatology(
     humid: 0,
     tN: 0,
     tSum: 0,
+    wN: 0,
+    wSum: 0,
+    windy: 0,
   }));
   for (const h of hours) {
     if (!Number.isFinite(h.cloudCoverTotal)) continue;
@@ -212,6 +226,12 @@ export function summarizeClimatology(
       if (typeof tC === 'number' && Number.isFinite(tC)) {
         slot.tN++;
         slot.tSum += tC;
+      }
+      const w = h.windSpeed;
+      if (typeof w === 'number' && Number.isFinite(w)) {
+        slot.wN++;
+        slot.wSum += w;
+        if (w >= WINDY_CLIMATOLOGY_MPS) slot.windy++;
       }
     }
     if (hour < window.startHour || hour >= window.endHour) continue;
@@ -257,6 +277,9 @@ export function summarizeClimatology(
       humidShare: s.rhN > 0 ? s.humid / s.rhN : 0,
       temperatureSamples: s.tN,
       meanTemperature: s.tN > 0 ? s.tSum / s.tN : 0,
+      windSamples: s.wN,
+      meanWindSpeed: s.wN > 0 ? s.wSum / s.wN : 0,
+      windyShare: s.wN > 0 ? s.windy / s.wN : 0,
     })),
     attribution: meta.attribution,
     license: meta.license,
@@ -367,7 +390,7 @@ export function suggestedScenario(summary: ClimatologySummary): WeatherScenarioI
 }
 
 /**
- * Cache key (v4: the hour-of-day rows carry humidity and temperature): provider, ~0.5° cell
+ * Cache key (v5: the hour-of-day rows carry humidity, temperature and wind): provider, ~0.5° cell
  * (climatology is smooth), month, year span, window and the zone (the daylight window is local,
  * so a cell straddling a zone boundary needs one row per zone).
  */
@@ -381,8 +404,8 @@ export function climatologyCacheKey(
   timeZone = 'UTC',
 ): string {
   const cell = `${(Math.round(lat * 2) / 2).toFixed(1)},${(Math.round(lng * 2) / 2).toFixed(1)}`;
-  // `v2`: the summary gained `byHour`; v3 humidity; v4 temperature — rows written before must not be served.
-  return `v4:${providerId}:${cell}:m${month}:${years.from}-${years.to}:h${window.startHour}-${window.endHour}:${timeZone}`;
+  // `v2`: the summary gained `byHour`; v3 humidity; v4 temperature; v5 wind — rows written before must not be served.
+  return `v5:${providerId}:${cell}:m${month}:${years.from}-${years.to}:h${window.startHour}-${window.endHour}:${timeZone}`;
 }
 
 /** Fetch the same month for several years and summarise. Concurrency-limited; partial years are dropped. */
@@ -498,5 +521,49 @@ export function temperatureByHour(
     coldest: cold.t,
     warmestHour: warm.hour,
     warmest: warm.t,
+  };
+}
+
+/**
+ * Typical wind by local hour from the per-hour breakdown: the mean and the share of fresh-breeze
+ * hours (≥ 8 m/s) at the selected hour (null when none was known there), and the calmest and
+ * windiest hours of the day — "3 m/s at 06:00; calmest 05:00 (2 m/s), windiest 15:00 (7 m/s,
+ * fresh 35 % of the time)". Null when no wind was ever known.
+ */
+export function windByHour(
+  byHour: ReadonlyArray<
+    Partial<Pick<ClimatologyHourOfDay, 'windSamples' | 'meanWindSpeed' | 'windyShare'>> & {
+      hour: number;
+    }
+  >,
+  selectedHour: number,
+): {
+  atHour: { meanWindSpeed: number; windyShare: number } | null;
+  calmestHour: number;
+  calmest: number;
+  windiestHour: number;
+  windiest: number;
+  windiestShare: number;
+} | null {
+  let calm: { hour: number; w: number } | null = null;
+  let windy: { hour: number; w: number; share: number } | null = null;
+  for (const b of byHour) {
+    if (!(b.windSamples && b.windSamples > 0)) continue;
+    const w = b.meanWindSpeed ?? 0;
+    if (!calm || w < calm.w) calm = { hour: b.hour, w };
+    if (!windy || w > windy.w) windy = { hour: b.hour, w, share: b.windyShare ?? 0 };
+  }
+  if (!calm || !windy) return null;
+  const sel = byHour.find((b) => b.hour === ((selectedHour % 24) + 24) % 24);
+  const atHour = sel?.windSamples
+    ? { meanWindSpeed: sel.meanWindSpeed ?? 0, windyShare: sel.windyShare ?? 0 }
+    : null;
+  return {
+    atHour,
+    calmestHour: calm.hour,
+    calmest: calm.w,
+    windiestHour: windy.hour,
+    windiest: windy.w,
+    windiestShare: windy.share,
   };
 }

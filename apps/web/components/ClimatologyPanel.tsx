@@ -13,11 +13,17 @@ import {
   humidityByHour,
   suggestedScenario,
   temperatureByHour,
+  windByHour,
   type ClimatologySummary,
 } from '@lightmap/weather';
 import { useId } from 'react';
 import { utcToWallClock } from '@lightmap/astronomy';
-import { formatTemperature, type DistanceUnits, type SceneState } from '@lightmap/scene';
+import {
+  formatTemperature,
+  formatWindSpeed,
+  type DistanceUnits,
+  type SceneState,
+} from '@lightmap/scene';
 import type { EntitlementDecision } from '@lightmap/entitlements';
 import { Badge, cx } from '@lightmap/ui';
 import { usePlannerStore } from '@/features/planner/store';
@@ -144,6 +150,9 @@ export function ClimatologyPanel({
           ) : null}
           {Array.isArray(q.data.summary.byHour) ? (
             <AirHours byHour={q.data.summary.byHour} selectedHour={selectedHour} units={units} />
+          ) : null}
+          {Array.isArray(q.data.summary.byHour) ? (
+            <WindHours byHour={q.data.summary.byHour} selectedHour={selectedHour} units={units} />
           ) : null}
           <p className="text-xs text-[var(--lm-text-muted)]" data-testid="climatology-summary">
             Daylight hours ({q.data.summary.window.startHour}:00–{q.data.summary.window.endHour}
@@ -342,6 +351,34 @@ function AirHours({
         : ''}
       ; coldest {two(t.coldestHour)} ({formatTemperature(t.coldest, units)}), warmest{' '}
       {two(t.warmestHour)} ({formatTemperature(t.warmest, units)}).
+    </p>
+  );
+}
+
+/**
+ * Typical wind by hour: the mean at the selected hour with how often it is a fresh breeze
+ * (≥ 8 m/s, the tripod's limit), and the day's calmest and windiest hours — long exposures and
+ * drone flights are planned by it. History, not a forecast; absent without a wind record.
+ */
+function WindHours({
+  byHour,
+  selectedHour,
+  units,
+}: {
+  byHour: ClimatologySummary['byHour'];
+  selectedHour: number;
+  units: DistanceUnits;
+}) {
+  const w = windByHour(byHour, selectedHour);
+  if (!w) return null;
+  return (
+    <p className="text-xs text-[var(--lm-text-muted)]" data-testid="climatology-wind">
+      Wind
+      {w.atHour
+        ? `: typically ${formatWindSpeed(w.atHour.meanWindSpeed, units)} at ${two(selectedHour)}, a fresh breeze or more ${Math.round(w.atHour.windyShare * 100)} % of the time`
+        : ''}
+      ; calmest {two(w.calmestHour)} ({formatWindSpeed(w.calmest, units)}), windiest{' '}
+      {two(w.windiestHour)} ({formatWindSpeed(w.windiest, units)}).
     </p>
   );
 }

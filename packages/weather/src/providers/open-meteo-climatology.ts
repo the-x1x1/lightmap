@@ -36,6 +36,7 @@ interface ArchiveResponse {
     precipitation?: Array<number | null>;
     relative_humidity_2m?: Array<number | null>;
     temperature_2m?: Array<number | null>;
+    wind_speed_10m?: Array<number | null>;
   };
   error?: boolean;
   reason?: string;
@@ -90,7 +91,11 @@ export class OpenMeteoClimatologyProvider implements ClimatologyProvider {
       'end_date',
       `${year}-${mm}-${String(daysInMonth(year, month)).padStart(2, '0')}`,
     );
-    url.searchParams.set('hourly', 'cloud_cover,precipitation,relative_humidity_2m,temperature_2m');
+    url.searchParams.set(
+      'hourly',
+      'cloud_cover,precipitation,relative_humidity_2m,temperature_2m,wind_speed_10m',
+    );
+    url.searchParams.set('wind_speed_unit', 'ms');
     url.searchParams.set('timezone', 'UTC');
     url.searchParams.set('timeformat', 'iso8601');
     if (this.apiKey) url.searchParams.set('apikey', this.apiKey);
@@ -117,6 +122,7 @@ export function normalizeArchive(body: ArchiveResponse): ClimatologyHour[] {
     const p = h.precipitation?.[i];
     const rh = h.relative_humidity_2m?.[i];
     const tC = h.temperature_2m?.[i];
+    const w = h.wind_speed_10m?.[i];
     out.push({
       timestamp: new Date(iso).toISOString(),
       cloudCoverTotal: Math.max(0, Math.min(100, cc)),
@@ -124,6 +130,7 @@ export function normalizeArchive(body: ArchiveResponse): ClimatologyHour[] {
       humidity:
         typeof rh === 'number' && Number.isFinite(rh) ? Math.max(0, Math.min(100, rh)) : null,
       temperature: typeof tC === 'number' && Number.isFinite(tC) ? tC : null,
+      windSpeed: typeof w === 'number' && Number.isFinite(w) ? Math.max(0, w) : null,
     });
   }
   return out;

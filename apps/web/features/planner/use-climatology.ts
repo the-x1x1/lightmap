@@ -5,11 +5,11 @@ import { fetchJson } from '@/lib/client/api';
 import type { ClimatologyResponse } from '@/lib/api-types';
 
 /**
- * Bumped with the server's summary shape (`climatologyCacheKey` v4: per-hour humidity and
- * temperature) so the browser's day-long HTTP cache and the query cache are not served a
+ * Bumped with the server's summary shape (`climatologyCacheKey` v5: per-hour humidity,
+ * temperature and wind) so the browser's day-long HTTP cache and the query cache are not served a
  * summary without the new rows.
  */
-export const CLIMATOLOGY_CLIENT_VERSION = 4;
+export const CLIMATOLOGY_CLIENT_VERSION = 5;
 
 /**
  * "Typical for this month" for the selected place and civil month. Only fetched when the plan

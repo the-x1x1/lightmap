@@ -190,7 +190,8 @@ Pro entitlement `climatology`; cached 30 days per 0.5° cell. Also delivered: th
 breakdown** (24 bars, clearest/cloudiest stretch, table alternative), the dark-hours line for
 night planning, **near-saturated air by hour** (dew on the glass, morning mist) from ERA5's
 humidity, and the **typical air by hour** (the coldest and warmest hours of the day) from its
-temperature. Future: haze/visibility climatology once a source with those fields is licensed.
+temperature, and the **typical wind by hour** (calmest and windiest hours, fresh-breeze share)
+from its wind. Future: haze/visibility climatology once a source with those fields is licensed.
 
 ## Phase 8 — High-fidelity environment reconstruction (future)
 
