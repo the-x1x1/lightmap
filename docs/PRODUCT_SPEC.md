@@ -356,7 +356,11 @@ focal-length preset, and mode.
   (thin-lens geometry, circle of confusion = sensor diagonal ÷ 1500, stated in the panel as a
   convention). The panel says whether the sun, moon and horizon fall inside the zone, offers
   "Focus at hyperfocal", and never blurs the preview: the numbers describe the photograph, the
-  frame stays sharp so its geometry is readable.
+  frame stays sharp so its geometry is readable. A **sky drift** line gives the longest shutter
+  before the sky's sidereal turn smears a star across one circle of confusion with this lens —
+  the "500 rule" for the chosen sensor: coc / (f · tan 15.04″ · cos δ), about 17 s at 24 mm on
+  full frame, 1 s at 400 mm — with the Milky Way core's own figure (δ = −29°, so a little
+  longer) and a note that the Moon drifts at the same rate (`skyDriftShutterS`, tested).
 
 - **Point with phone** (viewpoint mode, phones and tablets): the camera follows where the
   device's back camera points — heading from the compass, pitch from the tilt — so you can stand

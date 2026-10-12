@@ -111,3 +111,27 @@ export function formatDistance(m: number, units: DistanceUnits = 'metric'): stri
 export function formatHeight(m: number, units: DistanceUnits = 'metric'): string {
   return units === 'metric' ? `${Math.round(m)} m` : `${Math.round(feetFromMetres(m))} ft`;
 }
+
+/** The sky's sidereal drift, arcseconds per second of time, at the celestial equator. */
+export const SIDEREAL_ARCSEC_PER_S = 15.041;
+/** The Galactic Centre's declination, degrees (J2000), for the core's own drift rate. */
+export const GALACTIC_CENTRE_DECLINATION_DEG = -29.0;
+
+/**
+ * The longest shutter, seconds, before the sky's drift smears a star across one circle of
+ * confusion on the sensor: coc / (f · tan(15.04″) · cos δ). The usual "500 rule" (500 / f)
+ * falls out of a full-frame CoC near 0.036 mm; this one follows the sensor the photographer
+ * chose. Stars at the celestial equator drift fastest; a target at declination δ slower.
+ */
+export function skyDriftShutterS(focalLengthMm: number, cocMm: number, declinationDeg = 0): number {
+  const ratePerS = Math.tan((SIDEREAL_ARCSEC_PER_S / 3600) * (Math.PI / 180));
+  const cosDec = Math.max(0.05, Math.cos((declinationDeg * Math.PI) / 180));
+  return cocMm / (focalLengthMm * ratePerS * cosDec);
+}
+
+/** "17 s", "1.4 s", "1/8 s" — a shutter for a read-out, to two significant figures. */
+export function formatShutterS(seconds: number): string {
+  if (seconds >= 10) return `${Math.round(seconds)} s`;
+  if (seconds >= 1) return `${seconds.toFixed(1)} s`;
+  return `1/${Math.round(1 / seconds)} s`;
+}

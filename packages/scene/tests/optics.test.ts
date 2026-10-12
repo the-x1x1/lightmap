@@ -7,8 +7,11 @@ import {
   formatDistance,
   formatDistanceM,
   formatHeight,
+  formatShutterS,
   hyperfocalDistanceM,
   metresFromFeet,
+  skyDriftShutterS,
+  GALACTIC_CENTRE_DECLINATION_DEG,
 } from '../src/optics.ts';
 import { SENSOR_PRESETS, defaultCamera } from '../src/camera.ts';
 
@@ -126,5 +129,27 @@ describe('depth of field', () => {
     expect(defaultCamera(eye, 0, 8).fovDeg).toBe(120);
     expect(defaultCamera(eye, 0, Number.NaN).focalLengthMm).toBe(24);
     expect(defaultCamera(eye, 0, -5).focalLengthMm).toBe(24);
+  });
+});
+
+describe('sky drift', () => {
+  it('gives the 500-rule figures for full frame and follows the sensor and the declination', () => {
+    const coc = circleOfConfusionMm(36, 24); // 0.0289 mm
+    // 24 mm full frame: about 16–17 s (500/24 ≈ 21 s with a looser 0.036 mm circle).
+    expect(skyDriftShutterS(24, coc)).toBeGreaterThan(15);
+    expect(skyDriftShutterS(24, coc)).toBeLessThan(18);
+    expect(skyDriftShutterS(24, 0.036)).toBeCloseTo(500 / 24, 0);
+    // Inversely proportional to the focal length; longer for a target away from the equator.
+    expect(skyDriftShutterS(400, coc)).toBeCloseTo(skyDriftShutterS(24, coc) * (24 / 400), 6);
+    expect(
+      skyDriftShutterS(24, coc, GALACTIC_CENTRE_DECLINATION_DEG) / skyDriftShutterS(24, coc),
+    ).toBeCloseTo(1 / Math.cos((29 * Math.PI) / 180), 6);
+    // A smaller sensor's circle shortens it.
+    expect(skyDriftShutterS(24, circleOfConfusionMm(17.3, 13))).toBeLessThan(
+      skyDriftShutterS(24, coc),
+    );
+    expect(formatShutterS(16.6)).toBe('17 s');
+    expect(formatShutterS(1.44)).toBe('1.4 s');
+    expect(formatShutterS(0.125)).toBe('1/8 s');
   });
 });

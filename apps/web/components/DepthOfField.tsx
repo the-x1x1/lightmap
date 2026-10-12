@@ -6,13 +6,16 @@
 import { useState } from 'react';
 import {
   APERTURE_STOPS,
+  GALACTIC_CENTRE_DECLINATION_DEG,
   SENSOR_PRESETS,
   circleOfConfusionMm,
   depthOfField,
   feetFromMetres,
   focalLengthForFov,
   formatDistance,
+  formatShutterS,
   metresFromFeet,
+  skyDriftShutterS,
 } from '@lightmap/scene';
 import { usePlannerStore } from '@/features/planner/store';
 import { Button } from '@lightmap/ui';
@@ -36,6 +39,10 @@ export function DepthOfField() {
   // The real glass on this sensor that gives the current frame.
   const lensMm = focalLengthForFov(camera.fovDeg, sensorWidthMm);
   const dof = depthOfField({ focalLengthMm: lensMm, aperture, focusDistanceM, cocMm: coc });
+  // Night: how long the shutter can stay open before the sky's drift smears a star across one
+  // circle of confusion with this lens — the "500 rule" for the chosen sensor.
+  const driftS = skyDriftShutterS(lensMm, coc);
+  const coreDriftS = skyDriftShutterS(lensMm, coc, GALACTIC_CENTRE_DECLINATION_DEG);
 
   // The box is in the photographer's units; the store keeps metres.
   const focusShown = imperial ? feetFromMetres(focusDistanceM) : focusDistanceM;
@@ -115,6 +122,11 @@ export function DepthOfField() {
           Focus at hyperfocal ({fmt(dof.hyperfocalM)})
         </Button>
       </div>
+      <p className="text-xs text-[var(--lm-text-muted)]" data-testid="dof-sky-drift">
+        Sky drift: stars stay points for up to {formatShutterS(driftS)} with this lens (the Milky
+        Way core, lower in the sky's turn, {formatShutterS(coreDriftS)}); the Moon moves at the same
+        rate, so a long lens wants a short shutter.
+      </p>
       <p className="text-xs text-[var(--lm-text-muted)]">
         {lensMm.toFixed(lensMm < 10 ? 1 : 0)} mm on this sensor, circle of confusion{' '}
         {coc.toFixed(3)} mm (sensor diagonal ÷ 1500 — a print-viewing convention; pixel-peeping
