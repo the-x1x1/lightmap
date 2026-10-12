@@ -21,6 +21,8 @@ import {
 import {
   GROUND_COVER_BOUNDS_UNIFORM,
   GROUND_COVER_IMAGE_UNIFORM,
+  GROUND_DETAIL_IMAGE_UNIFORM,
+  GROUND_DETAIL_PERIOD_M,
   GROUND_MATERIAL_SOURCE,
   GROUND_UNIFORM_DEFAULTS,
 } from '../src/shaders/ground.frag.ts';
@@ -224,6 +226,13 @@ describe('ground material source', () => {
       expect(GROUND_MATERIAL_SOURCE).toContain(`uniform float ${name};`);
     expect(GROUND_MATERIAL_SOURCE).toContain(`uniform sampler2D ${GROUND_COVER_IMAGE_UNIFORM};`);
     expect(GROUND_MATERIAL_SOURCE).toContain(`uniform vec4 ${GROUND_COVER_BOUNDS_UNIFORM};`);
+    expect(GROUND_MATERIAL_SOURCE).toContain(`uniform sampler2D ${GROUND_DETAIL_IMAGE_UNIFORM};`);
+    for (const v of ['u_eastWC', 'u_northWC', 'u_upWC', 'u_detailOffset'])
+      expect(GROUND_MATERIAL_SOURCE).toContain(`uniform vec3 ${v};`);
+    expect(GROUND_DETAIL_PERIOD_M).toBe(2.5);
+    expect(GROUND_MATERIAL_SOURCE).toContain(
+      `/ ${GROUND_DETAIL_PERIOD_M.toFixed(1)} + u_detailOffset`,
+    );
     expect(GROUND_MATERIAL_SOURCE).toContain('uniform vec3 u_cameraCell;');
     expect(GROUND_MATERIAL_SOURCE).toContain('uniform vec3 u_cameraFrac;');
     expect(GROUND_MATERIAL_SOURCE).toMatch(/materialInput\.slope/);

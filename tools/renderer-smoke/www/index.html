@@ -462,6 +462,7 @@
         const {
           GROUND_COVER_BOUNDS_UNIFORM,
           GROUND_COVER_IMAGE_UNIFORM,
+          GROUND_DETAIL_IMAGE_UNIFORM,
           GROUND_MATERIAL_SOURCE,
           GROUND_UNIFORM_DEFAULTS,
           groundTextureFor,
@@ -483,6 +484,11 @@
               // (the default image until a land-cover read lands; u_coverOn stays 0 here).
               [GROUND_COVER_BOUNDS_UNIFORM]: new Cesium.Cartesian4(0, 0, 0, 0),
               [GROUND_COVER_IMAGE_UNIFORM]: Cesium.Material.DefaultImageId,
+              [GROUND_DETAIL_IMAGE_UNIFORM]: Cesium.Material.DefaultImageId,
+              u_eastWC: new Cesium.Cartesian3(1, 0, 0),
+              u_northWC: new Cesium.Cartesian3(0, 1, 0),
+              u_upWC: new Cesium.Cartesian3(0, 0, 1),
+              u_detailOffset: new Cesium.Cartesian3(0, 0, 0),
             },
             source: GROUND_MATERIAL_SOURCE,
           },

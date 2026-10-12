@@ -21,6 +21,8 @@ import { GRADE_FRAGMENT_SHADER } from '../shaders/grade.frag.ts';
 import {
   GROUND_COVER_BOUNDS_UNIFORM,
   GROUND_COVER_IMAGE_UNIFORM,
+  GROUND_DETAIL_IMAGE_UNIFORM,
+  GROUND_DETAIL_PERIOD_M,
   GROUND_GRAIN_M,
   GROUND_MATERIAL_SOURCE,
   GROUND_MATERIAL_TYPE,
@@ -54,6 +56,11 @@ export interface CesiumHostOptions {
   /** Render only when something changed (battery-friendly). */
   requestRenderMode?: boolean;
   msaaSamples?: number;
+  /**
+   * URL of the ground detail atlas (texture pack stage 3: grass, rock, sand, snow tiles in one
+   * image); absent, the near field keeps its procedural grain.
+   */
+  groundDetailAtlasUrl?: string;
   onError?: (message: string, error: unknown) => void;
 }
 
@@ -88,6 +95,12 @@ export class CesiumSceneHost implements SceneHost {
   private coverBounds: [number, number, number, number] | null = null;
   private coverCanvas: HTMLCanvasElement | null = null;
   private coverLoadSeq = 0;
+  private readonly detailAtlasUrl: string | undefined;
+  private readonly enuScratch: {
+    east: Cesium.Cartesian3;
+    north: Cesium.Cartesian3;
+    up: Cesium.Cartesian3;
+  };
   private readonly onError: ((message: string, error: unknown) => void) | undefined;
   private ionToken: string | undefined;
   private pickHandler: Cesium.ScreenSpaceEventHandler | null = null;
@@ -121,6 +134,12 @@ export class CesiumSceneHost implements SceneHost {
     this.C = C;
     this.onError = options.onError;
     this.ionToken = options.ionToken;
+    this.detailAtlasUrl = options.groundDetailAtlasUrl;
+    this.enuScratch = {
+      east: new C.Cartesian3(),
+      north: new C.Cartesian3(),
+      up: new C.Cartesian3(),
+    };
     if (options.ionToken) C.Ion.defaultAccessToken = options.ionToken;
 
     this.widget = new C.CesiumWidget(options.container, {
@@ -248,6 +267,28 @@ export class CesiumSceneHost implements SceneHost {
       frac.x = cam.x / GROUND_GRAIN_M - cx;
       frac.y = cam.y / GROUND_GRAIN_M - cy;
       frac.z = cam.z / GROUND_GRAIN_M - cz;
+      // The detail atlas is projected along the camera's own east/north/up (ECEF axes), with
+      // the camera's position along each in tile periods — the fraction only, in double.
+      if (this.detailAtlasUrl) {
+        const up = C.Ellipsoid.WGS84.geodeticSurfaceNormal(cam, this.enuScratch.up);
+        if (!up) return;
+        const east = this.enuScratch.east;
+        const h = Math.hypot(cam.x, cam.y);
+        if (h < 1) return;
+        east.x = -cam.y / h;
+        east.y = cam.x / h;
+        east.z = 0;
+        const north = C.Cartesian3.cross(up, east, this.enuScratch.north);
+        C.Cartesian3.clone(east, u['u_eastWC'] as Cesium.Cartesian3);
+        C.Cartesian3.clone(north, u['u_northWC'] as Cesium.Cartesian3);
+        C.Cartesian3.clone(up, u['u_upWC'] as Cesium.Cartesian3);
+        const off = u['u_detailOffset'] as Cesium.Cartesian3;
+        const P = GROUND_DETAIL_PERIOD_M;
+        const f = (v: number) => v - Math.floor(v);
+        off.x = f(C.Cartesian3.dot(cam, east) / P);
+        off.y = f(C.Cartesian3.dot(cam, north) / P);
+        off.z = f(C.Cartesian3.dot(cam, up) / P);
+      }
     });
     this.preRenderRemover = scene.postRender.addEventListener(() => {
       this.frameCount++;
@@ -330,6 +371,12 @@ export class CesiumSceneHost implements SceneHost {
             ...GROUND_UNIFORM_DEFAULTS,
             [GROUND_COVER_BOUNDS_UNIFORM]: new C.Cartesian4(0, 0, 0, 0),
             [GROUND_COVER_IMAGE_UNIFORM]: C.Material.DefaultImageId,
+            [GROUND_DETAIL_IMAGE_UNIFORM]: this.detailAtlasUrl ?? C.Material.DefaultImageId,
+            u_detailOn: this.detailAtlasUrl ? 1 : 0,
+            u_eastWC: new C.Cartesian3(1, 0, 0),
+            u_northWC: new C.Cartesian3(0, 1, 0),
+            u_upWC: new C.Cartesian3(0, 0, 1),
+            u_detailOffset: new C.Cartesian3(0, 0, 0),
             u_cameraCell: new C.Cartesian3(0, 0, 0),
             u_cameraFrac: new C.Cartesian3(0, 0, 0),
           },

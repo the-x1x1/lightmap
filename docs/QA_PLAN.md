@@ -185,6 +185,11 @@ on a failure (`release.yml` runs it after the deploy); the rest are by hand.
       land-cover attribution; move the pin 10 km and the paint follows after one read; with the
       wrong `LANDCOVER_PALETTE` (or a host without CORS) the surface is the procedural one and
       the console shows no error.
+- [ ] Detail atlas (Ultra/High): in viewpoint mode at 1.6 m eye height look down at the ground
+      within 20 m — grass blades or rock faces at 2.5 m tiles with no visible grid, the pattern
+      fixed to the ground while panning and walking the pin a few metres (no swimming), fading
+      out by 500 m; on Balanced the noise grain is back; the atlas loads once
+      (`/textures/ground-detail.png`, one request in the network panel).
 - [ ] Buildings in the horizon (`BUILDINGS_PROVIDER=cesium-osm`): pin a Manhattan cross-street
       (e.g. 40.7484, −73.9857) in viewpoint mode — the skyline in the level guide shows the
       blocks, the Terrain row's caveat starts "Terrain and mapped buildings" and names the

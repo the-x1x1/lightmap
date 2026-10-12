@@ -117,10 +117,12 @@ region's aridity and ice taken from the bundled basemap's colour (data-free); (2
 WorldCover at 10 m or the Copernicus Global Land Cover at 100 m, both CC BY 4.0,
 `LANDCOVER_PROVIDER=xyz`) read around the pin into a cover map the material samples, so forest,
 fields, a city, desert and an ice sheet read as what they are (`RENDERING_ACCURACY.md` "Ground
-texture", `DATA_SOURCES_AND_LICENSING.md`); (3) tiled detail textures (rock, grass, sand, snow)
-under a commercial-compatible licence, blended by the same masks, for close viewpoints — next;
+texture", `DATA_SOURCES_AND_LICENSING.md`); (3) **delivered (unreleased)** — tiled detail
+textures for close viewpoints: a generated seamless atlas (grass, rock, sand, snow; our own
+work, `pnpm textures:ground`) laid over the ground within 500 m by the same masks, triplanar
+along the camera's frame and anchored to the ground, replaceable by a photographic CC0 set;
 (4) a licensed aerial imagery basemap where the contract allows (`xyz-imagery`), which the
-material then only details. **Buildings** — delivered as an operator option (`BUILDINGS_PROVIDER=cesium-osm`: Cesium OSM
+material then only details — next, with the operator's contract. **Buildings** — delivered as an operator option (`BUILDINGS_PROVIDER=cesium-osm`: Cesium OSM
 Buildings through ion, lit and shadow-casting with the terrain, ODbL attribution shown;
 `RENDERING_ACCURACY.md`); the terrain horizon takes them in within 2.5 km of the pin, so "when does the
 sun clear that block" is answered in a city. The scattering model in

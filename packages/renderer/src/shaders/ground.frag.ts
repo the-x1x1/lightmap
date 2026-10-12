@@ -59,7 +59,14 @@ export const GROUND_UNIFORM_DEFAULTS = {
   u_detail: 2,
   /** 1 when a cover map is loaded and its bounds set; 0 leaves the procedural rules alone. */
   u_coverOn: 0,
+  /** 1 when the detail atlas is loaded: the near field takes its grain from it instead of the noise. */
+  u_detailOn: 0,
 } as const;
+
+/** The detail atlas sampler (texture pack stage 3): grass NW, rock NE, sand SW, snow SE, each tile wrapping. */
+export const GROUND_DETAIL_IMAGE_UNIFORM = 'u_detailAtlas';
+/** Ground period of one detail tile, metres. */
+export const GROUND_DETAIL_PERIOD_M = 2.5;
 
 /** The cover map's sampler uniform (an image uniform in Cesium's material fabric: a canvas, or `Material.DefaultImageId`). */
 export const GROUND_COVER_IMAGE_UNIFORM = 'u_coverMap';
@@ -82,6 +89,14 @@ uniform float u_wet;
 uniform float u_coverOn;
 uniform vec4 u_coverBounds;
 uniform sampler2D u_coverMap;
+uniform float u_detailOn;
+uniform sampler2D u_detailAtlas;
+// The camera's east/north/up axes in world (ECEF) coordinates, and its own position along them
+// in detail periods (the fraction), set each frame so the atlas is anchored to the ground.
+uniform vec3 u_eastWC;
+uniform vec3 u_northWC;
+uniform vec3 u_upWC;
+uniform vec3 u_detailOffset;
 // The camera's position in grain cells: whole cells and the fraction, set each frame.
 uniform vec3 u_cameraCell;
 uniform vec3 u_cameraFrac;
@@ -142,6 +157,15 @@ vec2 lmCoverUv(vec3 p)
     float merc = log(tan(0.78539816 + 0.5 * lat));
     return vec2((lon - u_coverBounds.x) / (u_coverBounds.y - u_coverBounds.x),
                 (u_coverBounds.z - merc) / (u_coverBounds.z - u_coverBounds.w));
+}
+
+// One wrapped tile of the atlas (quadrant q: 0 grass, 1 rock, 2 sand, 3 snow), with the
+// unwrapped coordinate's derivatives so the wrap seam takes no mip discontinuity.
+vec3 lmDetail(vec2 uv, float q)
+{
+    vec2 quad = vec2(q == 1.0 || q == 3.0 ? 0.5 : 0.0, q >= 2.0 ? 0.5 : 0.0);
+    vec2 st = quad + fract(uv) * 0.5;
+    return textureGrad(u_detailAtlas, st, dFdx(uv) * 0.5, dFdy(uv) * 0.5).rgb;
 }
 
 czm_material czm_getMaterial(czm_materialInput materialInput)
@@ -233,7 +257,31 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // cells into the lattice, the fraction into the coordinate, both from the CPU in double).
     float dist = length(positionEC);
     float nearW = u_detail >= 2.0 ? smoothstep(500.0, 60.0, dist) : 0.0;
-    if (nearW > 0.0)
+    if (nearW > 0.0 && u_detailOn > 0.5)
+    {
+        // The detail atlas (grass, rock, sand or snow — whichever the rules above made this
+        // ground), projected along the camera's east, north and up axes and blended by the
+        // surface normal (a cheap triplanar), in metres from the camera plus the camera's own
+        // offset so the pattern stays put as the camera moves. A multiplier about 1 on the
+        // colour the macro rules chose; it never changes what the ground is.
+        vec3 local = czm_inverseViewRotation * positionEC;
+        vec3 q = vec3(dot(local, u_eastWC), dot(local, u_northWC), dot(local, u_upWC)) / 2.5 + u_detailOffset;
+        vec3 nW = czm_inverseViewRotation * materialInput.normalEC;
+        vec3 w = abs(vec3(dot(nW, u_eastWC), dot(nW, u_northWC), dot(nW, u_upWC)));
+        w = w * w * w * w;
+        w = w * w;  // sharp, so a face takes one projection and two never blend into a hatch
+        w /= (w.x + w.y + w.z + 1e-5);
+        float bareW = max(rocky, alpine);
+        float sandW = max(shoreline, u_aridity * (1.0 - rocky));
+        float tile = snowy > 0.5 ? 3.0 : bareW > 0.5 ? (u_aridity > 0.6 ? 2.0 : 1.0) : sandW > 0.5 ? 2.0 : 0.0;
+        vec3 d = lmDetail(q.yz, tile) * w.x + lmDetail(q.xz, tile) * w.y + lmDetail(q.xy, tile) * w.z;
+        // The same tile again at 4.3 × the period, so the 2.5 m repeat does not read as a grid.
+        vec3 q2 = q * 0.23 + 0.37;
+        vec3 d2 = lmDetail(q2.yz, tile) * w.x + lmDetail(q2.xz, tile) * w.y + lmDetail(q2.xy, tile) * w.z;
+        d = mix(d, d2, 0.4);
+        ground *= mix(vec3(1.0), d * 2.0, nearW * 0.7);
+    }
+    else if (nearW > 0.0)
     {
         vec3 local = czm_inverseViewRotation * positionEC / 2.5 + u_cameraFrac;
         float fine = lmNoiseAt(local, u_cameraCell) * 0.6 + lmNoiseAt(local * 2.0 + 0.5, u_cameraCell * 2.0) * 0.3;

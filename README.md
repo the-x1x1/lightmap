@@ -33,8 +33,9 @@ the shadow probe (a 20 m tower at Sun 11°, shadow measured against `h / tan(el)
   different; a procedural ground texture (turf, rock, scree, snow by height, slope, season and the
   forecast; the region's tone from the basemap) so the terrain reads as ground, and with a
   land-cover tile source configured (ESA WorldCover / Copernicus, CC BY 4.0) forest, fields,
-  towns, desert and ice painted as what they are; 3D buildings where an operator configures
-  Cesium OSM Buildings. A 2D sun/shadow overlay always works, even
+  towns, desert and ice painted as what they are, and a bundled detail atlas (grass, rock,
+  sand, snow) under a viewpoint's feet; 3D buildings where an operator configures Cesium OSM
+  Buildings. A 2D sun/shadow overlay always works, even
   without WebGL2.
 - Every preview carries a source label (Real Reference / Simulated Lighting / Estimated Preview)
   and a confidence breakdown (astronomy, terrain, scene detail, weather, real reference), plus a

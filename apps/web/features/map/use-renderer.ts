@@ -21,6 +21,9 @@ import type { SceneState } from '@lightmap/scene';
 import type { GeoPoint } from '@lightmap/geospatial';
 import type { CapabilitiesResponse } from '@/lib/api-types';
 
+/** The ground detail atlas (`scripts/gen-ground-detail.ts`), served from `public/`. */
+export const GROUND_DETAIL_ATLAS_URL = '/textures/ground-detail.png';
+
 export interface RendererHandle {
   mode: '3D' | 'OVERLAY' | 'loading';
   error: string | null;
@@ -89,6 +92,8 @@ export function useRenderer(opts: UseRendererOptions): RendererHandle {
           container: opts.container.current,
           creditContainer: opts.credits.current,
           requestRenderMode: true,
+          // Texture pack stage 3: the bundled detail atlas for a viewpoint's foreground.
+          groundDetailAtlasUrl: GROUND_DETAIL_ATLAS_URL,
           ...(opts.ionToken ? { ionToken: opts.ionToken } : {}),
           onError: (message, error) => {
             console.warn('[renderer]', message, error);

@@ -202,7 +202,16 @@ region's aridity, permanent snow and ice snow at any height; grass and wetland l
 procedural open ground. Steep rock and the seasonal snow still win, water stays with the
 water mask, and a texel the palette did not know (no tile, a wrong palette, beyond the
 map's reach) changes nothing. The read is re-done when the pin moves more than 0.05°; the
-cover's attribution joins the footer. **Caveat:** still a texture, not a classification of
+cover's attribution joins the footer. Within 500 m of the camera (texture pack stage 3, Ultra
+and High) the near grain is a **detail atlas** — grass, rock, sand and snow tiles, 2.5 m to a
+tile, generated seamless by `scripts/gen-ground-detail.ts` (`pnpm textures:ground`) and
+bundled at `public/textures/ground-detail.png` — chosen by what the rules above made the
+ground, projected along the camera's own east, north and up axes and blended by the surface
+normal (a sharp triplanar, so a face takes one projection), anchored to the ground through the
+camera's position in double precision, at two scales so the repeat does not read as a grid; a
+multiplier about 1 on the colour the macro rules chose, never a change of what the ground is.
+A photographic CC0 set can replace the file as long as its quadrant order and wrap are kept.
+**Caveat:** still a texture, not a classification of
 the pixel under the camera — the map is ≈ 40 m per pixel against 10 m data, tells nothing
 about a forest's species or a field's crop, and without a source it does not know a forest
 from a field, a glacier from a snowfield, farmland, roads or a city; the snowline is a rule
