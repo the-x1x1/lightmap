@@ -540,6 +540,9 @@ input emits a value per keystroke); saves are chained so the last edit wins, and
 judged against what was last sent (the API trims notes); the status under the field says unsaved / saving /
 saved / not saved, and the project card shows the shoot date.
 
+**Order**: with more than one top-level viewpoint the drawer offers "as saved" (the server's
+creation order, the default) or "by shoot time"; variants stay under their parent.
+
 **Archive**: a project can be archived (kept with its viewpoints, hidden from the active list,
 listed under "Archived projects" with a Restore button) — reversible, unlike delete. Archived
 projects and their viewpoints do not count toward the plan's limits, so a Free account can

@@ -39,6 +39,8 @@ export function ProjectDrawer({
   const account = useAccount();
   const projects = useProjects(account.signedIn);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  /** Viewpoint order: as saved (the server's creation order) or by the planned instant. */
+  const [order, setOrder] = useState<'saved' | 'time'>('saved');
   const project = useProject(selectedId);
   const m = useProjectMutations();
   const [newName, setNewName] = useState('');
@@ -156,7 +158,11 @@ export function ProjectDrawer({
   // Group shot variants under their parent; variants of a deleted/unknown parent surface top-level.
   const all = project.data?.project.viewpoints ?? [];
   const ids = new Set(all.map((v) => v.id));
-  const topLevel = all.filter((v) => !v.parentViewpointId || !ids.has(v.parentViewpointId));
+  const byTime = (a: ViewpointDto, b: ViewpointDto) =>
+    Date.parse(a.selectedDatetimeUtc) - Date.parse(b.selectedDatetimeUtc);
+  const topLevel = all
+    .filter((v) => !v.parentViewpointId || !ids.has(v.parentViewpointId))
+    .sort(order === 'time' ? byTime : () => 0);
   const variantsOf = new Map<string, ViewpointDto[]>();
   for (const v of all)
     if (v.parentViewpointId && ids.has(v.parentViewpointId))
@@ -452,6 +458,20 @@ export function ProjectDrawer({
           )}
           {project.data?.project.viewpoints.length === 0 ? (
             <p className="text-sm text-[var(--lm-text-muted)]">Nothing saved here yet.</p>
+          ) : null}
+          {topLevel.length > 1 ? (
+            <label className="flex items-center gap-2 text-xs text-[var(--lm-text-muted)]">
+              Order
+              <select
+                className="lm-input w-auto"
+                value={order}
+                onChange={(e) => setOrder(e.target.value === 'time' ? 'time' : 'saved')}
+                data-testid="viewpoint-order"
+              >
+                <option value="saved">as saved</option>
+                <option value="time">by shoot time</option>
+              </select>
+            </label>
           ) : null}
           <div className="space-y-2">
             {topLevel.map((v) => (
