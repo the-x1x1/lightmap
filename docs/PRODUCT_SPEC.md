@@ -467,6 +467,11 @@ link per block (`/?viewpoint=<id>`) that reopens the viewpoint in the planner fo
 owner (fetched owner-scoped, restored like "Open", the parameter then dropped from the address);
 signed out, the planner says to sign in first, and a viewpoint the account cannot see (deleted,
 or someone else's) is said so, never silently ignored.
+The same shots download as a calendar file (`<name>.ics`, RFC 5545): one event per viewpoint
+from 30 minutes before the planned instant (time to set up) to 15 after, a reminder an hour
+ahead, the coordinates as LOCATION and GEO, the shot-list block as the description and the
+reopen link as URL; each event's UID is the viewpoint's id, so importing again updates the events
+instead of duplicating them (`buildCalendar()`, tested: escaping, 75-octet folding, CRLF).
 Pure and unit-tested (`buildShotList()`, `restoreInputFor()`); Free accounts see the reason
 instead of the buttons.
 

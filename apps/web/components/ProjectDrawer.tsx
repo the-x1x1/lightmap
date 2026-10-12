@@ -15,6 +15,7 @@ import {
 } from '@/features/projects/use-projects';
 import { viewpointPayload } from '@/features/projects/viewpoint-payload';
 import { buildShotList } from '@/features/export/shot-list';
+import { buildCalendar } from '@/features/export/calendar';
 import { downloadBlob, fileStem } from '@/features/export/download';
 import { restoreInputFor } from '@/features/projects/open-viewpoint';
 import { ApiRequestError } from '@/lib/client/api';
@@ -137,6 +138,20 @@ export function ProjectDrawer({
       `${fileStem(selectedProject.name, 'project')}-shot-list.txt`,
     );
     setStatus('Shot list downloaded.');
+  }
+  // The same shots as calendar events (one per viewpoint, re-importing updates them).
+  function downloadCalendar() {
+    if (!selectedProject) return;
+    const ics = buildCalendar(selectedProject, selectedProject.viewpoints, {
+      appUrl: window.location.origin,
+      generatedAt: new Date(),
+      units,
+    });
+    downloadBlob(
+      new Blob([ics], { type: 'text/calendar;charset=utf-8' }),
+      `${fileStem(selectedProject.name, 'project')}.ics`,
+    );
+    setStatus('Calendar file downloaded — open it to add the shots to your calendar.');
   }
   // Group shot variants under their parent; variants of a deleted/unknown parent surface top-level.
   const all = project.data?.project.viewpoints ?? [];
@@ -386,6 +401,15 @@ export function ProjectDrawer({
                     data-testid="shot-list-download"
                   >
                     Download .txt
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={downloadCalendar}
+                    title="One calendar event per viewpoint: from 30 min before the planned instant, with a reminder an hour ahead"
+                    data-testid="shot-list-calendar"
+                  >
+                    Add to calendar (.ics)
                   </Button>
                 </>
               ) : (

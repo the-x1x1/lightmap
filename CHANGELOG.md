@@ -71,6 +71,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   02:54 UTC) come out within two minutes.
 - **"Tonight"** beside "Now": today at the start of astronomical night at the place (`setTonight`,
   tested).
+- **Add a project's shots to your calendar**: an `.ics` file beside the shot list (Pro) — one
+  event per viewpoint from 30 min before the planned instant, a reminder an hour ahead, the place
+  and the reopen link; importing again updates the events (`buildCalendar()`, tested).
 - **"Point with phone" no longer gives up for good** when the first compass reading is slow: after
   2.5 s it says no heading has arrived yet but keeps listening, and a later reading starts the
   follow (a slow sensor, or a phone picked up late, used to need the button tapped again — and on
