@@ -261,7 +261,8 @@ published closest full Moon of 2025, 5 November at 356 980 km). Each is a button
 planner to that instant; a Free plan still reads the dates (they are almanac facts) but a date
 beyond its window is not a jump. The word "supermoon" is not used: a close full Moon is about
 7 % wider than average and 14 % wider than a far one, and the rows say exactly that. The shot
-list's Moon line carries the width too when the Moon is up ("… 99 % lit, 0.55° across").
+list's Moon line and the planning card's Moon fact carry the width too when the Moon is up
+("… 99 % lit, 0.55° across").
 
 **Export card** (Pro, entitlement `export_preview`): one PNG (1200 px wide) built in the browser
 from the current frame (captured at 1280 px from the renderer, or the sky-gradient band when the
