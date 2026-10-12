@@ -155,7 +155,8 @@ midnight, "✦" when the night holds a dark window for the Milky Way core (one w
 the dark windows' own rule) — for the night shooter choosing an evening. Days are fetched only while the block is open and only inside the forecast
 horizon (one cached `/api/weather` call per day, the plan's weather budget applies); a day
 beyond the horizon reads "beyond the forecast", one still loading "loading…". The footer says the
-extended range is low confidence. Hours the provider did not cover are
+extended range is low confidence. Free plans and visitors see the block named with the paywall
+reason (plan §38: the Pro value is explained, never hidden). Hours the provider did not cover are
 absent; DST gaps produce no duplicate rows (`hourlyOutlook`, tested). Free plans see the locked
 block with the paywall reason.
 

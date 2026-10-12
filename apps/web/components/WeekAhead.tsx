@@ -26,6 +26,7 @@ import {
   weekAheadRows,
 } from '@/features/planner/week-ahead';
 import { weatherQueryOptions } from '@/features/planner/weather-query';
+import { Paywall } from './Paywall';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -88,7 +89,26 @@ export function WeekAhead({
     if (d && r.data) framesByDate.set(d, r.data.frames);
   });
   const loading = open && results.some((r) => r.isLoading);
-  if (!decision.allowed || !from) return null;
+  if (!from) return null;
+  // Free and signed-out: the block is named and its reason given (plan §38), never hidden.
+  if (!decision.allowed)
+    return (
+      <details data-testid="week-ahead-locked">
+        <summary className="cursor-pointer text-xs uppercase tracking-wide text-[var(--lm-text-muted)]">
+          The week ahead
+          <span className="ml-2 normal-case tracking-normal text-[var(--lm-sun)]">Pro</span>
+        </summary>
+        <div className="mt-2">
+          <Paywall
+            compact
+            reason={
+              decision.reason ??
+              'The week ahead — the next seven days’ golden hours under the forecast — is part of Pro.'
+            }
+          />
+        </div>
+      </details>
+    );
   // Seven days' events and windows are a few milliseconds; the block re-renders only on its own
   // state and the queries, so this is not memoised.
   const rows = weekAheadRows({ latitude: lat, longitude: lng }, tz, from, framesByDate, dark);

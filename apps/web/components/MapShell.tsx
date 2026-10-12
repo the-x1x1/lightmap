@@ -420,8 +420,19 @@ export function MapShell() {
                     }
                   />
                 ) : null}
-                {scene && !planLoading && account.snapshot ? (
-                  <WeekAhead scene={scene} decision={account.can('forecast_detail')} />
+                {scene && !planLoading ? (
+                  <WeekAhead
+                    scene={scene}
+                    decision={
+                      account.snapshot
+                        ? account.can('forecast_detail')
+                        : {
+                            allowed: false,
+                            key: 'forecast_detail',
+                            reason: 'Sign in with Pro to see the week ahead.',
+                          }
+                    }
+                  />
                 ) : null}
                 {scene ? (
                   <>
