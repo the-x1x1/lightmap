@@ -20,7 +20,12 @@ export interface ClimatologyHour {
   cloudCoverTotal: number;
   /** mm for the hour; null when unknown. */
   precipitationAmount: number | null;
+  /** Relative humidity at 2 m, 0–100 %; absent or null when the source did not give it. */
+  humidity?: number | null;
 }
+
+/** From this relative humidity the air is within about a degree of its dew point (field conditions use the same). */
+export const HUMID_CLIMATOLOGY_THRESHOLD = 95;
 
 export interface ClimatologyWindow {
   /** Local hours [startHour, endHour) kept in the sample, e.g. 6–20 for daylight. */
@@ -72,6 +77,13 @@ export interface ClimatologyHourOfDay {
   dullShare: number;
   /** Fraction with ≥ 0.1 mm precipitation. */
   wetShare: number;
+  /** Hours in this slot with a known humidity. */
+  humiditySamples: number;
+  /**
+   * Fraction of those at or over `HUMID_CLIMATOLOGY_THRESHOLD` % — dew on the glass at night,
+   * mist or low cloud by day. 0 when no humidity was known.
+   */
+  humidShare: number;
 }
 
 export interface ClimatologyCapabilities {
@@ -161,7 +173,15 @@ export function summarizeClimatology(
   let cloudSum = 0;
   let wetHours = 0;
   const dayRain = new Map<string, number>();
-  const hod = Array.from({ length: 24 }, () => ({ n: 0, cloud: 0, clear: 0, dull: 0, wet: 0 }));
+  const hod = Array.from({ length: 24 }, () => ({
+    n: 0,
+    cloud: 0,
+    clear: 0,
+    dull: 0,
+    wet: 0,
+    rhN: 0,
+    humid: 0,
+  }));
   for (const h of hours) {
     if (!Number.isFinite(h.cloudCoverTotal)) continue;
     const { hour, dateKey } = localParts(h.timestamp, meta.timeZone);
@@ -175,6 +195,11 @@ export function summarizeClimatology(
       if (cls === 'clear' || cls === 'mostly-clear') slot.clear++;
       if (cls === 'overcast' || cls === 'storm') slot.dull++;
       if (rainH >= 0.1) slot.wet++;
+      const rh = h.humidity;
+      if (typeof rh === 'number' && Number.isFinite(rh)) {
+        slot.rhN++;
+        if (rh >= HUMID_CLIMATOLOGY_THRESHOLD) slot.humid++;
+      }
     }
     if (hour < window.startHour || hour >= window.endHour) continue;
     n++;
@@ -215,6 +240,8 @@ export function summarizeClimatology(
       clearShare: s.n > 0 ? s.clear / s.n : 0,
       dullShare: s.n > 0 ? s.dull / s.n : 0,
       wetShare: s.n > 0 ? s.wet / s.n : 0,
+      humiditySamples: s.rhN,
+      humidShare: s.rhN > 0 ? s.humid / s.rhN : 0,
     })),
     attribution: meta.attribution,
     license: meta.license,
@@ -325,7 +352,7 @@ export function suggestedScenario(summary: ClimatologySummary): WeatherScenarioI
 }
 
 /**
- * Cache key: provider, ~0.5° cell (climatology is smooth), month, year span, window and the zone
+ * Cache key (v3: the hour-of-day rows carry humidity): provider, ~0.5° cell (climatology is smooth), month, year span, window and the zone
  * (the daylight window is local, so a cell straddling a zone boundary needs one row per zone).
  */
 export function climatologyCacheKey(
@@ -339,7 +366,7 @@ export function climatologyCacheKey(
 ): string {
   const cell = `${(Math.round(lat * 2) / 2).toFixed(1)},${(Math.round(lng * 2) / 2).toFixed(1)}`;
   // `v2`: the summary gained `byHour`; rows written before that must not be served.
-  return `v2:${providerId}:${cell}:m${month}:${years.from}-${years.to}:h${window.startHour}-${window.endHour}:${timeZone}`;
+  return `v3:${providerId}:${cell}:m${month}:${years.from}-${years.to}:h${window.startHour}-${window.endHour}:${timeZone}`;
 }
 
 /** Fetch the same month for several years and summarise. Concurrency-limited; partial years are dropped. */
@@ -393,4 +420,27 @@ export async function buildMonthlyClimatology(
     attribution: caps.attribution,
     license: caps.license,
   });
+}
+
+/**
+ * The near-saturated air of the month by hour of day (dew on the glass at night, mist by day):
+ * the share at the selected local hour and the hour where it is most common. Null when the source
+ * gave no humidity (older cached summaries, providers without the field) — nothing is invented.
+ */
+export function humidityByHour(
+  byHour: ReadonlyArray<
+    Partial<Pick<ClimatologyHourOfDay, 'humiditySamples' | 'humidShare'>> & { hour: number }
+  >,
+  selectedHour: number,
+): { atHour: number | null; peakHour: number; peakShare: number } | null {
+  let peak: { hour: number; share: number } | null = null;
+  for (const b of byHour) {
+    if (!(b.humiditySamples && b.humiditySamples > 0)) continue;
+    const share = b.humidShare ?? 0;
+    if (!peak || share > peak.share) peak = { hour: b.hour, share };
+  }
+  if (!peak) return null;
+  const sel = byHour.find((b) => b.hour === ((selectedHour % 24) + 24) % 24);
+  const atHour = sel?.humiditySamples ? (sel.humidShare ?? 0) : null;
+  return { atHour, peakHour: peak.hour, peakShare: peak.share };
 }

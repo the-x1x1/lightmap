@@ -197,7 +197,14 @@ forecast nor a scenario.
   selected night — astronomical dusk to dawn, in the place's zone, wrapping midnight
   (`hoursBetween()`, `hoursShare()`: sample-weighted means of the per-hour statistics): "Dark
   hours (21:00–04:00): clear 41 % of the time, ~32 % mean cloud, overcast or storm 18 %"; absent
-  where there is no astronomical night (polar summer).
+  where there is no astronomical night (polar summer). A last line gives the month's
+  **near-saturated air** from the archive's 2 m relative humidity — the share of hours at or over
+  95 % (within about a degree of the dew point: dew on the glass at night, mist or low cloud by
+  day) at the selected hour and the hour where it is most common ("Air at ≥ 95 % humidity: 8 % of
+  the time at 12:00; most often at 05:00 (62 %)"; `humidityByHour()`, per-hour `humidShare` over
+  the hours whose humidity is known). It is not a visibility or haze statistic — ERA5 carries no
+  visibility — and it is absent when the source gave no humidity. Summaries cached before this
+  field existed are re-fetched (cache key `v3`).
 - **Never**: rendered with a Forecast badge, given a confidence above SCENARIO, or turned into a
   deterministic prediction (plan §4, §25 Phase 7). `ClimatologySummary.kind` is `'CLIMATOLOGY'` and
   its `label` is fixed to "Typical for this month" so the wording cannot drift.

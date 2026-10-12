@@ -71,6 +71,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   02:54 UTC) come out within two minutes.
 - **"Tonight"** beside "Now": today at the start of astronomical night at the place (`setTonight`,
   tested).
+- **Dew and mist in "Typical for this month"**: how often the air is near saturation (≥ 95 %
+  relative humidity) at the selected hour and when it is most common, from ERA5's humidity
+  (`humidityByHour()`, per-hour `humidShare`; tested; climatology cache key `v3`). Phase 7's
+  "haze/rain probabilities" item: humidity now, visibility still needs a licensed source.
 - **Add a project's shots to your calendar**: an `.ics` file beside the shot list (Pro) — one
   event per viewpoint from 30 min before the planned instant, a reminder an hour ahead, the place
   and the reopen link; importing again updates the events (`buildCalendar()`, tested).

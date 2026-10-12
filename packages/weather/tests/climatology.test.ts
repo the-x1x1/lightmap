@@ -6,6 +6,7 @@ import {
   hoursBetween,
   hoursShare,
   suggestedScenario,
+  humidityByHour,
   summarizeClimatology,
   type ClimatologyHour,
   type ClimatologyProvider,
@@ -144,7 +145,7 @@ describe('summarizeClimatology', () => {
     const a = climatologyCacheKey('p', 21.41, -157.72, 5, { from: 2015, to: 2024 });
     const b = climatologyCacheKey('p', 21.38, -157.68, 5, { from: 2015, to: 2024 });
     expect(a).toBe(b);
-    expect(a).toBe('v2:p:21.5,-157.5:m5:2015-2024:h6-20:UTC');
+    expect(a).toBe('v3:p:21.5,-157.5:m5:2015-2024:h6-20:UTC');
     expect(
       climatologyCacheKey(
         'p',
@@ -222,11 +223,74 @@ describe('normalizeArchive', () => {
         time: ['2020-05-01T00:00', '2020-05-01T01:00', '2020-05-01T02:00'],
         cloud_cover: [12, null, 88],
         precipitation: [0, 0.2, null],
+        relative_humidity_2m: [96, 80, null],
       },
     });
     expect(rows).toEqual([
-      { timestamp: '2020-05-01T00:00:00.000Z', cloudCoverTotal: 12, precipitationAmount: 0 },
-      { timestamp: '2020-05-01T02:00:00.000Z', cloudCoverTotal: 88, precipitationAmount: null },
+      {
+        timestamp: '2020-05-01T00:00:00.000Z',
+        cloudCoverTotal: 12,
+        precipitationAmount: 0,
+        humidity: 96,
+      },
+      {
+        timestamp: '2020-05-01T02:00:00.000Z',
+        cloudCoverTotal: 88,
+        precipitationAmount: null,
+        humidity: null,
+      },
     ]);
+  });
+});
+
+describe('humidity by hour of day (dew and mist climatology)', () => {
+  it('counts the hours at or over 95 % among those with a known humidity, per local hour', () => {
+    // Honolulu (UTC−10): local 05:00 is 15:00 UTC; four mornings, three of them saturated.
+    const hours = [96, 99, 95, 80].map((rh, d) => ({
+      timestamp: new Date(Date.UTC(2020, 4, d + 1, 15)).toISOString(),
+      cloudCoverTotal: 20,
+      precipitationAmount: 0,
+      humidity: rh,
+    }));
+    // A fifth morning without humidity counts toward cloud but not toward the humid share.
+    hours.push({
+      timestamp: new Date(Date.UTC(2020, 4, 5, 15)).toISOString(),
+      cloudCoverTotal: 20,
+      precipitationAmount: 0,
+      humidity: null as unknown as number,
+    });
+    const s = summarizeClimatology(hours, {
+      providerId: 'p',
+      latitude: 21.4,
+      longitude: -157.7,
+      month: 5,
+      timeZone: 'Pacific/Honolulu',
+      years: { from: 2020, to: 2020 },
+      attribution: '',
+      license: '',
+    });
+    const five = s.byHour[5]!;
+    expect(five.samples).toBe(5);
+    expect(five.humiditySamples).toBe(4);
+    expect(five.humidShare).toBeCloseTo(0.75, 9);
+    expect(s.byHour[12]).toMatchObject({ humiditySamples: 0, humidShare: 0 });
+  });
+});
+
+describe('humidityByHour', () => {
+  const row = (hour: number, humiditySamples: number, humidShare: number) => ({
+    hour,
+    humiditySamples,
+    humidShare,
+  });
+  it('names the hour where saturated air is most common and the share at the selected hour', () => {
+    const byHour = [row(4, 30, 0.5), row(5, 30, 0.62), row(12, 30, 0.08), row(13, 0, 0)];
+    expect(humidityByHour(byHour, 12)).toEqual({ atHour: 0.08, peakHour: 5, peakShare: 0.62 });
+    expect(humidityByHour(byHour, 13)?.atHour).toBeNull(); // no humidity known at 13:00
+    expect(humidityByHour(byHour, 29)?.atHour).toBe(0.62); // hours wrap
+  });
+  it('says nothing when no humidity was ever known (older cached summaries)', () => {
+    expect(humidityByHour([{ hour: 5 }, { hour: 6 }], 5)).toBeNull();
+    expect(humidityByHour([], 5)).toBeNull();
   });
 });

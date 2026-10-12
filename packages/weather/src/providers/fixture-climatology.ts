@@ -58,6 +58,12 @@ export class FixtureClimatologyProvider implements ClimatologyProvider {
           timestamp: new Date(Date.UTC(year, month - 1, d, h)).toISOString(),
           cloudCoverTotal: cloud,
           precipitationAmount: wet ? 0.5 + rnd() * 3 : 0,
+          // Humid before dawn, drier mid-afternoon; cloud and rain add moisture (no extra draws,
+          // so the cloud and rain series stay as they were).
+          humidity: Math.min(
+            100,
+            68 + 0.18 * cloud + (wet ? 12 : 0) + 14 * Math.cos(((h - 5) / 24) * 2 * Math.PI),
+          ),
         });
       }
     }

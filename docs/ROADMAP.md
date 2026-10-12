@@ -178,8 +178,9 @@ daylight hours across the last ten years (ERA5 via Open-Meteo's archive, `Climat
 abstraction with a fixture), mean cloud and wet-day fraction, tap-to-compare, most-common marker.
 Never labelled a forecast, never above SCENARIO confidence (`WEATHER_AND_FORECAST_MODEL.md` §8).
 Pro entitlement `climatology`; cached 30 days per 0.5° cell. Also delivered: the **hour-of-day
-breakdown** (24 bars, clearest/cloudiest stretch, table alternative). Future: haze/visibility
-climatology once a source with those fields is licensed.
+breakdown** (24 bars, clearest/cloudiest stretch, table alternative), the dark-hours line for
+night planning, and **near-saturated air by hour** (dew on the glass, morning mist) from ERA5's
+humidity. Future: haze/visibility climatology once a source with those fields is licensed.
 
 ## Phase 8 — High-fidelity environment reconstruction (future)
 

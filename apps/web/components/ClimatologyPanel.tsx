@@ -10,6 +10,7 @@ import {
   daylightPattern,
   hoursBetween,
   hoursShare,
+  humidityByHour,
   suggestedScenario,
   type ClimatologySummary,
 } from '@lightmap/weather';
@@ -135,6 +136,9 @@ export function ClimatologyPanel({
           ) : null}
           {Array.isArray(q.data.summary.byHour) && nightHours ? (
             <NightHours byHour={q.data.summary.byHour} hours={nightHours} />
+          ) : null}
+          {Array.isArray(q.data.summary.byHour) ? (
+            <HumidHours byHour={q.data.summary.byHour} selectedHour={selectedHour} />
           ) : null}
           <p className="text-xs text-[var(--lm-text-muted)]" data-testid="climatology-summary">
             Daylight hours ({q.data.summary.window.startHour}:00–{q.data.summary.window.endHour}
@@ -278,6 +282,32 @@ function NightHours({
       Dark hours ({two(hours.from)}–{two(hours.to)}): clear {Math.round(share.clearShare * 100)} %
       of the time, ~{Math.round(share.meanCloudCover)} % mean cloud, overcast or storm{' '}
       {Math.round(share.dullShare * 100)} % — history for night planning, not a forecast.
+    </p>
+  );
+}
+
+/**
+ * "Air at ≥ 95 % humidity: 8 % of the time at 12:00; most often at 05:00 (62 %)" — when the
+ * glass dews up at night and mist lies by day, from the archive's own humidity. History, not a
+ * forecast; absent when the source gave no humidity.
+ */
+function HumidHours({
+  byHour,
+  selectedHour,
+}: {
+  byHour: ClimatologySummary['byHour'];
+  selectedHour: number;
+}) {
+  const h = humidityByHour(byHour, selectedHour);
+  if (!h) return null;
+  return (
+    <p className="text-xs text-[var(--lm-text-muted)]" data-testid="climatology-humid">
+      Air at ≥ 95 % humidity
+      {h.atHour !== null
+        ? `: ${Math.round(h.atHour * 100)} % of the time at ${two(selectedHour)}`
+        : ''}
+      ; most often at {two(h.peakHour)} ({Math.round(h.peakShare * 100)} %) — dew on the glass at
+      night, mist by day.
     </p>
   );
 }
