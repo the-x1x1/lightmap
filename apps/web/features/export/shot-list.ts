@@ -16,16 +16,11 @@ import {
 } from '@lightmap/astronomy';
 import { brand } from '@lightmap/config';
 import { compassLabel } from '@lightmap/geospatial';
-import {
-  describeExposure,
-  estimateExposure,
-  formatHeight,
-  type DistanceUnits,
-} from '@lightmap/scene';
+import { describeExposure, formatHeight, type DistanceUnits } from '@lightmap/scene';
+import { viewpointExposure } from '@/features/projects/viewpoint-exposure';
 import {
   WINDOW_VERDICT_TEXT,
   isScenarioId,
-  parametersForForecast,
   scenarioById,
   type WindowOutlook,
 } from '@lightmap/weather';
@@ -119,18 +114,7 @@ export function shotBlock(
     !scenarioBased && v.cloudCoverAtSave !== null && v.cloudCoverAtSave !== undefined
       ? v.cloudCoverAtSave
       : null;
-  const exposure = estimateExposure({
-    sunElevationDeg: sun.elevationDeg,
-    sunTransmittance: scenarioBased
-      ? scenarioById(scenarioId).parameters.sunTransmittance
-      : savedCloud !== null
-        ? parametersForForecast({ cloudCoverTotal: savedCloud }).sunTransmittance
-        : 1,
-    moon: {
-      elevationDeg: moon.topocentricElevationDeg,
-      illuminatedFraction: moon.illuminatedFraction,
-    },
-  });
+  const exposure = viewpointExposure(v);
   const basis = scenarioBased
     ? `${scenarioById(scenarioId).label.toLowerCase()} scenario`
     : savedCloud !== null
