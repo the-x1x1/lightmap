@@ -13,7 +13,9 @@ import { formatWallTime, sunPosition } from '@lightmap/astronomy';
 import {
   coreTrackPosition,
   defaultCameraFeedFovDeg,
+  describeExposure,
   edgeIndicator,
+  estimateExposure,
   frameCoordinates,
   levelLineSegment,
   moonTrackPosition,
@@ -219,6 +221,19 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
   // The sun as it is now (a hollow ring) when the planner is not on the present: the same
   // horizon rule as the planned sun, from the same ephemeris.
   const plannedOffset = describePlannedOffset(scene.utc.getTime(), nowMs);
+  // A starting exposure for the planned instant (the details' estimate, never a meter).
+  const exposure = describeExposure(
+    estimateExposure({
+      sunElevationDeg: scene.solar.elevationDegrees,
+      sunTransmittance: scene.atmosphere.parameters.sunTransmittance,
+      moon: scene.lunar
+        ? {
+            elevationDeg: scene.lunar.elevationDegrees,
+            illuminatedFraction: scene.lunar.illuminatedFraction,
+          }
+        : null,
+    }),
+  );
   const sunNowPos = useMemo(() => sunPosition(new Date(nowMs), lat, lng), [nowMs, lat, lng]);
   const sunNowUp = plannedOffset !== null && sunNowPos.apparentElevationDeg > -0.2667;
   const sunNow = sunNowUp
@@ -281,6 +296,13 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
               : `Now ${formatWallTime(new Date(nowMs), tz)} · planned ${plannedOffset}${
                   sunNowUp ? ' · ○ the sun now' : ''
                 }`}
+            {' · '}
+            <span
+              data-testid="field-view-exposure"
+              title="An incident-light estimate, not a meter reading"
+            >
+              {exposure}
+            </span>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">

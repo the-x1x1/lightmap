@@ -389,7 +389,9 @@ focal-length preset, and mode.
   "32 min ago" (`describePlannedOffset`, live within a minute and a half: "Live — the marks show
   the sky as it is now") — and, while they differ and the sun is up, a hollow dashed ring marks
   **the sun now** beside the planned sun, so standing at the spot early you see both where the
-  light is and where it will be (the present is re-read every 30 s while the view is open).
+  light is and where it will be (the present is re-read every 30 s while the view is open). The
+  same line ends with the exposure estimate for the planned instant ("EV −3.5 · 2 s f/2.8
+  ISO 3200"), a starting point under the open sky.
   Heading and pitch follow the phone (the compass starts with the
   view); "Now" jumps the planner to the present; the feed's field of view starts at a phone-camera
   default (`defaultCameraFeedFovDeg`: 69° across the long side) and can be nudged ±3° until the
