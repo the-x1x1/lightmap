@@ -60,7 +60,8 @@ export function formatTemperature(c: number, units: DistanceUnits = 'metric'): s
 }
 
 /**
- * The air line: temperature with its dew point when the frame has one, and a note at the two
+ * The air line: temperature (with "feels like" when wind or humidity move it a degree or more)
+ * with its dew point when the frame has one, and a note at the two
  * ends that change how a shoot goes — freezing (batteries drain fast, the camera must warm up
  * sealed afterwards) and heat (shimmer in long lenses, an overheating body).
  */
@@ -68,11 +69,17 @@ export function describeAir(
   tempC: number,
   dewPointC: number | null,
   units: DistanceUnits = 'metric',
+  apparentC: number | null = null,
 ): FieldLine {
+  // "Feels like" only when it differs by a whole degree or more from the air itself.
+  const feels =
+    apparentC !== null && Math.abs(Math.round(apparentC) - Math.round(tempC)) >= 1
+      ? ` (feels like ${formatTemperature(apparentC, units)})`
+      : '';
   const value =
     dewPointC === null
-      ? formatTemperature(tempC, units)
-      : `${formatTemperature(tempC, units)}, dew point ${formatTemperature(dewPointC, units)}`;
+      ? `${formatTemperature(tempC, units)}${feels}`
+      : `${formatTemperature(tempC, units)}${feels}, dew point ${formatTemperature(dewPointC, units)}`;
   const note =
     tempC <= FREEZING_C
       ? 'freezing — batteries drain fast, keep spares warm; let the camera warm up sealed in its bag afterwards'
@@ -186,7 +193,14 @@ export function fieldConditions(
   if (!frame) return [];
   const out: FieldLine[] = [];
   if (frame.temperature !== null && frame.temperature !== undefined)
-    out.push(describeAir(frame.temperature, frame.dewPoint ?? null, units));
+    out.push(
+      describeAir(
+        frame.temperature,
+        frame.dewPoint ?? null,
+        units,
+        frame.apparentTemperature ?? null,
+      ),
+    );
   if (frame.windSpeed !== null) out.push(describeWind(frame.windSpeed, frame.windDirection, units));
   if (frame.humidity !== null) {
     const risk = moistureRisk(frame, sunElevationDeg);

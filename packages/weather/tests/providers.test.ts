@@ -35,6 +35,7 @@ const sample = {
     shortwave_radiation: [0, 0, 0],
     temperature_2m: [24.1, 23.5, 23],
     dew_point_2m: [18.2, 18.6, 19],
+    apparent_temperature: [26, 25.5, 25],
   },
 };
 
@@ -57,6 +58,7 @@ describe('Open-Meteo normalisation', () => {
       visibility: 40000,
       temperature: 24.1,
       dewPoint: 18.2,
+      apparentTemperature: 26,
     });
     expect(s.latitude).toBe(21.4);
     expect(s.modelElevationM).toBe(3);
@@ -72,6 +74,7 @@ describe('Open-Meteo normalisation', () => {
     expect(mid.weatherCode).toBe(2);
     expect(mid.temperature).toBeCloseTo(23.8, 6);
     expect(mid.dewPoint).toBeCloseTo(18.4, 6);
+    expect(mid.apparentTemperature).toBeCloseTo(25.75, 6);
     // A frame pair without the air fields interpolates to null, not NaN.
     const bare = s.frames.map(({ dewPoint: _absent, ...f }) => ({ ...f, temperature: null }));
     const midBare = interpolateFrame(bare, new Date('2026-05-31T00:30:00Z'))!;
@@ -99,6 +102,7 @@ describe('Open-Meteo normalisation', () => {
     expect(seen[0]).toContain('cloud_cover_low');
     expect(seen[0]).toContain('temperature_2m');
     expect(seen[0]).toContain('dew_point_2m');
+    expect(seen[0]).toContain('apparent_temperature');
     expect(seen[0]).toContain('timezone=UTC');
     expect(p.getCapabilities().commercialReview).toBe('approved');
     expect(new OpenMeteoProvider().getCapabilities().commercialReview).toBe('conditional');

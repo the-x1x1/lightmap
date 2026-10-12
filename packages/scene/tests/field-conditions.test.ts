@@ -158,6 +158,12 @@ describe('air', () => {
     expect(describeAir(0.1, -3).note).toBeNull();
     expect(describeAir(31.9, 20).note).toBeNull();
     expect(describeAir(32, 20).note).toMatch(/^hot — heat shimmer/);
+    // "Feels like" only when it differs by a whole degree.
+    expect(describeAir(2, -1, 'metric', -4.2).value).toBe(
+      '2 °C (feels like −4 °C), dew point −1 °C',
+    );
+    expect(describeAir(2, null, 'imperial', -4).value).toBe('36 °F (feels like 25 °F)');
+    expect(describeAir(2, -1, 'metric', 2.4).value).toBe('2 °C, dew point −1 °C');
   });
 });
 
@@ -167,9 +173,12 @@ describe('fieldConditions', () => {
   });
 
   it('puts the air first when the frame has a temperature', () => {
-    const lines = fieldConditions(frame({ temperature: -2, dewPoint: -4 }), -10);
+    const lines = fieldConditions(
+      frame({ temperature: -2, dewPoint: -4, apparentTemperature: -7 }),
+      -10,
+    );
     expect(lines.map((l) => l.label)).toEqual(['Air', 'Wind', 'Humidity']);
-    expect(lines[0]).toMatchObject({ value: '−2 °C, dew point −4 °C' });
+    expect(lines[0]).toMatchObject({ value: '−2 °C (feels like −7 °C), dew point −4 °C' });
     expect(lines[0]?.note).toMatch(/^freezing/);
     // Without a dew point the line is the temperature alone; a null temperature gives no line.
     expect(fieldConditions(frame({ temperature: 18 }), 30)[0]).toEqual({

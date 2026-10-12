@@ -65,7 +65,7 @@ Every vendor response is converted into frames; nothing downstream knows the ven
 | `windDirection`                                                    | degrees from, or null | interpolated as an angle              |
 | `weatherCode`                                                      | WMO 4677 or null      | nearest frame wins when interpolating |
 | `directNormalIrradiance`, `diffuseRadiation`, `shortwaveRadiation` | W/m², optional        |                                       |
-| `temperature`, `dewPoint`                                          | °C at 2 m, optional   | the shoot itself, not the light       |
+| `temperature`, `dewPoint`, `apparentTemperature`                   | °C at 2 m, optional   | the shoot itself, not the light       |
 
 `interpolateFrame(frames, at)` gives a linear blend between the two bracketing hourly frames so
 scrubbing is continuous; null fields interpolate as null. A `WeatherSeries` wraps the frames with

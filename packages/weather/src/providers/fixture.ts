@@ -134,6 +134,10 @@ export class FixtureWeatherProvider implements WeatherProvider {
       shortwaveRadiation: null,
       temperature,
       dewPoint,
+      // A steady breeze takes a degree or two off below 10 °C; humid heat adds above 25 °C.
+      apparentTemperature:
+        Math.round((temperature + (temperature < 10 ? -1.5 : temperature > 25 ? 1.5 : 0)) * 10) /
+        10,
     };
   }
 }

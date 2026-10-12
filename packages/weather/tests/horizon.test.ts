@@ -55,7 +55,7 @@ describe('decideWeatherMode', () => {
   });
   it('cache key quantises by provider, grid and day', () => {
     expect(forecastCacheKey('open-meteo', '21.4000,-157.7500', '2026-05-31')).toBe(
-      'weather:open-meteo:v2:21.4000,-157.7500:2026-05-31',
+      'weather:open-meteo:v3:21.4000,-157.7500:2026-05-31',
     );
   });
 });

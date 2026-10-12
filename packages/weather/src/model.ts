@@ -33,6 +33,8 @@ export interface WeatherFrame {
   temperature?: number | null;
   /** Dew point at 2 m, °C — how far the air is from saturating. */
   dewPoint?: number | null;
+  /** Apparent ("feels like") temperature, °C: wind chill and humidity on the skin. */
+  apparentTemperature?: number | null;
 }
 
 export interface WeatherCapabilities {
@@ -146,6 +148,7 @@ export function interpolateFrame(frames: readonly WeatherFrame[], at: Date): Wea
     shortwaveRadiation: mix(a.shortwaveRadiation, b.shortwaveRadiation),
     temperature: mix(a.temperature, b.temperature),
     dewPoint: mix(a.dewPoint, b.dewPoint),
+    apparentTemperature: mix(a.apparentTemperature, b.apparentTemperature),
   };
 }
 

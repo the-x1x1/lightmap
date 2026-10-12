@@ -61,6 +61,7 @@ const HOURLY_FIELDS = [
   'shortwave_radiation',
   'temperature_2m',
   'dew_point_2m',
+  'apparent_temperature',
 ] as const;
 
 interface OpenMeteoResponse {
@@ -230,6 +231,7 @@ export function normalizeOpenMeteo(
       shortwaveRadiation: num(h.shortwave_radiation?.[i]),
       temperature: num(h.temperature_2m?.[i]),
       dewPoint: num(h.dew_point_2m?.[i]),
+      apparentTemperature: num(h.apparent_temperature?.[i]),
     });
   }
   return {
