@@ -10,6 +10,8 @@
 import type { GeoPoint } from '../geo.ts';
 import type {
   BasemapDescriptor,
+  BuildingsDescriptor,
+  BuildingsProvider,
   MapTileProvider,
   ProviderMeta,
   TerrainDescriptor,
@@ -205,5 +207,49 @@ export class CesiumIonBasemap implements MapTileProvider {
   readonly detailLevel = 'street' as const;
   descriptor(): BasemapDescriptor {
     return { kind: 'cesium-ion', assetId: 2, attribution: this.meta.attribution };
+  }
+}
+
+export const NO_BUILDINGS_META: ProviderMeta = {
+  id: 'no-buildings',
+  name: 'No buildings',
+  attribution: '',
+  license: 'n/a',
+  review: 'approved',
+  isFixture: false,
+  cache: { allowed: false, maxAgeSeconds: 0 },
+};
+
+export class NoBuildings implements BuildingsProvider {
+  readonly meta = NO_BUILDINGS_META;
+  descriptor(): BuildingsDescriptor {
+    return { kind: 'none', attribution: '' };
+  }
+}
+
+/** Cesium OSM Buildings: OpenStreetMap building footprints and heights as 3D Tiles, via ion. */
+export const CESIUM_OSM_BUILDINGS_ASSET_ID = 96188;
+
+export const CESIUM_OSM_BUILDINGS_META: ProviderMeta = {
+  id: 'cesium-osm-buildings',
+  name: 'Cesium OSM Buildings',
+  attribution:
+    'Buildings © OpenStreetMap contributors (ODbL) · Cesium OSM Buildings via Cesium ion',
+  attributionUrl: 'https://www.openstreetmap.org/copyright',
+  license: 'ODbL 1.0 (data); Cesium ion terms (tiles)',
+  termsUrl: 'https://cesium.com/legal/terms-of-service/',
+  review: 'conditional',
+  isFixture: false,
+  cache: { allowed: false, maxAgeSeconds: 0 },
+};
+
+export class CesiumOsmBuildings implements BuildingsProvider {
+  readonly meta = CESIUM_OSM_BUILDINGS_META;
+  descriptor(): BuildingsDescriptor {
+    return {
+      kind: 'cesium-osm',
+      assetId: CESIUM_OSM_BUILDINGS_ASSET_ID,
+      attribution: this.meta.attribution,
+    };
   }
 }

@@ -179,7 +179,7 @@ export function useRenderer(opts: UseRendererOptions): RendererHandle {
     const c = state.controller;
     const caps = opts.capabilities;
     if (!c || !caps) return;
-    void c.setProviders(caps.providers.terrain, caps.providers.basemap);
+    void c.setProviders(caps.providers.terrain, caps.providers.basemap, caps.providers.buildings);
   }, [state.controller, opts.capabilities]);
 
   return state;

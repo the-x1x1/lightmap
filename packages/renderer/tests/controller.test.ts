@@ -80,6 +80,9 @@ function fakeHost() {
     setBasemap: async (...a) => {
       rec('setBasemap')(...a);
     },
+    setBuildings: async (...a) => {
+      rec('setBuildings')(...a);
+    },
     setCelestialBodies: rec('setCelestialBodies'),
     sunScreenPosition: () => [0.5, 0.6],
     sampleGroundHeight: async () => 42,

@@ -4,7 +4,12 @@
  * the controller with a fake host. (Pattern adopted from the owner's WorldView `CesiumLike`;
  * interface written fresh for LightMap — docs/WORLDVIEW_REUSE_AUDIT.md.)
  */
-import type { GeoPoint, BasemapDescriptor, TerrainDescriptor } from '@lightmap/geospatial';
+import type {
+  GeoPoint,
+  BasemapDescriptor,
+  BuildingsDescriptor,
+  TerrainDescriptor,
+} from '@lightmap/geospatial';
 import type { Vec3 } from '../sun-vector.ts';
 
 export interface HostLight {
@@ -167,6 +172,8 @@ export interface SceneHost {
   setGroundTexture(g: HostGroundTexture | null): void;
   setTerrain(t: TerrainDescriptor): Promise<void>;
   setBasemap(b: BasemapDescriptor): Promise<void>;
+  /** 3D buildings over the terrain (lit and shadow-casting like it); `none` removes them. */
+  setBuildings(b: BuildingsDescriptor): Promise<void>;
   /** Sun disc / moon / stars in the sky (viewpoint mode; stars only when dark). */
   setCelestialBodies(v: { sun: boolean; moon: boolean; stars: boolean }): void;
   /** Screen position (0..1) of a world direction from the camera, or null when behind. */

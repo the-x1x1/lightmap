@@ -10,7 +10,9 @@ export async function GET() {
   const s = getServices();
   const providers = publicDescriptors(s.geo);
   const usesIon =
-    providers.terrain.kind === 'cesium-ion' || providers.basemap.kind === 'cesium-ion';
+    providers.terrain.kind === 'cesium-ion' ||
+    providers.basemap.kind === 'cesium-ion' ||
+    providers.buildings.kind === 'cesium-osm';
   const body: CapabilitiesResponse = {
     providers,
     weather: s.weather.getCapabilities(),

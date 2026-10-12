@@ -55,6 +55,9 @@ describe('parseEnv', () => {
     const keys = r.issues.map((i) => i.key);
     expect(keys).toContain('CESIUM_ION_TOKEN');
     expect(keys).toContain('IMAGERY_XYZ_ATTRIBUTION');
+    const b = parseEnv({ BUILDINGS_PROVIDER: 'cesium-osm' });
+    expect(b.issues.map((i) => i.key)).toContain('CESIUM_ION_TOKEN');
+    expect(parseEnv({}).env.BUILDINGS_PROVIDER).toBe('none');
   });
 
   it('flags test-mode Stripe keys in production', () => {

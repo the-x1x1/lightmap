@@ -10,7 +10,12 @@
  * web app sets to `/cesium` before this module is imported (scripts/copy-cesium-assets.ts).
  */
 import type * as Cesium from '@cesium/engine';
-import type { BasemapDescriptor, GeoPoint, TerrainDescriptor } from '@lightmap/geospatial';
+import type {
+  BasemapDescriptor,
+  BuildingsDescriptor,
+  GeoPoint,
+  TerrainDescriptor,
+} from '@lightmap/geospatial';
 import { GRADE_FRAGMENT_SHADER } from '../shaders/grade.frag.ts';
 import {
   GROUND_GRAIN_M,
@@ -70,6 +75,8 @@ export class CesiumSceneHost implements SceneHost {
   private readonly grade: Cesium.PostProcessStage;
   private readonly gradeUniforms: Record<string, unknown>;
   private groundMaterial: Cesium.Material | null = null;
+  private buildings: Cesium.Cesium3DTileset | null = null;
+  private buildingsJob: Promise<void> | null = null;
   private groundTextureFailed = false;
   private readonly onError: ((message: string, error: unknown) => void) | undefined;
   private readonly ionToken: string | undefined;
@@ -652,8 +659,49 @@ export class CesiumSceneHost implements SceneHost {
 
   setQuality(q: HostQuality): void {
     this.scene.globe.maximumScreenSpaceError = q.terrainScreenSpaceError;
+    // Buildings follow the same rung: their tiles are refined to the same screen-space error.
+    if (this.buildings)
+      this.buildings.maximumScreenSpaceError = Math.max(8, q.terrainScreenSpaceError * 6);
     const dpr = typeof devicePixelRatio === 'number' && devicePixelRatio > 0 ? devicePixelRatio : 1;
     this.widget.resolutionScale = Math.min(q.resolutionScale, 2 / dpr);
+  }
+
+  async setBuildings(b: BuildingsDescriptor): Promise<void> {
+    const C = this.C;
+    // One job at a time: a later call waits for the earlier tileset to settle before replacing it.
+    await this.buildingsJob;
+    const job = (async () => {
+      if (this.destroyed) return;
+      if (this.buildings) {
+        this.scene.primitives.remove(this.buildings); // destroys it
+        this.buildings = null;
+      }
+      if (b.kind === 'none') return;
+      try {
+        // Cesium OSM Buildings through ion: lit by the scene light like the terrain, casting and
+        // receiving the same shadows, refined to the quality rung. A photographer's "when does
+        // the sun reach this street" needs the buildings in the picture, not just the ground.
+        // (The ion token is `Ion.defaultAccessToken`, set in the constructor.)
+        const tileset = await C.createOsmBuildingsAsync({
+          shadows: C.ShadowMode.ENABLED,
+          maximumScreenSpaceError: Math.max(8, this.scene.globe.maximumScreenSpaceError * 6),
+          // Hand-set colours from OSM are kept; the default is a neutral light grey that takes
+          // the Sun's colour.
+          defaultColor: new C.Color(0.78, 0.76, 0.72, 1),
+        });
+        if (this.destroyed) {
+          tileset.destroy();
+          return;
+        }
+        this.buildings = tileset;
+        this.scene.primitives.add(tileset);
+        this.scene.requestRender();
+      } catch (error) {
+        this.onError?.('Buildings unavailable — showing terrain alone', error);
+      }
+    })();
+    this.buildingsJob = job;
+    await job;
   }
 
   async setTerrain(t: TerrainDescriptor): Promise<void> {

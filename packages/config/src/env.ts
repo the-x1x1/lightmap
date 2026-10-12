@@ -35,6 +35,8 @@ export interface Env {
   TERRAIN_PROVIDER: 'reearth' | 'cesium-ion' | 'ellipsoid';
   CESIUM_ION_TOKEN: string | undefined;
   IMAGERY_PROVIDER: 'natural-earth' | 'cesium-ion' | 'xyz';
+  /** 3D buildings in the preview: Cesium OSM Buildings through ion, or none. */
+  BUILDINGS_PROVIDER: 'none' | 'cesium-osm';
   IMAGERY_XYZ_URL: string | undefined;
   IMAGERY_XYZ_ATTRIBUTION: string | undefined;
   IMAGERY_XYZ_MAX_ZOOM: number;
@@ -170,6 +172,13 @@ export function parseEnv(raw: RawEnv): EnvResult {
       'natural-earth',
       issues,
     ),
+    BUILDINGS_PROVIDER: oneOf(
+      raw,
+      'BUILDINGS_PROVIDER',
+      ['none', 'cesium-osm'] as const,
+      'none',
+      issues,
+    ),
     IMAGERY_XYZ_URL: str(raw, 'IMAGERY_XYZ_URL'),
     IMAGERY_XYZ_ATTRIBUTION: str(raw, 'IMAGERY_XYZ_ATTRIBUTION'),
     IMAGERY_XYZ_MAX_ZOOM: Number(str(raw, 'IMAGERY_XYZ_MAX_ZOOM') ?? '18'),
@@ -267,6 +276,13 @@ export function parseEnv(raw: RawEnv): EnvResult {
       key: 'CESIUM_ION_TOKEN',
       severity: 'error',
       message: 'required when IMAGERY_PROVIDER=cesium-ion',
+    });
+  }
+  if (env.BUILDINGS_PROVIDER === 'cesium-osm' && env.CESIUM_ION_TOKEN === undefined) {
+    issues.push({
+      key: 'CESIUM_ION_TOKEN',
+      severity: 'error',
+      message: 'required when BUILDINGS_PROVIDER=cesium-osm',
     });
   }
   if (env.IMAGERY_PROVIDER === 'xyz') {

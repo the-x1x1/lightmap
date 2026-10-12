@@ -115,6 +115,7 @@ The important ones:
 | `GEOCODER_PROVIDER` (`nominatim` \| `fixture`), `GEOCODER_USER_AGENT`                               | Place search. Nominatim is development-only.                                           |
 | `TERRAIN_PROVIDER` (`reearth` \| `cesium-ion` \| `ellipsoid`), `CESIUM_ION_TOKEN`                   | Terrain.                                                                               |
 | `IMAGERY_PROVIDER` (`natural-earth` \| `cesium-ion` \| `xyz`), `IMAGERY_XYZ_*`                      | Basemap imagery; attribution is mandatory.                                             |
+| `BUILDINGS_PROVIDER` (`none` \| `cesium-osm`)                                                       | 3D buildings (Cesium OSM Buildings through ion; needs `CESIUM_ION_TOKEN`).             |
 | `LIGHTMAP_SHOW_DEV_BANNER`                                                                          | Shows the "development mode" banner whenever a fixture/limited provider is active.     |
 | `SENTRY_DSN`                                                                                        | Error reports to any Sentry-compatible ingest (built-in envelope transport, no SDK).   |
 | `ANALYTICS_SINK` (`none` \| `log`)                                                                  | Product events (eight, sanitised, `docs/PRIVACY.md` §4); off in production unless set. |

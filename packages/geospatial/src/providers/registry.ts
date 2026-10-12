@@ -8,13 +8,17 @@ import { FixtureGeocoder, FixtureTimezoneProvider } from './fixtures.ts';
 import {
   CesiumIonBasemap,
   CesiumIonTerrainProvider,
+  CesiumOsmBuildings,
   EllipsoidTerrainProvider,
   NaturalEarthBasemap,
+  NoBuildings,
   ReearthTerrainProvider,
   XyzBasemap,
 } from './map-sources.ts';
 import { NominatimGeocoder } from './nominatim.ts';
 import type {
+  BuildingsDescriptor,
+  BuildingsProvider,
   GeocodingProvider,
   ImageryProvider,
   MapTileProvider,
@@ -28,6 +32,8 @@ export interface GeospatialProviders {
   timezone: TimezoneProvider;
   terrain: TerrainProvider;
   basemap: MapTileProvider;
+  /** 3D buildings; `NoBuildings` unless configured. */
+  buildings: BuildingsProvider;
   /** Null until a licensed provider contract exists (plan §7). */
   referenceImagery: ImageryProvider | null;
 }
@@ -87,12 +93,17 @@ export function createGeospatialProviders(
       break;
   }
 
-  return { geocoder, timezone, terrain, basemap, referenceImagery: null };
+  const buildings: BuildingsProvider =
+    env.BUILDINGS_PROVIDER === 'cesium-osm' && env.CESIUM_ION_TOKEN
+      ? new CesiumOsmBuildings()
+      : new NoBuildings();
+
+  return { geocoder, timezone, terrain, basemap, buildings, referenceImagery: null };
 }
 
 /** Everything the UI must attribute for the active configuration. */
 export function activeAttributions(p: GeospatialProviders): ProviderMeta[] {
-  const list = [p.basemap.meta, p.terrain.meta, p.geocoder.meta];
+  const list = [p.basemap.meta, p.terrain.meta, p.buildings.meta, p.geocoder.meta];
   if (p.referenceImagery) list.push(p.referenceImagery.meta);
   return list.filter((m) => m.attribution.length > 0);
 }
@@ -105,6 +116,7 @@ export interface PublicProviderDescriptors {
     detailLevel: MapTileProvider['detailLevel'];
     isFixture: boolean;
   };
+  buildings: BuildingsDescriptor & { providerId: string };
   geocoderId: string;
   geocoderIsFixture: boolean;
   referenceImagery: boolean;
@@ -124,6 +136,7 @@ export function publicDescriptors(p: GeospatialProviders): PublicProviderDescrip
       detailLevel: p.basemap.detailLevel,
       isFixture: p.basemap.meta.isFixture,
     },
+    buildings: { ...p.buildings.descriptor(), providerId: p.buildings.meta.id },
     geocoderId: p.geocoder.meta.id,
     geocoderIsFixture: p.geocoder.meta.isFixture,
     referenceImagery: p.referenceImagery !== null,

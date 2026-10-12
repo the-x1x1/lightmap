@@ -18,6 +18,7 @@ const caps: CapabilitiesResponse = {
       detailLevel: 'coarse',
       isFixture: false,
     },
+    buildings: { kind: 'none', attribution: '', providerId: 'no-buildings' },
     geocoderId: 'nominatim',
     geocoderIsFixture: false,
     referenceImagery: false,
@@ -41,6 +42,24 @@ describe('environmentFromCapabilities', () => {
       groundElevationM: 3,
       fixtureMode: true,
     });
+    expect(env.buildingsAvailable).toBe(false);
+    expect(
+      environmentFromCapabilities(
+        {
+          ...caps,
+          providers: {
+            ...caps.providers,
+            buildings: {
+              kind: 'cesium-osm',
+              assetId: 96188,
+              attribution: 'OSM',
+              providerId: 'cesium-osm-buildings',
+            },
+          },
+        },
+        3,
+      ).buildingsAvailable,
+    ).toBe(true);
     expect(environmentFromCapabilities(null, null).terrainAvailable).toBe(false);
   });
 });

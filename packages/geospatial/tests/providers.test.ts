@@ -98,6 +98,26 @@ describe('registry', () => {
     expect(pub.referenceImagery).toBe(false);
     expect(activeAttributions(p).map((m) => m.id)).toContain('natural-earth-ii');
   });
+  it('buildings: none by default; Cesium OSM Buildings only with the ion token, attributed to OpenStreetMap', () => {
+    const none = createGeospatialProviders(parseEnv({}).env);
+    expect(publicDescriptors(none).buildings).toEqual({
+      kind: 'none',
+      attribution: '',
+      providerId: 'no-buildings',
+    });
+    expect(activeAttributions(none).map((m) => m.id)).not.toContain('no-buildings');
+    const withToken = createGeospatialProviders(
+      parseEnv({ BUILDINGS_PROVIDER: 'cesium-osm', CESIUM_ION_TOKEN: 'secret-token' }).env,
+    );
+    const pub = publicDescriptors(withToken);
+    expect(pub.buildings).toMatchObject({ kind: 'cesium-osm', assetId: 96188 });
+    expect(pub.buildings.attribution).toContain('OpenStreetMap');
+    expect(JSON.stringify(pub)).not.toContain('secret-token');
+    expect(activeAttributions(withToken).map((m) => m.id)).toContain('cesium-osm-buildings');
+    const noToken = createGeospatialProviders(parseEnv({ BUILDINGS_PROVIDER: 'cesium-osm' }).env);
+    expect(noToken.buildings.meta.id).toBe('no-buildings');
+  });
+
   it('degrades to safe defaults when credentials are missing', () => {
     const env = parseEnv({
       TERRAIN_PROVIDER: 'cesium-ion',

@@ -12,7 +12,11 @@ import {
   type HorizonProfile,
   type SceneState,
 } from '@lightmap/scene';
-import type { BasemapDescriptor, TerrainDescriptor } from '@lightmap/geospatial';
+import type {
+  BasemapDescriptor,
+  BuildingsDescriptor,
+  TerrainDescriptor,
+} from '@lightmap/geospatial';
 import {
   NEUTRAL_LAND_HINT,
   groundTextureFor,
@@ -64,6 +68,7 @@ export class SceneController {
   private pendingExpensive: unknown = null;
   private lastTerrain: string | null = null;
   private lastBasemap: string | null = null;
+  private lastBuildings: string | null = null;
   private lastShadowKey: string | null = null;
   private lastShadingKey: string | null = null;
   private lastQualityKey: string | null = null;
@@ -102,10 +107,19 @@ export class SceneController {
   }
 
   /** Configure providers (idempotent; awaits the swap). */
-  async setProviders(terrain: TerrainDescriptor, basemap: BasemapDescriptor): Promise<void> {
+  async setProviders(
+    terrain: TerrainDescriptor,
+    basemap: BasemapDescriptor,
+    buildings: BuildingsDescriptor = { kind: 'none', attribution: '' },
+  ): Promise<void> {
     const tKey = JSON.stringify(terrain);
     const bKey = JSON.stringify(basemap);
+    const uKey = JSON.stringify(buildings);
     const jobs: Promise<void>[] = [];
+    if (uKey !== this.lastBuildings) {
+      this.lastBuildings = uKey;
+      jobs.push(this.host.setBuildings(buildings));
+    }
     if (tKey !== this.lastTerrain) {
       this.lastTerrain = tKey;
       this.groundHeightKey = null;

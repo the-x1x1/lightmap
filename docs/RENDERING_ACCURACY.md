@@ -56,7 +56,10 @@ in map view, so a ridge's shadow crosses a valley. **Claim:** direction and leng
 visible softening under cloud. **Verified:** the smoke harness renders a 20 m tower at Sun
 elevation ≈ 11° and measures the frame — the ground along the shadow line is < 70 % as bright as
 the Sun side and the point just beyond `h / tan(el)` is fully lit (`shadow-tower` scene).
-**Caveat:** no buildings/trees in v0.1 (no BuildingProvider configured); shadow map resolution is
+**Caveat:** buildings only where `BUILDINGS_PROVIDER=cesium-osm` is configured (OpenStreetMap
+heights, which are often estimates or missing; they cast and receive the terrain's shadows and
+are lit by the same light); no trees anywhere; the terrain horizon and the ridge markers sample
+the DEM alone and never see buildings; shadow map resolution is
 finite (1024–4096) and softens with reach; terrain self-shadowing at grazing angles shows some
 shadow-map artefacts.
 
@@ -207,7 +210,8 @@ in `tools/renderer-smoke` (`cirrus-sunset` vs `stratus-sunset` at 19:18, Sun −
 Terrain mesh from the configured `TerrainProvider` (Re:Earth/Mapterhorn or Cesium World Terrain)
 and imagery from the `MapTileProvider`. With the default bundled Natural Earth II the ground texture
 is coarse and the label drops to Estimated Preview. **Claim:** ridgelines and horizon shape relative
-to the Sun. **Caveat:** DEM resolution (≈30 m globally, better in some regions); no buildings.
+to the Sun. **Caveat:** DEM resolution (≈30 m globally, better in some regions); buildings only
+with `BUILDINGS_PROVIDER=cesium-osm` (see Shadows), and then as OSM has them.
 
 ### The map view at night
 

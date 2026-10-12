@@ -73,6 +73,19 @@ export interface BasemapDescriptor {
   attribution: string;
 }
 
+/** 3D buildings for the terrain preview (plan Phase 4 "detailed buildings where licensed"). */
+export interface BuildingsDescriptor {
+  kind: 'none' | 'cesium-osm';
+  /** For cesium-osm: the ion asset id (96188 = Cesium OSM Buildings). */
+  assetId?: number;
+  attribution: string;
+}
+
+export interface BuildingsProvider {
+  readonly meta: ProviderMeta;
+  descriptor(): BuildingsDescriptor;
+}
+
 export interface MapTileProvider {
   readonly meta: ProviderMeta;
   descriptor(): BasemapDescriptor;
