@@ -74,6 +74,7 @@ function fakeHost() {
     setOverlay: rec('setOverlay'),
     setQuality: rec('setQuality'),
     setGroundTexture: rec('setGroundTexture'),
+    setIonToken: rec('setIonToken'),
     setTerrain: async (...a) => {
       rec('setTerrain')(...a);
     },
