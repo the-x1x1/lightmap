@@ -200,8 +200,9 @@ export interface TerrainSunEvents {
   firstLightDiffers: boolean;
   lastLightDiffers: boolean;
   /**
-   * True when the terrain changed the day's first/last light by more than three minutes (below
-   * that, refraction conventions differ by as much) or split the day into several visible spells.
+   * True when the terrain changed the day: its crossings do not match the flat-horizon rise and
+   * set to within three minutes each (below that, refraction conventions differ by as much) —
+   * a crossing moved, one missing, or an extra spell.
    */
   differsFromAstronomical: boolean;
 }
@@ -216,10 +217,12 @@ export function terrainSunEvents(
   positionAt: (t: Date) => { azimuthDeg: number; elevationDeg: number },
   day: { dayStart: Date; dayEnd: Date; sunrise: Date | null; sunset: Date | null },
   stepMinutes = 5,
+  /** The body's semidiameter for the upper-limb test (the Sun's by default; the Moon's for the Moon). */
+  semidiameterDeg?: number,
 ): TerrainSunEvents {
   const vis = (ms: number) => {
     const p = positionAt(new Date(ms));
-    return aboveTerrain(profile, p.azimuthDeg, p.elevationDeg);
+    return aboveTerrain(profile, p.azimuthDeg, p.elevationDeg, semidiameterDeg);
   };
   const refine = (a: number, b: number): number => {
     // a and b bracket a visibility change; return the change instant (±10 s).
@@ -261,6 +264,18 @@ export function terrainSunEvents(
     (a !== null && b !== null && Math.abs(a.getTime() - b.getTime()) > tolerance);
   const firstLightDiffers = differsFrom(firstLight, day.sunrise);
   const lastLightDiffers = differsFrom(lastLight, day.sunset);
+  // "Did the terrain change the day?" by matching every crossing of the terrain horizon with a
+  // flat-horizon event, in any order — the Moon routinely sets before it rises in one civil day
+  // (up at midnight, down at 05:52, back at 20:00), which is not the terrain's doing.
+  const crossings = visible.flatMap((v) => [
+    v.from.getTime() === start ? null : v.from,
+    v.to.getTime() === end ? null : v.to,
+  ]);
+  const reference = [day.sunrise, day.sunset].filter((d): d is Date => d !== null);
+  const actual = crossings.filter((d): d is Date => d !== null);
+  const differsFromAstronomical =
+    actual.length !== reference.length ||
+    !actual.every((c) => reference.some((r) => Math.abs(c.getTime() - r.getTime()) <= tolerance));
   return {
     visible,
     startsVisible,
@@ -269,7 +284,7 @@ export function terrainSunEvents(
     lastLight,
     firstLightDiffers,
     lastLightDiffers,
-    differsFromAstronomical: firstLightDiffers || lastLightDiffers || visible.length > 1,
+    differsFromAstronomical,
   };
 }
 

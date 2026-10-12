@@ -121,6 +121,35 @@ describe('terrain horizon profile', () => {
     const ev2 = terrainSunEvents(flat, positionAt, { dayStart, dayEnd, sunrise, sunset });
     expect(ev2.differsFromAstronomical).toBe(false);
     expect(Math.abs(ev2.firstLight!.getTime() - sunrise.getTime())).toBeLessThan(3 * 60_000);
+
+    // A Moon's day — up at midnight, sets at 06:00, rises again at 20:00 — over flat ground is
+    // not the terrain's doing: two spells, no first/last light, yet nothing differs. The ridge
+    // (in the east, where it rises) delays the evening spell and does.
+    const moonAt = (t: Date) => {
+      const h = (t.getTime() - dayStart.getTime()) / 3_600_000;
+      const el = h < 12 ? 30 - 5 * h : 5 * (h - 20);
+      return { azimuthDeg: h < 12 ? 270 : 90, elevationDeg: el };
+    };
+    const moonset = new Date(dayStart.getTime() + ((30 + 0.833) / 5) * 3_600_000);
+    const moonrise = new Date(dayStart.getTime() + (20 - 0.833 / 5) * 3_600_000);
+    const moonFlat = terrainSunEvents(flat, moonAt, {
+      dayStart,
+      dayEnd,
+      sunrise: moonrise,
+      sunset: moonset,
+    });
+    expect(moonFlat.visible).toHaveLength(2);
+    expect(moonFlat.startsVisible).toBe(true);
+    expect(moonFlat.endsVisible).toBe(true);
+    expect(moonFlat.differsFromAstronomical).toBe(false);
+    const moonRidge = terrainSunEvents(p, moonAt, {
+      dayStart,
+      dayEnd,
+      sunrise: moonrise,
+      sunset: moonset,
+    });
+    expect(moonRidge.differsFromAstronomical).toBe(true);
+    expect(moonRidge.visible[1]!.from.getTime()).toBeGreaterThan(moonrise.getTime() + 60 * 60_000);
   });
 });
 

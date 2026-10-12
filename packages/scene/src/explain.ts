@@ -47,8 +47,13 @@ export function explainScene(s: SceneState): ExplanationLine[] {
   // At night the Moon is the light, and the sky's darkness is what the night shooter asks about.
   if (el <= -6 && s.lunar) {
     // Behind the ridge: say when it clears, from the Moon's own terrain crossings today.
+    // Only a clearing before the Moon sets counts; a later spell is its next rise, not this one.
+    const setsAt =
+      s.lunar.moonset && s.lunar.moonset.getTime() > s.utc.getTime()
+        ? s.lunar.moonset.getTime()
+        : null;
     const clears = s.terrainHorizon?.moonEvents?.visible.find(
-      (v) => v.from.getTime() > s.utc.getTime(),
+      (v) => v.from.getTime() > s.utc.getTime() && (setsAt === null || v.from.getTime() < setsAt),
     );
     const behind = clears
       ? `behind the terrain here until ${formatWallTime(clears.from, s.timeZone)}`

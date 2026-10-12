@@ -17,6 +17,7 @@ import {
 import { decideWeatherMode, type WeatherCapabilities, type WeatherFrame } from '@lightmap/weather';
 import { gridKey } from '@lightmap/geospatial';
 import { effectiveTimeZone, selectedUtc, usePlannerStore } from './store.ts';
+import { weatherQueryOptions } from './weather-query.ts';
 import { ApiRequestError, fetchJson } from '@/lib/client/api';
 import { useSettled } from '@/lib/use-settled';
 import type { CapabilitiesResponse, WeatherResponse } from '@/lib/api-types';
@@ -111,17 +112,8 @@ export function useScene(
   const settledDate = useSettled(date, WEATHER_DATE_SETTLE_MS);
   const dateSettled = settledDate === date;
   const weatherQuery = useQuery({
-    // The zone is part of the key: the same civil date is a different 24 h in another zone.
-    queryKey: ['weather', cell, settledDate, timeZone],
+    ...weatherQueryOptions(location?.point ?? { latitude: 0, longitude: 0 }, settledDate, timeZone),
     enabled: Boolean(location && cell && horizon?.fetchWorthwhile && dateSettled),
-    queryFn: () =>
-      fetchJson<WeatherResponse>(
-        `/api/weather?lat=${location!.point.latitude.toFixed(4)}&lng=${location!.point.longitude.toFixed(4)}&date=${settledDate}&tz=${encodeURIComponent(timeZone)}`,
-      ),
-    staleTime: 30 * 60_000,
-    gcTime: 6 * 60 * 60_000,
-    // One retry for a flaky network or provider; a 4xx (the plan window, a bad request) is final.
-    retry: (count, error) => count < 1 && !(error instanceof ApiRequestError && error.status < 500),
   });
 
   // Day events depend only on place + date + zone; cache them so scrubbing does not recompute.

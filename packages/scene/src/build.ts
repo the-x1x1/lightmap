@@ -95,24 +95,26 @@ function terrainHorizonState(
   }
   let events = perDay.get(key);
   if (!events || (lunar && !events.moon)) {
-    const sunEvents = terrainSunEvents(
-      profile,
-      (t) => {
-        const s = svc.getSolarState({
-          latitude: location.point.latitude,
-          longitude: location.point.longitude,
-          timestampUtc: t,
-          timeZone: location.timeZone,
-        });
-        return { azimuthDeg: s.azimuthDegrees, elevationDeg: s.elevationDegrees };
-      },
-      {
-        dayStart: dayEvents.dayStart,
-        dayEnd: dayEvents.dayEnd,
-        sunrise: dayEvents.sunrise,
-        sunset: dayEvents.sunset,
-      },
-    );
+    const sunEvents =
+      events?.sun ??
+      terrainSunEvents(
+        profile,
+        (t) => {
+          const s = svc.getSolarState({
+            latitude: location.point.latitude,
+            longitude: location.point.longitude,
+            timestampUtc: t,
+            timeZone: location.timeZone,
+          });
+          return { azimuthDeg: s.azimuthDegrees, elevationDeg: s.elevationDegrees };
+        },
+        {
+          dayStart: dayEvents.dayStart,
+          dayEnd: dayEvents.dayEnd,
+          sunrise: dayEvents.sunrise,
+          sunset: dayEvents.sunset,
+        },
+      );
     // The Moon's crossings the same way (with the lunar state, i.e. moon planning): "when does
     // the Moon clear the ridge?" — its own rise/set as the flat-horizon comparison.
     const moonEvents = lunar
@@ -128,6 +130,8 @@ function terrainHorizonState(
             sunrise: lunar.moonrise,
             sunset: lunar.moonset,
           },
+          5,
+          MOON_SEMIDIAMETER_DEG,
         )
       : null;
     if (perDay.size > 8) perDay.clear();

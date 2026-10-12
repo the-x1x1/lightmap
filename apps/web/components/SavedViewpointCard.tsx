@@ -1,13 +1,13 @@
 'use client';
 import type { ViewpointDto } from '@/lib/api-types';
 import { formatWallTime, utcToWallClock } from '@lightmap/astronomy';
-import { compassLabel, gridKey } from '@lightmap/geospatial';
+import { compassLabel } from '@lightmap/geospatial';
 import { Button } from '@lightmap/ui';
 import { WINDOW_VERDICT_TEXT, windowOutlook } from '@lightmap/weather';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { useCapabilities } from '@/features/planner/use-scene';
-import type { WeatherResponse } from '@/lib/api-types';
+import { weatherQueryOptions } from '@/features/planner/weather-query';
 import { forecastNudge } from '@/features/projects/forecast-nudge';
 import { nightTag } from '@/features/projects/night-tag';
 import { PreviewSourceBadge } from './PreviewSourceBadge';
@@ -47,11 +47,9 @@ export function SavedViewpointCard({
   // (the same query key as the planner and the week ahead): read from the cache, never fetched
   // from a card — a drawer of twenty cards must not cost twenty calls.
   const civilDate = `${w.year}-${String(w.month).padStart(2, '0')}-${String(w.day).padStart(2, '0')}`;
-  const cached = useQuery<WeatherResponse>({
-    queryKey: ['weather', gridKey({ latitude, longitude }), civilDate, viewpoint.timezone],
-    queryFn: () => Promise.reject(new Error('cache only')),
+  const cached = useQuery({
+    ...weatherQueryOptions({ latitude, longitude }, civilDate, viewpoint.timezone),
     enabled: false,
-    staleTime: Infinity,
   });
   const frames = cached.data?.frames;
   const around = useMemo(() => {

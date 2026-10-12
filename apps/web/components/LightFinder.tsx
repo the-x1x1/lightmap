@@ -25,10 +25,10 @@ import {
   ridgeContactElevationDeg,
   type SceneState,
 } from '@lightmap/scene';
-import { compassLabel, gridKey } from '@lightmap/geospatial';
+import { compassLabel } from '@lightmap/geospatial';
 import { WINDOW_VERDICT_TEXT, windowOutlook } from '@lightmap/weather';
-import { useQueryClient } from '@tanstack/react-query';
-import type { WeatherResponse } from '@/lib/api-types';
+import { useQueries } from '@tanstack/react-query';
+import { weatherQueryOptions } from '@/features/planner/weather-query';
 import { Button, RadioGroup } from '@lightmap/ui';
 import { usePlannerStore } from '@/features/planner/store';
 import { useSolver } from '@/features/finder/use-solver';
@@ -219,16 +219,6 @@ export function LightFinder({
     setMinutes(sel.minutes);
   }
 
-  // The forecast around a result when its day is already in the planner's query cache (the
-  // planner or the week ahead fetched it) — read, never fetched: a search can list eighty rows.
-  const queryClient = useQueryClient();
-  const cell = gridKey(scene.location.point);
-  const forecastAround = (m: SerializedMatch) => {
-    const data = queryClient.getQueryData<WeatherResponse>(['weather', cell, m.date, tz]);
-    if (!data || data.frames.length === 0) return null;
-    const at = Date.parse(m.timestampUtc);
-    return windowOutlook(data.frames, new Date(at - 30 * 60_000), new Date(at + 30 * 60_000));
-  };
   const [hideBehindTerrain, setHideBehindTerrain] = useState(false);
   const behindTerrain = (m: SerializedMatch) =>
     profile !== null &&
@@ -249,6 +239,23 @@ export function LightFinder({
   const hidden = terrainFilter ? sized.filter(behindTerrain).length : 0;
   const matches = terrainFilter ? sized.filter((m) => !behindTerrain(m)) : sized;
   const shown = matches.slice(0, MAX_RESULTS);
+  // The forecast around each shown result when its day is already in the planner's query cache
+  // (the planner or the week ahead fetched it) — observed, never fetched from here: `enabled`
+  // is false on every one, so a search of eighty rows costs no calls and still updates when a
+  // fetch elsewhere lands.
+  const shownDates = [...new Set(shown.map((m) => m.date))];
+  const cachedDays = useQueries({
+    queries: shownDates.map((d) => ({
+      ...weatherQueryOptions(scene.location.point, d, tz),
+      enabled: false,
+    })),
+  });
+  const forecastAround = (m: SerializedMatch) => {
+    const data = cachedDays[shownDates.indexOf(m.date)]?.data;
+    if (!data || data.frames.length === 0) return null;
+    const at = Date.parse(m.timestampUtc);
+    return windowOutlook(data.frames, new Date(at - 30 * 60_000), new Date(at + 30 * 60_000));
+  };
   const dates = new Set(matches.map((m) => m.date)).size;
 
   return (

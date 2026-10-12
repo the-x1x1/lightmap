@@ -523,12 +523,16 @@ In polar summer the rows read "up at midnight" rather than a time. With moon pla
 scan runs for the Moon (`terrainHorizon.moonEvents`, memoised per profile and day beside the
 Sun's): when the ridge changes its day, the Moon details list the spells it is over the terrain
 — "Moon over terrain: 00:00–05:52 · 21:31–24:00" — the full Moon of 31 May at Kailua clearing
-the test ridge more than an hour after its own moonrise; the "Why does it look like this?" Moon
+the test ridge more than an hour after its own moonrise. "Differs" matches every crossing of the
+terrain horizon with a flat-horizon rise or set in any order, so a Moon that sets before it rises
+over flat ground is not reported as the terrain's doing; the "Why does it look like this?" Moon
 line says "behind the terrain here until 21:31" while it waits. No profile is kept when fewer
 than 60 % of the samples answered or the ground height at the pin is unknown, and none exists on
 the ellipsoid fallback (every sample answers "unknown", never "flat").
 
-Tests: elevation angle with curvature/refraction, sea-horizon dip, profile from a synthetic ridge
+Tests: elevation angle with curvature/refraction, sea-horizon dip, a Moon's day over flat ground
+(sets at 06:00, rises at 20:00: two spells, nothing differs) and behind the ridge (differs, the
+evening spell delayed), profile from a synthetic ridge
 (elevation and distance, interpolation, missing samples), above-terrain decision at the
 astronomical-sunrise limit, first light over a ridge vs astronomical sunrise, memoised per-day
 events in `buildSceneState` (`packages/scene/tests/{horizon,scene}.test.ts`).

@@ -15,14 +15,12 @@ import {
   wallClockToUtc,
 } from '@lightmap/astronomy';
 import type { EntitlementDecision } from '@lightmap/entitlements';
-import { gridKey } from '@lightmap/geospatial';
 import type { SceneState } from '@lightmap/scene';
 import { decideWeatherMode, type WeatherFrame, type WindowVerdict } from '@lightmap/weather';
 import { usePlannerStore } from '@/features/planner/store';
 import { useCapabilities } from '@/features/planner/use-scene';
 import { weekAheadCellLabel, weekAheadDates, weekAheadRows } from '@/features/planner/week-ahead';
-import { ApiRequestError, fetchJson } from '@/lib/client/api';
-import type { WeatherResponse } from '@/lib/api-types';
+import { weatherQueryOptions } from '@/features/planner/weather-query';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -49,7 +47,6 @@ export function WeekAhead({
   const tz = scene.timeZone;
   const lat = scene.location.point.latitude;
   const lng = scene.location.point.longitude;
-  const cell = gridKey(scene.location.point);
   // From today in the planning zone (not the selected day): the week ahead is about now.
   const today = utcToLocalSelection(new Date(), tz).date;
   const from = useMemo(() => parseCivilDate(today), [today]);
@@ -67,16 +64,8 @@ export function WeekAhead({
   });
   const results = useQueries({
     queries: fetchable.map((d) => ({
-      queryKey: ['weather', cell, d, tz],
-      queryFn: () =>
-        fetchJson<WeatherResponse>(
-          `/api/weather?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}&date=${d}&tz=${encodeURIComponent(tz)}`,
-        ),
+      ...weatherQueryOptions(scene.location.point, d, tz),
       enabled: open && decision.allowed,
-      staleTime: 30 * 60_000,
-      gcTime: 6 * 60 * 60_000,
-      retry: (count: number, error: unknown) =>
-        count < 1 && !(error instanceof ApiRequestError && error.status < 500),
     })),
   });
   const framesByDate = new Map<string, readonly WeatherFrame[]>();
