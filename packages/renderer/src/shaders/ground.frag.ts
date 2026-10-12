@@ -198,16 +198,21 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float height = materialInput.height - u_seaLevelM; // metres above sea level
     float aspect = materialInput.aspect;              // radians, 0 east, pi/2 north
 
-    // Open ground leans from turf and scrub toward steppe and desert with the region's aridity.
-    vec3 turf  = mix(vec3(0.33, 0.45, 0.20), vec3(0.62, 0.55, 0.36), u_aridity);
-    vec3 scrub = mix(vec3(0.52, 0.46, 0.27), vec3(0.74, 0.64, 0.44), u_aridity);
+    // Open ground leans from turf and scrub toward steppe and desert with the region's aridity —
+    // and, on a slope, with which way it faces: the equatorward face takes the noon Sun and
+    // dries to scrub, the poleward face stays greener (a rule of the mid-latitudes; flat ground
+    // and the tropics barely move). Computed before the snow uses the same facing below.
+    float facing = slope > 0.05 ? sin(aspect) * u_poleward * smoothstep(0.05, 0.4, slope) : 0.0;  // +1 facing the pole
+    float dryness = clamp(u_aridity - 0.18 * facing, 0.0, 1.0);
+    vec3 turf  = mix(vec3(0.33, 0.45, 0.20), vec3(0.62, 0.55, 0.36), dryness);
+    vec3 scrub = mix(vec3(0.52, 0.46, 0.27), vec3(0.74, 0.64, 0.44), dryness);
     vec3 rock  = vec3(0.52, 0.49, 0.45);
     vec3 scree = vec3(0.40, 0.38, 0.34);
     vec3 snow  = vec3(0.93, 0.95, 0.97);
     vec3 shore = vec3(0.74, 0.69, 0.55);
 
     // Open ground: turf and scrub in patches, grained.
-    vec3 ground = mix(turf, scrub, smoothstep(0.32, 0.62, patches));
+    vec3 ground = mix(turf, scrub, smoothstep(0.32, 0.62, patches - 0.08 * facing));
     ground *= 0.82 + 0.36 * grain;
 
     // Above the treeline the cover thins to alpine ground and scree.
@@ -225,7 +230,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
 
     // Snow above the snowline: lower on poleward faces, patchy at its edge, thin on cliffs.
     // (The aspect of a perfectly flat vertex is undefined; flat ground has no poleward face.)
-    float poleward = slope > 0.05 ? sin(aspect) * u_poleward * smoothstep(0.05, 0.4, slope) : 0.0;  // +1 facing the pole
+    float poleward = facing;
     float snowline = u_snowlineM - 180.0 * poleward + 320.0 * (patches - 0.47);
     float snowy = smoothstep(snowline - 220.0, snowline + 160.0, height) * (1.0 - smoothstep(0.85, 1.15, slope));
     snowy = max(snowy, u_ice * (1.0 - smoothstep(0.9, 1.2, slope)));  // an ice sheet is snow at any height
