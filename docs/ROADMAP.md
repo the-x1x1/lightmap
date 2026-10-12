@@ -120,7 +120,8 @@ fields, a city, desert and an ice sheet read as what they are (`RENDERING_ACCURA
 texture", `DATA_SOURCES_AND_LICENSING.md`); (3) **delivered (unreleased)** — tiled detail
 textures for close viewpoints: a generated seamless atlas (grass, rock, sand, snow; our own
 work, `pnpm textures:ground`) laid over the ground within 500 m by the same masks, triplanar
-along the camera's frame and anchored to the ground, replaceable by a photographic CC0 set;
+along a ground-anchored frame, replaceable by a photographic CC0 set (device QA per
+`QA_PLAN.md` still to run);
 (4) a licensed aerial imagery basemap where the contract allows (`xyz-imagery`), which the
 material then only details — next, with the operator's contract. **Buildings** — delivered as an operator option (`BUILDINGS_PROVIDER=cesium-osm`: Cesium OSM
 Buildings through ion, lit and shadow-casting with the terrain, ODbL attribution shown;

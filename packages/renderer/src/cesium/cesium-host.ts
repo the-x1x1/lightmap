@@ -78,6 +78,8 @@ const DEG = Math.PI / 180;
 export const MIN_FRAMES_FOR_SAMPLE = 12;
 
 const HIDDEN_RUN_POOL = 6;
+/** The detail atlas's ground frame is re-anchored when the camera is this far from the anchor, metres. */
+const DETAIL_REANCHOR_M = 3000;
 
 export class CesiumSceneHost implements SceneHost {
   private readonly C: CesiumModule;
@@ -100,7 +102,11 @@ export class CesiumSceneHost implements SceneHost {
     east: Cesium.Cartesian3;
     north: Cesium.Cartesian3;
     up: Cesium.Cartesian3;
+    anchor: Cesium.Cartesian3;
+    anchored: boolean;
   };
+  /** The detail atlas once its image has loaded; the material takes it then, never a URL. */
+  private detailAtlas: HTMLImageElement | null = null;
   private readonly onError: ((message: string, error: unknown) => void) | undefined;
   private ionToken: string | undefined;
   private pickHandler: Cesium.ScreenSpaceEventHandler | null = null;
@@ -139,6 +145,8 @@ export class CesiumSceneHost implements SceneHost {
       east: new C.Cartesian3(),
       north: new C.Cartesian3(),
       up: new C.Cartesian3(),
+      anchor: new C.Cartesian3(),
+      anchored: false,
     };
     if (options.ionToken) C.Ion.defaultAccessToken = options.ionToken;
 
@@ -251,6 +259,8 @@ export class CesiumSceneHost implements SceneHost {
     this.frameWindowStart = performance.now();
     // The ground texture's near grain is anchored to the ground through the camera's position,
     // split into a whole number of cells and a fraction in double precision each frame.
+    // The detail atlas is fetched once, up front; the material takes it when both exist.
+    if (this.detailAtlasUrl) this.loadDetailAtlas(this.detailAtlasUrl);
     this.preRenderGroundRemover = scene.preRender.addEventListener(() => {
       const m = this.groundMaterial;
       if (!m) return;
@@ -267,27 +277,40 @@ export class CesiumSceneHost implements SceneHost {
       frac.x = cam.x / GROUND_GRAIN_M - cx;
       frac.y = cam.y / GROUND_GRAIN_M - cy;
       frac.z = cam.z / GROUND_GRAIN_M - cz;
-      // The detail atlas is projected along the camera's own east/north/up (ECEF axes), with
-      // the camera's position along each in tile periods — the fraction only, in double.
+      // The detail atlas is projected along an east/north/up frame anchored to the ground: the
+      // frame is taken at an anchor point and kept until the camera has moved kilometres from
+      // it (well beyond the 500 m the atlas reaches, so a re-anchor is never seen), and each
+      // frame only the camera's own position along those fixed axes, in tile periods — the
+      // fraction, in double — goes to the shader. A frame that followed the camera would drag
+      // the pattern with it.
       if (this.detailAtlasUrl) {
-        const up = C.Ellipsoid.WGS84.geodeticSurfaceNormal(cam, this.enuScratch.up);
-        if (!up) return;
-        const east = this.enuScratch.east;
-        const h = Math.hypot(cam.x, cam.y);
-        if (h < 1) return;
-        east.x = -cam.y / h;
-        east.y = cam.x / h;
-        east.z = 0;
-        const north = C.Cartesian3.cross(up, east, this.enuScratch.north);
-        C.Cartesian3.clone(east, u['u_eastWC'] as Cesium.Cartesian3);
-        C.Cartesian3.clone(north, u['u_northWC'] as Cesium.Cartesian3);
-        C.Cartesian3.clone(up, u['u_upWC'] as Cesium.Cartesian3);
-        const off = u['u_detailOffset'] as Cesium.Cartesian3;
-        const P = GROUND_DETAIL_PERIOD_M;
-        const f = (v: number) => v - Math.floor(v);
-        off.x = f(C.Cartesian3.dot(cam, east) / P);
-        off.y = f(C.Cartesian3.dot(cam, north) / P);
-        off.z = f(C.Cartesian3.dot(cam, up) / P);
+        const anchor = this.enuScratch.anchor;
+        const { east, north, up } = this.enuScratch;
+        const stale =
+          !this.enuScratch.anchored || C.Cartesian3.distance(anchor, cam) > DETAIL_REANCHOR_M;
+        if (stale) {
+          const n = C.Ellipsoid.WGS84.geodeticSurfaceNormal(cam, up);
+          const h = Math.hypot(cam.x, cam.y);
+          if (n && h >= 1) {
+            east.x = -cam.y / h;
+            east.y = cam.x / h;
+            east.z = 0;
+            C.Cartesian3.cross(up, east, north);
+            C.Cartesian3.clone(cam, anchor);
+            this.enuScratch.anchored = true;
+            C.Cartesian3.clone(east, u['u_eastWC'] as Cesium.Cartesian3);
+            C.Cartesian3.clone(north, u['u_northWC'] as Cesium.Cartesian3);
+            C.Cartesian3.clone(up, u['u_upWC'] as Cesium.Cartesian3);
+          }
+        }
+        if (this.enuScratch.anchored) {
+          const off = u['u_detailOffset'] as Cesium.Cartesian3;
+          const P = GROUND_DETAIL_PERIOD_M;
+          const f = (v: number) => v - Math.floor(v);
+          off.x = f(C.Cartesian3.dot(cam, east) / P);
+          off.y = f(C.Cartesian3.dot(cam, north) / P);
+          off.z = f(C.Cartesian3.dot(cam, up) / P);
+        }
       }
     });
     this.preRenderRemover = scene.postRender.addEventListener(() => {
@@ -371,8 +394,8 @@ export class CesiumSceneHost implements SceneHost {
             ...GROUND_UNIFORM_DEFAULTS,
             [GROUND_COVER_BOUNDS_UNIFORM]: new C.Cartesian4(0, 0, 0, 0),
             [GROUND_COVER_IMAGE_UNIFORM]: C.Material.DefaultImageId,
-            [GROUND_DETAIL_IMAGE_UNIFORM]: this.detailAtlasUrl ?? C.Material.DefaultImageId,
-            u_detailOn: this.detailAtlasUrl ? 1 : 0,
+            [GROUND_DETAIL_IMAGE_UNIFORM]: C.Material.DefaultImageId,
+            u_detailOn: 0,
             u_eastWC: new C.Cartesian3(1, 0, 0),
             u_northWC: new C.Cartesian3(0, 1, 0),
             u_upWC: new C.Cartesian3(0, 0, 1),
@@ -383,9 +406,14 @@ export class CesiumSceneHost implements SceneHost {
           source: GROUND_MATERIAL_SOURCE,
         },
         translucent: false,
+        // The atlas is a 1 cm-per-texel image read out to 500 m: it needs a mip chain (the
+        // cover map, a 768 px canvas, gets one too — fine on the WebGL2 the app requires).
+        minificationFilter: C.TextureMinificationFilter.LINEAR_MIPMAP_LINEAR,
+        magnificationFilter: C.TextureMagnificationFilter.LINEAR,
       });
       globe.material = this.groundMaterial;
       this.applyCoverMap();
+      this.applyDetailAtlas();
     }
     const u = this.groundMaterial.uniforms as Record<string, number>;
     u['u_snowlineM'] = g.snowlineM;
@@ -747,7 +775,12 @@ export class CesiumSceneHost implements SceneHost {
     this.applyCoverMap();
   }
 
-  /** Put the loaded cover map (or its absence) into the material's uniforms. */
+  /**
+   * Put the loaded cover map (or its absence) into the material's uniforms. A new image
+   * uniform is uploaded during the next render (the material would sample the default white
+   * texture that frame), so the on-flag follows one render later, with a render requested
+   * for it.
+   */
   private applyCoverMap(): void {
     const C = this.C;
     if (!this.groundMaterial) return;
@@ -756,12 +789,52 @@ export class CesiumSceneHost implements SceneHost {
       const [w, e, n, so] = this.coverBounds;
       u[GROUND_COVER_BOUNDS_UNIFORM] = new C.Cartesian4(w, e, n, so);
       u[GROUND_COVER_IMAGE_UNIFORM] = this.coverCanvas;
-      u['u_coverOn'] = 1;
+      const canvas = this.coverCanvas;
+      this.afterUpload(() => {
+        if (this.coverCanvas === canvas) u['u_coverOn'] = 1;
+      });
     } else {
       u['u_coverOn'] = 0;
       u[GROUND_COVER_IMAGE_UNIFORM] = C.Material.DefaultImageId;
     }
     this.scene.requestRender();
+  }
+
+  /** Run `fn` after the next render has gone through (an image uniform is uploaded in it), then render again. */
+  private afterUpload(fn: () => void): void {
+    const remove = this.scene.postRender.addEventListener(() => {
+      remove();
+      if (this.destroyed) return;
+      fn();
+      this.scene.requestRender();
+    });
+    this.scene.requestRender();
+  }
+
+  /** Fetch the detail atlas once; the material takes the decoded image, never a URL it might still be loading. */
+  private loadDetailAtlas(url: string): void {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      if (this.destroyed) return;
+      this.detailAtlas = img;
+      this.applyDetailAtlas();
+    };
+    img.onerror = () => {
+      this.onError?.('Ground detail textures unavailable — using the procedural grain', url);
+    };
+    img.src = url;
+  }
+
+  private applyDetailAtlas(): void {
+    const atlas = this.detailAtlas;
+    if (!this.groundMaterial || !atlas) return;
+    const u = this.groundMaterial.uniforms as Record<string, unknown>;
+    if (u[GROUND_DETAIL_IMAGE_UNIFORM] === atlas) return;
+    u[GROUND_DETAIL_IMAGE_UNIFORM] = atlas;
+    this.afterUpload(() => {
+      u['u_detailOn'] = 1;
+    });
   }
 
   async loadLandCoverAround(p: GeoPoint): Promise<LandCoverReading | null> {
@@ -802,7 +875,8 @@ export class CesiumSceneHost implements SceneHost {
     try {
       pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
     } catch {
-      // A tile host without CORS taints the canvas: nothing can be read.
+      // Not reachable with crossOrigin images (a host without CORS fails at load), kept so a
+      // tainted canvas can never throw out of here.
       return null;
     }
     const map = coverMapFromPixels(
@@ -812,8 +886,9 @@ export class CesiumSceneHost implements SceneHost {
       d.palette ?? 'worldcover',
     );
     if (map.known <= 0) return null;
-    // The packed map goes back into a canvas (the material's image uniform takes one). The
-    // tile rows run north to south, as the shader's mercator lookup expects (v = 0 at the north edge).
+    // The packed map goes back into a canvas (the material's image uniform takes one). Its
+    // rows run north to south; the upload flips images, so the shader reads the north edge at
+    // t = 1. Known texels are opaque, so the canvas's premultiplied alpha costs nothing.
     const out = document.createElement('canvas');
     out.width = map.width;
     out.height = map.height;

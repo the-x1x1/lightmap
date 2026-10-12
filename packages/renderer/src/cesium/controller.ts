@@ -449,6 +449,8 @@ export class SceneController {
     }
     if (this.landCoverKey !== key || this.host.isDestroyed()) return;
     this.landCoverReading = reading;
+    // Nothing read (tiles unreachable for now): forget the key so the next trigger tries again.
+    if (!reading) this.landCoverKey = null;
   }
 
   private async refreshGroundHeight(scene: SceneState): Promise<void> {

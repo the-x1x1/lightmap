@@ -12,9 +12,10 @@
  * resampling at tile edges), and the classes are packed into four channels the shader reads:
  *   R canopy (closed forest 1, open forest / mangrove ≈ 0.8, shrub ≈ 0.45, wetland ≈ 0.35, moss ≈ 0.15),
  *   G built-up (1 in a city),
- *   B bare ground (≈ 0.67 for bare rock / sand, 1 for permanent snow and ice),
- *   A cropland (1) — and A = 16/255 on every other *known* pixel, 0 where the tile said nothing
- *     the palette knows (or no tile came), so the shader can tell "open ground" from "unknown".
+ *   B levels: cropland 1/3, bare ground 2/3, permanent snow and ice 1 (0 for the rest),
+ *   A 1 on every pixel the palette knew, 0 where the tile said nothing it knows (or no tile
+ *     came) — known texels are opaque so a canvas's premultiplied alpha costs no precision,
+ *     and the shader can tell "open ground" from "unknown".
  * Pure, unit-tested; the tile fetch and texture upload are the host's.
  */
 
@@ -115,8 +116,12 @@ export function classifyCover(
   return best && bestD <= PALETTE_TOLERANCE ? best.cls : null;
 }
 
-/** The alpha value that marks a known, non-crop pixel in the cover map. */
-export const COVER_KNOWN_ALPHA = 16;
+/** The alpha value that marks a known pixel in the cover map (opaque; unknown is 0). */
+export const COVER_KNOWN_ALPHA = 255;
+/** The B levels: cropland, bare ground, permanent snow and ice. */
+export const COVER_B_CROP = 85;
+export const COVER_B_BARE = 170;
+export const COVER_B_ICE = 255;
 
 /** The four channels a class is packed into (0–255). */
 export function packCover(cls: CoverClass | null): [number, number, number, number] {
@@ -131,17 +136,17 @@ export function packCover(cls: CoverClass | null): [number, number, number, numb
     case 'wetland':
       return [90, 0, 0, COVER_KNOWN_ALPHA];
     case 'moss':
-      return [38, 0, 60, COVER_KNOWN_ALPHA];
+      return [38, 0, 0, COVER_KNOWN_ALPHA];
     case 'grass':
       return [0, 0, 0, COVER_KNOWN_ALPHA];
     case 'crop':
-      return [0, 0, 0, 255];
+      return [0, 0, COVER_B_CROP, COVER_KNOWN_ALPHA];
     case 'built':
       return [0, 255, 0, COVER_KNOWN_ALPHA];
     case 'bare':
-      return [0, 0, 170, COVER_KNOWN_ALPHA];
+      return [0, 0, COVER_B_BARE, COVER_KNOWN_ALPHA];
     case 'snow':
-      return [0, 0, 255, COVER_KNOWN_ALPHA];
+      return [0, 0, COVER_B_ICE, COVER_KNOWN_ALPHA];
     case 'water':
       // Water is the water mask's (and the shore rule's); the cover map calls it open ground.
       return [0, 0, 0, COVER_KNOWN_ALPHA];
@@ -247,7 +252,7 @@ export interface CoverMosaic {
   metresPerPixel: number;
 }
 
-/** How far the cover map reaches from the pin at least, metres (each way). */
+/** The reach the mosaic is sized for from the centre tile's centre, metres each way; from the pin itself it is at least one tile (≈ 10 km at zoom 12 near the equator). */
 export const COVER_REACH_M = 12_000;
 
 /**
@@ -289,13 +294,13 @@ export function coverMosaicFor(
   };
 }
 
-/** Tile URL from an XYZ template with `{z}`, `{x}`, `{y}` (and `{-y}` for TMS rows). */
+/** Tile URL from an XYZ template with `{z}`, `{x}`, `{y}` (and `{-y}` for TMS rows), every occurrence. */
 export function tileUrl(template: string, z: number, x: number, y: number): string {
   const n = Math.pow(2, z);
   const wrappedX = ((x % n) + n) % n;
   return template
-    .replace('{z}', String(z))
-    .replace('{x}', String(wrappedX))
-    .replace('{-y}', String(n - 1 - y))
-    .replace('{y}', String(y));
+    .replaceAll('{z}', String(z))
+    .replaceAll('{x}', String(wrappedX))
+    .replaceAll('{-y}', String(n - 1 - y))
+    .replaceAll('{y}', String(y));
 }

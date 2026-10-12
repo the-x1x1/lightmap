@@ -64,6 +64,9 @@ describe('parseEnv', () => {
     const lc = parseEnv({ LANDCOVER_PROVIDER: 'xyz' }).issues.map((i) => i.key);
     expect(lc).toContain('LANDCOVER_XYZ_URL');
     expect(lc).toContain('LANDCOVER_XYZ_ATTRIBUTION');
+    expect(parseEnv({ LANDCOVER_XYZ_MAX_ZOOM: 'high' }).issues.map((i) => i.key)).toContain(
+      'LANDCOVER_XYZ_MAX_ZOOM',
+    );
   });
 
   it('flags test-mode Stripe keys in production', () => {

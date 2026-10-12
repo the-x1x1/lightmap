@@ -7,7 +7,8 @@
  * Generated, not photographed: periodic value noise on a torus so every tile wraps without a
  * seam, shaped per surface (blades and clumps for grass, fractured faces and cracks for rock,
  * fine grain and ripples for sand, soft lumps with a cool shadow for snow), normalised to a mean
- * near 0.5 so the material can use it as a multiplier without shifting the macro colour. The
+ * near 0.5 so the material can use it as a multiplier without shifting the macro colour, each
+ * tile with a one-pixel wrapped border (the shader samples its inner 254 px). The
  * script is deterministic (a fixed seed), dependency-free (its own PNG encoder over `zlib`),
  * and the atlas it writes is committed; re-run `pnpm textures:ground` after changing it. A
  * photographic CC0 set (e.g. ambientCG's Grass/Rock/Ground/Snow, CC0 1.0) can replace the file
@@ -98,7 +99,9 @@ const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 function grass(u: number, v: number): Rgb {
   // Clumps, then blades: thin bright streaks with a slight lean, over a darker mat.
   const clump = fbm(u, v, 6, 3, 1);
-  const blades = ridged(u + 0.15 * v, v * 1.6, 48, 3, 2);
+  // The blade lattice must wrap too: an integer shear (7 cells over the tile) and a whole
+  // multiple of the period in v.
+  const blades = ridged(u + (7 / 48) * v, v * 2, 48, 3, 2);
   const fine = fbm(u, v, 96, 2, 3);
   const dark: Rgb = [0.16, 0.26, 0.09];
   const light: Rgb = [0.58, 0.66, 0.28];
@@ -163,7 +166,14 @@ for (const [fn, ox, oy] of surfaces) {
   let mean = 0;
   for (let y = 0; y < TILE; y++)
     for (let x = 0; x < TILE; x++) {
-      const c = fn(x / TILE, y / TILE);
+      // A one-pixel wrapped border: pixel 0 repeats the far edge and pixel 255 the near one,
+      // so the shader can sample the inner 254 px with linear filtering and never bleed into
+      // the neighbouring quadrant at the wrap.
+      const inner = TILE - 2;
+      const c = fn(
+        ((((x - 1) % inner) + inner) % inner) / inner,
+        ((((y - 1) % inner) + inner) % inner) / inner,
+      );
       tile.push(c);
       mean += 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2];
     }

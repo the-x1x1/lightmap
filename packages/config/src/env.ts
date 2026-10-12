@@ -316,6 +316,17 @@ export function parseEnv(raw: RawEnv): EnvResult {
         message: 'required when LANDCOVER_PROVIDER=xyz',
       });
   }
+  if (
+    !Number.isInteger(env.LANDCOVER_XYZ_MAX_ZOOM) ||
+    env.LANDCOVER_XYZ_MAX_ZOOM < 0 ||
+    env.LANDCOVER_XYZ_MAX_ZOOM > 24
+  ) {
+    issues.push({
+      key: 'LANDCOVER_XYZ_MAX_ZOOM',
+      severity: 'error',
+      message: 'must be an integer between 0 and 24',
+    });
+  }
   if (env.IMAGERY_PROVIDER === 'xyz') {
     if (env.IMAGERY_XYZ_URL === undefined)
       issues.push({

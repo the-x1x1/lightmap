@@ -181,7 +181,8 @@ on a failure (`release.yml` runs it after the deploy); the rest are by hand.
 - [ ] Land cover (`LANDCOVER_PROVIDER=xyz` with a CORS-enabled WorldCover tile host): pin the
       edge of a town beside farmland and forest (e.g. 47.37, 8.54 Zürich, then the Black Forest
       at 48.0, 8.2) in viewpoint mode — streets read grey with a block grain, fields a patchwork
-      of tones, the forest dark green, each ending where the map says; the footer carries the
+      of tones, the forest dark green, each ending where the map says (north is north: a wood
+      on the map's north side paints north of the pin); the footer carries the
       land-cover attribution; move the pin 10 km and the paint follows after one read; with the
       wrong `LANDCOVER_PALETTE` (or a host without CORS) the surface is the procedural one and
       the console shows no error.

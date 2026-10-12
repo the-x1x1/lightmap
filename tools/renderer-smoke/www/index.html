@@ -468,6 +468,32 @@
           groundTextureFor,
         } = await import('@lightmap/renderer');
         const probeParams = groundTextureFor(s1);
+        // A synthetic cover map over the probe rectangle (forest NW, crop NE, built SW, bare SE
+        // and an ice patch), packed as `packCover` does, so the cover branch runs for real:
+        // the shot must show the quadrants in place (forest at the north-west corner).
+        const { mercatorY, packCover } = await import('@lightmap/renderer');
+        const coverCanvas = document.createElement('canvas');
+        coverCanvas.width = coverCanvas.height = 64;
+        const cctx = coverCanvas.getContext('2d');
+        const cimg = cctx.createImageData(64, 64);
+        for (let y = 0; y < 64; y++)
+          for (let x = 0; x < 64; x++) {
+            // Row 0 is the north edge.
+            const north = y < 32;
+            const west = x < 32;
+            let cls = north && west ? 'tree' : north ? 'crop' : west ? 'built' : 'bare';
+            if ((x - 48) ** 2 + (y - 16) ** 2 < 36) cls = 'snow';
+            const v = packCover(cls);
+            cimg.data.set(v, (y * 64 + x) * 4);
+          }
+        cctx.putImageData(cimg, 0, 0);
+        const probeRect = { west: -157.76, south: 21.38, east: -157.7, north: 21.42 };
+        const coverBounds = new Cesium.Cartesian4(
+          Cesium.Math.toRadians(probeRect.west),
+          Cesium.Math.toRadians(probeRect.east),
+          mercatorY(probeRect.north),
+          mercatorY(probeRect.south),
+        );
         const probeMaterial = new Cesium.Material({
           fabric: {
             type: 'LightMapGroundProbe',
@@ -480,10 +506,13 @@
               u_cameraCell: new Cesium.Cartesian3(0, 0, 0),
               u_cameraFrac: new Cesium.Cartesian3(0, 0, 0),
               u_poleward: probeParams ? probeParams.poleward : 1,
-              // The cover map as the host declares it: a vec4 of bounds and an image uniform
-              // (the default image until a land-cover read lands; u_coverOn stays 0 here).
-              [GROUND_COVER_BOUNDS_UNIFORM]: new Cesium.Cartesian4(0, 0, 0, 0),
-              [GROUND_COVER_IMAGE_UNIFORM]: Cesium.Material.DefaultImageId,
+              // The cover map as the host declares it: a vec4 of bounds and an image uniform,
+              // here the synthetic map above, switched on (the one-frame default-white read
+              // before the upload is harmless in a probe); the detail atlas stays default and
+              // off (the probe is 2.5 km from the camera, beyond the atlas's reach anyway).
+              [GROUND_COVER_BOUNDS_UNIFORM]: coverBounds,
+              [GROUND_COVER_IMAGE_UNIFORM]: coverCanvas,
+              u_coverOn: 1,
               [GROUND_DETAIL_IMAGE_UNIFORM]: Cesium.Material.DefaultImageId,
               u_eastWC: new Cesium.Cartesian3(1, 0, 0),
               u_northWC: new Cesium.Cartesian3(0, 1, 0),
@@ -493,12 +522,18 @@
             source: GROUND_MATERIAL_SOURCE,
           },
           translucent: false,
+          minificationFilter: Cesium.TextureMinificationFilter.LINEAR_MIPMAP_LINEAR,
         });
         host.__scene.primitives.add(
           new Cesium.Primitive({
             geometryInstances: new Cesium.GeometryInstance({
               geometry: new Cesium.RectangleGeometry({
-                rectangle: Cesium.Rectangle.fromDegrees(-157.76, 21.38, -157.7, 21.42),
+                rectangle: Cesium.Rectangle.fromDegrees(
+                  probeRect.west,
+                  probeRect.south,
+                  probeRect.east,
+                  probeRect.north,
+                ),
                 height: 3,
                 vertexFormat: Cesium.MaterialAppearance.MaterialSupport.ALL.vertexFormat,
               }),

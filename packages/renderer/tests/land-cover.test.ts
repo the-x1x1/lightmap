@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  COVER_B_BARE,
+  COVER_B_CROP,
+  COVER_B_ICE,
   COVER_KNOWN_ALPHA,
   COVER_REACH_M,
   PALETTE_TOLERANCE,
@@ -48,10 +51,14 @@ describe('land-cover classification', () => {
   it('packs classes into the four channels the shader reads, with the known flag', () => {
     expect(packCover('tree')).toEqual([255, 0, 0, COVER_KNOWN_ALPHA]);
     expect(packCover('open-forest')).toEqual([204, 0, 0, COVER_KNOWN_ALPHA]);
-    expect(packCover('crop')).toEqual([0, 0, 0, 255]);
+    expect(packCover('crop')).toEqual([0, 0, COVER_B_CROP, COVER_KNOWN_ALPHA]);
+    // Known texels are opaque, so a canvas's premultiplied alpha loses nothing.
+    expect(COVER_KNOWN_ALPHA).toBe(255);
+    expect(COVER_B_CROP).toBeLessThan(COVER_B_BARE);
+    expect(COVER_B_BARE).toBeLessThan(COVER_B_ICE);
     expect(packCover('built')).toEqual([0, 255, 0, COVER_KNOWN_ALPHA]);
-    expect(packCover('bare')).toEqual([0, 0, 170, COVER_KNOWN_ALPHA]);
-    expect(packCover('snow')).toEqual([0, 0, 255, COVER_KNOWN_ALPHA]);
+    expect(packCover('bare')).toEqual([0, 0, COVER_B_BARE, COVER_KNOWN_ALPHA]);
+    expect(packCover('snow')).toEqual([0, 0, COVER_B_ICE, COVER_KNOWN_ALPHA]);
     expect(packCover('grass')).toEqual([0, 0, 0, COVER_KNOWN_ALPHA]);
     expect(packCover('water')).toEqual([0, 0, 0, COVER_KNOWN_ALPHA]);
     expect(packCover(null)).toEqual([0, 0, 0, 0]);
@@ -67,22 +74,10 @@ describe('land-cover classification', () => {
     expect(m.known).toBe(0.75);
     expect(m.shares).toEqual({ tree: 0.333, crop: 0.333, built: 0.333 });
     expect(Array.from(m.data)).toEqual([
-      255,
-      0,
-      0,
-      COVER_KNOWN_ALPHA,
-      0,
-      0,
-      0,
-      255,
-      0,
-      255,
-      0,
-      COVER_KNOWN_ALPHA,
-      0,
-      0,
-      0,
-      0,
+      ...[255, 0, 0, COVER_KNOWN_ALPHA],
+      ...[0, 0, COVER_B_CROP, COVER_KNOWN_ALPHA],
+      ...[0, 255, 0, COVER_KNOWN_ALPHA],
+      ...[0, 0, 0, 0],
     ]);
     // Transparent pixels (no tile) are unknown.
     const none = coverMapFromPixels(new Uint8ClampedArray([0, 100, 0, 0]), 1, 1, 'worldcover');

@@ -155,17 +155,35 @@ vec2 lmCoverUv(vec3 p)
     float N = a / sqrt(1.0 - e2 * sinL * sinL);
     float lat = atan(p.z + e2 * N * sinL, r);
     float merc = log(tan(0.78539816 + 0.5 * lat));
+    // A mosaic across the antimeridian has its west edge below -pi; bring the longitude into it.
+    if (lon < u_coverBounds.x - 3.14159265) lon += 6.28318531;
+    // Images are uploaded bottom-up (flipY): the canvas's first row, the north edge, is t = 1.
     return vec2((lon - u_coverBounds.x) / (u_coverBounds.y - u_coverBounds.x),
-                (u_coverBounds.z - merc) / (u_coverBounds.z - u_coverBounds.w));
+                (merc - u_coverBounds.w) / (u_coverBounds.z - u_coverBounds.w));
 }
 
-// One wrapped tile of the atlas (quadrant q: 0 grass, 1 rock, 2 sand, 3 snow), with the
-// unwrapped coordinate's derivatives so the wrap seam takes no mip discontinuity.
-vec3 lmDetail(vec2 uv, float q)
+// One wrapped tile of the atlas (quadrant q: 0 grass, 1 rock, 2 sand, 3 snow). The image is
+// uploaded bottom-up, so the PNG's top row (grass, rock) is t in [0.5, 1). Each tile carries a
+// one-pixel wrapped border, so the wrap samples its inner 254 px and never bleeds into the
+// neighbouring quadrant; the unwrapped coordinate's derivatives (computed by the caller,
+// outside any branch) keep the mip level continuous across the seam.
+vec3 lmDetail(vec2 uv, vec2 duvdx, vec2 duvdy, float q)
 {
-    vec2 quad = vec2(q == 1.0 || q == 3.0 ? 0.5 : 0.0, q >= 2.0 ? 0.5 : 0.0);
-    vec2 st = quad + fract(uv) * 0.5;
-    return textureGrad(u_detailAtlas, st, dFdx(uv) * 0.5, dFdy(uv) * 0.5).rgb;
+    vec2 quad = vec2(q == 1.0 || q == 3.0 ? 0.5 : 0.0, q >= 2.0 ? 0.0 : 0.5);
+    vec2 st = quad + (fract(uv) * 254.0 + 1.0) / 512.0;
+#if __VERSION__ >= 300
+    return textureGrad(u_detailAtlas, st, duvdx * (254.0 / 512.0), duvdy * (254.0 / 512.0)).rgb;
+#else
+    return texture(u_detailAtlas, st).rgb;
+#endif
+}
+
+// The atlas across the three projections of a point and its normal weights.
+vec3 lmDetailTri(vec3 q, vec3 dqx, vec3 dqy, vec3 w, float tile)
+{
+    return lmDetail(q.yz, dqx.yz, dqy.yz, tile) * w.x
+         + lmDetail(q.xz, dqx.xz, dqy.xz, tile) * w.y
+         + lmDetail(q.xy, dqx.xy, dqy.xy, tile) * w.z;
 }
 
 czm_material czm_getMaterial(czm_materialInput materialInput)
@@ -219,18 +237,23 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // block-sized grain; bare is sand and rock by the region's aridity; ice is snow at any
     // height. Rock on steep faces and the seasonal snow still win; unknown texels change nothing.
     float known = 0.0;
+    float canopy = 0.0;
+    float built = 0.0;
+    float bareC = 0.0;
     if (u_coverOn > 0.5)
     {
         vec2 cuv = lmCoverUv(positionWC);
         if (cuv.x > 0.0 && cuv.x < 1.0 && cuv.y > 0.0 && cuv.y < 1.0)
         {
             vec4 cv = texture(u_coverMap, cuv);
-            known = step(0.03, cv.a);
-            float canopy = cv.r;
-            float built = cv.g;
-            float bareC = smoothstep(0.3, 0.7, cv.b);
-            float iceC = smoothstep(0.75, 0.95, cv.b);
-            float crop = smoothstep(0.5, 0.9, cv.a);
+            // Known texels are opaque (so the canvas's premultiplied alpha costs nothing);
+            // B carries crop (1/3), bare (2/3) and ice (1) as levels.
+            known = step(0.5, cv.a);
+            canopy = cv.r;
+            built = cv.g;
+            float crop = smoothstep(0.17, 0.3, cv.b) * (1.0 - smoothstep(0.42, 0.55, cv.b));
+            bareC = smoothstep(0.55, 0.64, cv.b) * (1.0 - smoothstep(0.86, 0.95, cv.b));
+            float iceC = smoothstep(0.86, 0.95, cv.b);
             float open = known * (1.0 - snowy) * (1.0 - rocky * 0.7);
             float crowns = lmFbm(positionWC / 45.0 + 3.0);
             vec3 forest = mix(vec3(0.13, 0.25, 0.10), vec3(0.27, 0.38, 0.17), crowns);
@@ -257,28 +280,48 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // cells into the lattice, the fraction into the coordinate, both from the CPU in double).
     float dist = length(positionEC);
     float nearW = u_detail >= 2.0 ? smoothstep(500.0, 60.0, dist) : 0.0;
+    // The atlas coordinate: metres from the camera along an east/north/up frame the host
+    // anchors to the ground (re-anchored only when the camera has moved kilometres), plus the
+    // camera's own offset along that frame in tile periods — so the pattern stays put as the
+    // camera moves. Its derivatives are taken here, outside any branch, as GLSL requires.
+    vec3 local = czm_inverseViewRotation * positionEC;
+    vec3 q = vec3(dot(local, u_eastWC), dot(local, u_northWC), dot(local, u_upWC)) / 2.5 + u_detailOffset;
+    vec3 dqx = dFdx(q);
+    vec3 dqy = dFdy(q);
     if (nearW > 0.0 && u_detailOn > 0.5)
     {
-        // The detail atlas (grass, rock, sand or snow — whichever the rules above made this
-        // ground), projected along the camera's east, north and up axes and blended by the
-        // surface normal (a cheap triplanar), in metres from the camera plus the camera's own
-        // offset so the pattern stays put as the camera moves. A multiplier about 1 on the
-        // colour the macro rules chose; it never changes what the ground is.
-        vec3 local = czm_inverseViewRotation * positionEC;
-        vec3 q = vec3(dot(local, u_eastWC), dot(local, u_northWC), dot(local, u_upWC)) / 2.5 + u_detailOffset;
+        // The detail atlas — grass, rock, sand or snow, whichever the rules above made this
+        // ground, the two nearest blended across their edge — projected along the three axes
+        // and blended by the surface normal (a sharp triplanar, so a face takes one
+        // projection). A multiplier about 1 on the colour the macro rules chose; it never
+        // changes what the ground is.
         vec3 nW = czm_inverseViewRotation * materialInput.normalEC;
         vec3 w = abs(vec3(dot(nW, u_eastWC), dot(nW, u_northWC), dot(nW, u_upWC)));
         w = w * w * w * w;
-        w = w * w;  // sharp, so a face takes one projection and two never blend into a hatch
+        w = w * w;
         w /= (w.x + w.y + w.z + 1e-5);
-        float bareW = max(rocky, alpine);
-        float sandW = max(shoreline, u_aridity * (1.0 - rocky));
-        float tile = snowy > 0.5 ? 3.0 : bareW > 0.5 ? (u_aridity > 0.6 ? 2.0 : 1.0) : sandW > 0.5 ? 2.0 : 0.0;
-        vec3 d = lmDetail(q.yz, tile) * w.x + lmDetail(q.xz, tile) * w.y + lmDetail(q.xy, tile) * w.z;
-        // The same tile again at 4.3 × the period, so the 2.5 m repeat does not read as a grid.
+        // Tile weights: snow, then rock on steep or alpine ground (and streets), sand on the
+        // shore, bare desert and arid open ground, grass (and the forest floor) for the rest.
+        float wSnow = snowy;
+        float wRock = (1.0 - snowy) * max(rocky, max(alpine * (1.0 - 0.6 * u_aridity), built));
+        float wSand = (1.0 - snowy) * (1.0 - rocky) * max(shoreline, max(bareC, u_aridity * (1.0 - canopy)));
+        float wGrass = (1.0 - snowy) * (1.0 - max(wRock, wSand));
+        // The two strongest tiles, blended by their weights.
+        float t1 = 0.0; float w1 = wGrass;
+        float t2 = 1.0; float w2 = wRock;
+        if (wSand > w1) { t2 = t1; w2 = w1; t1 = 2.0; w1 = wSand; } else if (wSand > w2) { t2 = 2.0; w2 = wSand; }
+        if (wRock > w1 && t1 != 1.0) { t2 = t1; w2 = w1; t1 = 1.0; w1 = wRock; }
+        if (wSnow > w1) { t2 = t1; w2 = w1; t1 = 3.0; w1 = wSnow; } else if (wSnow > w2) { t2 = 3.0; w2 = wSnow; }
+        float blend = w2 / max(w1 + w2, 1e-4);
+        // The same tiles again at 4.3 × the period, so the 2.5 m repeat does not read as a grid.
         vec3 q2 = q * 0.23 + 0.37;
-        vec3 d2 = lmDetail(q2.yz, tile) * w.x + lmDetail(q2.xz, tile) * w.y + lmDetail(q2.xy, tile) * w.z;
-        d = mix(d, d2, 0.4);
+        vec3 d1 = mix(lmDetailTri(q, dqx, dqy, w, t1), lmDetailTri(q2, dqx * 0.23, dqy * 0.23, w, t1), 0.4);
+        vec3 d = d1;
+        if (blend > 0.02)
+        {
+            vec3 d2 = mix(lmDetailTri(q, dqx, dqy, w, t2), lmDetailTri(q2, dqx * 0.23, dqy * 0.23, w, t2), 0.4);
+            d = mix(d1, d2, blend);
+        }
         ground *= mix(vec3(1.0), d * 2.0, nearW * 0.7);
     }
     else if (nearW > 0.0)
