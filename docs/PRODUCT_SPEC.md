@@ -467,7 +467,8 @@ No lens optical simulation (distortion, rendered blur) in v1.
 - **Results**: count of moments and dates, each row `date · local time · elevation · rising/setting
 (· % lit, disc°)`; a Moon row carries how wide the disc is at that instant (0.49–0.56°,
   `apparentDiameterDegrees`), so among "every date the Moon rises over that ridge" the big-Moon
-  one stands out; selecting a row moves the planner to that instant so the preview shows it.
+  one stands out, and a "Big Moon only" filter keeps the rows at 0.54° or more (within a few
+  days of perigee); selecting a row moves the planner to that instant so the preview shows it.
 - **Honesty**: results are geometry only — terrain occlusion, clouds and near-horizon refraction
   are not part of the search; the note under the list says so and points to the preview.
 - **"This light" chip** under the timeline (`NextOccurrence`): whenever the sun is above civil

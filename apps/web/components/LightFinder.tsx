@@ -48,6 +48,8 @@ export interface LightFinderProps {
   canPickInView?: boolean;
 }
 
+/** A Moon disc this wide or wider is within a few days of perigee — the big one over the ridge. */
+const BIG_MOON_DEG = 0.54;
 const MAX_RESULTS = 80;
 
 function todayAt(timeZone: string): string {
@@ -83,6 +85,8 @@ export function LightFinder({
   const [elTol, setElTol] = useState(1);
   const [minIllum, setMinIllum] = useState(80);
   const [darkOnly, setDarkOnly] = useState(true);
+  /** Moon results only: keep the near-perigee ones (≥ 0.54° across, ~4 % wider than average). */
+  const [bigMoonOnly, setBigMoonOnly] = useState(false);
   const [from, setFrom] = useState(today);
   const [to, setTo] = useState(() => {
     const t = parseCivilDate(today)!;
@@ -224,7 +228,13 @@ export function LightFinder({
   const allMatches = result?.res.matches ?? [];
   const terrainFilter = Boolean(profile) && hideBehindTerrain && mode !== 'ridge';
   const hidden = terrainFilter ? allMatches.filter(behindTerrain).length : 0;
-  const matches = terrainFilter ? allMatches.filter((m) => !behindTerrain(m)) : allMatches;
+  const sized =
+    body === 'moon' && bigMoonOnly
+      ? allMatches.filter(
+          (m) => m.apparentDiameterDegrees !== null && m.apparentDiameterDegrees >= BIG_MOON_DEG,
+        )
+      : allMatches;
+  const matches = terrainFilter ? sized.filter((m) => !behindTerrain(m)) : sized;
   const shown = matches.slice(0, MAX_RESULTS);
   const dates = new Set(matches.map((m) => m.date)).size;
 
@@ -476,6 +486,18 @@ export function LightFinder({
                 className="lm-range mt-1 w-full"
                 onChange={(e) => setMinIllum(Number(e.target.value))}
               />
+            </label>
+          ) : null}
+          {body === 'moon' ? (
+            <label className="col-span-2 flex items-center gap-2 text-xs text-[var(--lm-text-muted)]">
+              <input
+                type="checkbox"
+                checked={bigMoonOnly}
+                onChange={(e) => setBigMoonOnly(e.target.checked)}
+                data-testid="finder-big-moon"
+              />
+              Big Moon only — a disc of {BIG_MOON_DEG.toFixed(2)}° or more (near perigee; the widest
+              run about 0.56°)
             </label>
           ) : null}
           {body === 'core' ? (
