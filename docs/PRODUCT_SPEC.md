@@ -552,8 +552,10 @@ they differ from sunrise/sunset by more than three minutes — under that, refra
 differ by as much); "First/Last light over terrain" and "Terrain horizon at sun" rows in Sun &
 moon details; the preview-basis Terrain row names the sampled reach and the highest ridge; the
 light finder tags moments that are **behind terrain** and can hide them. Every surface carries the
-caveat: terrain only — trees, buildings and cloud on the ridge are not in the elevation model,
-a sharp ridgeline can sit between samples, and terrain beyond the sampled reach was not sampled.
+caveat — terrain only: trees, buildings and cloud on the ridge are not in the elevation model,
+a sharp ridgeline can sit between samples, and terrain beyond the sampled reach was not sampled;
+with mapped buildings in the profile the same surfaces say "terrain and mapped buildings; trees
+not modelled" (`horizonShortCaveat`) and the full caveat names both reaches.
 In polar summer the rows read "up at midnight" rather than a time. With moon planning the same
 scan runs for the Moon (`terrainHorizon.moonEvents`, memoised per profile and day beside the
 Sun's): when the ridge changes its day, the Moon details list the spells it is over the terrain

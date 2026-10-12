@@ -46,8 +46,8 @@ the shadow probe (a 20 m tower at Sun 11°, shadow measured against `h / tan(el)
 - Light finder (reverse planning): "I want the sun _there_" — click the spot in the view, or ask
   for the sun on a ridge, and get every date and time it happens; a "this light" chip says how
   long the current light lasts and when it comes back.
-- Terrain horizon: when the sun actually clears or drops behind the ridge, with the caveat that
-  trees and buildings are not in the elevation model.
+- Terrain horizon: when the sun actually clears or drops behind the ridge (or, with buildings
+  configured, the block), with the caveat that trees are not in the model.
 - Seasons: a day-of-year slider scrubs the year with the time of day kept; the compass rose shows
   where sunrise and sunset swing to between the solstices.
 - Night planning: the Moon on the rose and the timeline, its phase calendar, and the Milky Way
@@ -114,19 +114,20 @@ production) or with a magic link printed to the server log when `EMAIL_SERVER` i
 All keys are documented in [`.env.example`](.env.example) and validated by `packages/config/src/env.ts`.
 The important ones:
 
-| Key                                                                                                 | Purpose                                                                                |
-| --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                                                                                      | PostgreSQL. Unset ⇒ no accounts/projects/billing (exploration still works).            |
-| `AUTH_SECRET`, `AUTH_URL`, `EMAIL_SERVER`, `EMAIL_FROM`, `AUTH_GOOGLE_*`, `AUTH_DEV_LOGIN`          | Auth.js.                                                                               |
-| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_YEARLY` | Billing (test mode keys locally).                                                      |
-| `WEATHER_PROVIDER` (`open-meteo` \| `fixture`), `OPEN_METEO_API_KEY`                                | Weather. Commercial use of Open-Meteo needs a paid key.                                |
-| `GEOCODER_PROVIDER` (`nominatim` \| `fixture`), `GEOCODER_USER_AGENT`                               | Place search. Nominatim is development-only.                                           |
-| `TERRAIN_PROVIDER` (`reearth` \| `cesium-ion` \| `ellipsoid`), `CESIUM_ION_TOKEN`                   | Terrain.                                                                               |
-| `IMAGERY_PROVIDER` (`natural-earth` \| `cesium-ion` \| `xyz`), `IMAGERY_XYZ_*`                      | Basemap imagery; attribution is mandatory.                                             |
-| `BUILDINGS_PROVIDER` (`none` \| `cesium-osm`)                                                       | 3D buildings (Cesium OSM Buildings through ion; needs `CESIUM_ION_TOKEN`).             |
-| `LIGHTMAP_SHOW_DEV_BANNER`                                                                          | Shows the "development mode" banner whenever a fixture/limited provider is active.     |
-| `SENTRY_DSN`                                                                                        | Error reports to any Sentry-compatible ingest (built-in envelope transport, no SDK).   |
-| `ANALYTICS_SINK` (`none` \| `log`)                                                                  | Product events (eight, sanitised, `docs/PRIVACY.md` §4); off in production unless set. |
+| Key                                                                                                 | Purpose                                                                                                                                      |
+| --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                                                                      | PostgreSQL. Unset ⇒ no accounts/projects/billing (exploration still works).                                                                  |
+| `AUTH_SECRET`, `AUTH_URL`, `EMAIL_SERVER`, `EMAIL_FROM`, `AUTH_GOOGLE_*`, `AUTH_DEV_LOGIN`          | Auth.js.                                                                                                                                     |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_YEARLY` | Billing (test mode keys locally).                                                                                                            |
+| `WEATHER_PROVIDER` (`open-meteo` \| `fixture`), `OPEN_METEO_API_KEY`                                | Weather. Commercial use of Open-Meteo needs a paid key.                                                                                      |
+| `GEOCODER_PROVIDER` (`nominatim` \| `fixture`), `GEOCODER_USER_AGENT`                               | Place search. Nominatim is development-only.                                                                                                 |
+| `TERRAIN_PROVIDER` (`reearth` \| `cesium-ion` \| `ellipsoid`), `CESIUM_ION_TOKEN`                   | Terrain.                                                                                                                                     |
+| `IMAGERY_PROVIDER` (`natural-earth` \| `cesium-ion` \| `xyz`), `IMAGERY_XYZ_*`                      | Basemap imagery; attribution is mandatory.                                                                                                   |
+| `BUILDINGS_PROVIDER` (`none` \| `cesium-osm`)                                                       | 3D buildings (Cesium OSM Buildings through ion; needs `CESIUM_ION_TOKEN`).                                                                   |
+| `LANDCOVER_PROVIDER` (`none` \| `xyz`), `LANDCOVER_XYZ_*`, `LANDCOVER_PALETTE`                      | Land cover for the painted ground (WorldCover / Copernicus tiles); attribution mandatory, the host must send CORS; its origin joins the CSP. |
+| `LIGHTMAP_SHOW_DEV_BANNER`                                                                          | Shows the "development mode" banner whenever a fixture/limited provider is active.                                                           |
+| `SENTRY_DSN`                                                                                        | Error reports to any Sentry-compatible ingest (built-in envelope transport, no SDK).                                                         |
+| `ANALYTICS_SINK` (`none` \| `log`)                                                                  | Product events (eight, sanitised, `docs/PRIVACY.md` §4); off in production unless set.                                                       |
 
 ## Commands
 
@@ -197,10 +198,13 @@ daily account-erasure / cache-purge job once the production database secret exis
 
 - **Imagery is coarse by default.** Without an imagery key the globe shows Natural Earth II, so
   scenes are labelled _Estimated Preview_. Terrain relief and light direction are still real.
-- **No buildings or vegetation.** Shadows come from terrain only.
+- **No vegetation; buildings only where an operator configures Cesium OSM Buildings** (OSM
+  heights, often estimated). Otherwise shadows come from terrain only.
 - **Sky is a model, not a spectral simulation** (single scattering in three bands for the sky
   gradient, Cesium's own dome in 3D); clouds are procedural coverage, not forecast shapes.
-- **Moon accuracy is ±0.02°** (sun ±0.01°); ample for framing, not an eclipse ephemeris.
+- **Moon accuracy is ±0.02°** (sun ±0.01°); ample for framing. The eclipse list is a predictor
+  built on the same series — contacts within a minute or two of the almanac, a path edge within
+  a few tens of km — not an ephemeris; confirm before travelling for one.
 - **The exposure estimate is a model, not a meter**: a clear-sky illuminance curve scaled by the
   forecast's or scenario's cloud, moonlight by phase and a starlight floor; no light pollution,
   no local terrain shading. Every place it appears says "estimate".

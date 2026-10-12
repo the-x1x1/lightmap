@@ -38,6 +38,7 @@ import {
   type DistanceUnits,
   type SceneState,
   type SourceMode,
+  horizonShortCaveat,
 } from '@lightmap/scene';
 import { scenarioById } from '@lightmap/weather';
 
@@ -234,13 +235,13 @@ export function buildPlanningCard(
     const last = ev.lastLight ? t(ev.lastLight) : ev.endsVisible ? 'still up at midnight' : 'never';
     facts.push({
       label: 'Over the terrain',
-      value: `first light ${first} · last light ${last} (terrain only; trees and buildings not modelled)`,
+      value: `first light ${first} · last light ${last} (${horizonShortCaveat(th.profile)})`,
     });
   }
   if (th && scene.solar.isAboveHorizon && !th.sunAboveTerrain)
     facts.push({
       label: 'Right now',
-      value: `sun behind the terrain (ridge ${formatDeg(th.horizonAtSunDeg)}°, sun's upper limb ${formatDeg(scene.solar.apparentElevationDegrees + 0.27)}°; terrain only, trees and buildings not modelled)`,
+      value: `sun behind the terrain (ridge ${formatDeg(th.horizonAtSunDeg)}°, sun's upper limb ${formatDeg(scene.solar.apparentElevationDegrees + 0.27)}°; ${horizonShortCaveat(th.profile)})`,
     });
 
   // What the frame says about the shoot itself: wind, humidity, visibility — and the notes.

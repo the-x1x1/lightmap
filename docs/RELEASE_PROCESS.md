@@ -131,7 +131,8 @@ Unfinished or unlicensed features ship dark, never as half-built navigation (pla
 
 - `REFERENCE_IMAGERY_PROVIDER=none` hides every Real Reference surface.
 - Studio plan has no price and is never offered.
-- Climatology, reverse planning and export are absent from the UI until their phase ships; the
+- Features behind an entitlement (climatology, reverse planning, export, the week ahead) show
+  their name and reason when locked, never a half-built flow; the
   entitlement keys exist so plans can advertise them, but no control is rendered for a missing
   feature.
 - `LIGHTMAP_SHOW_DEV_BANNER` and the performance panel are development-only and flagged as warnings

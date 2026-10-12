@@ -75,8 +75,9 @@ on the operator's own host). ESA also publishes a WMTS for WorldCover on Terrasc
 (`https://services.terrascope.be/wmts/v2?layer=WORLDCOVER_2021_MAP&style=&tilematrixset=EPSG:3857&Service=WMTS&Request=GetTile&Version=1.0.0&Format=image/png&TileMatrix={z}&TileCol={x}&TileRow={y}`
 is the XYZ form of it); before configuring it, confirm Terrascope's terms of use for an
 application and that the endpoint answers with CORS headers — the viewer's own tile cache is
-not a licence. The tile host must send CORS headers (the pixels are read); without them the
-read fails cleanly and the procedural surface stands alone.
+not a licence. The tile host must send CORS headers (the pixels are read); its origin is added
+to the Content-Security-Policy from `LANDCOVER_XYZ_URL` at startup (`apps/web/lib/csp.ts`);
+without CORS the read fails cleanly and the procedural surface stands alone.
 
 ### Ground detail atlas (bundled)
 

@@ -82,6 +82,13 @@ export function horizonCaveat(
   return onRoof ? `${ROOF_CAVEAT} ${base}` : base;
 }
 
+/** The short form for a marker or a card line: what the profile is made of. */
+export function horizonShortCaveat(profile: Pick<HorizonProfile, 'buildingsReachM'>): string {
+  return profile.buildingsReachM
+    ? 'terrain and mapped buildings; trees not modelled'
+    : 'terrain only; trees and buildings not modelled';
+}
+
 export const ROOF_CAVEAT =
   'The pin is on a mapped building, so the horizon is read from its roof; move it to the street for the view from the ground.';
 

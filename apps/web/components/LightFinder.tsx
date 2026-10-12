@@ -383,8 +383,10 @@ export function LightFinder({
             Every moment the {body === 'core' ? 'core' : `${body}’s upper limb`} touches the
             modelled skyline at this bearing — when it sets behind (or rises over) that ridge. Type
             the bearing; the elevation is read from the sampled terrain (
-            {profile ? `${target.el.toFixed(1)}° here` : '—'}). Terrain only: trees and buildings
-            are not in the model.
+            {profile ? `${target.el.toFixed(1)}° here` : '—'}).{' '}
+            {profile?.buildingsReachM
+              ? 'Terrain and mapped buildings: trees are not in the model.'
+              : 'Terrain only: trees and buildings are not in the model.'}
           </p>
         ) : null}
         {mode === 'current' && nowAz === null ? (

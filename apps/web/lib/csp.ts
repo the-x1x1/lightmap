@@ -4,7 +4,7 @@
  * because we import @cesium/engine, not `cesium` (ADR-0002). 'strict-dynamic' lets nonce'd
  * scripts load Next's chunks and Cesium's lazy modules.
  */
-const DATA_HOSTS = [
+const FIXED_HOSTS = [
   'https://terrain.reearth.land',
   'https://api.open-meteo.com',
   'https://customer-api.open-meteo.com',
@@ -12,8 +12,20 @@ const DATA_HOSTS = [
   'https://assets.ion.cesium.com',
   'https://*.virtualearth.net',
   'https://dev.virtualearth.net',
-  ...extraImageryHosts(process.env['IMAGERY_XYZ_URL']),
 ];
+
+/** The operator-configured tile hosts the browser fetches from: imagery and land cover (`<img crossOrigin>`). */
+export const TILE_HOST_ENV_KEYS = ['IMAGERY_XYZ_URL', 'LANDCOVER_XYZ_URL'] as const;
+
+/** Every host the browser may fetch data from: the fixed providers plus the operator's tile templates. */
+export function dataHosts(env: Record<string, string | undefined> = process.env): string[] {
+  const out = [...FIXED_HOSTS];
+  for (const key of TILE_HOST_ENV_KEYS)
+    for (const h of extraImageryHosts(env[key])) if (!out.includes(h)) out.push(h);
+  return out;
+}
+
+const DATA_HOSTS = dataHosts();
 
 /** Origin of a tile template, wildcarded to its parent domain only when it has ≥ 3 labels (a.b.tld). */
 export function extraImageryHosts(template: string | undefined): string[] {
@@ -28,8 +40,12 @@ export function extraImageryHosts(template: string | undefined): string[] {
   }
 }
 
-export function buildCsp(nonce: string, dev: boolean): string {
-  const hosts = DATA_HOSTS.join(' ');
+export function buildCsp(
+  nonce: string,
+  dev: boolean,
+  env?: Record<string, string | undefined>,
+): string {
+  const hosts = (env ? dataHosts(env) : DATA_HOSTS).join(' ');
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval' blob:${dev ? " 'unsafe-eval'" : ''}`,

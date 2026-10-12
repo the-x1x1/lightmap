@@ -22,7 +22,7 @@ export interface TimelineProps {
   /** Current phase label for the aria description. */
   phase?: string | undefined;
   /** Terrain first/last light, each only when it differs from sunrise/sunset (extra markers). */
-  terrain?: { firstLight: Date | null; lastLight: Date | null } | null | undefined;
+  terrain?: { firstLight: Date | null; lastLight: Date | null; caveat?: string } | null | undefined;
   /**
    * Spells (UTC) when the sun is above the terrain; daylight outside them is shaded on the track
    * so the scrubber shows at a glance when the spot sits in the ridge's shadow.
@@ -105,7 +105,7 @@ export function dayMarkers(
       ? m(
           'ridgeRise',
           terrain.firstLight,
-          'Sun clears the terrain (terrain only; trees and buildings not modelled)',
+          `Sun clears the terrain (${terrain.caveat ?? 'terrain only; trees and buildings not modelled'})`,
           'Ridge',
           '▲',
           'sun',
@@ -115,7 +115,7 @@ export function dayMarkers(
       ? m(
           'ridgeSet',
           terrain.lastLight,
-          'Sun drops behind the terrain (terrain only; trees and buildings not modelled)',
+          `Sun drops behind the terrain (${terrain.caveat ?? 'terrain only; trees and buildings not modelled'})`,
           'Ridge',
           '▽',
           'sun',

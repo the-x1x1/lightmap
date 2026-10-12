@@ -170,7 +170,7 @@ the year), snow above a snowline that follows the latitude
 (≈ 5 200 m at the equator, ≈ 3 000 m at 45°, ≈ 1 700 m at 60°) and the season (lower through
 winter by a share that grows with latitude: the Alps snowy from ≈ 1 500 m in February, bare to
 ≈ 3 000 m in August; the tropics barely move) and lies lower on poleward faces — and, inside the forecast horizon, the forecast's own word:
-when the frame has snow lying at the model's grid point (≥ 2 cm) the snowline drops to just
+when the frame has snow lying at the model's grid point (≥ 1 cm) the snowline drops to just
 under the pin's height, and when it has the ground bare it rises to just over it — and a strip of
 shore where flat ground meets sea level (`ground-texture.ts`, tested). The inputs are the
 terrain's own height, slope and aspect and a noise field anchored to the fragment's world
@@ -300,12 +300,12 @@ from fixture data says so.
 
 ## Quality ladder (plan §6)
 
-| Quality | What renders                                                           | When                                               |
-| ------- | ---------------------------------------------------------------------- | -------------------------------------------------- |
-| 0       | Sun/shadow overlay on a sky gradient; all numbers                      | No WebGL2, or renderer failure — always available  |
-| 1       | 3D terrain with directional light, shadows, atmosphere, scenario grade | Default with terrain                               |
-| 2       | 1 + licensed high-resolution imagery                                   | `IMAGERY_PROVIDER` configured                      |
-| 3       | Buildings/3D tiles, physically based scattering in the 3D dome         | Future (the sky gradient's scattering model is in) |
+| Quality | What renders                                                           | When                                                                                               |
+| ------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| 0       | Sun/shadow overlay on a sky gradient; all numbers                      | No WebGL2, or renderer failure — always available                                                  |
+| 1       | 3D terrain with directional light, shadows, atmosphere, scenario grade | Default with terrain                                                                               |
+| 2       | 1 + licensed high-resolution imagery                                   | `IMAGERY_PROVIDER` configured                                                                      |
+| 3       | Buildings/3D tiles, physically based scattering in the 3D dome         | Buildings where `BUILDINGS_PROVIDER` is configured; the dome's scattering behind `physicalSkyDome` |
 
 The governor's ceiling is the stricter of the device probe (`qualityCeiling`: low-power GPU or a
 small maximum texture) and live conditions (`conditionsCeiling`: battery level while discharging,

@@ -127,6 +127,18 @@ retention job erases after 14 days; reply with the date.
 audit rows of other users. Stripe holds invoices separately — point the user to the Customer
 Portal.
 
+## R8a. A tile host is down or refusing (terrain, imagery, buildings, land cover)
+
+**Notice**: the globe shows flat ground or the bare basemap; buildings vanish; the painted
+ground stops following the map (fields and forest no longer where the map has them); console
+CSP or CORS violations.
+
+**Do**: terrain and imagery fall back on their own (flat ground, Natural Earth) and the status
+line says so; land cover fails silently to the procedural surface. Check the host, then that
+its origin is in the CSP (`LANDCOVER_XYZ_URL` / `IMAGERY_XYZ_URL` are read at startup — a URL
+changed without a restart is not allowlisted) and that it sends CORS headers for image reads.
+Switch the provider env to the alternative or `none` and redeploy if the host stays down.
+
 ## R8. Provider licence or attribution problem
 
 **Notice**: a provider changes terms; the attribution gate (`scripts/check-attribution.ts`)

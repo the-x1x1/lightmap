@@ -11,6 +11,7 @@ import {
   seaHorizonDipDeg,
   terrainSunEvents,
   type HorizonSample,
+  horizonShortCaveat,
 } from '../src/horizon.ts';
 
 const origin = { latitude: 46.5, longitude: 7.9 };
@@ -83,6 +84,8 @@ describe('terrain horizon profile', () => {
     const plain = horizonProfileFromSamples(origin, 0, 1.6, ridgeSamples(), source);
     expect(plain.buildingsReachM).toBeNull();
     expect(plain.onRoof).toBe(false);
+    expect(horizonShortCaveat(p)).toBe('terrain and mapped buildings; trees not modelled');
+    expect(horizonShortCaveat(plain)).toBe('terrain only; trees and buildings not modelled');
     expect(plain.caveat).toMatch(/^Terrain only/);
     const roof = horizonProfileFromSamples(origin, 30, 1.6, ridgeSamples(), source, {
       buildingsReachM: 2500,

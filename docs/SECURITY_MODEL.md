@@ -22,9 +22,11 @@ Out of scope for v0.1: DDoS mitigation beyond the hosting platform, WAF, SOC-sty
 
 Only `NEXT_PUBLIC_*` variables reach the client (`packages/config/src/env.ts`). Weather, geocoding
 and reverse geocoding go through `/api/*` routes that attach credentials on the server. The only
-browser-side provider traffic is tile fetching from terrain/imagery CDNs, which is allowlisted in
-the CSP and either credential-free (Re:Earth, Natural Earth) or uses a token designed for browser
-use (Cesium ion, when configured).
+browser-side provider traffic is tile fetching from terrain/imagery CDNs, the 3D buildings
+tileset (ion) and the operator's land-cover tile host, all allowlisted in the CSP (the imagery
+and land-cover hosts are read from `IMAGERY_XYZ_URL` and `LANDCOVER_XYZ_URL` at startup,
+`apps/web/lib/csp.ts`) and either credential-free (Re:Earth, Natural Earth, land cover) or using
+a token designed for browser use (Cesium ion, when configured).
 
 ## 3. Content Security Policy and headers
 
@@ -37,7 +39,7 @@ needs neither `'unsafe-inline'` nor `'unsafe-eval'`. The remaining security head
 default-src 'self'
 script-src 'self' 'nonce-<per request>' 'strict-dynamic' 'wasm-unsafe-eval' blob:   (+ 'unsafe-eval' in development)
 style-src 'self' 'unsafe-inline'
-img-src 'self' data: blob: <terrain/imagery/weather hosts>
+img-src 'self' data: blob: <terrain/imagery/land-cover/weather hosts>
 connect-src 'self' blob: data: <terrain/imagery/weather hosts> https://api.stripe.com
 worker-src 'self' blob:
 child-src 'self' blob:

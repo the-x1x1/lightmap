@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { brand, isEnabled } from '@lightmap/config';
 import { addCivilDays, civilDateString, parseCivilDate, utcToWallClock } from '@lightmap/astronomy';
-import { DEFAULT_RENDER_SETTINGS } from '@lightmap/scene';
+import { DEFAULT_RENDER_SETTINGS, horizonShortCaveat } from '@lightmap/scene';
 import { effectiveTimeZone, usePlannerStore } from '@/features/planner/store';
 import { useScene } from '@/features/planner/use-scene';
 import { useTerrainHorizon } from '@/features/planner/use-terrain-horizon';
@@ -119,12 +119,14 @@ export function MapShell() {
   // the ordinary sunrise/sunset markers). Identity is stable per day thanks to the scene memo.
   const terrainMarkers = useMemo(() => {
     const ev = scene?.terrainHorizon?.sunEvents;
-    if (!ev || !ev.differsFromAstronomical) return null;
+    const profile = scene?.terrainHorizon?.profile;
+    if (!ev || !ev.differsFromAstronomical || !profile) return null;
     return {
       firstLight: ev.firstLightDiffers ? ev.firstLight : null,
       lastLight: ev.lastLightDiffers ? ev.lastLight : null,
+      caveat: horizonShortCaveat(profile),
     };
-  }, [scene?.terrainHorizon?.sunEvents]);
+  }, [scene?.terrainHorizon?.sunEvents, scene?.terrainHorizon?.profile]);
   // Moonrise/moonset on the timeline (moon planning): keyed on the instants, so a scrub tick
   // (which rebuilds the scene) does not hand the timeline a new object.
   const moonriseMs = scene?.lunar?.moonrise?.getTime() ?? null;
