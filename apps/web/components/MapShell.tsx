@@ -135,13 +135,16 @@ export function MapShell() {
         : null,
     [hasLunar, moonriseMs, moonsetMs],
   );
+  const dayStartMs = dayEvents?.dayStart.getTime() ?? null;
+  const dayEndMs = dayEvents?.dayEnd.getTime() ?? null;
   // The Moon's terrain-horizon crossings that are the ridge's doing (not its own rise/set):
   // keyed on the instants so a scrub tick hands the timeline the same object.
   const moonEvents = scene?.terrainHorizon?.moonEvents ?? null;
   const moonTerrainKey = useMemo(() => {
-    if (!moonEvents?.differsFromAstronomical || !scene) return null;
-    const start = scene.dayEvents.dayStart.getTime();
-    const end = scene.dayEvents.dayEnd.getTime();
+    if (!moonEvents?.differsFromAstronomical || dayStartMs === null || dayEndMs === null)
+      return null;
+    const start = dayStartMs;
+    const end = dayEndMs;
     const own = [moonriseMs, moonsetMs].filter((x): x is number => x !== null);
     const ridge = (t: number) => own.every((o) => Math.abs(o - t) > 3 * 60_000);
     const clears = moonEvents.visible
@@ -151,7 +154,7 @@ export function MapShell() {
       .map((v) => v.to.getTime())
       .filter((t) => t !== end && ridge(t));
     return clears.length || drops.length ? `${clears.join(',')}|${drops.join(',')}` : null;
-  }, [moonEvents, scene, moonriseMs, moonsetMs]);
+  }, [moonEvents, dayStartMs, dayEndMs, moonriseMs, moonsetMs]);
   const moonTerrain = useMemo(() => {
     if (!moonTerrainKey) return null;
     const [c, d] = moonTerrainKey.split('|');
@@ -160,8 +163,6 @@ export function MapShell() {
     return { clears: dates(c), drops: dates(d) };
   }, [moonTerrainKey]);
   // Dark-sky spells of the civil day (night planning) for the timeline band: per place and day.
-  const dayStartMs = dayEvents?.dayStart.getTime() ?? null;
-  const dayEndMs = dayEvents?.dayEnd.getTime() ?? null;
   const darkSky = useMemo(
     () =>
       hasLunar && location && dayStartMs !== null && dayEndMs !== null
