@@ -1,7 +1,7 @@
 /**
  * A project's shots as an iCalendar file (RFC 5545) for any calendar app: one event per saved
  * viewpoint, from half an hour before the planned instant (time to be set up) to a quarter of an
- * hour after, with a reminder an hour before, the place as LOCATION and GEO, the shot-list block
+ * hour after, with a reminder an hour before the planned instant, the place as LOCATION and GEO, the shot-list block
  * (camera, sun, Moon and Milky Way core at night, the weather basis) as the description and the
  * link that reopens the viewpoint. Each event's UID is the viewpoint's own id, so importing the
  * file again updates the events instead of duplicating them. Instants are written in UTC: every
@@ -22,7 +22,7 @@ export interface CalendarOptions {
 /** Minutes before the planned instant the event starts, and after it that it ends. */
 export const SETUP_MINUTES = 30;
 export const AFTER_MINUTES = 15;
-/** Reminder before the event starts. */
+/** Reminder before the planned instant (the alarm trigger is relative to DTSTART, so it is offset by the set-up time). */
 export const REMINDER_MINUTES = 60;
 
 /** 20261011T043000Z */
@@ -91,7 +91,7 @@ function eventLines(project: ProjectDto, v: ViewpointDto, opts: CalendarOptions)
     'BEGIN:VALARM',
     'ACTION:DISPLAY',
     `DESCRIPTION:${icsText(`${v.label} in ${REMINDER_MINUTES} min`)}`,
-    `TRIGGER:-PT${REMINDER_MINUTES}M`,
+    `TRIGGER:-PT${REMINDER_MINUTES - SETUP_MINUTES}M`,
     'END:VALARM',
     'END:VEVENT',
   ];

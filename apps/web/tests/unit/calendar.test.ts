@@ -77,13 +77,14 @@ describe('calendar export (.ics)', () => {
     expect(flat).toContain('SUMMARY:Beach\\, noon · Kailua weekend\\, dawn\\; dusk');
     expect(flat).toContain('GEO:21.397000;-157.727000');
     expect(flat).toContain('URL:https://lightmap.example/?viewpoint=v1');
-    expect(flat).toContain('TRIGGER:-PT60M');
+    // An hour before the planned instant: 30 min before the event's own start.
+    expect(flat).toContain('TRIGGER:-PT30M');
     // The description is the shot-list block, newlines escaped.
     expect(flat).toContain('When:    2026-05-31 12:30 (Pacific/Honolulu)\\n');
     expect(flat).toContain('Weather: Scenario (not a forecast): overcast');
   });
 
-  it('an empty project is a valid, empty calendar', () => {
+  it('an empty project gives a calendar with no events (the UI offers the file only with viewpoints)', () => {
     const ics = buildCalendar(project, [], opts);
     expect(ics).not.toContain('BEGIN:VEVENT');
     expect(ics).toContain('END:VCALENDAR');

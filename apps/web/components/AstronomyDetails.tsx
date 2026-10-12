@@ -200,7 +200,8 @@ function MoonDetails({
         <Row
           label="Moon disc"
           value={describeDisc(
-            moonApparentDiameterDeg(lunar.distanceKm, lunar.elevationDegrees),
+            // The observer offset only while the Moon is up; below the horizon the almanac's figure.
+            moonApparentDiameterDeg(lunar.distanceKm, Math.max(0, lunar.elevationDegrees)),
             scene.camera.mode === 'viewpoint' ? scene.camera.fovDeg : null,
           )}
           testId="moon-disc"

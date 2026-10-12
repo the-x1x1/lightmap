@@ -215,6 +215,30 @@ describe('buildMonthlyClimatology', () => {
     });
     expect(polar.meanCloudCover).toBeGreaterThan(tropics.meanCloudCover);
   });
+
+  it('the fixture air runs on local time and has the seasons the right way round', async () => {
+    const p = new FixtureClimatologyProvider();
+    const mean = (rows: Awaited<ReturnType<typeof p.getMonthHours>>) =>
+      rows.reduce((acc, r) => acc + (r.temperature ?? 0), 0) / rows.length;
+    // Tromsø: July warmer than January; Sydney the other way round; the tropics warmer than both.
+    const tromsoJul = mean(await p.getMonthHours(69.6, 18.9, 2020, 7));
+    const tromsoJan = mean(await p.getMonthHours(69.6, 18.9, 2020, 1));
+    expect(tromsoJul).toBeGreaterThan(tromsoJan + 10);
+    expect(mean(await p.getMonthHours(-33.9, 151.2, 2020, 1))).toBeGreaterThan(
+      mean(await p.getMonthHours(-33.9, 151.2, 2020, 7)),
+    );
+    expect(mean(await p.getMonthHours(21.4, -157.7, 2020, 1))).toBeGreaterThan(tromsoJan + 20);
+    // Warmest in the place's afternoon, not UTC's: Honolulu's hottest hour lands at 14–16 local.
+    const s = summarizeClimatology(await p.getMonthHours(21.4, -157.7, 2020, 5), meta);
+    const t = temperatureByHour(s.byHour, 12)!;
+    expect(t.warmestHour).toBeGreaterThanOrEqual(14);
+    expect(t.warmestHour).toBeLessThanOrEqual(16);
+    expect(t.coldestHour).toBeGreaterThanOrEqual(2);
+    expect(t.coldestHour).toBeLessThanOrEqual(4);
+    const h = humidityByHour(s.byHour, 12)!;
+    expect(h.peakHour).toBeGreaterThanOrEqual(3);
+    expect(h.peakHour).toBeLessThanOrEqual(7);
+  });
 });
 
 describe('normalizeArchive', () => {

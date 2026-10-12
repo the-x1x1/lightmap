@@ -406,7 +406,7 @@ export function ProjectDrawer({
                     size="sm"
                     variant="ghost"
                     onClick={downloadCalendar}
-                    title="One calendar event per viewpoint: from 30 min before the planned instant, with a reminder an hour ahead"
+                    title="One calendar event per viewpoint: from 30 min before the planned instant, with a reminder an hour before the shot"
                     data-testid="shot-list-calendar"
                   >
                     Add to calendar (.ics)

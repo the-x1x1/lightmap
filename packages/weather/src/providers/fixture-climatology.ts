@@ -44,15 +44,17 @@ export class FixtureClimatologyProvider implements ClimatologyProvider {
     const baseCloud = 25 + absLat * 0.6 + (winter ? 15 : 0);
     // Air: cooler toward the poles, a seasonal swing that grows with latitude (warmest in July
     // north of the equator, January south of it) and a ±5 °C day; no extra draws.
-    const seasonal = -(4 + absLat * 0.25) * Math.cos(((month - 7) / 12) * 2 * Math.PI);
-    const baseAir = 27 - absLat * 0.4 + (lat >= 0 ? seasonal : -seasonal);
+    const seasonal = absLat * 0.22 * Math.cos(((month - 7) / 12) * 2 * Math.PI);
+    const baseAir = 28 - absLat * 0.35 + (lat >= 0 ? seasonal : -seasonal);
     const wetChance = absLat < 23 && [11, 12, 1, 2, 3].includes(month) ? 0.18 : 0.06;
     const days = new Date(Date.UTC(year, month, 0)).getUTCDate();
     const out: ClimatologyHour[] = [];
     for (let d = 1; d <= days; d++) {
       const dayOffset = (rnd() - 0.5) * 60; // some days are clear, some overcast
       for (let h = 0; h < 24; h++) {
-        const diurnal = 10 * Math.sin(((h - 6) / 24) * 2 * Math.PI); // afternoon build-up
+        // The day's cycles run on local (solar) time, as the summary buckets by the place's hour.
+        const lh = (((h + lng / 15) % 24) + 24) % 24;
+        const diurnal = 10 * Math.sin(((lh - 6) / 24) * 2 * Math.PI); // afternoon build-up
         const cloud = Math.max(
           0,
           Math.min(100, baseCloud + dayOffset + diurnal + (rnd() - 0.5) * 20),
@@ -66,9 +68,10 @@ export class FixtureClimatologyProvider implements ClimatologyProvider {
           // so the cloud and rain series stay as they were).
           humidity: Math.min(
             100,
-            68 + 0.18 * cloud + (wet ? 12 : 0) + 14 * Math.cos(((h - 5) / 24) * 2 * Math.PI),
+            68 + 0.18 * cloud + (wet ? 12 : 0) + 14 * Math.cos(((lh - 5) / 24) * 2 * Math.PI),
           ),
-          temperature: Math.round((baseAir + 5 * Math.sin(((h - 9) / 24) * 2 * Math.PI)) * 10) / 10,
+          temperature:
+            Math.round((baseAir + 5 * Math.sin(((lh - 9) / 24) * 2 * Math.PI)) * 10) / 10,
         });
       }
     }
