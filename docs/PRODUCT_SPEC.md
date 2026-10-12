@@ -482,7 +482,9 @@ No lens optical simulation (distortion, rendered blur) in v1.
   one stands out, and a "Big Moon only" filter keeps the rows at 0.54° or more (within a few
   days of perigee); a row whose day is already in the planner's query cache (the planner or the
   week ahead fetched it) adds the forecast around that instant ("· forecast 20 % cloud, clear"),
-  read from the cache, never fetched by the finder; selecting a row moves the planner to that instant so the preview shows it.
+  read from the cache, never fetched by the finder; "Copy" puts the shown results on the clipboard
+  as text — one line per moment in the planning zone with bearing, height, trend and the Moon's
+  lit share and disc (`finderResultsText`, tested); selecting a row moves the planner to that instant so the preview shows it.
 - **Honesty**: results are geometry only — terrain occlusion, clouds and near-horizon refraction
   are not part of the search; the note under the list says so and points to the preview.
 - **"This light" chip** under the timeline (`NextOccurrence`): whenever the sun is above civil

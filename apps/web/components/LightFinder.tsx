@@ -34,6 +34,7 @@ import { usePlannerStore } from '@/features/planner/store';
 import { useSolver } from '@/features/finder/use-solver';
 import type { SerializedMatch, SolverResultDto } from '@/features/finder/solver-types';
 import { Paywall } from './Paywall';
+import { finderResultsText } from '@/features/finder/results-text';
 
 type TargetMode = 'pick' | 'frame' | 'current' | 'manual' | 'ridge';
 
@@ -102,6 +103,7 @@ export function LightFinder({
     ms: number;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
 
   const bodyName = body === 'sun' ? 'sun' : body === 'moon' ? 'moon' : 'Milky Way core';
   // Where the chosen body is right now (the Moon and the core ride on the lunar state).
@@ -567,6 +569,33 @@ export function LightFinder({
               {result.res.truncated ? ' · range capped at 1100 days' : ''}
               {hidden > 0 ? ` · ${hidden} behind terrain hidden` : ''}
             </span>
+            {matches.length > 0 ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                className="ml-2"
+                data-testid="finder-copy"
+                onClick={() => {
+                  void navigator.clipboard
+                    .writeText(
+                      finderResultsText(matches, {
+                        timeZone: tz,
+                        body,
+                        place: scene.location.label,
+                      }),
+                    )
+                    .then(
+                      () => setCopied('Results copied to the clipboard.'),
+                      () => setCopied('Could not reach the clipboard here.'),
+                    );
+                }}
+              >
+                Copy
+              </Button>
+            ) : null}
+            {copied ? (
+              <span className="ml-2 text-xs text-[var(--lm-text-muted)]">{copied}</span>
+            ) : null}
           </p>
         ) : null}
       </div>
