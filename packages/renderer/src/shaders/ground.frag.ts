@@ -49,6 +49,8 @@ export const GROUND_UNIFORM_DEFAULTS = {
   u_cloudShadow: 0,
   /** The planner's clock in minutes (the sky's clouds drift with the same one). */
   u_cloudTime: 0,
+  /** Detail level from the quality rung: 0 base surface, 1 adds cloud shadows, 2 adds relief and the near grain. */
+  u_detail: 2,
 } as const;
 
 export const GROUND_MATERIAL_SOURCE = /* glsl */ `
@@ -62,6 +64,7 @@ uniform float u_brightness;
 uniform float u_seaLevelM;
 uniform float u_cloudShadow;
 uniform float u_cloudTime;
+uniform float u_detail;
 // The camera's position in grain cells: whole cells and the fraction, set each frame.
 uniform vec3 u_cameraCell;
 uniform vec3 u_cameraFrac;
@@ -157,7 +160,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // camera-relative position (precise) plus the camera's own position in grain cells (whole
     // cells into the lattice, the fraction into the coordinate, both from the CPU in double).
     float dist = length(positionEC);
-    float nearW = smoothstep(500.0, 60.0, dist);
+    float nearW = u_detail >= 2.0 ? smoothstep(500.0, 60.0, dist) : 0.0;
     if (nearW > 0.0)
     {
         vec3 local = czm_inverseViewRotation * positionEC / 2.5 + u_cameraFrac;
@@ -169,13 +172,16 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // and scree show texture that turns with the light through the day. A shading of the albedo
     // only (the mesh, its normals and the shadows are untouched), strongest on bare ground, gone
     // on snow, and fading beyond a few kilometres where it would only shimmer.
-    float reliefW = max(rocky, alpine * 0.7) * (1.0 - snowy) * smoothstep(6000.0, 800.0, dist);
+    float reliefW = u_detail >= 2.0
+        ? max(rocky, alpine * 0.7) * (1.0 - snowy) * smoothstep(6000.0, 800.0, dist)
+        : 0.0;
     if (reliefW > 0.0)
     {
-        float e = 6.0;
+        // Forward differences from the grain already in hand: two more samples, not four.
+        float e = 6.0 / 60.0;
         vec3 pe = positionWC / 60.0 + 5.0;
-        float gx = lmFbm(pe + vec3(e / 60.0, 0.0, 0.0)) - lmFbm(pe - vec3(e / 60.0, 0.0, 0.0));
-        float gy = lmFbm(pe + vec3(0.0, e / 60.0, 0.0)) - lmFbm(pe - vec3(0.0, e / 60.0, 0.0));
+        float gx = lmFbm(pe + vec3(e, 0.0, 0.0)) - grain;
+        float gy = lmFbm(pe + vec3(0.0, e, 0.0)) - grain;
         // The gradient is in world axes; read it as east/north in the surface frame (the
         // difference is a rotation of a random field, which changes nothing a viewer can tell).
         vec3 bumpEC = normalize(materialInput.normalEC + materialInput.tangentToEyeMatrix * vec3(-gx * 2.5, -gy * 2.5, 0.0));
@@ -188,7 +194,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // planner's clock, over everything but water. A dappling of the albedo — the direct light's
     // direction, the terrain shadows and the sky are untouched; the patches are a pattern, not
     // the forecast's own clouds.
-    if (u_cloudShadow > 0.0)
+    if (u_cloudShadow > 0.0 && u_detail >= 1.0)
     {
         vec3 drift = vec3(u_cloudTime * 8.0, u_cloudTime * 3.0, 0.0);  // ≈ 8 m/min east, 3 north
         float cloud = lmFbm((positionWC + drift) / 1400.0 + 13.0);

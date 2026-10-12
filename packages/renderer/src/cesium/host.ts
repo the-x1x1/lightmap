@@ -142,6 +142,7 @@ export interface HostGroundTexture {
   brightness: number;
   seaLevelM: number;
   cloudShadow: number;
+  detail: 0 | 1 | 2;
 }
 
 export interface HostQuality {

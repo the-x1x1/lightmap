@@ -25,6 +25,8 @@ export interface GroundTextureParams {
   seaLevelM: number;
   /** How strongly broken cloud dapples the ground, 0–1 (`cloudShadowStrength`). */
   cloudShadow: number;
+  /** What the quality rung affords: 0 the base surface, 1 with cloud shadows, 2 with relief and the near grain. */
+  detail: 0 | 1 | 2;
 }
 
 /**
@@ -177,6 +179,9 @@ export function groundTextureFor(
     ice: Math.round(hint.ice * 100) / 100,
     brightness: Math.round(Math.max(0, Math.min(1, context.brightness)) * 100) / 100,
     seaLevelM: Math.round(context.seaLevelM),
+    // Ultra/High (soft shadows) carry everything; Balanced drops the per-fragment relief and
+    // grain; Battery keeps the base surface only.
+    detail: scene.render.softShadows ? 2 : scene.render.shadowMapSize >= 2048 ? 1 : 0,
     cloudShadow: cloudShadowStrength(
       scene.atmosphere.parameters.cloudLayers,
       scene.atmosphere.parameters.sunTransmittance,

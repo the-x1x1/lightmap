@@ -117,6 +117,24 @@ describe('groundTextureFor', () => {
     const g = groundTextureFor(sceneAt(21.4, new Date('2026-02-09T22:00:00Z')))!;
     expect(g.poleward).toBe(1);
     expect(g.strength).toBe(1);
+    expect(g.detail).toBe(2);
+    expect(
+      groundTextureFor(
+        sceneAt(21.4, new Date('2026-02-09T22:00:00Z'), {
+          ...DEFAULT_RENDER_SETTINGS,
+          softShadows: false,
+        }),
+      )!.detail,
+    ).toBe(1);
+    expect(
+      groundTextureFor(
+        sceneAt(21.4, new Date('2026-02-09T22:00:00Z'), {
+          ...DEFAULT_RENDER_SETTINGS,
+          softShadows: false,
+          shadowMapSize: 1024,
+        }),
+      )!.detail,
+    ).toBe(0);
     expect(g.snowlineM).toBe(Math.round(snowlineM(21.4, 40)));
     expect(g.treelineM).toBe(Math.round(permanentSnowlineM(21.4) - 900));
     expect(groundTextureFor(sceneAt(-33.9, new Date('2026-02-09T22:00:00Z')))!.poleward).toBe(-1);

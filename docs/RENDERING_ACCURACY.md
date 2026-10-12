@@ -172,8 +172,9 @@ procedural surface supplies the detail it lacks. Water (where the terrain carrie
 left to the water effect; the shore and snow rules read heights above sea level (the geoid at
 the pin from the terrain's ellipsoidal height against the known elevation; a click picks the
 ground under the cursor, never a roof, so buildings do not skew it), and the night
-chart's dimming applies to the surface as to the basemap. The Minimal quality rung turns it off with the shadows; the
-`groundTexture` flag turns it off everywhere. On bare ground within a few kilometres a **micro-relief** shading
+chart's dimming applies to the surface as to the basemap. The quality rung sets its detail: Ultra and High carry everything, Balanced drops the
+per-fragment relief and the near grain, Battery keeps the base surface alone, Minimal turns it
+off with the shadows; the `groundTexture` flag turns it off everywhere. On bare ground within a few kilometres a **micro-relief** shading
 reads the grain as small bumps lit by the scene's own Sun direction, so rock and scree show a
 texture that turns with the light through the day — a shading of the albedo only, within
 ±30 %, gone on snow. Under **broken cloud** the ground is dappled with
