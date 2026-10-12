@@ -10,6 +10,8 @@ import { useCapabilities } from '@/features/planner/use-scene';
 import { weatherQueryOptions } from '@/features/planner/weather-query';
 import { forecastNudge } from '@/features/projects/forecast-nudge';
 import { nightTag } from '@/features/projects/night-tag';
+import { viewpointExposure } from '@/features/projects/viewpoint-exposure';
+import { describeExposure } from '@lightmap/scene';
 import { PreviewSourceBadge } from './PreviewSourceBadge';
 
 export function SavedViewpointCard({
@@ -42,6 +44,21 @@ export function SavedViewpointCard({
   const night = useMemo(
     () => nightTag({ latitude, longitude, selectedDatetimeUtc }),
     [latitude, longitude, selectedDatetimeUtc],
+  );
+  const { weatherMode, weatherScenario, cloudCoverAtSave } = viewpoint;
+  const exposure = useMemo(
+    () =>
+      describeExposure(
+        viewpointExposure({
+          latitude,
+          longitude,
+          selectedDatetimeUtc,
+          weatherMode,
+          weatherScenario,
+          cloudCoverAtSave,
+        }),
+      ),
+    [latitude, longitude, selectedDatetimeUtc, weatherMode, weatherScenario, cloudCoverAtSave],
   );
   // The forecast around the shot when the planner already fetched that day for this place
   // (the same query key as the planner and the week ahead): read from the cache, never fetched
@@ -93,6 +110,13 @@ export function SavedViewpointCard({
                   ? ` · ${viewpoint.cloudCoverAtSave} % cloud at save`
                   : ''
               }`}
+          <span
+            className="text-[var(--lm-text-faint)]"
+            title="An incident-light estimate, not a meter reading"
+          >
+            {' · ~'}
+            {exposure}
+          </span>
         </p>
         {around ? (
           <p className="mt-1 text-xs text-[var(--lm-text-muted)]" data-testid="viewpoint-forecast">

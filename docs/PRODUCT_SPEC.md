@@ -619,7 +619,9 @@ horizon rule as the planner). A viewpoint planned after civil dusk also carries 
 (`nightTag()`), green when the sky is dark. When that day's frames for that place are already
 in the planner's query cache (the planner or the week ahead fetched them) the card also reads
 the forecast around its own hour — "Forecast around the shot: 20 % cloud, clear — direct light"
-(`windowOutlook` over ±30 min); a card never fetches on its own.
+(`windowOutlook` over ±30 min); a card never fetches on its own. Each card also carries the
+exposure estimate for its instant under its saved scenario or cloud ("~EV 12.8 · 1/125 s f/8
+ISO 100", `viewpointExposure`, tested).
 
 **Shot variants** (plan §25 Phase 6): a viewpoint can hold variants — the same place and camera at
 other dates/times or scenarios ("07:10 vs 18:40 vs 4 August"). A variant is a viewpoint row with
