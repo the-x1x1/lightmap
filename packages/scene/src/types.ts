@@ -63,6 +63,8 @@ export interface EnvironmentState {
   basemapProviderId: string;
   basemapDetail: 'coarse' | 'regional' | 'street';
   buildingsAvailable: boolean;
+  /** The land-cover source painting the ground texture, when one is configured ('worldcover' | 'copernicus'). */
+  landCover?: 'worldcover' | 'copernicus' | null;
   /** Ground elevation at the pin when known. */
   groundElevationM: number | null;
   attributions: Array<{ id: string; attribution: string; attributionUrl?: string }>;

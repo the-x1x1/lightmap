@@ -325,6 +325,25 @@ describe('confidence and source mode', () => {
       }).environment,
     ).toBe('LOW');
   });
+  it('names the ground texture’s source in the environment note without grading it', () => {
+    const note = (environment: typeof envGood) =>
+      deriveConfidence({
+        astronomyInputsValid: true,
+        environment,
+        weather: horizon,
+        realReference: false,
+      });
+    expect(note(envCoarse).notes.environment).toMatch(
+      /; ground painted by rule \(no land-cover data\)$/,
+    );
+    const wc = note({ ...envCoarse, landCover: 'worldcover' });
+    expect(wc.notes.environment).toMatch(/; ground painted from ESA WorldCover land cover$/);
+    expect(wc.environment).toBe(note(envCoarse).environment);
+    expect(note({ ...envGood, landCover: 'copernicus' }).notes.environment).toMatch(
+      /Copernicus land cover$/,
+    );
+    expect(note(envFlat).notes.environment).toBe('No terrain data here — flat ground assumed');
+  });
   it('maps to the three source labels', () => {
     expect(
       deriveSourceMode(

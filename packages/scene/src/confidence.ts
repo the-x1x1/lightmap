@@ -42,12 +42,21 @@ export function deriveConfidence(input: ConfidenceInput): ConfidenceState {
   const weather = input.weatherProviderFailed ? 'SCENARIO' : input.weather.weatherConfidence;
   const imagery = input.realReference ? 'REAL_REFERENCE' : 'NONE';
 
+  // The ground texture's source is named, never graded: a tint on the surface, not detail.
+  const ground =
+    input.environment.landCover === 'worldcover'
+      ? '; ground painted from ESA WorldCover land cover'
+      : input.environment.landCover === 'copernicus'
+        ? '; ground painted from Copernicus land cover'
+        : terrain === 'HIGH'
+          ? '; ground painted by rule (no land-cover data)'
+          : '';
   const envNote =
-    environment === 'HIGH'
+    (environment === 'HIGH'
       ? 'Real terrain with detailed imagery and OSM buildings where mapped'
       : terrain === 'HIGH'
         ? `Real terrain; ${input.environment.basemapDetail === 'coarse' ? 'coarse basemap, no buildings' : 'imagery without 3D buildings'}`
-        : 'No terrain data here — flat ground assumed';
+        : 'No terrain data here — flat ground assumed') + ground;
   const weatherNote = input.weatherProviderFailed
     ? 'Live forecast unavailable — showing your selected scenario'
     : input.weather.reason;

@@ -376,12 +376,14 @@ Independent dimensions, never a single percentage:
 | Real reference | Available · Unavailable        | Whether a licensed image is on screen                                                                 |
 
 Environment (used internally) combines terrain and scene detail. Each dimension carries a
-one-line, user-facing reason. Example:
+one-line, user-facing reason; the scene-detail reason ends by naming what paints the ground —
+"by rule (no land-cover data)" or the configured land-cover source (ESA WorldCover, Copernicus)
+— without grading it, since the texture is a tint, not detail. Example:
 
 ```
 Preview basis
 Astronomy       High      Sun and moon positions computed from ephemeris (sun ±0.01° against USNO, moon ±0.02° against Meeus 47.a)
-Terrain         High      Real terrain; imagery without 3D buildings
+Terrain         High      Real terrain; imagery without 3D buildings; ground painted by rule (no land-cover data)
 Scene detail    Medium
 Weather         Scenario  Forecast unavailable this far ahead (250 days) — compare scenarios
 Real reference  Unavailable   No licensed real photograph available — simulation only

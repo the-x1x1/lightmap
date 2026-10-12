@@ -75,6 +75,8 @@ export function environmentFromCapabilities(
     basemapProviderId: c.providers.basemap.providerId,
     basemapDetail: c.providers.basemap.detailLevel,
     buildingsAvailable: c.providers.buildings.kind !== 'none',
+    landCover:
+      c.providers.landCover.kind === 'xyz' ? (c.providers.landCover.palette ?? null) : null,
     groundElevationM,
     attributions: c.providers.attributions,
     fixtureMode: c.fixtureMode,
