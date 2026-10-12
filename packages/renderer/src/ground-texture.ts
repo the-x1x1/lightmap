@@ -25,6 +25,8 @@ export interface GroundTextureParams {
   seaLevelM: number;
   /** How strongly broken cloud dapples the ground, 0–1 (`cloudShadowStrength`). */
   cloudShadow: number;
+  /** How wet the ground is, 0–1, from the scenario's precipitation. */
+  wet: number;
   /** What the quality rung affords: 0 the base surface, 1 with cloud shadows, 2 with relief and the near grain. */
   detail: 0 | 1 | 2;
 }
@@ -181,6 +183,8 @@ export function groundTextureFor(
     seaLevelM: Math.round(context.seaLevelM),
     // Ultra/High (soft shadows) carry everything; Balanced drops the per-fragment relief and
     // grain; Battery keeps the base surface only.
+    wet:
+      Math.round(Math.max(0, Math.min(1, scene.atmosphere.parameters.precipitation)) * 100) / 100,
     detail: scene.render.softShadows ? 2 : scene.render.shadowMapSize >= 2048 ? 1 : 0,
     cloudShadow: cloudShadowStrength(
       scene.atmosphere.parameters.cloudLayers,

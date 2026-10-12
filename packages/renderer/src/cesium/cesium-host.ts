@@ -338,6 +338,7 @@ export class CesiumSceneHost implements SceneHost {
     u['u_seaLevelM'] = g.seaLevelM;
     u['u_cloudShadow'] = g.cloudShadow;
     u['u_detail'] = g.detail;
+    u['u_wet'] = g.wet;
     this.scene.requestRender();
   }
 

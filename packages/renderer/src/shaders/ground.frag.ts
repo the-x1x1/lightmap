@@ -49,6 +49,8 @@ export const GROUND_UNIFORM_DEFAULTS = {
   u_cloudShadow: 0,
   /** The planner's clock in minutes (the sky's clouds drift with the same one). */
   u_cloudTime: 0,
+  /** How wet the ground is, 0–1 (the scenario's precipitation): wet ground is darker and duller. */
+  u_wet: 0,
   /** Detail level from the quality rung: 0 base surface, 1 adds cloud shadows, 2 adds relief and the near grain. */
   u_detail: 2,
 } as const;
@@ -65,6 +67,7 @@ uniform float u_seaLevelM;
 uniform float u_cloudShadow;
 uniform float u_cloudTime;
 uniform float u_detail;
+uniform float u_wet;
 // The camera's position in grain cells: whole cells and the fraction, set each frame.
 uniform vec3 u_cameraCell;
 uniform vec3 u_cameraFrac;
@@ -200,6 +203,14 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         float cloud = lmFbm((positionWC + drift) / 1400.0 + 13.0);
         float shade = smoothstep(0.38, 0.62, cloud);
         ground *= 1.0 - 0.45 * u_cloudShadow * shade;
+    }
+
+    // Rain: wet ground is darker and duller (water in the surface), snow apart.
+    if (u_wet > 0.0)
+    {
+        float wetness = u_wet * (1.0 - snowy);
+        vec3 grey = vec3(dot(ground, vec3(0.3, 0.59, 0.11)));
+        ground = mix(ground, grey, 0.25 * wetness) * (1.0 - 0.3 * wetness);
     }
 
     material.diffuse = ground * u_brightness;

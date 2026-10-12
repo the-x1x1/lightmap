@@ -182,7 +182,8 @@ cumulus-sized patches of shade (a kilometre or two across) drifting with the pla
 nothing under a clear sky or an overcast one (the light is already diffuse and dimmed as a
 whole), most at half cover of the low and mid decks, nothing without direct sun
 (`cloudShadowStrength`, 4c(1−c)); the patches are a pattern, not the forecast's own clouds, and
-they do not match the clouds drawn in the sky. **Claim:** the surface lit by the true Sun, with
+they do not match the clouds drawn in the sky. Under rain the ground is darker and duller
+(the scenario's precipitation; snow apart). **Claim:** the surface lit by the true Sun, with
 shadows and horizon geometry untouched (the material runs before the globe's lighting and
 changes albedo only; the micro-relief uses the light direction but never the shadow map or
 the mesh). **Caveat:** a texture, not land cover — it does not know a forest from a

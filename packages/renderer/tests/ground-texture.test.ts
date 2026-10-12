@@ -118,6 +118,7 @@ describe('groundTextureFor', () => {
     expect(g.poleward).toBe(1);
     expect(g.strength).toBe(1);
     expect(g.detail).toBe(2);
+    expect(g.wet).toBe(0);
     expect(
       groundTextureFor(
         sceneAt(21.4, new Date('2026-02-09T22:00:00Z'), {
