@@ -107,6 +107,9 @@ export const ANALYTICS_EVENTS = [
   'preview_expanded',
   'upgrade_started',
   'subscription_started',
+  // Which exports are used and whether the week ahead is opened: product questions, no content.
+  'export_made',
+  'week_ahead_opened',
 ] as const;
 
 export type AnalyticsEvent = (typeof ANALYTICS_EVENTS)[number];

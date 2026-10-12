@@ -29,6 +29,16 @@ type PropRule =
   | { kind: 'scenario' };
 
 const LOCATION_SOURCES = ['search', 'map-click', 'coordinates', 'device', 'saved', 'fixture'];
+/** The exports a photographer can make — which ones earn their keep is a product question. */
+export const EXPORT_KINDS = [
+  'card',
+  'shot-list',
+  'calendar',
+  'finder-text',
+  'finder-calendar',
+  'dark-windows-calendar',
+  'week-ahead-text',
+] as const;
 
 /** The properties each event may carry (PRIVACY.md §4 lists them in words). */
 export const ANALYTICS_PROPS: Record<AnalyticsEvent, Record<string, PropRule>> = {
@@ -44,6 +54,8 @@ export const ANALYTICS_PROPS: Record<AnalyticsEvent, Record<string, PropRule>> =
   preview_expanded: { camera: { kind: 'enum', values: ['map', 'viewpoint'] } },
   upgrade_started: { interval: { kind: 'enum', values: ['monthly', 'yearly'] } },
   subscription_started: { plan: { kind: 'enum', values: ['free', 'pro', 'studio', 'unknown'] } },
+  export_made: { kind: { kind: 'enum', values: EXPORT_KINDS } },
+  week_ahead_opened: {},
 };
 
 function accept(rule: PropRule, v: string | number | boolean): string | number | boolean | null {

@@ -37,6 +37,7 @@ import { Paywall } from './Paywall';
 import { finderResultsText } from '@/features/finder/results-text';
 import { buildFinderCalendar } from '@/features/export/finder-calendar';
 import { downloadBlob, fileStem } from '@/features/export/download';
+import { track } from '@/lib/client/analytics';
 
 type TargetMode = 'pick' | 'frame' | 'current' | 'manual' | 'ridge';
 
@@ -587,7 +588,10 @@ export function LightFinder({
                       }),
                     )
                     .then(
-                      () => setCopied('Results copied to the clipboard.'),
+                      () => {
+                        setCopied('Results copied to the clipboard.');
+                        track('export_made', { kind: 'finder-text' });
+                      },
                       () => setCopied('Could not reach the clipboard here.'),
                     );
                   // The note fades on its own; a late update after unmount is harmless in React 19.
@@ -604,7 +608,7 @@ export function LightFinder({
                 className="ml-2"
                 data-testid="finder-calendar"
                 title="Download every moment as a calendar event (.ics)"
-                onClick={() =>
+                onClick={() => {
                   downloadBlob(
                     new Blob(
                       [
@@ -622,8 +626,9 @@ export function LightFinder({
                       { type: 'text/calendar;charset=utf-8' },
                     ),
                     `${fileStem(scene.location.label, 'place')}-${body}-finder.ics`,
-                  )
-                }
+                  );
+                  track('export_made', { kind: 'finder-calendar' });
+                }}
               >
                 Calendar
               </Button>

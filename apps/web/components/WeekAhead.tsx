@@ -28,6 +28,7 @@ import {
 } from '@/features/planner/week-ahead';
 import { weatherQueryOptions } from '@/features/planner/weather-query';
 import { Paywall } from './Paywall';
+import { track } from '@/lib/client/analytics';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -167,7 +168,10 @@ export function WeekAhead({
     <details
       className="group"
       data-testid="week-ahead"
-      onToggle={(e) => setOpen(e.currentTarget.open)}
+      onToggle={(e) => {
+        setOpen(e.currentTarget.open);
+        if (e.currentTarget.open) track('week_ahead_opened');
+      }}
     >
       <summary className="cursor-pointer text-xs uppercase tracking-wide text-[var(--lm-text-muted)]">
         The week ahead
@@ -233,7 +237,10 @@ export function WeekAhead({
             void navigator.clipboard
               .writeText(weekAheadText(rows, tz, new Set(fetchable), scene.location.label))
               .then(
-                () => setCopied('Copied.'),
+                () => {
+                  setCopied('Copied.');
+                  track('export_made', { kind: 'week-ahead-text' });
+                },
                 () => setCopied('Could not reach the clipboard here.'),
               );
             // The note fades on its own; a late update after unmount is harmless in React 19.

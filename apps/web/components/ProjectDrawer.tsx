@@ -24,6 +24,7 @@ import { buildCalendar } from '@/features/export/calendar';
 import { downloadBlob, fileStem } from '@/features/export/download';
 import { restoreInputFor } from '@/features/projects/open-viewpoint';
 import { ApiRequestError } from '@/lib/client/api';
+import { track } from '@/lib/client/analytics';
 import type { ViewpointDto } from '@/lib/api-types';
 import { Button } from '@lightmap/ui';
 import { ProjectCard } from './ProjectCard';
@@ -147,6 +148,7 @@ export function ProjectDrawer({
     try {
       await navigator.clipboard.writeText(text);
       setStatus('Shot list copied to the clipboard.');
+      track('export_made', { kind: 'shot-list' });
     } catch {
       setError({ message: 'Could not reach the clipboard here — use Download instead.' });
     }
@@ -159,6 +161,7 @@ export function ProjectDrawer({
       `${fileStem(selectedProject.name, 'project')}-shot-list.txt`,
     );
     setStatus('Shot list downloaded.');
+    track('export_made', { kind: 'shot-list' });
   }
   // The same shots as calendar events (one per viewpoint, re-importing updates them).
   function downloadCalendar() {
@@ -173,6 +176,7 @@ export function ProjectDrawer({
       `${fileStem(selectedProject.name, 'project')}.ics`,
     );
     setStatus('Calendar file downloaded — open it to add the shots to your calendar.');
+    track('export_made', { kind: 'calendar' });
   }
   // Group shot variants under their parent; variants of a deleted/unknown parent surface top-level.
   const all = project.data?.project.viewpoints ?? [];

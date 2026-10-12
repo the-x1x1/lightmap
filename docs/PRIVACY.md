@@ -45,7 +45,7 @@ the app's own origin.
   than 64 characters, regardless of what the caller passed.
 - Events are limited to the product set: `location_selected`, `timeline_scrubbed`,
   `weather_scenario_changed`, `project_created`, `viewpoint_saved`, `preview_expanded`,
-  `upgrade_started`, `subscription_started`.
+  `upgrade_started`, `subscription_started`, `export_made`, `week_ahead_opened`.
 - The sink is chosen by `ANALYTICS_SINK`: `none` (the production default) records nothing and
   the client sends nothing; `log` writes the sanitised events to the structured server log. A
   third-party analytics vendor would plug in behind `AnalyticsSink` and would still only receive
@@ -64,8 +64,10 @@ the app's own origin.
   the slider moved before resting; `weather_scenario_changed` — the scenario id;
   `preview_expanded` — map or viewpoint camera; `viewpoint_saved` — whether it is a shot variant;
   `project_created` — nothing; `upgrade_started` — monthly or yearly; `subscription_started`
-  (server-side, from the Stripe webhook) — the plan key. Never a label, a note, a search query,
-  a precise coordinate or an email address.
+  (server-side, from the Stripe webhook) — the plan key; `export_made` — which kind of export
+  (card, shot list, calendar, finder text or calendar, dark-windows calendar, week-ahead text),
+  never its content; `week_ahead_opened` — nothing. Never a label, a note, a search query, a
+  precise coordinate or an email address.
 
 ## 5. Server logs
 

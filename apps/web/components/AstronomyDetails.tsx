@@ -44,6 +44,7 @@ import { describeLightWindows } from '@/features/planner/light-windows';
 import { DayEventMarkers } from './Timeline';
 import { buildDarkWindowsCalendar } from '@/features/export/dark-windows-calendar';
 import { downloadBlob, fileStem } from '@/features/export/download';
+import { track } from '@/lib/client/analytics';
 
 /**
  * The nights ahead on which the core can be shot, each a click away (the planner jumps to the
@@ -141,6 +142,7 @@ function DarkWindows({
                 new Blob([ics], { type: 'text/calendar;charset=utf-8' }),
                 `${fileStem(scene.location.label, 'place')}-milky-way.ics`,
               );
+              track('export_made', { kind: 'dark-windows-calendar' });
             }}
           >
             add to calendar

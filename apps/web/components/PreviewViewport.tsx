@@ -17,6 +17,7 @@ import { PreviewSourceBadge } from './PreviewSourceBadge';
 import { ForecastBadge } from './ForecastBadge';
 import { TerrainHorizonBadge } from './TerrainHorizonBadge';
 import { Paywall } from './Paywall';
+import { track } from '@/lib/client/analytics';
 
 export function PreviewViewport({
   scene,
@@ -79,6 +80,7 @@ export function PreviewViewport({
       });
       const blob = await renderPlanningCardPng(model, image);
       downloadBlob(blob, model.fileName);
+      track('export_made', { kind: 'card' });
       setExportState('done');
     } catch {
       setExportState('error');

@@ -66,6 +66,20 @@ describe('analytics beacon (plan §31, PRIVACY §4)', () => {
       parseAnalyticsBeacon({ event: 'project_created', props: { latBucket: 21 } }).props,
     ).toEqual({});
   });
+  it('the export and week-ahead events carry only their kind, from the fixed list', () => {
+    expect(
+      parseAnalyticsBeacon({ event: 'export_made', props: { kind: 'finder-calendar' } }),
+    ).toEqual({
+      event: 'export_made',
+      props: { kind: 'finder-calendar' },
+    });
+    expect(
+      parseAnalyticsBeacon({ event: 'export_made', props: { kind: 'pdf', label: 'x' } }).props,
+    ).toEqual({});
+    expect(
+      parseAnalyticsBeacon({ event: 'week_ahead_opened', props: { kind: 'card' } }).props,
+    ).toEqual({});
+  });
   it('rejects unknown events and malformed bodies', () => {
     expect(() => parseAnalyticsBeacon({ event: 'page_view' })).toThrow(/known product event/);
     expect(() => parseAnalyticsBeacon({ event: 'project_created', props: [] })).toThrow(/object/);
@@ -84,6 +98,8 @@ describe('analytics beacon (plan §31, PRIVACY §4)', () => {
         'preview_expanded',
         'upgrade_started',
         'subscription_started',
+        'export_made',
+        'week_ahead_opened',
       ].sort(),
     );
   });

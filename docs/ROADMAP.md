@@ -58,7 +58,7 @@ Checkout and Customer Portal routes; idempotent webhook pipeline; central entitl
 and `GET /api/account/entitlements`; usage counters and daily budgets; account-deletion request;
 legal placeholders wired into the app; profile preferences (units, time-zone mode, default lens;
 `GET/PATCH /api/account/profile`, kept on the device when signed out); product analytics (plan
-§31: the eight named events as same-origin beacons to `/api/analytics`, sanitised server-side,
+§31: the eight named events plus `export_made` and `week_ahead_opened` as same-origin beacons to `/api/analytics`, sanitised server-side,
 `ANALYTICS_SINK` off in production by default, Do-Not-Track and Global Privacy Control honoured).
 
 Outstanding before commercial beta (plan §43):
