@@ -23,6 +23,9 @@ dashboards. Re-baseline this document after the first month of real traffic and 
 | Pro price (for fee math only)             | $9/month                                                                  | **Replace with the real price**                                                             |
 
 Derived: weather requests before cache ≈ 6 × 3 × 1.5 = **27 per MAU per month**; after cache 8–19.
+Pro's "week ahead" block adds up to seven place-days per open (only while open, only inside the
+horizon, one cached call per day, the same `weather` budget); at the 5 % conversion assumption and
+one open per session that is ≈ 6 × 7 × 0.05 ≈ **2 more per MAU per month** before cache.
 
 ## 2. Why scrubbing costs nothing
 
