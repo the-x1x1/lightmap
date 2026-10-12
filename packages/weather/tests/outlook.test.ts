@@ -5,6 +5,7 @@ import {
   cloudOverSpells,
   hourRuns,
   hourlyOutlook,
+  freezingHours,
   humidHours,
   windyHours,
 } from '../src/outlook.ts';
@@ -161,5 +162,35 @@ describe('hourRuns / humidHours / windyHours', () => {
     ]);
     expect(hourRuns(hours, () => false)).toEqual([]);
     expect(hourRuns([], () => true)).toEqual([]);
+  });
+
+  it('freezing hours: at or below 0 °C, unknown temperatures never qualify', () => {
+    const frames: WeatherFrame[] = [];
+    for (let u = 10; u <= 33; u++) {
+      const local = u - 10;
+      frames.push(
+        frame(u, 20, {
+          temperature: local <= 6 ? -3 + local * 0.5 : local >= 21 ? 0 : local === 12 ? null : 8,
+        }),
+      );
+    }
+    const hours = hourlyOutlook(frames, hst);
+    expect(hours[12]!.temperature).toBeNull();
+    expect(hours[3]!.temperature).toBeCloseTo(-1.5, 9);
+    expect(freezingHours(hours)).toEqual([
+      { fromHour: 0, toHour: 6 },
+      { fromHour: 21, toHour: 23 },
+    ]);
+    expect(freezingHours(hours, 8)).toEqual([
+      { fromHour: 0, toHour: 11 },
+      { fromHour: 13, toHour: 23 },
+    ]);
+    // Frames without the field (older providers) give no temperature and no runs.
+    const bare = hourlyOutlook(
+      frames.map(({ temperature: _t, ...f }) => f),
+      hst,
+    );
+    expect(bare[0]!.temperature).toBeNull();
+    expect(freezingHours(bare)).toEqual([]);
   });
 });

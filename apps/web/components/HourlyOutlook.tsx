@@ -9,13 +9,15 @@
 import { useMemo } from 'react';
 import { parseCivilDate, wallClockToUtc } from '@lightmap/astronomy';
 import type { EntitlementDecision } from '@lightmap/entitlements';
-import { formatWindSpeed, type SceneState } from '@lightmap/scene';
+import { formatTemperature, formatWindSpeed, type SceneState } from '@lightmap/scene';
 import {
   HUMID_HOUR_THRESHOLD,
+  FREEZING_HOUR_C,
   WINDY_HOUR_MPS,
   brightWindows,
   cloudOverSpells,
   hourlyOutlook,
+  freezingHours,
   humidHours,
   scenarioById,
   windyHours,
@@ -71,6 +73,7 @@ export function HourlyOutlook({
   // The hours that matter to the glass and the tripod, as runs.
   const humid = useMemo(() => humidHours(hours), [hours]);
   const windy = useMemo(() => windyHours(hours), [hours]);
+  const freezing = useMemo(() => freezingHours(hours), [hours]);
 
   if (frames.length === 0 || hours.length === 0) return null;
 
@@ -175,9 +178,12 @@ export function HourlyOutlook({
           {`Dark sky (Milky Way core up): ${Math.round(darkCloud.meanCloudCover)} % cloud over ${darkCloud.hours} h, clearest ${fmt(darkCloud.clearestHour)} (${Math.round(darkCloud.clearestCloud)} %).`}
         </p>
       ) : null}
-      {humid.length || windy.length ? (
+      {humid.length || windy.length || freezing.length ? (
         <p className="text-xs text-[var(--lm-text-muted)]" data-testid="field-hours">
           {[
+            freezing.length
+              ? `freezing (≤ ${formatTemperature(FREEZING_HOUR_C, units)}) ${runs(freezing)} (batteries, iced glass)`
+              : null,
             humid.length
               ? `humidity ≥ ${HUMID_HOUR_THRESHOLD} % ${runs(humid)} (dew or mist on the glass)`
               : null,

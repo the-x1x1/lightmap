@@ -31,6 +31,8 @@ export interface OutlookHour {
   windSpeed: number | null;
   /** metres. */
   visibility: number | null;
+  /** °C at 2 m; null when the provider gave none. */
+  temperature: number | null;
 }
 
 /**
@@ -82,6 +84,7 @@ export function hourlyOutlook(
       humidity: f.humidity,
       windSpeed: f.windSpeed,
       visibility: f.visibility,
+      temperature: f.temperature ?? null,
     });
   }
   return out;
@@ -131,6 +134,14 @@ export function humidHours(hours: readonly OutlookHour[], threshold = HUMID_HOUR
 /** The hours at or over `WINDY_HOUR_MPS`, as runs. */
 export function windyHours(hours: readonly OutlookHour[], mps = WINDY_HOUR_MPS) {
   return hourRuns(hours, (h) => h.windSpeed !== null && h.windSpeed >= mps);
+}
+
+/** At or below this the air is freezing: batteries drain fast and the glass ices over. */
+export const FREEZING_HOUR_C = 0;
+
+/** The hours at or below `FREEZING_HOUR_C`, as runs. */
+export function freezingHours(hours: readonly OutlookHour[], maxC = FREEZING_HOUR_C) {
+  return hourRuns(hours, (h) => h.temperature !== null && h.temperature <= maxC);
 }
 
 /**
