@@ -254,6 +254,12 @@ export function HourlyOutlook({
               <th scope="col" className="py-0.5 text-right font-normal">
                 Rain
               </th>
+              <th scope="col" className="py-0.5 text-right font-normal">
+                Air
+              </th>
+              <th scope="col" className="py-0.5 text-right font-normal">
+                Wind
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -279,6 +285,12 @@ export function HourlyOutlook({
                   {h.precipitationProbability !== null
                     ? `${Math.round(h.precipitationProbability)} %`
                     : '—'}
+                </td>
+                <td className="py-0.5 text-right font-mono tabular-nums">
+                  {h.temperature !== null ? formatTemperature(h.temperature, units) : '—'}
+                </td>
+                <td className="py-0.5 text-right font-mono tabular-nums">
+                  {h.windSpeed !== null ? formatWindSpeed(h.windSpeed, units) : '—'}
                 </td>
               </tr>
             ))}

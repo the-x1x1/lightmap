@@ -141,7 +141,8 @@ covers none of them). A third line names the hours that matter to the batteries,
 the tripod — "Freezing (≤ 0 °C) 00:00–06:00 (batteries, iced glass) · humidity ≥ 95 %
 02:00–06:00 (dew or mist on the glass) · wind ≥ 8 m/s 13:00–17:00 (weigh the tripod)" — as runs
 of consecutive hours (`freezingHours`, `humidHours`, `windyHours`, tested; absent when no hour
-qualifies). The same numbers are available as a table. Hours the provider did not cover are
+qualifies). The same numbers are available as a table, with the hour's air temperature and wind in
+the chosen units. Hours the provider did not cover are
 absent; DST gaps produce no duplicate rows (`hourlyOutlook`, tested). Free plans see the locked
 block with the paywall reason.
 
