@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { WeatherFrame } from '@lightmap/weather';
 import {
+  darkNights,
   weekAheadCellLabel,
   weekAheadDates,
   weekAheadRows,
@@ -79,5 +80,25 @@ describe('week ahead', () => {
     );
     expect(weekAheadCellLabel(null, { inForecast: true, loading: true })).toBe('loading…');
     expect(weekAheadCellLabel(null, { inForecast: true, loading: false })).toBe('no forecast');
+  });
+
+  it('marks the nights with a Milky Way window: none around the full Moon, every night at new Moon', () => {
+    // Full Moon 31 May 2026: the first dark window is the evening of 3 June (the same as the
+    // dark windows list), so from 29 May only the last nights of the week qualify; new Moon
+    // 15 June: every night.
+    const fullWeek = darkNights(kailua, tz, { year: 2026, month: 5, day: 29 });
+    expect(fullWeek.has('2026-05-31')).toBe(false);
+    expect(fullWeek.has('2026-06-03')).toBe(true);
+    expect(fullWeek.size).toBe(2);
+    const dark = darkNights(kailua, tz, { year: 2026, month: 6, day: 12 });
+    expect(dark.size).toBeGreaterThanOrEqual(6);
+    expect(dark.has('2026-06-15')).toBe(true);
+    const rows = weekAheadRows(kailua, tz, { year: 2026, month: 6, day: 12 }, new Map(), dark);
+    expect(rows.filter((r) => r.darkSky).length).toBe(dark.size);
+    expect(
+      weekAheadRows(kailua, tz, { year: 2026, month: 6, day: 12 }, new Map()).every(
+        (r) => !r.darkSky,
+      ),
+    ).toBe(true);
   });
 });

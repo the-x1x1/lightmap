@@ -19,7 +19,12 @@ import type { SceneState } from '@lightmap/scene';
 import { decideWeatherMode, type WeatherFrame, type WindowVerdict } from '@lightmap/weather';
 import { usePlannerStore } from '@/features/planner/store';
 import { useCapabilities } from '@/features/planner/use-scene';
-import { weekAheadCellLabel, weekAheadDates, weekAheadRows } from '@/features/planner/week-ahead';
+import {
+  darkNights,
+  weekAheadCellLabel,
+  weekAheadDates,
+  weekAheadRows,
+} from '@/features/planner/week-ahead';
 import { weatherQueryOptions } from '@/features/planner/weather-query';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -51,6 +56,15 @@ export function WeekAhead({
   const today = utcToLocalSelection(new Date(), tz).date;
   const from = useMemo(() => parseCivilDate(today), [today]);
   const dates = useMemo(() => (from ? weekAheadDates(from) : []), [from]);
+  // The nights with a Milky Way window (with moon planning): one scan per week, place and zone.
+  const hasLunar = scene.lunar !== null;
+  const dark = useMemo(
+    () =>
+      from && hasLunar
+        ? darkNights({ latitude: lat, longitude: lng }, tz, from)
+        : new Set<string>(),
+    [from, hasLunar, lat, lng, tz],
+  );
   const weatherCaps = caps.data?.weather ?? null;
   // Only days the forecast covers are asked for — the route's own horizon rule, probed at local
   // noon (today reads as the recent past once noon has gone; its evening is still a fetch).
@@ -77,7 +91,7 @@ export function WeekAhead({
   if (!decision.allowed || !from) return null;
   // Seven days' events and windows are a few milliseconds; the block re-renders only on its own
   // state and the queries, so this is not memoised.
-  const rows = weekAheadRows({ latitude: lat, longitude: lng }, tz, from, framesByDate);
+  const rows = weekAheadRows({ latitude: lat, longitude: lng }, tz, from, framesByDate, dark);
 
   const jump = (at: Date) => {
     const sel = utcToLocalSelection(at, tz);
@@ -162,6 +176,7 @@ export function WeekAhead({
                       : 'Lit fraction; the Moon is down at midnight that night'
                   }
                 >
+                  {r.darkSky ? '✦ ' : ''}
                   {Math.round(r.moon.illuminatedFraction * 100)} %{r.moon.upAtMidnight ? '' : ' ↓'}
                 </td>
               </tr>
@@ -172,7 +187,7 @@ export function WeekAhead({
       <p className="mt-1 text-xs text-[var(--lm-text-muted)]">
         Cloud over each golden hour from the forecast; the extended range is low confidence, and
         beyond it there is no forecast to show. Moon: lit fraction that night, ↓ when it is down at
-        midnight. Times are local ({tz}).
+        midnight, ✦ when the night has a dark window for the Milky Way core. Times are local ({tz}).
       </p>
     </details>
   );

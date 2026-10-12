@@ -9,7 +9,9 @@ import {
   addCivilDays,
   civilDateString,
   computeDayEvents,
+  milkyWayWindows,
   moonPosition,
+  utcToWallClock,
   type DayEvents,
 } from '@lightmap/astronomy';
 import {
@@ -31,6 +33,31 @@ export interface WeekAheadRow {
   evening: { start: Date; end: Date; outlook: WindowOutlook | null } | null;
   /** The Moon that night: lit fraction and whether it is up at local midnight (the night shooter's quick read). */
   moon: { illuminatedFraction: number; upAtMidnight: boolean };
+  /** The night that follows this day has a dark window with the Milky Way core up (`darkNights`). */
+  darkSky: boolean;
+}
+
+/**
+ * The civil dates (planning zone) whose following night holds a Milky Way window — the same
+ * 30-minute rule as the dark windows list — over the week from `from`. One scan, memoised by
+ * the caller: a few tens of milliseconds.
+ */
+export function darkNights(
+  place: { latitude: number; longitude: number },
+  timeZone: string,
+  from: { year: number; month: number; day: number },
+): Set<string> {
+  const noon = new Date(
+    computeDayEvents({ ...place, timeZone, date: from }).dayStart.getTime() + 12 * 3_600_000,
+  );
+  const out = new Set<string>();
+  for (const w of milkyWayWindows(noon, WEEK_AHEAD_DAYS, place.latitude, place.longitude).windows) {
+    // A window after midnight belongs to the evening before it.
+    const wall = utcToWallClock(w.start, timeZone);
+    const civil = wall.hour < 12 ? addCivilDays(wall, -1) : wall;
+    out.add(civilDateString(civil));
+  }
+  return out;
 }
 
 /** The civil dates of the week from `from` (inclusive). */
@@ -43,6 +70,7 @@ export function weekAheadRows(
   timeZone: string,
   from: { year: number; month: number; day: number },
   framesByDate: ReadonlyMap<string, readonly WeatherFrame[]>,
+  dark: ReadonlySet<string> = new Set(),
 ): WeekAheadRow[] {
   return Array.from({ length: WEEK_AHEAD_DAYS }, (_, i) => {
     const civil = addCivilDays(from, i);
@@ -65,6 +93,7 @@ export function weekAheadRows(
         illuminatedFraction: midnight.illuminatedFraction,
         upAtMidnight: midnight.topocentricElevationDeg > 0,
       },
+      darkSky: dark.has(date),
     };
   });
 }
