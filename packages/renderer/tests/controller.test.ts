@@ -83,7 +83,11 @@ function fakeHost() {
     setCelestialBodies: rec('setCelestialBodies'),
     sunScreenPosition: () => [0.5, 0.6],
     sampleGroundHeight: async () => 42,
-    sampleBasemapColor: async () => [200, 180, 140] as [number, number, number],
+    sampleBasemapPixels: async () =>
+      [
+        [200, 180, 140],
+        [60, 90, 140],
+      ] as Array<[number, number, number]>,
     sampleGroundHeights: async (pts: readonly unknown[]) => pts.map(() => 42),
     requestRender: rec('requestRender'),
     stats: () => ({
@@ -165,7 +169,7 @@ describe('SceneController', () => {
     await new Promise((r) => setTimeout(r, 0));
     await new Promise((r) => setTimeout(r, 0));
     const last = calls['setGroundTexture']!.at(-1)![0] as { aridity: number; ice: number };
-    expect(last.aridity).toBe(0.75); // the fake basemap is tan
+    expect(last.aridity).toBe(0.75); // the fake basemap is tan beside a sea pixel, which is left out
     expect(last.ice).toBe(0);
   });
 

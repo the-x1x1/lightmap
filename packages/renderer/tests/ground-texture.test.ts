@@ -12,6 +12,7 @@ import {
   dayOfYearUtc,
   groundTextureFor,
   landHintFromColor,
+  landHintFromPixels,
   permanentSnowlineM,
   snowlineM,
 } from '../src/ground-texture.ts';
@@ -130,6 +131,29 @@ describe('landHintFromColor', () => {
     });
   });
 
+  it('averages a patch without its water pixels: a desert coast is desert; all water is neutral', () => {
+    const coast = landHintFromPixels([
+      [200, 180, 140],
+      [60, 90, 140],
+      [60, 90, 140],
+    ]);
+    expect(coast.aridity).toBeCloseTo(0.75, 2);
+    expect(landHintFromPixels([[60, 90, 140]])).toEqual(NEUTRAL_LAND_HINT);
+    expect(landHintFromPixels([])).toEqual(NEUTRAL_LAND_HINT);
+  });
+
+  it('carries the chart brightness and the geoid into the params', () => {
+    const g = groundTextureFor(sceneAt(30, new Date('2026-07-01T00:00:00Z')), NEUTRAL_LAND_HINT, {
+      brightness: 0.45,
+      seaLevelM: 47.4,
+    })!;
+    expect(g.brightness).toBe(0.45);
+    expect(g.seaLevelM).toBe(47);
+    const d = groundTextureFor(sceneAt(30, new Date('2026-07-01T00:00:00Z')))!;
+    expect(d.brightness).toBe(1);
+    expect(d.seaLevelM).toBe(0);
+  });
+
   it('carries the hint into the params, rounded to a hundredth', () => {
     const g = groundTextureFor(sceneAt(30, new Date('2026-07-01T00:00:00Z')), {
       aridity: 0.7777,
@@ -147,6 +171,8 @@ describe('ground material source', () => {
   it('declares every uniform it is given, reads slope (so Cesium requests normals) and respects the water mask', () => {
     for (const name of Object.keys(GROUND_UNIFORM_DEFAULTS))
       expect(GROUND_MATERIAL_SOURCE).toContain(`uniform float ${name};`);
+    expect(GROUND_MATERIAL_SOURCE).toContain('uniform vec3 u_cameraCell;');
+    expect(GROUND_MATERIAL_SOURCE).toContain('uniform vec3 u_cameraFrac;');
     expect(GROUND_MATERIAL_SOURCE).toMatch(/materialInput\.slope/);
     expect(GROUND_MATERIAL_SOURCE).toMatch(/#ifdef HAS_WATER_MASK[\s\S]*waterMask[\s\S]*#endif/);
     expect(GROUND_MATERIAL_SOURCE).toMatch(

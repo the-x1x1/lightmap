@@ -134,6 +134,8 @@ export interface HostGroundTexture {
   strength: number;
   aridity: number;
   ice: number;
+  brightness: number;
+  seaLevelM: number;
 }
 
 export interface HostQuality {
@@ -170,10 +172,10 @@ export interface SceneHost {
   /** Screen position (0..1) of a world direction from the camera, or null when behind. */
   sunScreenPosition(directionTowardSunEcef: Vec3): [number, number] | null;
   /**
-   * The bundled coarse basemap's colour (sRGB 0–255) around a point — the ground texture's
-   * regional land hint; null when the basemap is not loaded or cannot be read.
+   * The bundled coarse basemap's pixels (sRGB 0–255, a small neighbourhood) around a point —
+   * the ground texture's regional land hint; null when the basemap is not loaded or readable.
    */
-  sampleBasemapColor(p: GeoPoint): Promise<[number, number, number] | null>;
+  sampleBasemapPixels(p: GeoPoint): Promise<Array<[number, number, number]> | null>;
   /** Ground height at a point once terrain is loaded; null when unknown. */
   sampleGroundHeight(p: GeoPoint): Promise<number | null>;
   /**

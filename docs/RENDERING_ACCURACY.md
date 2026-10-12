@@ -148,7 +148,7 @@ water mask is the provider's, not a tide model.
 
 The terrain is painted with a procedural surface (`shaders/ground.frag.ts`, a Cesium globe
 material) so the mesh reads as ground rather than a grey plane under a 40 km-per-pixel basemap:
-turf and scrub in patches on the lower slopes, bare rock where the slope passes about 25–40°,
+turf and scrub in patches on the lower slopes, bare rock where the slope passes about 30–45°,
 scree and alpine ground above a treeline (900 m under the climatic snowline, fixed through
 the year), snow above a snowline that follows the latitude
 (≈ 5 200 m at the equator, ≈ 3 000 m at 45°, ≈ 1 700 m at 60°) and the season (lower through
@@ -164,7 +164,9 @@ scrub, tan to steppe and desert, white to an ice sheet — a tint, never a class
 opacity that rises on rock and snow and falls on open ground, so a licensed imagery layer still
 shows through where it carries the information — vegetation hue, desert, farmland — and the
 procedural surface supplies the detail it lacks. Water (where the terrain carries a mask) is
-left to the water effect. The Minimal quality rung turns it off with the shadows; the
+left to the water effect; the shore and snow rules read heights above sea level (the geoid at
+the pin from the terrain's ellipsoidal height against the known elevation), and the night
+chart's dimming applies to the surface as to the basemap. The Minimal quality rung turns it off with the shadows; the
 `groundTexture` flag turns it off everywhere. **Claim:** the surface lit by the true Sun, with
 shadows and horizon geometry untouched (the material runs before the globe's lighting and
 changes albedo only). **Caveat:** a texture, not land cover — it does not know a forest from a

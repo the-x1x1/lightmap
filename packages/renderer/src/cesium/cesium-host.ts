@@ -13,6 +13,7 @@ import type * as Cesium from '@cesium/engine';
 import type { BasemapDescriptor, GeoPoint, TerrainDescriptor } from '@lightmap/geospatial';
 import { GRADE_FRAGMENT_SHADER } from '../shaders/grade.frag.ts';
 import {
+  GROUND_GRAIN_M,
   GROUND_MATERIAL_SOURCE,
   GROUND_MATERIAL_TYPE,
   GROUND_UNIFORM_DEFAULTS,
@@ -69,6 +70,7 @@ export class CesiumSceneHost implements SceneHost {
   private readonly grade: Cesium.PostProcessStage;
   private readonly gradeUniforms: Record<string, unknown>;
   private groundMaterial: Cesium.Material | null = null;
+  private groundTextureFailed = false;
   private readonly onError: ((message: string, error: unknown) => void) | undefined;
   private readonly ionToken: string | undefined;
   private pickHandler: Cesium.ScreenSpaceEventHandler | null = null;
@@ -96,6 +98,7 @@ export class CesiumSceneHost implements SceneHost {
   private terrainReady: Promise<void> = Promise.resolve();
   private lastCameraKey = '';
   private preRenderRemover: (() => void) | null = null;
+  private preRenderGroundRemover: (() => void) | null = null;
 
   constructor(C: CesiumModule, options: CesiumHostOptions) {
     this.C = C;
@@ -210,6 +213,25 @@ export class CesiumSceneHost implements SceneHost {
     // one-second window with at least MIN_FRAMES_FOR_SAMPLE frames (continuous interaction: a
     // scrub, an orbit, a flight). Idle windows are discarded.
     this.frameWindowStart = performance.now();
+    // The ground texture's near grain is anchored to the ground through the camera's position,
+    // split into a whole number of cells and a fraction in double precision each frame.
+    this.preRenderGroundRemover = scene.preRender.addEventListener(() => {
+      const m = this.groundMaterial;
+      if (!m) return;
+      const cam = scene.camera.positionWC;
+      const u = m.uniforms as Record<string, unknown>;
+      const cell = u['u_cameraCell'] as Cesium.Cartesian3;
+      const frac = u['u_cameraFrac'] as Cesium.Cartesian3;
+      const cx = Math.floor(cam.x / GROUND_GRAIN_M);
+      const cy = Math.floor(cam.y / GROUND_GRAIN_M);
+      const cz = Math.floor(cam.z / GROUND_GRAIN_M);
+      cell.x = cx;
+      cell.y = cy;
+      cell.z = cz;
+      frac.x = cam.x / GROUND_GRAIN_M - cx;
+      frac.y = cam.y / GROUND_GRAIN_M - cy;
+      frac.z = cam.z / GROUND_GRAIN_M - cz;
+    });
     this.preRenderRemover = scene.postRender.addEventListener(() => {
       this.frameCount++;
       const now = performance.now();
@@ -226,6 +248,18 @@ export class CesiumSceneHost implements SceneHost {
     });
 
     scene.renderError.addEventListener((_s: unknown, error: unknown) => {
+      // The widget stops its render loop on an error. A globe material that fails to compile
+      // on this GPU is the one failure the host can recover from: drop the texture, resume.
+      if (this.groundMaterial) {
+        globe.material = undefined;
+        this.groundMaterial.destroy();
+        this.groundMaterial = null;
+        this.groundTextureFailed = true;
+        this.onError?.('Ground texture disabled — the renderer could not compile it', error);
+        this.widget.useDefaultRenderLoop = true;
+        scene.requestRender();
+        return;
+      }
       this.onError?.('Renderer error', error);
     });
   }
@@ -270,11 +304,16 @@ export class CesiumSceneHost implements SceneHost {
     // One material for the life of the host; its uniforms are updated in place. Cesium applies
     // a globe material only when the terrain carries vertex normals (the slope input), which
     // the terrain providers request; on the ellipsoid fallback it simply does nothing.
+    if (this.groundTextureFailed) return;
     if (!this.groundMaterial) {
       this.groundMaterial = new C.Material({
         fabric: {
           type: GROUND_MATERIAL_TYPE,
-          uniforms: { ...GROUND_UNIFORM_DEFAULTS },
+          uniforms: {
+            ...GROUND_UNIFORM_DEFAULTS,
+            u_cameraCell: new C.Cartesian3(0, 0, 0),
+            u_cameraFrac: new C.Cartesian3(0, 0, 0),
+          },
           source: GROUND_MATERIAL_SOURCE,
         },
         translucent: false,
@@ -288,6 +327,8 @@ export class CesiumSceneHost implements SceneHost {
     u['u_strength'] = g.strength;
     u['u_aridity'] = g.aridity;
     u['u_ice'] = g.ice;
+    u['u_brightness'] = g.brightness;
+    u['u_seaLevelM'] = g.seaLevelM;
     this.scene.requestRender();
   }
 
@@ -734,13 +775,13 @@ export class CesiumSceneHost implements SceneHost {
     return [win.x / canvas.clientWidth, 1 - win.y / canvas.clientHeight];
   }
 
-  async sampleBasemapColor(p: GeoPoint): Promise<[number, number, number] | null> {
+  async sampleBasemapPixels(p: GeoPoint): Promise<Array<[number, number, number]> | null> {
     const C = this.C;
     const provider = this.fallbackLayer?.imageryProvider;
     if (!provider || this.destroyed) return null;
     try {
       // Natural Earth II's deepest bundled level (2: a pixel ≈ 20 km) — the regional tone, not
-      // the pixel under the pin. A 3 × 3 neighbourhood is averaged.
+      // the pixel under the pin. A 3 × 3 neighbourhood is returned.
       const level = Math.min(2, provider.maximumLevel ?? 2);
       const carto = C.Cartographic.fromDegrees(p.longitude, p.latitude);
       const xy = provider.tilingScheme.positionToTileXY(carto, level, new C.Cartesian2());
@@ -750,24 +791,33 @@ export class CesiumSceneHost implements SceneHost {
       const rect = provider.tilingScheme.tileXYToRectangle(xy.x, xy.y, level);
       const w = provider.tileWidth;
       const h = provider.tileHeight;
-      const canvas = new OffscreenCanvas(w, h);
-      const ctx = canvas.getContext('2d');
+      const canvas =
+        typeof OffscreenCanvas !== 'undefined'
+          ? new OffscreenCanvas(w, h)
+          : Object.assign(document.createElement('canvas'), { width: w, height: h });
+      const ctx = canvas.getContext('2d') as
+        OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D | null;
       if (!ctx) return null;
+      // Cesium decodes tiles for texture upload, which on browsers with ImageBitmap options
+      // means flipped vertically; an HTMLImageElement comes as drawn. Undo the flip so a row
+      // means the latitude it says.
+      const flipped = typeof ImageBitmap !== 'undefined' && image instanceof ImageBitmap;
+      if (flipped) {
+        ctx.translate(0, h);
+        ctx.scale(1, -1);
+      }
       ctx.drawImage(image as CanvasImageSource, 0, 0, w, h);
+      if (flipped) ctx.setTransform(1, 0, 0, 1, 0, 0);
+      if (typeof ImageBitmap !== 'undefined' && image instanceof ImageBitmap) image.close();
       const fx = (carto.longitude - rect.west) / (rect.east - rect.west);
       const fy = (rect.north - carto.latitude) / (rect.north - rect.south);
       const px = Math.max(1, Math.min(w - 2, Math.floor(fx * w)));
       const py = Math.max(1, Math.min(h - 2, Math.floor(fy * h)));
       const data = ctx.getImageData(px - 1, py - 1, 3, 3).data;
-      let r = 0;
-      let g = 0;
-      let b = 0;
-      for (let i = 0; i < 9; i++) {
-        r += data[i * 4] ?? 0;
-        g += data[i * 4 + 1] ?? 0;
-        b += data[i * 4 + 2] ?? 0;
-      }
-      return [r / 9, g / 9, b / 9];
+      const out: Array<[number, number, number]> = [];
+      for (let i = 0; i < 9; i++)
+        out.push([data[i * 4] ?? 0, data[i * 4 + 1] ?? 0, data[i * 4 + 2] ?? 0]);
+      return out;
     } catch {
       return null;
     }
@@ -926,6 +976,7 @@ export class CesiumSceneHost implements SceneHost {
     if (this.destroyed) return;
     this.destroyed = true;
     this.preRenderRemover?.();
+    this.preRenderGroundRemover?.();
     this.pickHandler?.destroy();
     this.groundMaterial?.destroy();
     this.groundMaterial = null;

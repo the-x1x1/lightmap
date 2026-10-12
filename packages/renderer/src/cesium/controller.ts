@@ -16,7 +16,7 @@ import type { BasemapDescriptor, TerrainDescriptor } from '@lightmap/geospatial'
 import {
   NEUTRAL_LAND_HINT,
   groundTextureFor,
-  landHintFromColor,
+  landHintFromPixels,
   type LandHint,
 } from '../ground-texture.ts';
 import { lightingFromScene, type LightingParameters } from '../lighting.ts';
@@ -71,6 +71,10 @@ export class SceneController {
   private lastGroundKey: string | null = null;
   private landHint: LandHint = NEUTRAL_LAND_HINT;
   private landHintKey: string | null = null;
+  /** Pin work owed to the next debounced slot: a reschedule must not lose it. */
+  private pinRefreshPending = false;
+  /** Ellipsoidal height of sea level at the pin, metres (the geoid), for the shore and snow rules. */
+  private seaLevelM = 0;
   private lastDayKey: string | null = null;
   private groundHeightM = 0;
   private groundHeightKey: string | null = null;
@@ -112,7 +116,10 @@ export class SceneController {
       jobs.push(this.host.setBasemap(basemap));
     }
     await Promise.all(jobs);
-    if (this.lastScene) await this.refreshGroundHeight(this.lastScene);
+    if (this.lastScene) {
+      await this.refreshGroundHeight(this.lastScene);
+      await this.refreshLandHint(this.lastScene);
+    }
   }
 
   /** Orbit view for map mode; the React layer updates it from drag gestures. */
@@ -210,9 +217,12 @@ export class SceneController {
     }
 
     // The ground texture: its inputs move with the place, the season and the quality rung only.
-    const ground = groundTextureFor(scene, this.landHint);
+    const ground = groundTextureFor(scene, this.landHint, {
+      brightness: shading.basemapBrightness,
+      seaLevelM: this.seaLevelM,
+    });
     const groundKey = ground
-      ? `${ground.snowlineM}|${ground.treelineM}|${ground.poleward}|${ground.strength}|${ground.aridity}|${ground.ice}`
+      ? `${ground.snowlineM}|${ground.treelineM}|${ground.poleward}|${ground.strength}|${ground.aridity}|${ground.ice}|${ground.brightness}|${ground.seaLevelM}`
       : 'off';
     if (groundKey !== this.lastGroundKey) {
       this.lastGroundKey = groundKey;
@@ -234,6 +244,7 @@ export class SceneController {
 
     // --- expensive, debounced -------------------------------------------------------------
     const qualityKey = `${scene.render.terrainScreenSpaceError}|${scene.render.resolutionScale}`;
+    if (pinMoved) this.pinRefreshPending = true;
     if (qualityKey !== this.lastQualityKey || pinMoved) {
       this.scheduleExpensive(() => {
         if (qualityKey !== this.lastQualityKey) {
@@ -243,7 +254,8 @@ export class SceneController {
             resolutionScale: scene.render.resolutionScale,
           });
         }
-        if (pinMoved) {
+        if (this.pinRefreshPending) {
+          this.pinRefreshPending = false;
           void this.refreshGroundHeight(scene);
           void this.refreshLandHint(scene);
         }
@@ -362,9 +374,19 @@ export class SceneController {
     const key = `${scene.location.point.latitude.toFixed(2)},${scene.location.point.longitude.toFixed(2)}`;
     if (key === this.landHintKey) return;
     this.landHintKey = key;
-    const rgb = await this.host.sampleBasemapColor(scene.location.point);
+    let rgb: Array<[number, number, number]> | null = null;
+    try {
+      rgb = await this.host.sampleBasemapPixels(scene.location.point);
+    } catch {
+      rgb = null;
+    }
     if (this.landHintKey !== key || this.host.isDestroyed()) return;
-    const hint = rgb ? landHintFromColor(rgb) : NEUTRAL_LAND_HINT;
+    // Nothing read (the basemap not up yet): forget the key so the next trigger tries again.
+    if (!rgb) {
+      this.landHintKey = null;
+      return;
+    }
+    const hint = landHintFromPixels(rgb);
     if (hint.aridity !== this.landHint.aridity || hint.ice !== this.landHint.ice) {
       this.landHint = hint;
       if (this.lastScene) this.apply(this.lastScene);
@@ -377,12 +399,21 @@ export class SceneController {
     this.groundHeightKey = key;
     const h = await this.host.sampleGroundHeight(scene.location.point);
     const next = h ?? scene.location.point.elevationM ?? scene.environment.groundElevationM ?? 0;
+    // The geoid here: the terrain's ellipsoidal height less the known height above sea level
+    // (the ground texture's shore and snow rules read sea level, not the ellipsoid).
+    const orthometric = scene.location.point.elevationM ?? scene.environment.groundElevationM;
+    const seaLevel =
+      h !== null && orthometric !== null && orthometric !== undefined ? h - orthometric : 0;
+    const seaLevelRounded = Math.round(Math.max(-120, Math.min(120, seaLevel)));
+    const seaChanged = seaLevelRounded !== this.seaLevelM;
+    if (seaChanged) this.seaLevelM = seaLevelRounded;
     if (next !== this.groundHeightM && this.lastScene) {
       this.groundHeightM = next;
       this.applyCamera(this.lastScene, false);
       this.applyOverlay(this.lastScene);
       this.host.requestRender();
     }
+    if (seaChanged && this.lastScene) this.apply(this.lastScene);
   }
 
   get groundHeight(): number {

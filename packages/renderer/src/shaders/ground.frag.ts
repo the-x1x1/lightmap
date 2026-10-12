@@ -11,7 +11,8 @@
  * height, slope and aspect (per vertex, from the mesh normals) and a value-noise field over the
  * fragment's world position, so patches are fixed to the ground and do not swim as the camera
  * moves (float ECEF jitter is ~0.5 m; the finest world-anchored octave is 8 m; a metre-scale
- * grain near the camera is anchored to the camera's position instead and fades out by 500 m). The colour is blended
+ * grain near the camera is computed camera-relative with the camera's own cell offset passed in,
+ * and fades out by 500 m). The colour is blended
  * over the basemap with an alpha that rises on rock and snow and falls on open ground, so a
  * real imagery layer, where one is licensed, still shows through where it matters — vegetation
  * hue, desert, farmland — and the procedural surface supplies the detail the basemap lacks.
@@ -22,6 +23,9 @@
  * field, a glacier from a snowfield, or a city at all. `RENDERING_ACCURACY.md` says so.
  */
 export const GROUND_MATERIAL_TYPE = 'LightMapGround';
+
+/** Cell size of the near grain, metres; the host passes the camera's position in these cells. */
+export const GROUND_GRAIN_M = 2.5;
 
 /** Uniforms the material takes, with their defaults; `groundTextureFor()` sets them per scene. */
 export const GROUND_UNIFORM_DEFAULTS = {
@@ -37,6 +41,10 @@ export const GROUND_UNIFORM_DEFAULTS = {
   u_aridity: 0.25,
   /** The region's ice-sheet share from the basemap's colour, 0–1. */
   u_ice: 0,
+  /** The chart's brightness (the night map is dimmed), applied to the surface as well. */
+  u_brightness: 1,
+  /** Ellipsoidal height of sea level at the place, metres (the geoid). */
+  u_seaLevelM: 0,
 } as const;
 
 export const GROUND_MATERIAL_SOURCE = /* glsl */ `
@@ -46,6 +54,11 @@ uniform float u_poleward;
 uniform float u_strength;
 uniform float u_aridity;
 uniform float u_ice;
+uniform float u_brightness;
+uniform float u_seaLevelM;
+// The camera's position in grain cells: whole cells and the fraction, set each frame.
+uniform vec3 u_cameraCell;
+uniform vec3 u_cameraFrac;
 
 // Hash without axis correlation (Hoskins' hash13), so the noise has no lattice pattern.
 float lmHash(vec3 p)
@@ -58,6 +71,20 @@ float lmHash(vec3 p)
 float lmNoise(vec3 x)
 {
     vec3 i = floor(x);
+    vec3 f = fract(x);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(
+        mix(mix(lmHash(i), lmHash(i + vec3(1.0, 0.0, 0.0)), f.x),
+            mix(lmHash(i + vec3(0.0, 1.0, 0.0)), lmHash(i + vec3(1.0, 1.0, 0.0)), f.x), f.y),
+        mix(mix(lmHash(i + vec3(0.0, 0.0, 1.0)), lmHash(i + vec3(1.0, 0.0, 1.0)), f.x),
+            mix(lmHash(i + vec3(0.0, 1.0, 1.0)), lmHash(i + vec3(1.0, 1.0, 1.0)), f.x), f.y),
+        f.z);
+}
+
+// Value noise with the lattice offset by whole cells, for coordinates kept small for precision.
+float lmNoiseAt(vec3 x, vec3 cell)
+{
+    vec3 i = floor(x) + cell;
     vec3 f = fract(x);
     f = f * f * (3.0 - 2.0 * f);
     return mix(
@@ -83,7 +110,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float patches = lmFbm(positionWC / 480.0);          // broad patchiness, ~500 m
     float grain = lmFbm(positionWC / 60.0 + 5.0);     // fine detail, 60 m down to ~8 m
     float slope = materialInput.slope;                // radians, 0 flat
-    float height = materialInput.height;              // metres above the ellipsoid
+    float height = materialInput.height - u_seaLevelM; // metres above sea level
     float aspect = materialInput.aspect;              // radians, 0 east, pi/2 north
 
     // Open ground leans from turf and scrub toward steppe and desert with the region's aridity.
@@ -112,25 +139,27 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     ground = mix(ground, shore * (0.9 + 0.2 * grain), shoreline);
 
     // Snow above the snowline: lower on poleward faces, patchy at its edge, thin on cliffs.
-    float poleward = sin(aspect) * u_poleward * smoothstep(0.05, 0.4, slope);  // +1 facing the pole
+    // (The aspect of a perfectly flat vertex is undefined; flat ground has no poleward face.)
+    float poleward = slope > 0.05 ? sin(aspect) * u_poleward * smoothstep(0.05, 0.4, slope) : 0.0;  // +1 facing the pole
     float snowline = u_snowlineM - 180.0 * poleward + 320.0 * (patches - 0.47);
     float snowy = smoothstep(snowline - 220.0, snowline + 160.0, height) * (1.0 - smoothstep(0.85, 1.15, slope));
     snowy = max(snowy, u_ice * (1.0 - smoothstep(0.9, 1.2, slope)));  // an ice sheet is snow at any height
     ground = mix(ground, snow * (0.95 + 0.05 * grain), snowy);
 
-    // Close to the camera (a viewpoint's foreground) a metre-scale grain, anchored to the camera's
-    // own position so float precision holds (ECEF is 0.5 m at best), fading out by 500 m so it
-    // never shimmers at a distance.
+    // Close to the camera (a viewpoint's foreground) a metre-scale grain, fading out by 500 m so
+    // it never shimmers at a distance. It is anchored to the ground, not the camera: the
+    // camera-relative position (precise) plus the camera's own position in grain cells (whole
+    // cells into the lattice, the fraction into the coordinate, both from the CPU in double).
     float dist = length(positionEC);
     float nearW = smoothstep(500.0, 60.0, dist);
     if (nearW > 0.0)
     {
-        vec3 localWC = mat3(czm_inverseView) * positionEC;
-        float fine = lmFbm(localWC / 2.5 + 3.0);
-        ground *= 1.0 + nearW * 0.3 * (fine - 0.47);
+        vec3 local = czm_inverseViewRotation * positionEC / 2.5 + u_cameraFrac;
+        float fine = lmNoiseAt(local, u_cameraCell) * 0.6 + lmNoiseAt(local * 2.0 + 0.5, u_cameraCell * 2.0) * 0.3;
+        ground *= 1.0 + nearW * 0.3 * (fine - 0.45);
     }
 
-    material.diffuse = ground;
+    material.diffuse = ground * u_brightness;
     // Rock and snow are what they are; open ground lets the basemap's own hue through.
     float cover = max(rocky, max(snowy, alpine * 0.8));
     float alpha = u_strength * mix(0.75, 0.95, cover);

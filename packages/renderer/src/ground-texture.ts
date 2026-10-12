@@ -19,6 +19,16 @@ export interface GroundTextureParams {
   aridity: number;
   /** How much of the region is ice sheet, 0–1, from the basemap's own colour. */
   ice: number;
+  /** The chart's brightness (1 by day; the unlit night chart is dimmed), applied to the surface too. */
+  brightness: number;
+  /** Ellipsoidal height of sea level at the place, metres, so shore and snow read true heights. */
+  seaLevelM: number;
+}
+
+/** What the renderer knows beyond the scene: the chart dimming and the geoid at the pin. */
+export interface GroundTextureContext {
+  brightness: number;
+  seaLevelM: number;
 }
 
 /** What the coarse basemap's colour says about the region around a point. */
@@ -36,12 +46,37 @@ export const NEUTRAL_LAND_HINT: LandHint = { aridity: 0.25, ice: 0 };
  * ice is how far the darkest channel climbs toward white. A tint, not a classification: it
  * tells the texture which way to lean, never what a given pixel is.
  */
+/** Whether a basemap pixel is sea or lake (blue), which says nothing about the land. */
+export function isWaterColor(rgb: readonly [number, number, number]): boolean {
+  const [r, g, b] = rgb;
+  return b > r + 15 && b > g + 5;
+}
+
+/**
+ * The land hint from a patch of basemap pixels: water pixels are left out and the rest
+ * averaged, so a desert coast reads as desert, not as the mean of tan and blue; neutral when
+ * every pixel is water.
+ */
+export function landHintFromPixels(
+  pixels: ReadonlyArray<readonly [number, number, number]>,
+): LandHint {
+  const land = pixels.filter((p) => !isWaterColor(p));
+  if (land.length === 0) return NEUTRAL_LAND_HINT;
+  const mean: [number, number, number] = [0, 0, 0];
+  for (const p of land) {
+    mean[0] += p[0] / land.length;
+    mean[1] += p[1] / land.length;
+    mean[2] += p[2] / land.length;
+  }
+  return landHintFromColor(mean);
+}
+
 export function landHintFromColor(rgb: readonly [number, number, number]): LandHint {
   const [r, g, b] = rgb;
   const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
   const ice = clamp01((Math.min(r, g, b) - 185) / 45);
   // Blue (sea, lakes) says nothing about the land: lean on the neutral hint.
-  if (b > r + 15 && b > g + 5) return { aridity: NEUTRAL_LAND_HINT.aridity, ice };
+  if (isWaterColor(rgb)) return { aridity: NEUTRAL_LAND_HINT.aridity, ice };
   return { aridity: clamp01((r - g + 10) / 40) * (1 - ice), ice };
 }
 
@@ -82,6 +117,7 @@ export function dayOfYearUtc(utc: Date): number {
 export function groundTextureFor(
   scene: SceneState,
   hint: LandHint = NEUTRAL_LAND_HINT,
+  context: GroundTextureContext = { brightness: 1, seaLevelM: 0 },
 ): GroundTextureParams | null {
   if (scene.render.groundTexture === false) return null;
   if (!scene.render.shadows) return null;
@@ -93,5 +129,7 @@ export function groundTextureFor(
     strength: 1,
     aridity: Math.round(hint.aridity * 100) / 100,
     ice: Math.round(hint.ice * 100) / 100,
+    brightness: Math.round(Math.max(0, Math.min(1, context.brightness)) * 100) / 100,
+    seaLevelM: Math.round(context.seaLevelM),
   };
 }
