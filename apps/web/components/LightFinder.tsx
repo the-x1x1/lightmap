@@ -25,7 +25,10 @@ import {
   ridgeContactElevationDeg,
   type SceneState,
 } from '@lightmap/scene';
-import { compassLabel } from '@lightmap/geospatial';
+import { compassLabel, gridKey } from '@lightmap/geospatial';
+import { WINDOW_VERDICT_TEXT, windowOutlook } from '@lightmap/weather';
+import { useQueryClient } from '@tanstack/react-query';
+import type { WeatherResponse } from '@/lib/api-types';
 import { Button, RadioGroup } from '@lightmap/ui';
 import { usePlannerStore } from '@/features/planner/store';
 import { useSolver } from '@/features/finder/use-solver';
@@ -216,6 +219,16 @@ export function LightFinder({
     setMinutes(sel.minutes);
   }
 
+  // The forecast around a result when its day is already in the planner's query cache (the
+  // planner or the week ahead fetched it) — read, never fetched: a search can list eighty rows.
+  const queryClient = useQueryClient();
+  const cell = gridKey(scene.location.point);
+  const forecastAround = (m: SerializedMatch) => {
+    const data = queryClient.getQueryData<WeatherResponse>(['weather', cell, m.date, tz]);
+    if (!data || data.frames.length === 0) return null;
+    const at = Date.parse(m.timestampUtc);
+    return windowOutlook(data.frames, new Date(at - 30 * 60_000), new Date(at + 30 * 60_000));
+  };
   const [hideBehindTerrain, setHideBehindTerrain] = useState(false);
   const behindTerrain = (m: SerializedMatch) =>
     profile !== null &&
@@ -602,6 +615,12 @@ export function LightFinder({
                           }`
                         : ''}
                       {m.sky !== null && m.sky !== 'dark' ? ` · ${m.sky}` : ''}
+                      {(() => {
+                        const f = forecastAround(m);
+                        return f
+                          ? ` · forecast ${Math.round(f.meanCloudCover)} % cloud, ${WINDOW_VERDICT_TEXT[f.verdict].split(' — ')[0]}`
+                          : '';
+                      })()}
                       {mode !== 'ridge' && behindTerrain(m) ? (
                         <span className="ml-1 text-[color:#ffd27a]" title={profile?.caveat}>
                           · behind terrain
