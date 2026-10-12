@@ -187,6 +187,10 @@ on a failure (`release.yml` runs it after the deploy); the rest are by hand.
       land-cover attribution; move the pin 10 km and the paint follows after one read; with the
       wrong `LANDCOVER_PALETTE` (or a host without CORS) the surface is the procedural one and
       the console shows no error.
+- [ ] Painted ground on real terrain (the default Re:Earth Mapterhorn set, then Cesium World
+      Terrain with an ion token): the terrain is painted, not the bare Natural Earth basemap;
+      if the renderer status says the terrain has no vertex normals, that set cannot carry the
+      texture — switch the terrain provider rather than the texture.
 - [ ] Painted ground off (Preferences): the terrain shows the bare basemap under the same
       light and shadows, at once, without a reload; on again repaints; the choice survives a
       reload and, signed in, a wipe of local storage (E2E covers the save).

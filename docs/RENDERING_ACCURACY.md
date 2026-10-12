@@ -227,6 +227,9 @@ range (a synthetic cover map in place, the atlas close up), and, in the renderer
 probe (`tools/renderer-smoke`), the cover map through Cesium's own upload and the atlas close up
 from two headings; the atlas on real terrain at a viewpoint — the "fixed to the ground" claim
 while walking the pin — is the `QA_PLAN.md` device check, still to run.
+The material needs terrain with vertex normals (Cesium applies a globe material only then):
+the terrain providers request them, and a tile set that serves none leaves the basemap bare
+under the light and says so in the renderer's status — a terrain choice, not a texture fault.
 **Caveat:** still a texture, not a classification of
 the pixel under the camera — the map is ≈ 40 m per pixel against 10 m data, tells nothing
 about a forest's species or a field's crop, and without a source it does not know a forest
