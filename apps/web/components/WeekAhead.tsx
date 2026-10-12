@@ -166,6 +166,9 @@ export function WeekAhead({
             <th scope="col" className="py-0.5 font-normal">
               Evening
             </th>
+            <th scope="col" className="py-0.5 text-right font-normal">
+              Moon
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -179,6 +182,16 @@ export function WeekAhead({
                 </th>
                 <td className="py-0.5">{cellText(r.morning, inForecast)}</td>
                 <td className="py-0.5">{cellText(r.evening, inForecast)}</td>
+                <td
+                  className="py-0.5 text-right font-mono tabular-nums"
+                  title={
+                    r.moon.upAtMidnight
+                      ? 'Lit fraction; the Moon is up at midnight that night'
+                      : 'Lit fraction; the Moon is down at midnight that night'
+                  }
+                >
+                  {Math.round(r.moon.illuminatedFraction * 100)} %{r.moon.upAtMidnight ? '' : ' ↓'}
+                </td>
               </tr>
             );
           })}
@@ -186,7 +199,8 @@ export function WeekAhead({
       </table>
       <p className="mt-1 text-xs text-[var(--lm-text-muted)]">
         Cloud over each golden hour from the forecast; the extended range is low confidence, and
-        beyond it there is no forecast to show. Times are local ({tz}).
+        beyond it there is no forecast to show. Moon: lit fraction that night, ↓ when it is down at
+        midnight. Times are local ({tz}).
       </p>
     </details>
   );

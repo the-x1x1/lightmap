@@ -9,6 +9,7 @@ import {
   addCivilDays,
   civilDateString,
   computeDayEvents,
+  moonPosition,
   type DayEvents,
 } from '@lightmap/astronomy';
 import { windowOutlook, type WeatherFrame, type WindowOutlook } from '@lightmap/weather';
@@ -23,6 +24,8 @@ export interface WeekAheadRow {
   dayEvents: DayEvents;
   morning: { start: Date; end: Date; outlook: WindowOutlook | null } | null;
   evening: { start: Date; end: Date; outlook: WindowOutlook | null } | null;
+  /** The Moon that night: lit fraction and whether it is up at local midnight (the night shooter's quick read). */
+  moon: { illuminatedFraction: number; upAtMidnight: boolean };
 }
 
 /** The civil dates of the week from `from` (inclusive). */
@@ -45,12 +48,18 @@ export function weekAheadRows(
       start && end
         ? { start, end, outlook: frames.length ? windowOutlook(frames, start, end) : null }
         : null;
+    // Local midnight at the end of this civil day: the Moon over the night that follows.
+    const midnight = moonPosition(ev.dayEnd, place.latitude, place.longitude);
     return {
       date,
       weekday: new Date(Date.UTC(civil.year, civil.month - 1, civil.day)).getUTCDay(),
       dayEvents: ev,
       morning: window(ev.goldenHourMorningStart, ev.goldenHourMorningEnd),
       evening: window(ev.goldenHourEveningStart, ev.goldenHourEveningEnd),
+      moon: {
+        illuminatedFraction: midnight.illuminatedFraction,
+        upAtMidnight: midnight.topocentricElevationDeg > 0,
+      },
     };
   });
 }

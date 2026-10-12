@@ -55,6 +55,10 @@ describe('week ahead', () => {
     // No frames for the third day: the windows exist, the outlook is null.
     expect(rows[2]!.evening).not.toBeNull();
     expect(rows[2]!.evening?.outlook).toBeNull();
+    // The full Moon of 31 May is up at midnight and almost fully lit; a week later it is waning.
+    expect(rows[0]!.moon.illuminatedFraction).toBeGreaterThan(0.95);
+    expect(rows[0]!.moon.upAtMidnight).toBe(true);
+    expect(rows[6]!.moon.illuminatedFraction).toBeLessThan(rows[0]!.moon.illuminatedFraction);
     // The windows are the day's own golden hours (Kailua: 18:3x–19:2x HST = 04:3x–05:2x UTC next day).
     expect(rows[0]!.evening!.start.toISOString()).toMatch(/^2026-06-01T04:3\d/);
   });
