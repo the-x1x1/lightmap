@@ -106,6 +106,8 @@ describe('buildPlanningCard', () => {
       windSpeed: 4,
       windDirection: 60,
       weatherCode: 1,
+      temperature: 24.3,
+      dewPoint: 15.8,
     };
     const card = buildPlanningCard(
       scene({
@@ -119,9 +121,13 @@ describe('buildPlanningCard', () => {
     expect(card.notes.some((n) => n.includes('No forecast exists'))).toBe(false);
     // The frame's field conditions: a moderate breeze and dry air, nothing to warn about.
     expect(card.facts.find((f) => f.label === 'In the field')?.value).toBe(
-      'wind 4 m/s from the ENE · humidity 60 % · visibility 20 km',
+      'air 24 °C, dew point 16 °C · wind 4 m/s from the ENE · humidity 60 % · visibility 20 km',
     );
-    expect(card.notes.some((n) => n.startsWith('Wind:') || n.startsWith('Humidity:'))).toBe(false);
+    expect(
+      card.notes.some(
+        (n) => n.startsWith('Air:') || n.startsWith('Wind:') || n.startsWith('Humidity:'),
+      ),
+    ).toBe(false);
     // A fresh breeze and saturated night air put both notes on the card, in the chosen units.
     const night = localSelectionToUtc({ year: 2026, month: 5, day: 2 }, 23 * 60, kailua.timeZone);
     const windy = buildPlanningCard(
@@ -129,14 +135,26 @@ describe('buildPlanningCard', () => {
         utc: night,
         weather: {
           capabilities: OPEN_METEO_CAPABILITIES,
-          frames: [{ ...frame, timestamp: night.toISOString(), windSpeed: 9, humidity: 97 }],
+          frames: [
+            {
+              ...frame,
+              timestamp: night.toISOString(),
+              windSpeed: 9,
+              humidity: 97,
+              temperature: -1.5,
+              dewPoint: -2,
+            },
+          ],
           providerFailed: false,
         },
       }),
       { generatedAt, units: 'imperial' },
     );
     expect(windy.facts.find((f) => f.label === 'In the field')?.value).toBe(
-      'wind 20 mph from the ENE · humidity 97 % · visibility 12 mi',
+      'air 29 °F, dew point 28 °F · wind 20 mph from the ENE · humidity 97 % · visibility 12 mi',
+    );
+    expect(windy.notes).toContain(
+      'Air: freezing — batteries drain fast, keep spares warm; let the camera warm up sealed in its bag afterwards.',
     );
     expect(windy.notes).toContain(
       'Wind: fresh — weigh the tripod down; clouds streak in a long exposure.',

@@ -33,6 +33,8 @@ const sample = {
     direct_normal_irradiance: [0, 0, 0],
     diffuse_radiation: [0, 0, 0],
     shortwave_radiation: [0, 0, 0],
+    temperature_2m: [24.1, 23.5, 23],
+    dew_point_2m: [18.2, 18.6, 19],
   },
 };
 
@@ -53,6 +55,8 @@ describe('Open-Meteo normalisation', () => {
       windDirection: 350,
       weatherCode: 0,
       visibility: 40000,
+      temperature: 24.1,
+      dewPoint: 18.2,
     });
     expect(s.latitude).toBe(21.4);
     expect(s.modelElevationM).toBe(3);
@@ -66,6 +70,13 @@ describe('Open-Meteo normalisation', () => {
     expect(mid.cloudCoverTotal).toBe(30);
     expect(mid.windDirection).toBeCloseTo(0, 5);
     expect(mid.weatherCode).toBe(2);
+    expect(mid.temperature).toBeCloseTo(23.8, 6);
+    expect(mid.dewPoint).toBeCloseTo(18.4, 6);
+    // A frame pair without the air fields interpolates to null, not NaN.
+    const bare = s.frames.map(({ dewPoint: _absent, ...f }) => ({ ...f, temperature: null }));
+    const midBare = interpolateFrame(bare, new Date('2026-05-31T00:30:00Z'))!;
+    expect(midBare.temperature).toBeNull();
+    expect(midBare.dewPoint).toBeNull();
     expect(interpolateFrame(s.frames, new Date('2026-05-30T00:00:00Z'))?.cloudCoverTotal).toBe(10);
     expect(interpolateFrame([], new Date())).toBeNull();
   });
@@ -86,6 +97,8 @@ describe('Open-Meteo normalisation', () => {
     expect(seen[0]).toContain('customer-api.open-meteo.com');
     expect(seen[0]).toContain('apikey=k');
     expect(seen[0]).toContain('cloud_cover_low');
+    expect(seen[0]).toContain('temperature_2m');
+    expect(seen[0]).toContain('dew_point_2m');
     expect(seen[0]).toContain('timezone=UTC');
     expect(p.getCapabilities().commercialReview).toBe('approved');
     expect(new OpenMeteoProvider().getCapabilities().commercialReview).toBe('conditional');
@@ -199,6 +212,22 @@ describe('fixture provider', () => {
       new Date(),
     );
     expect(storm.frames[0]?.weatherCode).toBe(63);
+  });
+
+  it('carries an air temperature with a dew point at or below it, warmer at noon than at dawn', () => {
+    const p = new FixtureWeatherProvider();
+    // Kailua: 16:00 UTC is 06:00 HST, 01:00 UTC is 15:00 HST.
+    const dawn = p.frameAt(new Date('2026-05-31T16:00:00Z'), 21.397, -157.727);
+    const afternoon = p.frameAt(new Date('2026-05-31T01:00:00Z'), 21.397, -157.727);
+    expect(dawn.temperature).toBeGreaterThan(10);
+    expect(afternoon.temperature).toBeGreaterThan(dawn.temperature!);
+    for (const f of [dawn, afternoon]) {
+      expect(f.dewPoint).toBeLessThanOrEqual(f.temperature!);
+      expect(f.dewPoint).toBeGreaterThan(f.temperature! - 12);
+    }
+    // Colder toward the poles.
+    const tromso = p.frameAt(new Date('2026-05-31T01:00:00Z'), 69.65, 18.96);
+    expect(tromso.temperature).toBeLessThan(dawn.temperature!);
   });
 });
 

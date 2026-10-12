@@ -65,6 +65,7 @@ Every vendor response is converted into frames; nothing downstream knows the ven
 | `windDirection`                                                    | degrees from, or null | interpolated as an angle              |
 | `weatherCode`                                                      | WMO 4677 or null      | nearest frame wins when interpolating |
 | `directNormalIrradiance`, `diffuseRadiation`, `shortwaveRadiation` | W/m², optional        |                                       |
+| `temperature`, `dewPoint`                                          | °C at 2 m, optional   | the shoot itself, not the light       |
 
 `interpolateFrame(frames, at)` gives a linear blend between the two bracketing hourly frames so
 scrubbing is continuous; null fields interpolate as null. A `WeatherSeries` wraps the frames with
@@ -98,7 +99,9 @@ overhead, cooling through 7800–9000 K in twilight). The curve is configurable.
 ### 4a. Field conditions from the frame
 
 Beside the light, the weather details read the frame for the shoot itself (`fieldConditions()` in
-`@lightmap/scene`, pure, tested): the **wind** in Beaufort's bands and names (calm < 0.5 m/s;
+`@lightmap/scene`, pure, tested): the **air** — the 2 m temperature with its dew point, noting
+the freezing end (≤ 0 °C: batteries, condensation on the way back indoors) and the hot end
+(≥ 32 °C: heat shimmer in a long lens, an overheating body); the **wind** in Beaufort's bands and names (calm < 0.5 m/s;
 light 1–2, < 3.4; moderate 3–4, < 8; fresh 5, < 10.8; strong 6, < 13.9; near gale 7, < 17.2; gale
 8 and above) with the quarter it blows from, warning from fresh up; and the **humidity** with a
 moisture call for the glass — fog when the code is 45/48, or visibility is under the WMO

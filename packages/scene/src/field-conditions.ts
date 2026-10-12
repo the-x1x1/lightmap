@@ -1,11 +1,13 @@
 /**
  * Field conditions (plan §1 B lists humidity, fog and wind beside cloud): what the forecast
- * frame says about the shoot rather than the light — the wind on the tripod and in the clouds,
- * and whether the glass will fog or dew. From the frame's own fields: Beaufort's bands for the
- * wind (speed at 10 m), the WMO threshold for fog (visibility under 1 km, or the fog weather
- * codes), dew called likely at ≥ 95 % relative humidity (the air within about a degree of its
- * dew point) and possible on a calm, mostly clear night above 85 %, when radiative cooling takes
- * a surface below the dew point first. Pure; a scenario has no frame and gives no lines.
+ * frame says about the shoot rather than the light — the air on the photographer and the
+ * batteries, the wind on the tripod and in the clouds, and whether the glass will fog or dew.
+ * From the frame's own fields: the 2 m temperature with its dew point (freezing and heat notes),
+ * Beaufort's bands for the wind (speed at 10 m), the WMO threshold for fog (visibility under
+ * 1 km, or the fog weather codes), dew called likely at ≥ 95 % relative humidity (the air within
+ * about a degree of its dew point) and possible on a calm, mostly clear night above 85 %, when
+ * radiative cooling takes a surface below the dew point first. Pure; a scenario has no frame
+ * and gives no lines.
  */
 import { compassLabel } from '@lightmap/geospatial';
 import type { WeatherFrame } from '@lightmap/weather';
@@ -31,8 +33,8 @@ export function windStrength(mps: number): WindStrength {
 export type MoistureRisk = 'fog' | 'mist' | 'dew-likely' | 'dew-possible' | null;
 
 export interface FieldLine {
-  label: 'Wind' | 'Humidity';
-  /** "9 mph from the ENE", "calm", "97 %". */
+  label: 'Air' | 'Wind' | 'Humidity';
+  /** "4 °C, dew point 2 °C", "9 mph from the ENE", "calm", "97 %". */
   value: string;
   /** What to do about it, or null when there is nothing to act on. */
   note: string | null;
@@ -45,6 +47,40 @@ export const DEW_LIKELY_HUMIDITY = 95;
 export const DEW_POSSIBLE_HUMIDITY = 85;
 /** WMO: fog is visibility under one kilometre. */
 export const FOG_VISIBILITY_M = 1000;
+
+/** Below this the air is freezing: batteries, fingers and condensation on the way back in. */
+export const FREEZING_C = 0;
+/** From here the ground shimmers in a long lens and the camera itself runs hot. */
+export const HOT_C = 32;
+
+/** A temperature in the chosen units, whole degrees with a true minus: "4 °C" / "−6 °F". */
+export function formatTemperature(c: number, units: DistanceUnits = 'metric'): string {
+  const n = Math.round(units === 'metric' ? c : (c * 9) / 5 + 32);
+  return `${n < 0 ? `−${-n}` : `${n}`} °${units === 'metric' ? 'C' : 'F'}`;
+}
+
+/**
+ * The air line: temperature with its dew point when the frame has one, and a note at the two
+ * ends that change how a shoot goes — freezing (batteries drain fast, the camera must warm up
+ * sealed afterwards) and heat (shimmer in long lenses, an overheating body).
+ */
+export function describeAir(
+  tempC: number,
+  dewPointC: number | null,
+  units: DistanceUnits = 'metric',
+): FieldLine {
+  const value =
+    dewPointC === null
+      ? formatTemperature(tempC, units)
+      : `${formatTemperature(tempC, units)}, dew point ${formatTemperature(dewPointC, units)}`;
+  const note =
+    tempC <= FREEZING_C
+      ? 'freezing — batteries drain fast, keep spares warm; let the camera warm up sealed in its bag afterwards'
+      : tempC >= HOT_C
+        ? 'hot — heat shimmer over ground and water in a long lens; keep the camera out of the sun'
+        : null;
+  return { label: 'Air', value, note };
+}
 
 /** The wind in the chosen units, whole numbers: "4 m/s" / "9 mph". */
 export function formatWindSpeed(mps: number, units: DistanceUnits = 'metric'): string {
@@ -139,8 +175,8 @@ const MOISTURE_NOTE: Record<Exclude<MoistureRisk, null>, string> = {
 };
 
 /**
- * The lines for the weather details: the wind, then the humidity with its fog or dew note.
- * Lines whose field the frame lacks are left out; a null frame (a scenario) gives none.
+ * The lines for the weather details: the air, the wind, then the humidity with its fog or dew
+ * note. Lines whose field the frame lacks are left out; a null frame (a scenario) gives none.
  */
 export function fieldConditions(
   frame: WeatherFrame | null,
@@ -149,6 +185,8 @@ export function fieldConditions(
 ): FieldLine[] {
   if (!frame) return [];
   const out: FieldLine[] = [];
+  if (frame.temperature !== null && frame.temperature !== undefined)
+    out.push(describeAir(frame.temperature, frame.dewPoint ?? null, units));
   if (frame.windSpeed !== null) out.push(describeWind(frame.windSpeed, frame.windDirection, units));
   if (frame.humidity !== null) {
     const risk = moistureRisk(frame, sunElevationDeg);

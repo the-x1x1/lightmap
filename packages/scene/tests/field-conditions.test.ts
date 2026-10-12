@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { WeatherFrame } from '@lightmap/weather';
 import {
+  describeAir,
   describeWind,
   fieldConditions,
+  formatTemperature,
   formatVisibility,
   formatWindSpeed,
   isFog,
@@ -130,9 +132,52 @@ describe('moisture on the glass', () => {
   });
 });
 
+describe('air', () => {
+  it('formats whole degrees in the chosen units', () => {
+    expect(formatTemperature(3.6)).toBe('4 °C');
+    expect(formatTemperature(-0.4)).toBe('0 °C');
+    expect(formatTemperature(3.6, 'imperial')).toBe('38 °F');
+    expect(formatTemperature(-10, 'imperial')).toBe('14 °F');
+    expect(formatTemperature(-21.1, 'imperial')).toBe('−6 °F');
+    expect(formatTemperature(-2.5)).toBe('−2 °C');
+  });
+
+  it('gives the temperature with its dew point and notes only the freezing and the hot ends', () => {
+    expect(describeAir(12.4, 9.8)).toEqual({
+      label: 'Air',
+      value: '12 °C, dew point 10 °C',
+      note: null,
+    });
+    expect(describeAir(12.4, null, 'imperial')).toEqual({
+      label: 'Air',
+      value: '54 °F',
+      note: null,
+    });
+    expect(describeAir(0, -3).note).toMatch(/^freezing — batteries drain fast/);
+    expect(describeAir(-12.5, -15, 'imperial')).toMatchObject({ value: '10 °F, dew point 5 °F' });
+    expect(describeAir(0.1, -3).note).toBeNull();
+    expect(describeAir(31.9, 20).note).toBeNull();
+    expect(describeAir(32, 20).note).toMatch(/^hot — heat shimmer/);
+  });
+});
+
 describe('fieldConditions', () => {
   it('gives nothing for a scenario (no frame)', () => {
     expect(fieldConditions(null, 30)).toEqual([]);
+  });
+
+  it('puts the air first when the frame has a temperature', () => {
+    const lines = fieldConditions(frame({ temperature: -2, dewPoint: -4 }), -10);
+    expect(lines.map((l) => l.label)).toEqual(['Air', 'Wind', 'Humidity']);
+    expect(lines[0]).toMatchObject({ value: '−2 °C, dew point −4 °C' });
+    expect(lines[0]?.note).toMatch(/^freezing/);
+    // Without a dew point the line is the temperature alone; a null temperature gives no line.
+    expect(fieldConditions(frame({ temperature: 18 }), 30)[0]).toEqual({
+      label: 'Air',
+      value: '18 °C',
+      note: null,
+    });
+    expect(fieldConditions(frame({ temperature: null, dewPoint: 3 }), 30)[0]?.label).toBe('Wind');
   });
 
   it('lists the wind and the humidity with their notes', () => {

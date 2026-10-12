@@ -140,9 +140,13 @@ block with the paywall reason.
 
 **Weather details** (any plan). The details drawer lists what the frame says beyond the light:
 cloud cover, the direct and diffuse shares, haze, the WMO conditions, rain chance, visibility
-("600 m", "4.5 km", "24 km"; feet and miles on imperial), **wind** with the quarter it blows from
-("4 m/s from the ENE"; "calm" below 0.5 m/s) and **humidity**. Up to two field notes follow when
-there is something to act on (plan §1 B's humidity, fog and wind): from a fresh breeze up
+("600 m", "4.5 km", "24 km"; feet and miles on imperial), the **air** — the 2 m temperature
+with its dew point ("12 °C, dew point 10 °C"; Fahrenheit on imperial) — **wind** with the
+quarter it blows from ("4 m/s from the ENE"; "calm" below 0.5 m/s) and **humidity**. Up to three
+field notes follow when there is something to act on (plan §1 B's humidity, fog and wind, and the
+cold): at or below 0 °C the air line says "freezing — batteries drain fast, keep spares warm; let
+the camera warm up sealed in its bag afterwards", from 32 °C "hot — heat shimmer over ground and
+water in a long lens; keep the camera out of the sun"; from a fresh breeze up
 (Beaufort 5, 8 m/s) the wind line says so — "weigh the tripod down; clouds streak in a long
 exposure" (fresh), "tripod shake likely; find a lee" (strong, Beaufort 6), "a weighted tripod in a
 lee at best" (near gale, 7), "hand-held only" (gale, 8 and up) — and the humidity line calls
@@ -246,8 +250,8 @@ noon, moon, camera heading/pitch/lens and — with the camera tools — the phot
 aperture, focus distance and sharp range ("Depth of field"), the "Milky Way core" line once the
 Sun is below −6°, the next two dark windows ("Dark windows"), the year's envelope ("Across
 the year") and, on a forecast or observed day, the frame's field conditions ("In the field":
-wind with its quarter, humidity, visibility, with any wind or dew/fog note among the card's
-notes). The card always shows the source label as a text badge, the
+air with its dew point, wind with its quarter, humidity, visibility, with any cold/heat, wind or
+dew/fog note among the card's notes). The card always shows the source label as a text badge, the
 weather line prefixed **Forecast (provider)** / **Observed** / **Scenario (not a forecast)**, the
 five confidence dimensions, the honesty note for the source mode, provider attribution, and
 "Made with LightMap · URL · timestamp". Nothing on the card is generated; the file name is

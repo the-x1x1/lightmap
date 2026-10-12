@@ -29,6 +29,10 @@ export interface WeatherFrame {
   directNormalIrradiance?: number | null;
   diffuseRadiation?: number | null;
   shortwaveRadiation?: number | null;
+  /** Air temperature at 2 m, °C (what the shoot feels like; batteries and condensation). */
+  temperature?: number | null;
+  /** Dew point at 2 m, °C — how far the air is from saturating. */
+  dewPoint?: number | null;
 }
 
 export interface WeatherCapabilities {
@@ -140,6 +144,8 @@ export function interpolateFrame(frames: readonly WeatherFrame[], at: Date): Wea
     directNormalIrradiance: mix(a.directNormalIrradiance, b.directNormalIrradiance),
     diffuseRadiation: mix(a.diffuseRadiation, b.diffuseRadiation),
     shortwaveRadiation: mix(a.shortwaveRadiation, b.shortwaveRadiation),
+    temperature: mix(a.temperature, b.temperature),
+    dewPoint: mix(a.dewPoint, b.dewPoint),
   };
 }
 

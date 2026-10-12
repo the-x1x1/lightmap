@@ -107,6 +107,15 @@ export class FixtureWeatherProvider implements WeatherProvider {
         code = total < 12 ? 0 : total < 40 ? 1 : total < 80 ? 2 : 3;
         break;
     }
+    // Air: cooler toward the poles, a ±4 °C swing peaking mid-afternoon local (solar) time, and
+    // a dew point that follows the humidity (the usual "a degree per 5 % below saturation").
+    const localHour = (((hour + lng / 15) % 24) + 24) % 24;
+    const humidity = Math.round(60 + total / 4);
+    const temperature =
+      Math.round(
+        (28 - 0.35 * Math.abs(lat) + 4 * Math.sin(((localHour - 9) / 24) * Math.PI * 2)) * 10,
+      ) / 10;
+    const dewPoint = Math.round((temperature - (100 - humidity) / 5) * 10) / 10;
     return {
       timestamp: t.toISOString(),
       cloudCoverTotal: Math.round(total),
@@ -115,7 +124,7 @@ export class FixtureWeatherProvider implements WeatherProvider {
       cloudCoverHigh: Math.round(total * 0.25),
       precipitationProbability: precip > 0 ? 90 : Math.round(total / 4),
       precipitationAmount: precip,
-      humidity: Math.round(60 + total / 4),
+      humidity,
       visibility: precip > 0 ? 6000 : 30000 - total * 100,
       windSpeed: 4,
       windDirection: 60,
@@ -123,6 +132,8 @@ export class FixtureWeatherProvider implements WeatherProvider {
       directNormalIrradiance: null,
       diffuseRadiation: null,
       shortwaveRadiation: null,
+      temperature,
+      dewPoint,
     };
   }
 }

@@ -98,12 +98,16 @@ export function decideWeatherMode(
   };
 }
 
-/** A day's worth of frames is fetched once per (grid cell, civil day, provider); this is that key. */
+/**
+ * A day's worth of frames is fetched once per (grid cell, civil day, provider); this is that key.
+ * The version is bumped when the frame shape gains a field every cached day must carry (v2: air
+ * temperature and dew point), so an old entry is refetched rather than served without it.
+ */
 export function forecastCacheKey(
   providerId: string,
   gridKey: string,
   dayIso: string,
-  providerVersion = 1,
+  providerVersion = 2,
 ): string {
   return `weather:${providerId}:v${providerVersion}:${gridKey}:${dayIso}`;
 }

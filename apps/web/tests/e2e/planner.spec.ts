@@ -525,6 +525,9 @@ test.describe('preferences', () => {
     await expect(weather).not.toContainText('m/s');
     await expect(weather).toContainText(/\d+ mi/);
     await expect(weather).toContainText('Humidity');
+    // The fixture's air for London in the afternoon: around 14 °C, in Fahrenheit here, with its
+    // dew point — far from freezing, so still no note.
+    await expect(weather).toContainText(/Air\s*5\d °F, dew point \d+ °F/);
     await expect(page.getByTestId('field-notes')).toHaveCount(0);
 
     // Kept on this device: the choice is still there after a reload.

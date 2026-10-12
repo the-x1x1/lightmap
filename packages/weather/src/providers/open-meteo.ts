@@ -59,6 +59,8 @@ const HOURLY_FIELDS = [
   'direct_normal_irradiance',
   'diffuse_radiation',
   'shortwave_radiation',
+  'temperature_2m',
+  'dew_point_2m',
 ] as const;
 
 interface OpenMeteoResponse {
@@ -226,6 +228,8 @@ export function normalizeOpenMeteo(
       directNormalIrradiance: num(h.direct_normal_irradiance?.[i]),
       diffuseRadiation: num(h.diffuse_radiation?.[i]),
       shortwaveRadiation: num(h.shortwave_radiation?.[i]),
+      temperature: num(h.temperature_2m?.[i]),
+      dewPoint: num(h.dew_point_2m?.[i]),
     });
   }
   return {
