@@ -12,7 +12,12 @@ import {
   moonPosition,
   type DayEvents,
 } from '@lightmap/astronomy';
-import { windowOutlook, type WeatherFrame, type WindowOutlook } from '@lightmap/weather';
+import {
+  windowOutlook,
+  type WeatherFrame,
+  type WindowOutlook,
+  type WindowVerdict,
+} from '@lightmap/weather';
 
 export const WEEK_AHEAD_DAYS = 7;
 
@@ -62,4 +67,27 @@ export function weekAheadRows(
       },
     };
   });
+}
+
+/** The verdict in a word or two for a seven-row list. */
+export const WEEK_AHEAD_SHORT: Record<WindowVerdict, string> = {
+  clear: 'clear',
+  thin: 'thin cloud',
+  'high-colour': 'high cloud — colour',
+  mixed: 'broken cloud',
+  clouded: 'clouded out',
+};
+
+/**
+ * The words after a window's time in the week-ahead table: the verdict with its cloud, or why
+ * there is none — the day is beyond the forecast, still loading, or came back without frames.
+ */
+export function weekAheadCellLabel(
+  outlook: Pick<WindowOutlook, 'verdict' | 'meanCloudCover'> | null,
+  state: { inForecast: boolean; loading: boolean },
+): string {
+  if (outlook)
+    return `${WEEK_AHEAD_SHORT[outlook.verdict]} (${Math.round(outlook.meanCloudCover)} %)`;
+  if (!state.inForecast) return 'beyond the forecast';
+  return state.loading ? 'loading…' : 'no forecast';
 }

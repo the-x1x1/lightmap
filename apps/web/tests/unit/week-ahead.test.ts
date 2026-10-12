@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { WeatherFrame } from '@lightmap/weather';
-import { weekAheadDates, weekAheadRows } from '../../features/planner/week-ahead.ts';
+import {
+  weekAheadCellLabel,
+  weekAheadDates,
+  weekAheadRows,
+} from '../../features/planner/week-ahead.ts';
 
 const kailua = { latitude: 21.397, longitude: -157.727 };
 const tz = 'Pacific/Honolulu';
@@ -61,5 +65,19 @@ describe('week ahead', () => {
     expect(rows[6]!.moon.illuminatedFraction).toBeLessThan(rows[0]!.moon.illuminatedFraction);
     // The windows are the day's own golden hours (Kailua: 18:3x–19:2x HST = 04:3x–05:2x UTC next day).
     expect(rows[0]!.evening!.start.toISOString()).toMatch(/^2026-06-01T04:3\d/);
+  });
+
+  it('labels a cell with the verdict and cloud, or says why there is none', () => {
+    expect(
+      weekAheadCellLabel(
+        { verdict: 'high-colour', meanCloudCover: 72.4 },
+        { inForecast: true, loading: false },
+      ),
+    ).toBe('high cloud — colour (72 %)');
+    expect(weekAheadCellLabel(null, { inForecast: false, loading: true })).toBe(
+      'beyond the forecast',
+    );
+    expect(weekAheadCellLabel(null, { inForecast: true, loading: true })).toBe('loading…');
+    expect(weekAheadCellLabel(null, { inForecast: true, loading: false })).toBe('no forecast');
   });
 });

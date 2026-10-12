@@ -20,21 +20,12 @@ import type { SceneState } from '@lightmap/scene';
 import { decideWeatherMode, type WeatherFrame, type WindowVerdict } from '@lightmap/weather';
 import { usePlannerStore } from '@/features/planner/store';
 import { useCapabilities } from '@/features/planner/use-scene';
-import { weekAheadDates, weekAheadRows } from '@/features/planner/week-ahead';
+import { weekAheadCellLabel, weekAheadDates, weekAheadRows } from '@/features/planner/week-ahead';
 import { ApiRequestError, fetchJson } from '@/lib/client/api';
 import type { WeatherResponse } from '@/lib/api-types';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-/** The verdict in a word or two for a seven-row list. */
-const SHORT: Record<WindowVerdict, string> = {
-  clear: 'clear',
-  thin: 'thin cloud',
-  'high-colour': 'high cloud — colour',
-  mixed: 'broken cloud',
-  clouded: 'clouded out',
-};
 
 const TONE: Record<WindowVerdict, string> = {
   clear: 'text-[var(--lm-ok)]',
@@ -123,20 +114,12 @@ export function WeekAhead({
         {formatWallTime(w.start, tz)}
       </button>
     );
-    if (!w.outlook)
-      return (
-        <>
-          {time}{' '}
-          <span className="text-[var(--lm-text-faint)]">
-            {inForecast ? (loading ? 'loading…' : 'no forecast') : 'beyond the forecast'}
-          </span>
-        </>
-      );
+    const label = weekAheadCellLabel(w.outlook, { inForecast, loading });
     return (
       <>
         {time}{' '}
-        <span className={TONE[w.outlook.verdict]}>
-          {SHORT[w.outlook.verdict]} ({Math.round(w.outlook.meanCloudCover)} %)
+        <span className={w.outlook ? TONE[w.outlook.verdict] : 'text-[var(--lm-text-faint)]'}>
+          {label}
         </span>
       </>
     );
