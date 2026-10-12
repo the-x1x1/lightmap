@@ -135,6 +135,30 @@ export function MapShell() {
         : null,
     [hasLunar, moonriseMs, moonsetMs],
   );
+  // The Moon's terrain-horizon crossings that are the ridge's doing (not its own rise/set):
+  // keyed on the instants so a scrub tick hands the timeline the same object.
+  const moonEvents = scene?.terrainHorizon?.moonEvents ?? null;
+  const moonTerrainKey = useMemo(() => {
+    if (!moonEvents?.differsFromAstronomical || !scene) return null;
+    const start = scene.dayEvents.dayStart.getTime();
+    const end = scene.dayEvents.dayEnd.getTime();
+    const own = [moonriseMs, moonsetMs].filter((x): x is number => x !== null);
+    const ridge = (t: number) => own.every((o) => Math.abs(o - t) > 3 * 60_000);
+    const clears = moonEvents.visible
+      .map((v) => v.from.getTime())
+      .filter((t) => t !== start && ridge(t));
+    const drops = moonEvents.visible
+      .map((v) => v.to.getTime())
+      .filter((t) => t !== end && ridge(t));
+    return clears.length || drops.length ? `${clears.join(',')}|${drops.join(',')}` : null;
+  }, [moonEvents, scene, moonriseMs, moonsetMs]);
+  const moonTerrain = useMemo(() => {
+    if (!moonTerrainKey) return null;
+    const [c, d] = moonTerrainKey.split('|');
+    const dates = (s: string | undefined) =>
+      s ? s.split(',').map((x) => new Date(Number(x))) : [];
+    return { clears: dates(c), drops: dates(d) };
+  }, [moonTerrainKey]);
   // Dark-sky spells of the civil day (night planning) for the timeline band: per place and day.
   const dayStartMs = dayEvents?.dayStart.getTime() ?? null;
   const dayEndMs = dayEvents?.dayEnd.getTime() ?? null;
@@ -393,6 +417,7 @@ export function MapShell() {
                   terrain={terrainMarkers}
                   terrainVisible={scene?.terrainHorizon?.sunEvents.visible ?? null}
                   moon={moonMarkers}
+                  moonTerrain={moonTerrain}
                   darkSky={darkSky}
                 />
                 {scene && isEnabled('reversePlanning') ? (

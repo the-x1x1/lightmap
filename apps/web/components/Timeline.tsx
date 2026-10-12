@@ -30,6 +30,8 @@ export interface TimelineProps {
   terrainVisible?: ReadonlyArray<{ from: Date; to: Date }> | null | undefined;
   /** Moonrise / moonset for the day (moon planning), as extra grey markers. */
   moon?: { moonrise: Date | null; moonset: Date | null } | null | undefined;
+  /** The Moon's terrain-horizon crossings that differ from its rise/set (terrain horizon + moon planning). */
+  moonTerrain?: { clears: Date[]; drops: Date[] } | null | undefined;
   /** Spells (UTC) when the Milky Way core can be shot: a faint violet band on the night track. */
   darkSky?: ReadonlyArray<Spell> | null | undefined;
   className?: string | undefined;
@@ -66,6 +68,7 @@ export function dayMarkers(
   ev: DayEvents,
   terrain?: TimelineProps['terrain'],
   moon?: TimelineProps['moon'],
+  moonTerrain?: TimelineProps['moonTerrain'],
 ): Marker[] {
   const dayLength = (ev.dayEnd.getTime() - ev.dayStart.getTime()) / 60_000;
   const m = (
@@ -120,6 +123,26 @@ export function dayMarkers(
       : null,
     moon ? m('moonrise', moon.moonrise, 'Moonrise', 'Moon ↑', '☾', 'moon') : null,
     moon ? m('moonset', moon.moonset, 'Moonset', 'Moon ↓', '☽', 'moon') : null,
+    ...(moonTerrain?.clears ?? []).map((d, i) =>
+      m(
+        `moonRidgeRise${i}`,
+        d,
+        'Moon clears the terrain (terrain only)',
+        'Moon ridge',
+        '▲',
+        'moon',
+      ),
+    ),
+    ...(moonTerrain?.drops ?? []).map((d, i) =>
+      m(
+        `moonRidgeSet${i}`,
+        d,
+        'Moon drops behind the terrain (terrain only)',
+        'Moon ridge',
+        '▽',
+        'moon',
+      ),
+    ),
   ].filter((x): x is Marker => x !== null);
 }
 
@@ -154,6 +177,7 @@ export function Timeline({
   terrain,
   terrainVisible,
   moon,
+  moonTerrain,
   darkSky,
   className,
 }: TimelineProps) {
@@ -164,8 +188,8 @@ export function Timeline({
     ? Math.round((dayEvents.dayEnd.getTime() - dayEvents.dayStart.getTime()) / 60_000)
     : 1440;
   const markers = useMemo(
-    () => (dayEvents ? dayMarkers(dayEvents, terrain, moon) : []),
-    [dayEvents, terrain, moon],
+    () => (dayEvents ? dayMarkers(dayEvents, terrain, moon, moonTerrain) : []),
+    [dayEvents, terrain, moon, moonTerrain],
   );
   const gradient = useMemo(
     () => (dayEvents ? dayGradient(dayEvents) : 'rgba(255,255,255,0.15)'),

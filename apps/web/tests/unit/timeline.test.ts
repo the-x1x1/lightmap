@@ -35,6 +35,15 @@ describe('timeline markers', () => {
     expect(moon.map((x) => x.key)).toEqual(['moonrise']);
     expect(moon[0]!.minutes).toBe(20 * 60);
     expect(dayMarkers(ev, null, null).some((x) => x.tone === 'moon')).toBe(false);
+    // The Moon's ridge crossings ride along as grey ▲/▽ markers.
+    const ridge = dayMarkers(ev, null, null, {
+      clears: [new Date(ev.dayStart.getTime() + 21.5 * 3_600_000)],
+      drops: [],
+    });
+    const mr = ridge.filter((x) => x.tone === 'moon');
+    expect(mr.map((x) => [x.key, x.glyph, x.minutes])).toEqual([
+      ['moonRidgeRise0', '▲', 21.5 * 60],
+    ]);
   });
   it('builds a gradient with night at both ends', () => {
     const g = dayGradient(ev);
