@@ -14,8 +14,10 @@ import {
 } from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
 import {
+  ECLIPSE_ACCURACY_NOTE,
   civilDateString,
   describeMilkyWayWindows,
+  eclipsesAhead,
   formatMilkyWayWindow,
   formatWallTime,
   fullMoonsAhead,
@@ -34,6 +36,7 @@ import { useSettled } from '@/lib/use-settled';
 import {
   DARK_WINDOW_NIGHTS,
   describeDisc,
+  describeEclipse,
   describeMilkyWay,
   describeMoonSize,
   describeNextPhases,
@@ -199,6 +202,83 @@ function FullMoons({ scene, windowEnd }: { scene: SceneState; windowEnd: string 
   );
 }
 
+/** How far ahead the eclipse scan looks, months. */
+const ECLIPSE_MONTHS = 12;
+
+/**
+ * The eclipses of the year ahead as seen from here — every solar eclipse this place sees at all
+ * and every lunar eclipse with whether the Moon is up for it — each a click away (the planner
+ * jumps to greatest eclipse). Rendered only while the Moon details are open: the scan is some
+ * tens of milliseconds, memoised per settled civil day and place (to a hundredth of a degree,
+ * well inside the eclipse's own accuracy). Dates beyond a Free plan's window are named but not
+ * jumped to.
+ */
+function Eclipses({ scene, windowEnd }: { scene: SceneState; windowEnd: string | null }) {
+  const setDate = usePlannerStore((s) => s.setDate);
+  const setMinutes = usePlannerStore((s) => s.setMinutes);
+  const tz = scene.timeZone;
+  const placeZone = scene.location.timeZone;
+  const from = useSettled(scene.dayEvents.dayStart.getTime(), 300);
+  const lat = Math.round(scene.location.point.latitude * 100) / 100;
+  const lng = Math.round(scene.location.point.longitude * 100) / 100;
+  const ahead = useMemo(
+    () => eclipsesAhead({ latitude: lat, longitude: lng }, new Date(from), ECLIPSE_MONTHS),
+    [from, lat, lng],
+  );
+  const jump = (at: Date) => {
+    const sel = utcToLocalSelection(at, tz);
+    setDate(sel.date);
+    setMinutes(sel.minutes);
+  };
+  return (
+    <div className="mt-1 text-xs text-[var(--lm-text-muted)]" data-testid="eclipses">
+      <p>
+        Eclipses in the year ahead
+        {ahead.length === 0 ? ': none.' : ':'}
+      </p>
+      {ahead.length > 0 ? (
+        <ul className="mt-0.5 space-y-0.5">
+          {ahead.map((e) => {
+            const line = describeEclipse(e, tz);
+            const inWindow =
+              !windowEnd || civilDateString(utcToWallClock(e.greatest, placeZone)) <= windowEnd;
+            const title = `${line.title} · ${line.date}`;
+            return (
+              <li
+                key={e.greatest.toISOString()}
+                data-testid="eclipse"
+                data-kind={e.kind}
+                data-type={e.type}
+              >
+                {inWindow ? (
+                  <button
+                    type="button"
+                    className="text-[var(--lm-text)] underline decoration-dotted underline-offset-2 hover:text-[var(--lm-sun)]"
+                    title="Jump the planner to greatest eclipse"
+                    onClick={() => jump(line.at)}
+                  >
+                    {title}
+                  </button>
+                ) : (
+                  <span
+                    className="text-[var(--lm-text)]"
+                    title="Beyond your plan’s date window · Pro"
+                  >
+                    {title}
+                  </span>
+                )}
+                {' — '}
+                {line.detail}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+      {ahead.length > 0 ? <p className="mt-0.5">{ECLIPSE_ACCURACY_NOTE}</p> : null}
+    </div>
+  );
+}
+
 /**
  * The Moon section: phase, position, rise/set, the phase calendar, the Milky Way core and — while
  * open — the dark windows ahead. Its open state lives here so it unmounts with the element when
@@ -286,6 +366,7 @@ function MoonDetails({
         Next: {nextPhases}
       </p>
       {moonOpen ? <FullMoons scene={scene} windowEnd={windowEnd} /> : null}
+      {moonOpen ? <Eclipses scene={scene} windowEnd={windowEnd} /> : null}
       {scene.nightSky ? (
         <p
           className={

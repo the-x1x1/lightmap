@@ -302,6 +302,22 @@ beyond its window is not a jump. The word "supermoon" is not used: a close full 
 list's Moon line and the planning card's Moon fact carry the width too when the Moon is up
 ("… 99 % lit, 0.55° across").
 
+**Eclipses ahead** (night planning; deterministic facts): while the Moon details are open,
+**Eclipses in the year ahead** lists, from this place, every solar eclipse the place sees at all
+and every lunar eclipse with whether the Moon is up for it — "Total lunar eclipse · 3 Mar —
+greatest 01:34, in the umbra 23:50–03:18, total 01:04–02:04 — the Moon up throughout from
+here, 52° SW at greatest"; "Total solar eclipse here · 12 Aug — totality 20:28:27–20:30:04
+(1 min 37 s), 19:33–21:20, Sun 8° up W; the Sun sets before it ends"; "Partial solar eclipse
+here · 12 Aug — greatest 19:13, 92 % of the Sun's width covered (91 % of the disc), 18:17–20:06,
+Sun 10° up W". Each is a button that jumps the planner to greatest eclipse (a Free plan reads
+dates beyond its window without the jump). The geometry is the planner's own: a lunar eclipse
+from the Moon's geocentric centre against the anti-solar point and the shadow radii at its
+distance (Danjon's enlargement, Meeus ch. 54), a solar one from the observer's topocentric Moon
+against the Sun (`eclipsesAhead()`, `lunarEclipseAt()`, `solarEclipseAt()`, checked against the
+2023–2027 almanac eclipses: contacts within a minute or two, a totality's seconds within ≈ 1 min,
+the edge of a path within a few tens of km). The block ends with that accuracy note and says to confirm
+against an almanac before travelling for one; "none" when the year has none (a lunar eclipse is listed even when the Moon is down here, with that said).
+
 **Export card** (Pro, entitlement `export_preview`): one PNG (1200 px wide) built in the browser
 from the current frame (captured at 1280 px from the renderer, or the sky-gradient band when the
 3D preview is unavailable) plus the facts above — place, coordinates, zone, date/time, sun

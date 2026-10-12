@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { fullMoonsAhead, milkyWayCore } from '@lightmap/astronomy';
+import { eclipsesAhead, fullMoonsAhead, milkyWayCore } from '@lightmap/astronomy';
 import {
   describeDisc,
   describeMilkyWay,
   describeMoonSize,
+  describeEclipse,
   describeNextPhases,
   formatFullMoon,
+  formatSeconds,
 } from '../../features/planner/night-text.ts';
 
 describe('night read-outs', () => {
@@ -74,5 +76,58 @@ describe('apparent sizes', () => {
         'UTC',
       ),
     ).toBe('20 Apr (0 %)');
+  });
+
+  it('describes an eclipse from here: the March 2026 lunar eclipse up throughout in Hawaii, down in Rome', () => {
+    const e = eclipsesAhead(
+      { latitude: 21.3, longitude: -157.86 },
+      new Date('2026-02-20T00:00:00Z'),
+      1,
+    )[0]!;
+    const line = describeEclipse(e, 'Pacific/Honolulu');
+    expect(line.title).toBe('Total lunar eclipse');
+    expect(line.date).toBe('3 Mar');
+    expect(line.detail).toMatch(
+      /^greatest 01:3\d, in the umbra 23:5\d–03:1\d, total 01:0\d–02:0\d — the Moon up throughout from here, \d+° [A-Z]+ at greatest$/,
+    );
+    expect(line.at).toBe(e.greatest);
+    const rome = eclipsesAhead(
+      { latitude: 41.9, longitude: 12.5 },
+      new Date('2026-02-20T00:00:00Z'),
+      1,
+    )[0]!;
+    expect(describeEclipse(rome, 'Europe/Rome').detail).toMatch(
+      /— the Moon is below the horizon here$/,
+    );
+  });
+
+  it('a solar eclipse here: total in Burgos with its seconds, partial in London with its coverage', () => {
+    const burgos = eclipsesAhead(
+      { latitude: 42.34, longitude: -3.7 },
+      new Date('2026-08-01T00:00:00Z'),
+      1,
+    )[0]!;
+    const b = describeEclipse(burgos, 'Europe/Madrid');
+    expect(b.title).toBe('Total solar eclipse here');
+    expect(b.date).toBe('12 Aug');
+    expect(b.detail).toMatch(
+      /^totality 20:2\d:\d\d–20:3\d:\d\d \(1 min \d+ s\), 19:3\d–21:2\d, Sun 8° up W(NW)?; the Sun sets before it ends$/,
+    );
+    const london = eclipsesAhead(
+      { latitude: 51.5, longitude: -0.12 },
+      new Date('2026-08-01T00:00:00Z'),
+      1,
+    )[0]!;
+    const l = describeEclipse(london, 'Europe/London');
+    expect(l.title).toBe('Partial solar eclipse here');
+    expect(l.detail).toMatch(
+      /^greatest 19:13, 92 % of the Sun’s width covered \(91 % of the disc\), 18:17–20:06, Sun 10° up W(NW)?$/,
+    );
+  });
+
+  it('formats seconds as minutes and seconds', () => {
+    expect(formatSeconds(97)).toBe('1 min 37 s');
+    expect(formatSeconds(385.4)).toBe('6 min 25 s');
+    expect(formatSeconds(48)).toBe('48 s');
   });
 });

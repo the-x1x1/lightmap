@@ -177,6 +177,11 @@ of the frame that is through the current lens; the Moon's distance against its m
 widest/narrowest of the twelve full Moons ahead, each a click away (`moonApparentDiameterDeg`,
 `sunApparentDiameterDeg`, `fullMoonsAhead`, `discFrameShare`; tested against the almanac).
 
+Also delivered: **eclipses ahead** — the year's solar eclipses as this place sees them (total,
+annular or partial here, the seconds of totality, how much of the disc, the Sun's height,
+whether the horizon cuts it) and its lunar eclipses with the contacts and whether the Moon is
+up here (`eclipsesAhead`; checked against the 2023–2027 almanac eclipses).
+
 Also delivered: **camera roll in the frame maths** (`frameCoordinates`/`directionFromFrame`
 optional roll, `levelLineSegment`, roll from the device orientation) — used by the field view
 so a hand-held phone's tilt is honoured. The planner's saved camera stays roll-free; a rolled

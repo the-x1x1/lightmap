@@ -13,7 +13,7 @@
  *
  * Honest accuracy statement (surfaced in the UI as the lunar confidence note): position ±0.02°,
  * illumination ±1 %, rise/set ±1 min. That is ample to plan where the Moon will be in a frame; it
- * is not an eclipse ephemeris. The AstronomyService interface allows a higher-precision backend
+ * is not an eclipse ephemeris (`eclipses.ts` builds a predictor on it, honest to a minute or two). The AstronomyService interface allows a higher-precision backend
  * (e.g. the MIT-licensed astronomy-engine) to be swapped in without touching callers (ADR-0006).
  */
 import {

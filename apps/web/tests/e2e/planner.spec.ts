@@ -126,6 +126,14 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
   await expect(page.getByTestId('full-moons')).toContainText(
     'widest 23 Dec (+8 %) · narrowest 29 Jun (−5 %)',
   );
+  // The eclipses of the year ahead from here: the August 2026 partial lunar eclipse, with the
+  // Moon rising over Kailua already in the umbra; the solar one that month is Europe's.
+  const eclipses = page.getByTestId('eclipses');
+  await expect(eclipses).toContainText(
+    /Partial lunar eclipse · 27 Aug — greatest 18:1\d, in the umbra 16:3\d–19:5\d — the Moon rises here during it/,
+  );
+  await expect(eclipses.getByTestId('eclipse')).toHaveCount(2);
+  await expect(eclipses.getByTestId('eclipse').first()).toHaveAttribute('data-type', 'partial');
   // Night planning: at noon the Milky Way line rules the sky out before anything else.
   await expect(page.getByTestId('milky-way')).toHaveAttribute('data-verdict', 'daylight');
   await expect(page.getByTestId('milky-way')).toContainText('Milky Way core:');

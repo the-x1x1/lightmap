@@ -46,8 +46,8 @@ the shadow probe (a 20 m tower at Sun 11°, shadow measured against `h / tan(el)
 - Night planning: the Moon on the rose and the timeline, its phase calendar, and the Milky Way
   core — where it stands, whether the sky can show it, the dark windows ahead (each a click
   away), a dark-sky band on the timeline, the core as a Light-finder body, its track over the
-  live camera, the widest and narrowest full Moons of the year ahead, and how often this month's
-  nights were clear.
+  live camera, the widest and narrowest full Moons of the year ahead, the eclipses of the year
+  ahead as seen from here, and how often this month's nights were clear.
 - Climatology: "typical for this month" from ten years of ERA5, by hour of day — cloud, saturated
   air, temperature and wind — never a forecast.
 - In the field: point the phone and the camera follows the compass; the field view puts the

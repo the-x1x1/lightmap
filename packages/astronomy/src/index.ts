@@ -59,3 +59,4 @@ export {
 export * from './phases.ts';
 export * from './night-sky.ts';
 export * from './apparent-size.ts';
+export * from './eclipses.ts';
