@@ -4,18 +4,18 @@ Phases follow the master plan (§25). Status as of v0.1.0. A phase is "delivered
 items exist, are tested and are documented; "plumbing" means the code paths work end to end in test
 mode but production configuration is still outstanding.
 
-| Phase | Goal                                        | Status                                                                                            |
-| ----- | ------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| 0     | Foundation                                  | **Delivered in v0.1.0**                                                                           |
-| 1     | Lighting MVP                                | **Delivered in v0.1.0**                                                                           |
-| 2     | Weather                                     | **Delivered in v0.1.0**                                                                           |
-| 3     | Accounts, projects, billing                 | **Delivered as plumbing in v0.1.0**; production configuration outstanding                         |
-| 4     | Visual quality                              | Started: export, twilight/haze, layered clouds delivered (unreleased)                             |
-| 5     | Real references                             | Future — blocked on licensing                                                                     |
-| 6     | Advanced camera planning / reverse planning | **Solver, Light finder, point-in-view, variants, "this light" chip, DOF, levelling (unreleased)** |
-| 7     | Long-range climatology                      | **Delivered (unreleased)** — Open-Meteo/ERA5, Pro entitlement                                     |
-| 8     | High-fidelity environment reconstruction    | Future                                                                                            |
-| 9     | Native mobile                               | Started — PWA installable baseline and offline project cache (unreleased); native later           |
+| Phase | Goal                                        | Status                                                                                             |
+| ----- | ------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| 0     | Foundation                                  | **Delivered in v0.1.0**                                                                            |
+| 1     | Lighting MVP                                | **Delivered in v0.1.0**                                                                            |
+| 2     | Weather                                     | **Delivered in v0.1.0**; hour by hour, golden-hour verdicts, the week ahead, the air (unreleased)  |
+| 3     | Accounts, projects, billing                 | **Delivered as plumbing in v0.1.0**; production configuration outstanding                          |
+| 4     | Visual quality                              | Started: export, twilight/haze, layered clouds delivered (unreleased)                              |
+| 5     | Real references                             | Future — blocked on licensing                                                                      |
+| 6     | Advanced camera planning / reverse planning | **Solver, finder, point-in-view, variants, DOF, levelling, apparent sizes, exposure (unreleased)** |
+| 7     | Long-range climatology                      | **Delivered (unreleased)** — ERA5 cloud, humidity, air and wind by hour; Pro entitlement           |
+| 8     | High-fidelity environment reconstruction    | Future                                                                                             |
+| 9     | Native mobile                               | Started — PWA installable baseline and offline project cache (unreleased); native later            |
 
 ## Phase 0 — Foundation (delivered)
 
