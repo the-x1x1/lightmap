@@ -155,6 +155,8 @@ export function HourlyOutlook({
                 h.precipitationProbability !== null
                   ? ` · rain ${Math.round(h.precipitationProbability)} %`
                   : ''
+              }${h.temperature !== null ? ` · ${formatTemperature(h.temperature, units)}` : ''}${
+                h.windSpeed !== null ? ` · wind ${formatWindSpeed(h.windSpeed, units)}` : ''
               }`}
               className={cx(
                 'group relative flex h-full flex-1 items-end rounded-sm',
