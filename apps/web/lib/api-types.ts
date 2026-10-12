@@ -123,6 +123,8 @@ export interface ViewpointDto {
   createdAt: string;
   updatedAt: string;
   thumbnailDataUrl?: string | null;
+  /** Total cloud cover the viewpoint was saved under (forecast/observed days), whole %; null otherwise. */
+  cloudCoverAtSave?: number | null;
 }
 
 export interface ProjectDetailDto extends ProjectDto {

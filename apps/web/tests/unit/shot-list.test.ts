@@ -95,6 +95,18 @@ describe('shot list', () => {
     expect(variantAt).toBeGreaterThan(noon);
     expect(dusk).toBeGreaterThan(variantAt);
     expect(text).toContain('  Weather: Forecast at save time (check again before the day)');
+    // A forecast-saved viewpoint without a stored cloud figure reads as a clear sky and says so;
+    // with one, the light follows the cloud it was saved under.
+    expect(text).toMatch(
+      / {2}Light: {3}~EV -?\d+\.\d · [\d/]+ (s|min) f\/[\d.]+ ISO \d+ \(clear sky, estimate\)/,
+    );
+    const cloudy = shotBlock({ ...later, cloudCoverAtSave: 90 });
+    expect(cloudy.find((l) => l.startsWith('  Weather:'))).toBe(
+      '  Weather: Forecast at save time (90 % cloud; check again before the day)',
+    );
+    expect(cloudy.find((l) => l.startsWith('  Light:'))).toMatch(
+      /\(90 % cloud at save time, estimate\)$/,
+    );
     expect(text).toContain('  Open:    https://app.example/?viewpoint=v3');
     expect(shotBlock(base).some((l) => l.startsWith('  Open:'))).toBe(false);
     // No shoot date: no stray blank line between the title and the count; imperial heights.

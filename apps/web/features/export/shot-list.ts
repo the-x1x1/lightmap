@@ -22,7 +22,7 @@ import {
   formatHeight,
   type DistanceUnits,
 } from '@lightmap/scene';
-import { isScenarioId, scenarioById } from '@lightmap/weather';
+import { isScenarioId, parametersForForecast, scenarioById } from '@lightmap/weather';
 import type { ProjectDto, ViewpointDto } from '@/lib/api-types';
 import { viewpointUrl } from '@/features/projects/open-viewpoint';
 
@@ -40,14 +40,18 @@ function civil(d: Date, tz: string): string {
 }
 
 function weatherLine(v: ViewpointDto): string {
+  const cloud =
+    v.cloudCoverAtSave !== null && v.cloudCoverAtSave !== undefined
+      ? `${v.cloudCoverAtSave} % cloud; `
+      : '';
   switch (v.weatherMode) {
     case 'FORECAST':
-      return 'Forecast at save time (check again before the day)';
+      return `Forecast at save time (${cloud}check again before the day)`;
     case 'EXTENDED_FORECAST':
-      return 'Extended-range forecast at save time (low confidence)';
+      return `Extended-range forecast at save time (${cloud}low confidence)`;
     case 'RECENT_PAST':
     case 'PAST':
-      return 'Observed conditions';
+      return `Observed conditions${cloud ? ` (${v.cloudCoverAtSave} % cloud)` : ''}`;
     case 'SCENARIO':
       return `Scenario (not a forecast): ${v.weatherScenario ?? 'none chosen'}`;
   }
@@ -88,22 +92,34 @@ export function shotBlock(
     );
   }
   lines.push(`  Weather: ${weatherLine(v)}`);
-  // An incident-light estimate under the saved scenario (a forecast's cloud is not stored with
-  // the viewpoint, so those read as a clear sky and say so); the footer says it is not a meter.
+  // An incident-light estimate under the saved scenario, or the cloud the forecast or the
+  // observation carried at save time; without either it reads as a clear sky and says so. The
+  // footer says it is not a meter.
   const scenarioId =
     v.weatherScenario !== null && isScenarioId(v.weatherScenario) ? v.weatherScenario : null;
   const scenarioBased = v.weatherMode === 'SCENARIO' && scenarioId !== null;
+  const savedCloud =
+    !scenarioBased && v.cloudCoverAtSave !== null && v.cloudCoverAtSave !== undefined
+      ? v.cloudCoverAtSave
+      : null;
   const exposure = estimateExposure({
     sunElevationDeg: sun.elevationDeg,
-    sunTransmittance: scenarioBased ? scenarioById(scenarioId).parameters.sunTransmittance : 1,
+    sunTransmittance: scenarioBased
+      ? scenarioById(scenarioId).parameters.sunTransmittance
+      : savedCloud !== null
+        ? parametersForForecast({ cloudCoverTotal: savedCloud }).sunTransmittance
+        : 1,
     moon: {
       elevationDeg: moon.topocentricElevationDeg,
       illuminatedFraction: moon.illuminatedFraction,
     },
   });
-  lines.push(
-    `  Light:   ~${describeExposure(exposure)} (${scenarioBased ? `${scenarioById(scenarioId).label.toLowerCase()} scenario` : 'clear sky'}, estimate)`,
-  );
+  const basis = scenarioBased
+    ? `${scenarioById(scenarioId).label.toLowerCase()} scenario`
+    : savedCloud !== null
+      ? `${savedCloud} % cloud at save time`
+      : 'clear sky';
+  lines.push(`  Light:   ~${describeExposure(exposure)} (${basis}, estimate)`);
   if (appUrl) lines.push(`  Open:    ${viewpointUrl(appUrl, v.id)}`);
   return lines;
 }

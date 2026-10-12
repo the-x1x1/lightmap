@@ -1,6 +1,7 @@
 import 'server-only';
 import type { Project, Viewpoint } from '@lightmap/database';
 import type { ProjectDto, ViewpointDto } from '@/lib/api-types';
+import { cloudCoverAtSave } from '@/lib/saved-cloud';
 
 export function projectDto(
   p: Project & { viewpointCount?: number; upcomingViewpointCount?: number },
@@ -19,7 +20,9 @@ export function projectDto(
 }
 
 export function viewpointDto(
-  v: Viewpoint & { snapshot?: { thumbnailDataUrl: string | null } | null },
+  v: Viewpoint & {
+    snapshot?: { thumbnailDataUrl: string | null; weatherState?: unknown } | null;
+  },
 ): ViewpointDto {
   return {
     id: v.id,
@@ -41,5 +44,6 @@ export function viewpointDto(
     createdAt: v.createdAt.toISOString(),
     updatedAt: v.updatedAt.toISOString(),
     thumbnailDataUrl: v.snapshot?.thumbnailDataUrl ?? null,
+    cloudCoverAtSave: cloudCoverAtSave(v.snapshot?.weatherState),
   };
 }

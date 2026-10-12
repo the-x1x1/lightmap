@@ -106,7 +106,11 @@ export function projectsRepo(db: Db) {
       id: string,
     ): Promise<
       Project & {
-        viewpoints: Array<Viewpoint & { snapshot: { thumbnailDataUrl: string | null } | null }>;
+        viewpoints: Array<
+          Viewpoint & {
+            snapshot: { thumbnailDataUrl: string | null; weatherState: unknown } | null;
+          }
+        >;
       }
     > {
       const [p] = await db
@@ -129,11 +133,15 @@ export function projectsRepo(db: Db) {
               .select({
                 viewpointId: previewSnapshots.viewpointId,
                 thumbnailDataUrl: previewSnapshots.thumbnailDataUrl,
+                weatherState: previewSnapshots.weatherState,
               })
               .from(previewSnapshots)
               .where(inArray(previewSnapshots.viewpointId, ids));
       const byId = new Map(
-        snaps.map((x) => [x.viewpointId, { thumbnailDataUrl: x.thumbnailDataUrl }]),
+        snaps.map((x) => [
+          x.viewpointId,
+          { thumbnailDataUrl: x.thumbnailDataUrl, weatherState: x.weatherState },
+        ]),
       );
       return { ...p, viewpoints: vps.map((v) => ({ ...v, snapshot: byId.get(v.id) ?? null })) };
     },

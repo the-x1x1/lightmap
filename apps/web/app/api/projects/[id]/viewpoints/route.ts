@@ -41,7 +41,12 @@ export async function POST(req: Request, { params }: Params) {
       {
         viewpoint: viewpointDto({
           ...vp,
-          snapshot: snapshot ? { thumbnailDataUrl: snapshot.thumbnailDataUrl ?? null } : null,
+          snapshot: snapshot
+            ? {
+                thumbnailDataUrl: snapshot.thumbnailDataUrl ?? null,
+                weatherState: snapshot.weatherState,
+              }
+            : null,
         }),
       },
       { status: 201 },
