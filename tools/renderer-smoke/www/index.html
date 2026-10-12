@@ -513,7 +513,10 @@
               [GROUND_COVER_BOUNDS_UNIFORM]: coverBounds,
               [GROUND_COVER_IMAGE_UNIFORM]: coverCanvas,
               u_coverOn: 1,
-              [GROUND_DETAIL_IMAGE_UNIFORM]: Cesium.Material.DefaultImageId,
+              // The detail atlas as the app serves it, switched on; the probe's own ENU frame
+              // and camera offsets are kept up each frame below, as the host does for the globe.
+              [GROUND_DETAIL_IMAGE_UNIFORM]: 'textures/ground-detail.png',
+              u_detailOn: 1,
               u_eastWC: new Cesium.Cartesian3(1, 0, 0),
               u_northWC: new Cesium.Cartesian3(0, 1, 0),
               u_upWC: new Cesium.Cartesian3(0, 0, 1),
@@ -524,6 +527,29 @@
           translucent: false,
           minificationFilter: Cesium.TextureMinificationFilter.LINEAR_MIPMAP_LINEAR,
         });
+        {
+          // The atlas frame: east/north/up at the probe's centre, the camera's offset along them
+          // in tile periods each frame (the host's preRender does the same for the globe).
+          const centre = Cesium.Cartesian3.fromDegrees(
+            (probeRect.west + probeRect.east) / 2,
+            (probeRect.south + probeRect.north) / 2,
+          );
+          const up = Cesium.Ellipsoid.WGS84.geodeticSurfaceNormal(centre, new Cesium.Cartesian3());
+          const h = Math.hypot(centre.x, centre.y);
+          const east = new Cesium.Cartesian3(-centre.y / h, centre.x / h, 0);
+          const north = Cesium.Cartesian3.cross(up, east, new Cesium.Cartesian3());
+          const u = probeMaterial.uniforms;
+          Cesium.Cartesian3.clone(east, u.u_eastWC);
+          Cesium.Cartesian3.clone(north, u.u_northWC);
+          Cesium.Cartesian3.clone(up, u.u_upWC);
+          host.__scene.preRender.addEventListener(() => {
+            const cam = host.__scene.camera.positionWC;
+            const f = (v) => v - Math.floor(v);
+            u.u_detailOffset.x = f(Cesium.Cartesian3.dot(cam, east) / 2.5);
+            u.u_detailOffset.y = f(Cesium.Cartesian3.dot(cam, north) / 2.5);
+            u.u_detailOffset.z = f(Cesium.Cartesian3.dot(cam, up) / 2.5);
+          });
+        }
         host.__scene.primitives.add(
           new Cesium.Primitive({
             geometryInstances: new Cesium.GeometryInstance({
@@ -622,6 +648,21 @@
           errorsBefore: window.__smoke.errors.length,
         };
         window.__smoke.shot = 'ground-texture';
+        await new Promise((r) => {
+          window.__takeShot = r;
+        });
+        // Close up: the camera 40 m from the pin, looking down at the probe — the atlas's
+        // grass tile (the Kailua shore reads as turf at this height) with no visible grid, and
+        // fixed to the ground as the orbit turns (two shots, same place).
+        controller.setOrbit({ headingDeg: 20, pitchDeg: -35, rangeM: 40 });
+        await wait(2500);
+        window.__smoke.shot = 'ground-detail';
+        await new Promise((r) => {
+          window.__takeShot = r;
+        });
+        controller.setOrbit({ headingDeg: 60, pitchDeg: -35, rangeM: 40 });
+        await wait(1500);
+        window.__smoke.shot = 'ground-detail-turned';
         await new Promise((r) => {
           window.__takeShot = r;
         });

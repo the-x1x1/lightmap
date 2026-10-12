@@ -223,10 +223,10 @@ camera's position in double precision, at two scales so the repeat does not read
 multiplier about 1 on the colour the macro rules chose, never a change of what the ground is.
 A photographic CC0 set can replace the file as long as its quadrant order and wrap are kept.
 Verified so far: both branches compiled and rendered in a bare WebGL2 harness on a synthetic
-range (a synthetic cover map in place, the atlas close up), and the cover map through
-Cesium's own upload in the renderer smoke probe (`tools/renderer-smoke`); the atlas on a
-real terrain at a viewpoint — the "fixed to the ground" and "no grid" claims — is the
-`QA_PLAN.md` device check, still to run.
+range (a synthetic cover map in place, the atlas close up), and, in the renderer smoke
+probe (`tools/renderer-smoke`), the cover map through Cesium's own upload and the atlas close up
+from two headings; the atlas on real terrain at a viewpoint — the "fixed to the ground" claim
+while walking the pin — is the `QA_PLAN.md` device check, still to run.
 **Caveat:** still a texture, not a classification of
 the pixel under the camera — the map is ≈ 40 m per pixel against 10 m data, tells nothing
 about a forest's species or a field's crop, and without a source it does not know a forest

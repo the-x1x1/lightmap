@@ -2,7 +2,8 @@
  * Renderer smoke test: loads the real SceneController + CesiumSceneHost + grade shader in headless
  * Chromium against a bundled Cesium build, applies seven scenes (noon clear/overcast, golden hour,
  * blue hour, partly cloudy, moonlit night, storm, cirrus and stratus decks after sunset from a
- * forecast frame, a tower's shadow at low Sun, the ground texture compiled on a probe) and screenshots each; the shadow scene is also
+ * forecast frame, a tower's shadow at low Sun, the ground texture on a probe with a synthetic cover
+ * map and, close up, the detail atlas) and screenshots each; the shadow scene is also
  * measured (direction, length, no low-Sun fade). Fails on any runtime or
  * shader error. Usage (after `pnpm install`):
  *
@@ -16,8 +17,14 @@
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
 
+// The app's ground detail atlas, served beside the page so the probe can take it as the host does.
+mkdirSync(fileURLToPath(new URL('./www/textures', import.meta.url)), { recursive: true });
+copyFileSync(
+  fileURLToPath(new URL('../../apps/web/public/textures/ground-detail.png', import.meta.url)),
+  fileURLToPath(new URL('./www/textures/ground-detail.png', import.meta.url)),
+);
 const server = spawn('python3', ['-m', 'http.server', '8765', '--bind', '127.0.0.1'], {
   cwd: fileURLToPath(new URL('./www', import.meta.url)),
   stdio: 'ignore',
