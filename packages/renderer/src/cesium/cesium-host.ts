@@ -286,6 +286,8 @@ export class CesiumSceneHost implements SceneHost {
     u['u_treelineM'] = g.treelineM;
     u['u_poleward'] = g.poleward;
     u['u_strength'] = g.strength;
+    u['u_aridity'] = g.aridity;
+    u['u_ice'] = g.ice;
     this.scene.requestRender();
   }
 
@@ -730,6 +732,45 @@ export class CesiumSceneHost implements SceneHost {
     if (!win) return null;
     const canvas = this.widget.canvas;
     return [win.x / canvas.clientWidth, 1 - win.y / canvas.clientHeight];
+  }
+
+  async sampleBasemapColor(p: GeoPoint): Promise<[number, number, number] | null> {
+    const C = this.C;
+    const provider = this.fallbackLayer?.imageryProvider;
+    if (!provider || this.destroyed) return null;
+    try {
+      // Natural Earth II's deepest bundled level (2: a pixel ≈ 20 km) — the regional tone, not
+      // the pixel under the pin. A 3 × 3 neighbourhood is averaged.
+      const level = Math.min(2, provider.maximumLevel ?? 2);
+      const carto = C.Cartographic.fromDegrees(p.longitude, p.latitude);
+      const xy = provider.tilingScheme.positionToTileXY(carto, level, new C.Cartesian2());
+      if (!xy) return null;
+      const image = await provider.requestImage(xy.x, xy.y, level);
+      if (!image || this.destroyed) return null;
+      const rect = provider.tilingScheme.tileXYToRectangle(xy.x, xy.y, level);
+      const w = provider.tileWidth;
+      const h = provider.tileHeight;
+      const canvas = new OffscreenCanvas(w, h);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+      ctx.drawImage(image as CanvasImageSource, 0, 0, w, h);
+      const fx = (carto.longitude - rect.west) / (rect.east - rect.west);
+      const fy = (rect.north - carto.latitude) / (rect.north - rect.south);
+      const px = Math.max(1, Math.min(w - 2, Math.floor(fx * w)));
+      const py = Math.max(1, Math.min(h - 2, Math.floor(fy * h)));
+      const data = ctx.getImageData(px - 1, py - 1, 3, 3).data;
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      for (let i = 0; i < 9; i++) {
+        r += data[i * 4] ?? 0;
+        g += data[i * 4 + 1] ?? 0;
+        b += data[i * 4 + 2] ?? 0;
+      }
+      return [r / 9, g / 9, b / 9];
+    } catch {
+      return null;
+    }
   }
 
   async sampleGroundHeight(p: GeoPoint): Promise<number | null> {

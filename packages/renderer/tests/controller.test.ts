@@ -83,6 +83,7 @@ function fakeHost() {
     setCelestialBodies: rec('setCelestialBodies'),
     sunScreenPosition: () => [0.5, 0.6],
     sampleGroundHeight: async () => 42,
+    sampleBasemapColor: async () => [200, 180, 140] as [number, number, number],
     sampleGroundHeights: async (pts: readonly unknown[]) => pts.map(() => 42),
     requestRender: rec('requestRender'),
     stats: () => ({
@@ -144,6 +145,28 @@ describe('SceneController', () => {
     c.apply(scene({ render: { ...DEFAULT_RENDER_SETTINGS, shadows: false } }));
     expect(calls['setGroundTexture']).toHaveLength(2);
     expect(calls['setGroundTexture']![1]![0]).toBeNull();
+  });
+
+  it('reads the basemap’s colour around a new pin and re-paints with the land hint', async () => {
+    const timers: Array<() => void> = [];
+    const { host, calls } = fakeHost();
+    const c = new SceneController(host, {
+      setTimeoutImpl: (fn) => {
+        timers.push(fn);
+        return timers.length;
+      },
+      clearTimeoutImpl: () => {},
+      aspect: () => 16 / 9,
+    });
+    c.apply(scene());
+    const first = calls['setGroundTexture']![0]![0] as { aridity: number };
+    expect(first.aridity).toBe(0.25); // neutral until the basemap has been read
+    timers[timers.length - 1]!(); // the debounced pin work: ground height and the land hint
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    const last = calls['setGroundTexture']!.at(-1)![0] as { aridity: number; ice: number };
+    expect(last.aridity).toBe(0.75); // the fake basemap is tan
+    expect(last.ice).toBe(0);
   });
 
   it('map mode → orbit camera with fly on pin move; viewpoint mode → eye camera with aspect-corrected fov', () => {

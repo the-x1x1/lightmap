@@ -13,7 +13,12 @@ import {
   type SceneState,
 } from '@lightmap/scene';
 import type { BasemapDescriptor, TerrainDescriptor } from '@lightmap/geospatial';
-import { groundTextureFor } from '../ground-texture.ts';
+import {
+  NEUTRAL_LAND_HINT,
+  groundTextureFor,
+  landHintFromColor,
+  type LandHint,
+} from '../ground-texture.ts';
 import { lightingFromScene, type LightingParameters } from '../lighting.ts';
 import { enuTowardSun, enuToEcef } from '../sun-vector.ts';
 import type {
@@ -64,6 +69,8 @@ export class SceneController {
   private lastQualityKey: string | null = null;
   private lastCelestial: string | null = null;
   private lastGroundKey: string | null = null;
+  private landHint: LandHint = NEUTRAL_LAND_HINT;
+  private landHintKey: string | null = null;
   private lastDayKey: string | null = null;
   private groundHeightM = 0;
   private groundHeightKey: string | null = null;
@@ -203,9 +210,9 @@ export class SceneController {
     }
 
     // The ground texture: its inputs move with the place, the season and the quality rung only.
-    const ground = groundTextureFor(scene);
+    const ground = groundTextureFor(scene, this.landHint);
     const groundKey = ground
-      ? `${ground.snowlineM}|${ground.treelineM}|${ground.poleward}|${ground.strength}`
+      ? `${ground.snowlineM}|${ground.treelineM}|${ground.poleward}|${ground.strength}|${ground.aridity}|${ground.ice}`
       : 'off';
     if (groundKey !== this.lastGroundKey) {
       this.lastGroundKey = groundKey;
@@ -236,7 +243,10 @@ export class SceneController {
             resolutionScale: scene.render.resolutionScale,
           });
         }
-        if (pinMoved) void this.refreshGroundHeight(scene);
+        if (pinMoved) {
+          void this.refreshGroundHeight(scene);
+          void this.refreshLandHint(scene);
+        }
       });
     }
     this.host.requestRender();
@@ -342,6 +352,23 @@ export class SceneController {
       fn();
       this.host.requestRender();
     }, this.debounceMs);
+  }
+
+  /**
+   * The ground texture's regional hint from the basemap's colour around the pin (one tile read
+   * per place, after the basemap is up); the next apply carries it into the material.
+   */
+  private async refreshLandHint(scene: SceneState): Promise<void> {
+    const key = `${scene.location.point.latitude.toFixed(2)},${scene.location.point.longitude.toFixed(2)}`;
+    if (key === this.landHintKey) return;
+    this.landHintKey = key;
+    const rgb = await this.host.sampleBasemapColor(scene.location.point);
+    if (this.landHintKey !== key || this.host.isDestroyed()) return;
+    const hint = rgb ? landHintFromColor(rgb) : NEUTRAL_LAND_HINT;
+    if (hint.aridity !== this.landHint.aridity || hint.ice !== this.landHint.ice) {
+      this.landHint = hint;
+      if (this.lastScene) this.apply(this.lastScene);
+    }
   }
 
   private async refreshGroundHeight(scene: SceneState): Promise<void> {

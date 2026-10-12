@@ -111,7 +111,8 @@ material from the mesh's own height, slope and aspect; `RENDERING_ACCURACY.md` "
 texture") so the preview reads as ground rather than a grey plane under the coarse basemap;
 blended over the basemap so licensed imagery, where configured, still carries the hue.
 
-Remaining — the **texture pack**, in stages: (1) delivered above, the procedural surface;
+Remaining — the **texture pack**, in stages: (1) delivered above, the procedural surface,
+with the region's aridity and ice taken from the bundled basemap's colour (data-free);
 (2) a land-cover tint — a coarse public-domain land-cover raster (e.g. ESA WorldCover at 10 m
 is CC BY 4.0; Copernicus Global Land Cover 100 m is CC BY 4.0) sampled per tile to tell forest
 from field, desert from steppe, built-up from open, feeding the material's palette; (3) tiled

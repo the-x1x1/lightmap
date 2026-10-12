@@ -15,8 +15,10 @@
  * real imagery layer, where one is licensed, still shows through where it matters — vegetation
  * hue, desert, farmland — and the procedural surface supplies the detail the basemap lacks.
  *
- * A texture, not a land-cover dataset: it does not know a forest from a field, a glacier from a
- * snowfield, or a city at all. `RENDERING_ACCURACY.md` says so.
+ * The one regional cue it takes is the bundled basemap's own colour around the place (sampled
+ * once per place by the host): green leans the open ground to turf, tan to steppe and desert,
+ * white to an ice sheet. A texture, not a land-cover dataset: it does not know a forest from a
+ * field, a glacier from a snowfield, or a city at all. `RENDERING_ACCURACY.md` says so.
  */
 export const GROUND_MATERIAL_TYPE = 'LightMapGround';
 
@@ -30,6 +32,10 @@ export const GROUND_UNIFORM_DEFAULTS = {
   u_poleward: 1,
   /** Overall opacity over the basemap, 0–1. */
   u_strength: 1,
+  /** The region's aridity from the basemap's colour, 0 vegetated – 1 desert. */
+  u_aridity: 0.25,
+  /** The region's ice-sheet share from the basemap's colour, 0–1. */
+  u_ice: 0,
 } as const;
 
 export const GROUND_MATERIAL_SOURCE = /* glsl */ `
@@ -37,6 +43,8 @@ uniform float u_snowlineM;
 uniform float u_treelineM;
 uniform float u_poleward;
 uniform float u_strength;
+uniform float u_aridity;
+uniform float u_ice;
 
 // Hash without axis correlation (Hoskins' hash13), so the noise has no lattice pattern.
 float lmHash(vec3 p)
@@ -77,8 +85,9 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float height = materialInput.height;              // metres above the ellipsoid
     float aspect = materialInput.aspect;              // radians, 0 east, pi/2 north
 
-    vec3 turf  = vec3(0.33, 0.45, 0.20);
-    vec3 scrub = vec3(0.52, 0.46, 0.27);
+    // Open ground leans from turf and scrub toward steppe and desert with the region's aridity.
+    vec3 turf  = mix(vec3(0.33, 0.45, 0.20), vec3(0.62, 0.55, 0.36), u_aridity);
+    vec3 scrub = mix(vec3(0.52, 0.46, 0.27), vec3(0.74, 0.64, 0.44), u_aridity);
     vec3 rock  = vec3(0.52, 0.49, 0.45);
     vec3 scree = vec3(0.40, 0.38, 0.34);
     vec3 snow  = vec3(0.93, 0.95, 0.97);
@@ -105,6 +114,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float poleward = sin(aspect) * u_poleward * smoothstep(0.05, 0.4, slope);  // +1 facing the pole
     float snowline = u_snowlineM - 180.0 * poleward + 320.0 * (patches - 0.47);
     float snowy = smoothstep(snowline - 220.0, snowline + 160.0, height) * (1.0 - smoothstep(0.85, 1.15, slope));
+    snowy = max(snowy, u_ice * (1.0 - smoothstep(0.9, 1.2, slope)));  // an ice sheet is snow at any height
     ground = mix(ground, snow * (0.95 + 0.05 * grain), snowy);
 
     material.diffuse = ground;

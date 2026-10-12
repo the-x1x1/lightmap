@@ -156,7 +156,11 @@ winter by a share that grows with latitude: the Alps snowy from ≈ 1 500 m in F
 ≈ 3 000 m in August; the tropics barely move) and lies lower on poleward faces, and a strip of
 shore where flat ground meets sea level (`ground-texture.ts`, tested). The inputs are the
 terrain's own height, slope and aspect and a noise field anchored to the fragment's world
-position, so patches stay put as the camera moves. The colour is blended over the basemap with an
+position, so patches stay put as the camera moves. One regional cue comes from the bundled
+Natural Earth II basemap's own colour around the place (a 3 × 3-pixel read of its deepest
+bundled level, ≈ 20 km per pixel, once per place): green leans the open ground to turf and
+scrub, tan to steppe and desert, white to an ice sheet — a tint, never a classification
+(`landHintFromColor`, tested). The colour is blended over the basemap with an
 opacity that rises on rock and snow and falls on open ground, so a licensed imagery layer still
 shows through where it carries the information — vegetation hue, desert, farmland — and the
 procedural surface supplies the detail it lacks. Water (where the terrain carries a mask) is

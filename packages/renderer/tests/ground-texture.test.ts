@@ -8,8 +8,10 @@ import {
 } from '@lightmap/scene';
 import { OPEN_METEO_CAPABILITIES } from '@lightmap/weather';
 import {
+  NEUTRAL_LAND_HINT,
   dayOfYearUtc,
   groundTextureFor,
+  landHintFromColor,
   permanentSnowlineM,
   snowlineM,
 } from '../src/ground-texture.ts';
@@ -109,6 +111,35 @@ describe('groundTextureFor', () => {
         }),
       ),
     ).toBeNull();
+  });
+});
+
+describe('landHintFromColor', () => {
+  it('reads Natural Earth II: green land is not arid, tan is, the ice sheet is ice, the sea says nothing', () => {
+    expect(landHintFromColor([120, 150, 90])).toEqual({ aridity: 0, ice: 0 });
+    expect(landHintFromColor([200, 180, 140]).aridity).toBeCloseTo(0.75, 2);
+    expect(landHintFromColor([200, 180, 140]).ice).toBe(0);
+    const ice = landHintFromColor([235, 238, 242]);
+    expect(ice.ice).toBe(1);
+    expect(ice.aridity).toBe(0);
+    const brownGrey = landHintFromColor([150, 140, 120]);
+    expect(brownGrey.aridity).toBeCloseTo(0.5, 2);
+    expect(landHintFromColor([60, 90, 140])).toEqual({
+      aridity: NEUTRAL_LAND_HINT.aridity,
+      ice: 0,
+    });
+  });
+
+  it('carries the hint into the params, rounded to a hundredth', () => {
+    const g = groundTextureFor(sceneAt(30, new Date('2026-07-01T00:00:00Z')), {
+      aridity: 0.7777,
+      ice: 0.123,
+    })!;
+    expect(g.aridity).toBe(0.78);
+    expect(g.ice).toBe(0.12);
+    expect(groundTextureFor(sceneAt(30, new Date('2026-07-01T00:00:00Z')))!.aridity).toBe(
+      NEUTRAL_LAND_HINT.aridity,
+    );
   });
 });
 

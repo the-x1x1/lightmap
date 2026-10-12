@@ -15,6 +15,34 @@ export interface GroundTextureParams {
   poleward: 1 | -1;
   /** Opacity over the basemap, 0–1. */
   strength: number;
+  /** How arid the region reads, 0 (vegetated) – 1 (desert), from the basemap's own colour. */
+  aridity: number;
+  /** How much of the region is ice sheet, 0–1, from the basemap's own colour. */
+  ice: number;
+}
+
+/** What the coarse basemap's colour says about the region around a point. */
+export interface LandHint {
+  aridity: number;
+  ice: number;
+}
+
+export const NEUTRAL_LAND_HINT: LandHint = { aridity: 0.25, ice: 0 };
+
+/**
+ * The land-class hint from a basemap colour (sRGB 0–255), as Natural Earth II paints it: green
+ * for vegetation, tan through brown for steppe and desert, white for ice. Aridity is the
+ * red-over-green excess (green land ≈ 0, tan ≈ 0.75, the brown-grey of high mountains ≈ 0.5);
+ * ice is how far the darkest channel climbs toward white. A tint, not a classification: it
+ * tells the texture which way to lean, never what a given pixel is.
+ */
+export function landHintFromColor(rgb: readonly [number, number, number]): LandHint {
+  const [r, g, b] = rgb;
+  const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
+  const ice = clamp01((Math.min(r, g, b) - 185) / 45);
+  // Blue (sea, lakes) says nothing about the land: lean on the neutral hint.
+  if (b > r + 15 && b > g + 5) return { aridity: NEUTRAL_LAND_HINT.aridity, ice };
+  return { aridity: clamp01((r - g + 10) / 40) * (1 - ice), ice };
 }
 
 /** Climatic (late-summer) snowline by latitude, metres: ≈ 5 200 m at the equator, ≈ 3 000 m at 45°, ≈ 1 700 m at 60°, a few hundred at 80°. */
@@ -47,11 +75,14 @@ export function dayOfYearUtc(utc: Date): number {
 }
 
 /**
- * The ground texture for a scene, or null when it is off (`render.groundTexture === false`) or
+ * The ground texture for a scene (with the region's land hint, neutral until sampled), or null when it is off (`render.groundTexture === false`) or
  * the quality rung has turned it off (Minimal: no shadows either). Strength follows the quality:
  * full on every rung that shades.
  */
-export function groundTextureFor(scene: SceneState): GroundTextureParams | null {
+export function groundTextureFor(
+  scene: SceneState,
+  hint: LandHint = NEUTRAL_LAND_HINT,
+): GroundTextureParams | null {
   if (scene.render.groundTexture === false) return null;
   if (!scene.render.shadows) return null;
   const lat = scene.location.point.latitude;
@@ -60,5 +91,7 @@ export function groundTextureFor(scene: SceneState): GroundTextureParams | null 
     treelineM: Math.round(Math.max(0, permanentSnowlineM(lat) - 900)),
     poleward: lat < 0 ? -1 : 1,
     strength: 1,
+    aridity: Math.round(hint.aridity * 100) / 100,
+    ice: Math.round(hint.ice * 100) / 100,
   };
 }
