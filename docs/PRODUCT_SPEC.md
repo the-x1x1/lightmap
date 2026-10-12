@@ -253,7 +253,9 @@ Sun first, asking for the Moon only inside dark hours with the core up, so the 4
 few tens of milliseconds, memoised per place and civil day.
 
 **Exposure estimate**: an **Exposure (est.)** row in the Sun details — "EV 14.8 · 1/500 s f/8
-ISO 100", with "· sun in or near the frame: flare, expose for it" when the viewpoint camera holds the Sun —
+ISO 100", with "· sun in or near the frame: flare, expose for it" when the viewpoint camera holds the Sun
+and, at night at a viewpoint, "· stars trail past 17 s at this lens" (the sky-drift limit for
+the frame's full-frame-equivalent lens, since a night setting runs to minutes) —
 the incident illuminance the sky puts on the ground at the planned instant as an
 exposure value at ISO 100 with one starting setting (f/8 ISO 100 by day, f/4 ISO 400 around
 sunset, f/2.8 ISO 3200 at night), the same on the planning card ("Exposure (est.)") and in the

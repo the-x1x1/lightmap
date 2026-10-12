@@ -4,9 +4,13 @@ import {
   describeExposure,
   describeSeasonalEnvelope,
   estimateExposure,
+  circleOfConfusionMm,
   explainScene,
+  focalLengthForFov,
   formatDeg,
+  formatShutterS,
   frameCoordinates,
+  skyDriftShutterS,
 } from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
 import {
@@ -261,6 +265,22 @@ export function AstronomyDetails({ scene, windowEnd = null }: AstronomyDetailsPr
     [dayEvents, lat, lng, tz],
   );
   // The Sun inside the frame at a viewpoint: flare and a blown highlight unless exposed for it.
+  // At night the starting setting runs to minutes; the lens decides how long the stars stay
+  // points (full-frame equivalent of the current frame; the camera box has the exact sensor).
+  const exposure = estimateExposure({
+    sunElevationDeg: s.elevationDegrees,
+    sunTransmittance: scene.atmosphere.parameters.sunTransmittance,
+    moon: scene.lunar
+      ? {
+          elevationDeg: scene.lunar.elevationDegrees,
+          illuminatedFraction: scene.lunar.illuminatedFraction,
+        }
+      : null,
+  });
+  const starsTrail =
+    scene.camera.mode === 'viewpoint' && (exposure.basis === 'stars' || exposure.basis === 'moon')
+      ? skyDriftShutterS(focalLengthForFov(scene.camera.fovDeg), circleOfConfusionMm(36, 24))
+      : null;
   const sunInFrame = (() => {
     if (scene.camera.mode !== 'viewpoint' || !s.isAboveHorizon) return false;
     const f = frameCoordinates(scene.camera, s.azimuthDegrees, s.apparentElevationDegrees);
@@ -334,18 +354,9 @@ export function AstronomyDetails({ scene, windowEnd = null }: AstronomyDetailsPr
         <Row label="Colour temp." value={`${Math.round(scene.atmosphere.colorTemperatureK)} K`} />
         <Row
           label="Exposure (est.)"
-          value={`${describeExposure(
-            estimateExposure({
-              sunElevationDeg: s.elevationDegrees,
-              sunTransmittance: scene.atmosphere.parameters.sunTransmittance,
-              moon: scene.lunar
-                ? {
-                    elevationDeg: scene.lunar.elevationDegrees,
-                    illuminatedFraction: scene.lunar.illuminatedFraction,
-                  }
-                : null,
-            }),
-          )}${sunInFrame ? ' · sun in or near the frame: flare, expose for it' : ''}`}
+          value={`${describeExposure(exposure)}${
+            sunInFrame ? ' · sun in or near the frame: flare, expose for it' : ''
+          }${starsTrail !== null ? ` · stars trail past ${formatShutterS(starsTrail)} at this lens` : ''}`}
           testId="exposure"
         />
         <Row
