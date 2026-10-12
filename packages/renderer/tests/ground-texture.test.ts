@@ -16,8 +16,10 @@ import {
   permanentSnowlineM,
   snowlineM,
   cloudShadowStrength,
+  polewardWeight,
   snowlineWithForecast,
 } from '../src/ground-texture.ts';
+import { QUALITY_LADDER } from '../src/quality-governor.ts';
 import {
   GROUND_COVER_BOUNDS_UNIFORM,
   GROUND_COVER_IMAGE_UNIFORM,
@@ -112,17 +114,37 @@ describe('cloudShadowStrength', () => {
     expect(cloudShadowStrength({ low: 1, mid: 0 }, 0.3, 40)).toBe(0);
     expect(cloudShadowStrength({ low: 0.5, mid: 0 }, 0.7, 40)).toBe(1);
     expect(cloudShadowStrength({ low: 0.25, mid: 0 }, 0.7, 40)).toBeCloseTo(0.75, 2);
-    expect(cloudShadowStrength({ low: 0, mid: 0.5 }, 0.7, 40)).toBeCloseTo(0.84, 2);
+    expect(cloudShadowStrength({ low: 0, mid: 0.5 }, 0.7, 40)).toBeCloseTo(0.6, 2);
     expect(cloudShadowStrength({ low: 0.5, mid: 0 }, 0.3, 40)).toBeCloseTo(0.5, 2);
     expect(cloudShadowStrength({ low: 0.5, mid: 0 }, 0.7, -2)).toBe(0);
     expect(cloudShadowStrength({ low: 0.5, mid: 0 }, 0.1, 40)).toBe(0);
+  });
+
+  it('a complete sheet has no gaps however thin: a mid-level overcast dapples nothing, layers clamp', () => {
+    expect(cloudShadowStrength({ low: 0.1, mid: 0.9 }, 0.5, 40)).toBe(0);
+    expect(cloudShadowStrength({ low: 0.4, mid: 0.6 }, 0.5, 40)).toBe(0);
+    expect(cloudShadowStrength({ low: 1.5, mid: 0 }, 0.9, 40)).toBe(0);
+    // Half the sky in a mid deck alone: gaps as for any half cover, the shade lighter than a low deck's.
+    expect(cloudShadowStrength({ low: 0, mid: 0.5 }, 0.7, 40)).toBeCloseTo(0.6, 2);
+  });
+});
+
+describe('polewardWeight', () => {
+  it('is signed toward the pole, nothing in the tropics, full from 35°', () => {
+    expect(polewardWeight(0)).toBe(0);
+    expect(polewardWeight(8)).toBe(0);
+    expect(polewardWeight(-8)).toBe(-0);
+    expect(polewardWeight(21.4)).toBeCloseTo(0.46, 2);
+    expect(polewardWeight(-33.9)).toBeCloseTo(-0.96, 2);
+    expect(polewardWeight(47)).toBe(1);
+    expect(polewardWeight(-60)).toBe(-1);
   });
 });
 
 describe('groundTextureFor', () => {
   it('gives the scene’s snowline, hemisphere and full strength', () => {
     const g = groundTextureFor(sceneAt(21.4, new Date('2026-02-09T22:00:00Z')))!;
-    expect(g.poleward).toBe(1);
+    expect(g.poleward).toBeCloseTo(0.46, 2);
     expect(g.strength).toBe(1);
     expect(g.detail).toBe(2);
     expect(g.wet).toBe(0);
@@ -145,7 +167,44 @@ describe('groundTextureFor', () => {
     ).toBe(0);
     expect(g.snowlineM).toBe(Math.round(snowlineM(21.4, 40)));
     expect(g.treelineM).toBe(Math.round(permanentSnowlineM(21.4) - 900));
-    expect(groundTextureFor(sceneAt(-33.9, new Date('2026-02-09T22:00:00Z')))!.poleward).toBe(-1);
+    expect(
+      groundTextureFor(sceneAt(-33.9, new Date('2026-02-09T22:00:00Z')))!.poleward,
+    ).toBeCloseTo(-0.96, 2);
+  });
+
+  it('detail follows the real quality ladder: Ultra/High 2, Balanced 1, Battery 0, Minimal off', () => {
+    const byLabel = Object.fromEntries(
+      QUALITY_LADDER.map((r) => [
+        r.label,
+        groundTextureFor(
+          sceneAt(21.4, new Date('2026-02-09T22:00:00Z'), {
+            ...DEFAULT_RENDER_SETTINGS,
+            shadows: r.shadows,
+            shadowMapSize: r.shadowMapSize,
+            softShadows: r.softShadows,
+          }),
+        )?.detail ?? null,
+      ]),
+    );
+    expect(byLabel).toEqual({ Ultra: 2, High: 2, Balanced: 1, Battery: 0, Minimal: null });
+  });
+
+  it('wet ground follows the scenario’s precipitation, clamped', () => {
+    const storm = buildSceneState({
+      location: place(21.4, -157.73, 'Pacific/Honolulu'),
+      utc: new Date('2026-02-09T22:00:00Z'),
+      now: new Date('2026-02-01T00:00:00Z'),
+      camera: defaultCamera({ latitude: 21.4, longitude: -157.73 }, 90),
+      environment: env,
+      scenario: 'storm',
+      forceScenario: true,
+      weather: { capabilities: OPEN_METEO_CAPABILITIES, frames: [], providerFailed: false },
+      render: DEFAULT_RENDER_SETTINGS,
+      includeLunar: false,
+      realReference: false,
+    });
+    expect(groundTextureFor(storm)!.wet).toBeGreaterThan(0.5);
+    expect(groundTextureFor(storm)!.wet).toBeLessThanOrEqual(1);
   });
 
   it('is off when the setting says so or the Minimal rung has dropped the shadows', () => {

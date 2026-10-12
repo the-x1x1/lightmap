@@ -107,6 +107,8 @@ export class CesiumSceneHost implements SceneHost {
   };
   /** The detail atlas once its image has loaded; the material takes it then, never a URL. */
   private detailAtlas: HTMLImageElement | null = null;
+  /** The grade's clock, so a material created after the first grade starts on it. */
+  private lastGradeTime = 0;
   private readonly onError: ((message: string, error: unknown) => void) | undefined;
   private ionToken: string | undefined;
   private pickHandler: Cesium.ScreenSpaceEventHandler | null = null;
@@ -427,6 +429,7 @@ export class CesiumSceneHost implements SceneHost {
     u['u_cloudShadow'] = g.cloudShadow;
     u['u_detail'] = g.detail;
     u['u_wet'] = g.wet;
+    u['u_cloudTime'] = this.lastGradeTime;
     this.scene.requestRender();
   }
 
@@ -479,6 +482,7 @@ export class CesiumSceneHost implements SceneHost {
   setGrade(u: HostGradeUniforms): void {
     const g = this.gradeUniforms;
     // The ground's cloud shadows drift with the same clock as the sky's clouds.
+    this.lastGradeTime = u.u_time;
     if (this.groundMaterial)
       (this.groundMaterial.uniforms as Record<string, number>)['u_cloudTime'] = u.u_time;
     g['u_saturation'] = u.u_saturation;

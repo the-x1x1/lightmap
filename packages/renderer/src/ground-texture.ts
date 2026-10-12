@@ -11,8 +11,8 @@ export interface GroundTextureParams {
   snowlineM: number;
   /** Height above which the cover thins to alpine ground, metres: the climatic snowline less 900 m, fixed through the year. */
   treelineM: number;
-  /** +1 north of the equator, −1 south: which slopes face away from the Sun's noon side. */
-  poleward: 1 | -1;
+  /** Which way is poleward and how much it matters: +1 north of the equator, −1 south, scaled to 0 inside 10° of the equator and full from 35° (the noon Sun stands too high in the tropics for a slope's facing to dry or shade it). */
+  poleward: number;
   /** Opacity over the basemap, 0–1. */
   strength: number;
   /** How arid the region reads, 0 (vegetated) – 1 (desert), from the basemap's own colour. */
@@ -43,8 +43,15 @@ export function cloudShadowStrength(
   sunElevationDeg: number,
 ): number {
   if (sunElevationDeg <= -0.833 || sunTransmittance <= 0.12) return 0;
-  const cover = Math.max(0, Math.min(1, layers.low + 0.6 * layers.mid));
-  return Math.round(4 * cover * (1 - cover) * Math.min(1, sunTransmittance / 0.6) * 100) / 100;
+  const low = Math.max(0, Math.min(1, layers.low));
+  const mid = Math.max(0, Math.min(1, layers.mid));
+  // The gaps are what the whole sun-blocking sheet leaves (a complete altostratus sheet has
+  // none, however thin); the depth of the shade leans on the low deck.
+  const total = Math.min(1, low + mid);
+  const depth = total > 0 ? (low + 0.6 * mid) / total : 0;
+  return (
+    Math.round(4 * total * (1 - total) * depth * Math.min(1, sunTransmittance / 0.6) * 100) / 100
+  );
 }
 
 /** What the renderer knows beyond the scene: the chart dimming, the geoid and the ground at the pin. */
@@ -124,6 +131,16 @@ export function landHintFromColor(rgb: readonly [number, number, number]): LandH
   return { aridity: clamp01((r - g + 10) / 40) * (1 - ice), ice };
 }
 
+/**
+ * How much a slope's facing matters at a latitude, signed toward the pole: 0 inside 10° of
+ * the equator (the noon Sun is near the zenith either way), full from 35°, −1…+1.
+ */
+export function polewardWeight(latitudeDeg: number): number {
+  const sign = latitudeDeg < 0 ? -1 : 1;
+  const w = Math.max(0, Math.min(1, (Math.abs(latitudeDeg) - 10) / 25));
+  return Math.round(sign * w * 100) / 100;
+}
+
 /** Climatic (late-summer) snowline by latitude, metres: ≈ 5 200 m at the equator, ≈ 3 000 m at 45°, ≈ 1 700 m at 60°, a few hundred at 80°. */
 export function permanentSnowlineM(latitudeDeg: number): number {
   const c = Math.cos((Math.min(89.9, Math.abs(latitudeDeg)) * Math.PI) / 180);
@@ -175,7 +192,7 @@ export function groundTextureFor(
       ),
     ),
     treelineM: Math.round(Math.max(0, permanentSnowlineM(lat) - 900)),
-    poleward: lat < 0 ? -1 : 1,
+    poleward: polewardWeight(lat),
     strength: 1,
     aridity: Math.round(hint.aridity * 100) / 100,
     ice: Math.round(hint.ice * 100) / 100,

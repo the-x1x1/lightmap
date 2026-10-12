@@ -196,13 +196,21 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float grain = lmFbm(positionWC / 60.0 + 5.0);     // fine detail, 60 m down to ~8 m
     float slope = materialInput.slope;                // radians, 0 flat
     float height = materialInput.height - u_seaLevelM; // metres above sea level
-    float aspect = materialInput.aspect;              // radians, 0 east, pi/2 north
 
     // Open ground leans from turf and scrub toward steppe and desert with the region's aridity —
     // and, on a slope, with which way it faces: the equatorward face takes the noon Sun and
     // dries to scrub, the poleward face stays greener (a rule of the mid-latitudes; flat ground
     // and the tropics barely move). Computed before the snow uses the same facing below.
-    float facing = slope > 0.05 ? sin(aspect) * u_poleward * smoothstep(0.05, 0.4, slope) : 0.0;  // +1 facing the pole
+    // Which way the slope faces, from the fragment's own normal (the interpolated aspect angle
+    // wraps at east and would sweep through every value inside a triangle there): the
+    // horizontal part of the normal against local north, +1 facing the pole.
+    vec3 nW = czm_inverseViewRotation * materialInput.normalEC;
+    vec3 upW = normalize(positionWC);
+    vec3 eastW = normalize(cross(vec3(0.0, 0.0, 1.0), upW));
+    vec3 northW = cross(upW, eastW);
+    vec3 nH = nW - upW * dot(nW, upW);
+    float northness = dot(nH, northW) / max(length(nH), 1e-4);
+    float facing = slope > 0.05 ? northness * u_poleward * smoothstep(0.05, 0.4, slope) : 0.0;  // +1 facing the pole
     float dryness = clamp(u_aridity - 0.18 * facing, 0.0, 1.0);
     vec3 turf  = mix(vec3(0.33, 0.45, 0.20), vec3(0.62, 0.55, 0.36), dryness);
     vec3 scrub = mix(vec3(0.52, 0.46, 0.27), vec3(0.74, 0.64, 0.44), dryness);
@@ -260,9 +268,12 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
             bareC = smoothstep(0.55, 0.64, cv.b) * (1.0 - smoothstep(0.86, 0.95, cv.b));
             float iceC = smoothstep(0.86, 0.95, cv.b);
             float open = known * (1.0 - snowy) * (1.0 - rocky * 0.7);
-            float crowns = lmFbm(positionWC / 45.0 + 3.0);
-            vec3 forest = mix(vec3(0.13, 0.25, 0.10), vec3(0.27, 0.38, 0.17), crowns);
-            forest *= 0.9 + 0.2 * grain;
+            vec3 forest = vec3(0.0);
+            if (canopy > 0.0)
+            {
+                float crowns = lmFbm(positionWC / 45.0 + 3.0);
+                forest = mix(vec3(0.13, 0.25, 0.10), vec3(0.27, 0.38, 0.17), crowns) * (0.9 + 0.2 * grain);
+            }
             vec3 cell = floor(positionWC / 260.0);
             float fieldTone = lmHash(cell + 7.0);
             vec3 field = mix(vec3(0.50, 0.52, 0.28), vec3(0.72, 0.64, 0.40), fieldTone) * (0.9 + 0.2 * grain);
@@ -300,7 +311,6 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         // and blended by the surface normal (a sharp triplanar, so a face takes one
         // projection). A multiplier about 1 on the colour the macro rules chose; it never
         // changes what the ground is.
-        vec3 nW = czm_inverseViewRotation * materialInput.normalEC;
         vec3 w = abs(vec3(dot(nW, u_eastWC), dot(nW, u_northWC), dot(nW, u_upWC)));
         w = w * w * w * w;
         w = w * w;
@@ -364,9 +374,13 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // the forecast's own clouds.
     if (u_cloudShadow > 0.0 && u_detail >= 1.0)
     {
-        vec3 drift = vec3(u_cloudTime * 8.0, u_cloudTime * 3.0, 0.0);  // ≈ 8 m/min east, 3 north
-        float cloud = lmFbm((positionWC + drift) / 1400.0 + 13.0);
-        float shade = smoothstep(0.38, 0.62, cloud);
+        // The patches move with the planner's clock toward the north-east at ≈ 200 m/min (a
+        // 12 km/h wind — a pattern, not the forecast's wind), along the place's own east and
+        // north; sampling at position − drift moves the pattern with +drift. They fade toward
+        // the horizon, where their finest octave would only shimmer.
+        vec3 drift = (eastW * 190.0 + northW * 60.0) * u_cloudTime;
+        float cloud = lmFbm((positionWC - drift) / 1400.0 + 13.0);
+        float shade = smoothstep(0.38, 0.62, cloud) * smoothstep(80000.0, 15000.0, dist);
         ground *= 1.0 - 0.45 * u_cloudShadow * shade;
     }
 

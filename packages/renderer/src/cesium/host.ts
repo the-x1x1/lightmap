@@ -146,7 +146,7 @@ export interface LandCoverReading {
 export interface HostGroundTexture {
   snowlineM: number;
   treelineM: number;
-  poleward: 1 | -1;
+  poleward: number;
   strength: number;
   aridity: number;
   ice: number;

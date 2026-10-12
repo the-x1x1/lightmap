@@ -151,11 +151,20 @@ describe('SceneController', () => {
     c.apply(scene({ utc: new Date(scene().utc.getTime() + 3_600_000) }));
     expect(calls['setGroundTexture']).toHaveLength(1);
     const g = calls['setGroundTexture']![0]![0] as { snowlineM: number; poleward: number };
-    expect(g.poleward).toBe(1);
+    expect(g.poleward).toBeCloseTo(0.46, 2);
     expect(g.snowlineM).toBeGreaterThan(4000);
-    c.apply(scene({ render: { ...DEFAULT_RENDER_SETTINGS, shadows: false } }));
+    // A scenario change (wet ground, cloud shadows) and a rung change (detail) each re-apply.
+    c.apply(scene({ scenario: 'storm' }));
     expect(calls['setGroundTexture']).toHaveLength(2);
-    expect(calls['setGroundTexture']![1]![0]).toBeNull();
+    expect((calls['setGroundTexture']![1]![0] as { wet: number }).wet).toBeGreaterThan(0.5);
+    c.apply(
+      scene({ scenario: 'storm', render: { ...DEFAULT_RENDER_SETTINGS, softShadows: false } }),
+    );
+    expect(calls['setGroundTexture']).toHaveLength(3);
+    expect((calls['setGroundTexture']![2]![0] as { detail: number }).detail).toBe(1);
+    c.apply(scene({ render: { ...DEFAULT_RENDER_SETTINGS, shadows: false } }));
+    expect(calls['setGroundTexture']).toHaveLength(4);
+    expect(calls['setGroundTexture']![3]![0]).toBeNull();
   });
 
   it('reads the basemap’s colour around a new pin and re-paints with the land hint', async () => {

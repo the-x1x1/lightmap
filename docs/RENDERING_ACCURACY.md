@@ -160,8 +160,10 @@ water mask is the provider's, not a tide model.
 The terrain is painted with a procedural surface (`shaders/ground.frag.ts`, a Cesium globe
 material) so the mesh reads as ground rather than a grey plane under a 40 km-per-pixel basemap:
 turf and scrub in patches on the lower slopes (drier on the equatorward face of a slope, which
-takes the noon Sun, greener on the poleward one — a mid-latitude rule; flat ground does not
-move), bare rock where the slope passes about 30–45°,
+takes the noon Sun, greener on the poleward one — a rule that fades to nothing inside 10° of
+the equator and is full from 35°, as the snow's own facing rule now does too; flat ground does
+not move; the facing is read from the fragment's normal, not the interpolated aspect angle,
+which wraps at east), bare rock where the slope passes about 30–45°,
 scree and alpine ground above a treeline (900 m under the climatic snowline, fixed through
 the year), snow above a snowline that follows the latitude
 (≈ 5 200 m at the equator, ≈ 3 000 m at 45°, ≈ 1 700 m at 60°) and the season (lower through
@@ -188,10 +190,13 @@ off with the shadows; the `groundTexture` flag turns it off everywhere. On bare 
 reads the grain as small bumps lit by the scene's own Sun direction, so rock and scree show a
 texture that turns with the light through the day — a shading of the albedo only, within
 ±30 %, gone on snow. Under **broken cloud** the ground is dappled with
-cumulus-sized patches of shade (a kilometre or two across) drifting with the planner's clock —
+cumulus-sized patches of shade (a kilometre or two across) drifting north-east with the
+planner's clock at about 200 m a minute (a pattern's wind, not the forecast's), fading toward
+the horizon —
 nothing under a clear sky or an overcast one (the light is already diffuse and dimmed as a
-whole), most at half cover of the low and mid decks, nothing without direct sun
-(`cloudShadowStrength`, 4c(1−c)); the patches are a pattern, not the forecast's own clouds, and
+whole), most at half cover, nothing under a complete sheet at any level (an altostratus
+overcast has no gaps however thin) and nothing without direct sun (`cloudShadowStrength`:
+4t(1−t) over the total sun-blocking cover, the shade's depth leaning on the low deck); the patches are a pattern, not the forecast's own clouds, and
 they do not match the clouds drawn in the sky. Under rain the ground is darker and duller
 (the scenario's precipitation; snow apart). **Claim:** the surface lit by the true Sun, with
 shadows and horizon geometry untouched (the material runs before the globe's lighting and
