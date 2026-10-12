@@ -573,7 +573,11 @@ export function LightFinder({
                     <span className="text-xs text-[var(--lm-text-muted)]">
                       {m.elevationDegrees.toFixed(1)}° {m.trend}
                       {m.illuminatedFraction !== null
-                        ? ` · ${Math.round(m.illuminatedFraction * 100)} % lit`
+                        ? ` · ${Math.round(m.illuminatedFraction * 100)} % lit${
+                            m.apparentDiameterDegrees !== null
+                              ? `, ${m.apparentDiameterDegrees.toFixed(2)}°`
+                              : ''
+                          }`
                         : ''}
                       {m.sky !== null && m.sky !== 'dark' ? ` · ${m.sky}` : ''}
                       {mode !== 'ridge' && behindTerrain(m) ? (

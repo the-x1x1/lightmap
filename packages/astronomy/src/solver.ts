@@ -18,6 +18,7 @@
  * Cost: ~145 evaluations per day; a full year of Sun matches takes a few milliseconds.
  * Pure: no I/O, no Date.now().
  */
+import { moonApparentDiameterDeg, sunApparentDiameterDeg } from './apparent-size.ts';
 import { moonHorizonThresholdDeg, moonPosition } from './lunar.ts';
 import { galacticCentrePosition, MILKY_WAY_MOON_LIMIT } from './night-sky.ts';
 import { sunPosition } from './solar.ts';
@@ -86,6 +87,12 @@ export interface DirectionMatch {
   /** Moon only. */
   illuminatedFraction: number | null;
   /**
+   * How wide the body looks at the instant, degrees — the Moon's swings 0.49–0.56° with its
+   * distance (which of these dates has the big Moon over the ridge), the Sun's 0.52–0.54°; null
+   * for the core.
+   */
+  apparentDiameterDegrees: number | null;
+  /**
    * Core only: whether the sky can show the band at the instant — `dark` (astronomical night, no
    * Moon over 30 % up), `daylight`, `twilight`, or `moonlit`; null for the Sun and Moon.
    */
@@ -119,14 +126,20 @@ function positionOf(body: CelestialBody, t: number, lat: number, lon: number) {
       azimuth: m.azimuthDeg,
       elevation: m.topocentricElevationDeg,
       illuminated: m.illuminatedFraction,
+      diameter: moonApparentDiameterDeg(m.distanceKm, m.topocentricElevationDeg),
     };
   }
   if (body === 'core') {
     const c = galacticCentrePosition(new Date(t), lat, lon);
-    return { azimuth: c.azimuthDeg, elevation: c.elevationDeg, illuminated: null };
+    return { azimuth: c.azimuthDeg, elevation: c.elevationDeg, illuminated: null, diameter: null };
   }
   const s = sunPosition(new Date(t), lat, lon);
-  return { azimuth: s.azimuthDeg, elevation: s.elevationDeg, illuminated: null };
+  return {
+    azimuth: s.azimuthDeg,
+    elevation: s.elevationDeg,
+    illuminated: null,
+    diameter: sunApparentDiameterDeg(s.distanceAu),
+  };
 }
 
 /**
@@ -222,6 +235,7 @@ export function findDirectionMatches(input: SolverInput): SolverResult {
       elevationErrorDegrees: elErr,
       withinTolerance: within,
       illuminatedFraction: p.illuminated,
+      apparentDiameterDegrees: p.diameter,
       sky,
       trend: after >= p.elevation ? 'rising' : 'setting',
     });

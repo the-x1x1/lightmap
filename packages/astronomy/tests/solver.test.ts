@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { computeDayEvents } from '../src/events.ts';
+import { moonApparentDiameterDeg } from '../src/apparent-size.ts';
 import { moonPosition } from '../src/lunar.ts';
 import { galacticCentrePosition, milkyWayCore } from '../src/night-sky.ts';
 import { sunPosition } from '../src/solar.ts';
@@ -43,6 +44,8 @@ describe('reverse planning solver', () => {
     expect(dates.size).toBeGreaterThanOrEqual(4);
     expect(dates.size).toBeLessThanOrEqual(9);
     for (const d of dates) expect(d >= '2026-03-13' && d <= '2026-03-25').toBe(true);
+    // The Sun's disc in March (0.995 AU): 0.536°.
+    for (const m of r.matches) expect(m.apparentDiameterDegrees).toBeCloseTo(0.536, 2);
     for (const m of r.matches) {
       expect(m.trend).toBe('rising');
       expect(Math.abs(wrapDelta(m.azimuthDegrees - 90))).toBeLessThanOrEqual(2);
@@ -191,7 +194,17 @@ describe('reverse planning solver', () => {
       expect(a.illuminatedFraction).not.toBeNull();
       const check = moonPosition(a.timestampUtc, KAILUA.latitude, KAILUA.longitude);
       expect(Math.abs(wrapDelta(check.azimuthDeg - 110))).toBeLessThan(0.02);
+      // The disc at the instant: apogee to perigee, from the same position's distance.
+      expect(a.apparentDiameterDegrees).toBeGreaterThan(0.488);
+      expect(a.apparentDiameterDegrees).toBeLessThan(0.562);
+      expect(a.apparentDiameterDegrees).toBeCloseTo(
+        moonApparentDiameterDeg(check.distanceKm, check.topocentricElevationDeg),
+        4,
+      );
     }
+    // Two months of risings span a good part of the apogee–perigee swing.
+    const discs = all.alignments.map((a) => a.apparentDiameterDegrees!);
+    expect(Math.max(...discs) - Math.min(...discs)).toBeGreaterThan(0.03);
     const bright = findDirectionMatches({
       ...KAILUA,
       ...range,
@@ -229,6 +242,7 @@ describe('reverse planning solver', () => {
     for (const a of all.alignments) {
       expect(a.body).toBe('core');
       expect(a.illuminatedFraction).toBeNull();
+      expect(a.apparentDiameterDegrees).toBeNull();
       expect(['dark', 'daylight', 'twilight', 'moonlit']).toContain(a.sky);
       const check = galacticCentrePosition(a.timestampUtc, KAILUA.latitude, KAILUA.longitude);
       expect(Math.abs(wrapDelta(check.azimuthDeg - 180))).toBeLessThan(0.02);
