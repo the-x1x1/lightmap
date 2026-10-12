@@ -345,7 +345,7 @@ export function AstronomyDetails({ scene, windowEnd = null }: AstronomyDetailsPr
                   }
                 : null,
             }),
-          )}${sunInFrame ? ' · sun in frame: flare, expose for it' : ''}`}
+          )}${sunInFrame ? ' · sun in or near the frame: flare, expose for it' : ''}`}
           testId="exposure"
         />
         <Row

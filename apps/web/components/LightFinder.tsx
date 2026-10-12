@@ -227,13 +227,13 @@ export function LightFinder({
     );
   const allMatches = result?.res.matches ?? [];
   const terrainFilter = Boolean(profile) && hideBehindTerrain && mode !== 'ridge';
-  const hidden = terrainFilter ? allMatches.filter(behindTerrain).length : 0;
   const sized =
     body === 'moon' && bigMoonOnly
       ? allMatches.filter(
           (m) => m.apparentDiameterDegrees !== null && m.apparentDiameterDegrees >= BIG_MOON_DEG,
         )
       : allMatches;
+  const hidden = terrainFilter ? sized.filter(behindTerrain).length : 0;
   const matches = terrainFilter ? sized.filter((m) => !behindTerrain(m)) : sized;
   const shown = matches.slice(0, MAX_RESULTS);
   const dates = new Set(matches.map((m) => m.date)).size;

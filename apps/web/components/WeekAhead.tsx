@@ -61,20 +61,19 @@ export function WeekAhead({
   const cell = gridKey(scene.location.point);
   // From today in the planning zone (not the selected day): the week ahead is about now.
   const today = utcToLocalSelection(new Date(), tz).date;
-  const from = parseCivilDate(today);
+  const from = useMemo(() => parseCivilDate(today), [today]);
   const dates = useMemo(() => (from ? weekAheadDates(from) : []), [from]);
   const weatherCaps = caps.data?.weather ?? null;
-  // Only days the forecast covers are asked for; the horizon decision is the route's own rule.
-  const fetchable = useMemo(() => {
-    const now = new Date();
-    return dates.filter((d) => {
-      const civil = parseCivilDate(d);
-      if (!civil) return false;
-      const noon = wallClockToUtc({ ...civil, hour: 12, minute: 0, second: 0 }, tz);
-      const h = decideWeatherMode(noon, now, weatherCaps);
-      return h.fetchWorthwhile && (h.mode === 'FORECAST' || h.mode === 'EXTENDED_FORECAST');
-    });
-  }, [dates, tz, weatherCaps]);
+  // Only days the forecast covers are asked for — the route's own horizon rule, probed at local
+  // noon (today reads as the recent past once noon has gone; its evening is still a fetch).
+  // Seven cheap decisions per render, deliberately not memoised: the clock must stay live.
+  const now = new Date();
+  const fetchable = dates.filter((d) => {
+    const civil = parseCivilDate(d);
+    if (!civil) return false;
+    const noon = wallClockToUtc({ ...civil, hour: 12, minute: 0, second: 0 }, tz);
+    return decideWeatherMode(noon, now, weatherCaps).fetchWorthwhile;
+  });
   const results = useQueries({
     queries: fetchable.map((d) => ({
       queryKey: ['weather', cell, d, tz],
