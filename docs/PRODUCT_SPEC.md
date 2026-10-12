@@ -129,7 +129,7 @@ the day (forecast, extended forecast or recent past — never on a scenario day)
 hour, height = direct-light share from cloud (`parametersForForecast`), colour = scenario class,
 a drop for likely rain (≥ 40 % probability or ≥ 0.5 mm); the selected hour is outlined; clicking a
 bar moves the timeline to that hour. "Best light: 07:00–11:00 (92 % direct)" lists contiguous runs
-≥ 60 % direct. The **golden hours under this forecast** get their own line — "Evening golden
+≥ 60 % direct. The **golden and blue hours under this forecast** get their own line — "Evening golden
 hour 18:37–19:24: 72 % cloud, high cloud over a clear horizon — colour likely, little direct
 light" — each window sampled every ten minutes from the frames with a verdict in the
 photographer's words: _clear_ (direct light ≥ 70 %), _high-colour_ (a deck that is mostly high

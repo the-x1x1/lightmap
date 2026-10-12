@@ -84,6 +84,11 @@ export function HourlyOutlook({
         start: ev.goldenHourEveningStart,
         end: ev.goldenHourEveningEnd,
       });
+    // The blue hours too (the package's −6°…−4° band): colour there wants a clear sky as well.
+    if (ev.dawn && ev.goldenHourMorningStart)
+      spans.push({ label: 'Morning blue', start: ev.dawn, end: ev.goldenHourMorningStart });
+    if (ev.goldenHourEveningEnd && ev.civilDusk)
+      spans.push({ label: 'Evening blue', start: ev.goldenHourEveningEnd, end: ev.civilDusk });
     return spans
       .map((s) => ({ ...s, outlook: windowOutlook(frames, s.start, s.end) }))
       .filter((s) => s.outlook !== null);
@@ -196,7 +201,7 @@ export function HourlyOutlook({
           {golden
             .map(
               (g) =>
-                `${g.label} golden hour ${formatWallTime(g.start, tz)}–${formatWallTime(g.end, tz)}: ${Math.round(g.outlook!.meanCloudCover)} % cloud, ${WINDOW_VERDICT_TEXT[g.outlook!.verdict]}`,
+                `${g.label} ${g.label.endsWith('blue') ? 'hour' : 'golden hour'} ${formatWallTime(g.start, tz)}–${formatWallTime(g.end, tz)}: ${Math.round(g.outlook!.meanCloudCover)} % cloud, ${WINDOW_VERDICT_TEXT[g.outlook!.verdict]}`,
             )
             .join(' · ')}
           .
