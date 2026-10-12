@@ -102,8 +102,7 @@ export function WeekAhead({
   framesRef.current = { key: framesKey, map: framesByDate };
   const rows = useMemo(() => {
     // framesKey names the fetched days the ref holds; it is what makes this memo recompute.
-    const frames =
-      framesRef.current.key === framesKey ? framesRef.current.map : framesRef.current.map;
+    const frames = framesRef.current.key === framesKey ? framesRef.current.map : NO_FRAMES;
     return from ? weekAheadRows({ latitude: lat, longitude: lng }, tz, from, frames, dark) : [];
   }, [from, lat, lng, tz, dark, framesKey]);
   if (!from) return null;
