@@ -35,6 +35,8 @@ import { useSolver } from '@/features/finder/use-solver';
 import type { SerializedMatch, SolverResultDto } from '@/features/finder/solver-types';
 import { Paywall } from './Paywall';
 import { finderResultsText } from '@/features/finder/results-text';
+import { buildFinderCalendar } from '@/features/export/finder-calendar';
+import { downloadBlob, fileStem } from '@/features/export/download';
 
 type TargetMode = 'pick' | 'frame' | 'current' | 'manual' | 'ridge';
 
@@ -591,6 +593,37 @@ export function LightFinder({
                 }}
               >
                 Copy
+              </Button>
+            ) : null}
+            {matches.length > 0 ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                className="ml-2"
+                data-testid="finder-calendar"
+                title="Download every moment as a calendar event (.ics)"
+                onClick={() =>
+                  downloadBlob(
+                    new Blob(
+                      [
+                        buildFinderCalendar(
+                          matches,
+                          {
+                            label: scene.location.label,
+                            latitude: scene.location.point.latitude,
+                            longitude: scene.location.point.longitude,
+                            timeZone: tz,
+                          },
+                          { body, generatedAt: new Date() },
+                        ),
+                      ],
+                      { type: 'text/calendar;charset=utf-8' },
+                    ),
+                    `${fileStem(scene.location.label, 'place')}-${body}-finder.ics`,
+                  )
+                }
+              >
+                Calendar
               </Button>
             ) : null}
             {copied ? (
