@@ -211,6 +211,19 @@ on a failure (`release.yml` runs it after the deploy); the rest are by hand.
       keep the camera bearing, search a month — results cluster at the terrain sunset/sunrise
       times (compare with the "last light over terrain" row); at a beach facing the sea the
       results are the sunset instants (the contact elevation sits below the flat horizon).
+- [ ] Exposure estimate: Kailua at noon, Clear reads about EV 15–16 at f/8 1/1000 ISO 100; switch
+      to Overcast and it drops to EV 12–13; scrub through sunset — the figure falls smoothly
+      (no jump at the horizon) and the night reading names f/2.8 ISO 3200; the planning card and
+      the shot list carry the same line labelled an estimate.
+- [ ] Week ahead (Pro): open the block on a forecast-covered day — seven rows with morning and
+      evening golden hours, verdicts with a cloud figure for the days inside the horizon,
+      "beyond the forecast" for the rest; a time jumps the planner to that window; the network
+      tab shows one `/api/weather` call per fetched day, none until the block was opened.
+- [ ] Climatology air and wind (Pro): the "Air: typically …" and "Wind: typically …" lines
+      follow the selected hour and the unit preference (°F and mph on imperial).
+- [ ] Field view clock (phone): with the planner an hour ahead of now the clock line reads
+      "planned in 1 h …", a hollow ring marks the sun where it is now and the exposure estimate
+      ends the line; tap Now and the line reads "Live".
 - [ ] Field view roll: with the view open, tilt the phone 20° left and right — the level line
       tilts the opposite way and the sun marker stays on the real sun; rotate to landscape — the
       marks stay upright on screen (no 90° jump) and the feed is not stretched.
