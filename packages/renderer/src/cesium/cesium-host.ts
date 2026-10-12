@@ -981,9 +981,9 @@ export class CesiumSceneHost implements SceneHost {
         this.onError?.('Terrain unavailable — showing flat ground', error);
         this.scene.terrainProvider = new C.EllipsoidTerrainProvider();
       }
-      // The ground texture is a globe material, which Cesium applies only when the terrain
-      // carries vertex normals (its slope and aspect inputs). A tile set without them leaves
-      // the basemap bare under the light — say so, rather than let it pass for a texture bug.
+      // The ground texture is a globe material whose slope and aspect come from the terrain's
+      // vertex normals; a tile set without them cannot carry it as intended (Cesium applies a
+      // globe material only with normals) — say so, rather than let it pass for a texture bug.
       const tp = this.scene.terrainProvider;
       if (
         t.kind !== 'ellipsoid' &&
@@ -991,7 +991,7 @@ export class CesiumSceneHost implements SceneHost {
         tp.hasVertexNormals === false
       )
         this.onError?.(
-          'This terrain has no vertex normals — the painted ground needs them, so the basemap shows bare; use a terrain set that serves normals (Cesium World Terrain does)',
+          'This terrain serves no vertex normals — the painted ground reads slope and aspect from them; if the terrain shows the bare basemap, use a terrain set that serves normals (Cesium World Terrain does)',
           null,
         );
     })();
