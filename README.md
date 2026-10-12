@@ -24,7 +24,9 @@ the shadow probe (a 20 m tower at Sun 11°, shadow measured against `h / tan(el)
   minute, correct on DST days, across the date line, and in polar day/night.
 - Weather: hourly forecast inside the provider horizon (Open-Meteo, 16 forecast days counting today), labelled honestly by
   confidence; beyond it, five deterministic scenarios (Clear · Mostly Clear · Partly Cloudy ·
-  Overcast · Rain/Storm) that are never called a forecast.
+  Overcast · Rain/Storm) that are never called a forecast. Hour by hour with the golden hours'
+  own verdicts, the week ahead, the air (temperature, dew point, feels like), wind and humidity on
+  the shoot itself, and an exposure estimate (EV and a starting setting, labelled an estimate).
 - Rendering: directional sunlight and terrain shadows from the computed sun vector, colour
   temperature by elevation, atmosphere and a weather grade so clear/partly/overcast look obviously
   different. A 2D sun/shadow overlay always works, even without WebGL2.
@@ -32,7 +34,8 @@ the shadow probe (a 20 m tower at Sun 11°, shadow measured against `h / tan(el)
   and a confidence breakdown (astronomy, terrain, scene detail, weather, real reference), plus a
   "why does it look like this?" explanation.
 - Viewpoint camera: map orbit or eye-level first person; heading, pitch, full-frame lens presets;
-  your own sensor and lens, depth of field, a level & thirds guide.
+  your own sensor and lens, depth of field, sky drift (how long stars stay points), a level &
+  thirds guide; how wide the Sun and the Moon are in the frame.
 - Light finder (reverse planning): "I want the sun _there_" — click the spot in the view, or ask
   for the sun on a ridge, and get every date and time it happens; a "this light" chip says how
   long the current light lasts and when it comes back.
@@ -43,13 +46,15 @@ the shadow probe (a 20 m tower at Sun 11°, shadow measured against `h / tan(el)
 - Night planning: the Moon on the rose and the timeline, its phase calendar, and the Milky Way
   core — where it stands, whether the sky can show it, the dark windows ahead (each a click
   away), a dark-sky band on the timeline, the core as a Light-finder body, its track over the
-  live camera, and how often this month's nights were clear.
-- Climatology: "typical for this month" from ten years of ERA5, by hour of day — never a forecast.
+  live camera, the widest and narrowest full Moons of the year ahead, and how often this month's
+  nights were clear.
+- Climatology: "typical for this month" from ten years of ERA5, by hour of day — cloud, saturated
+  air, temperature and wind — never a forecast.
 - In the field: point the phone and the camera follows the compass; the field view puts the
-  planned sun, its path, true level and the ridge over the live camera; saved projects open
-  offline; installable as a PWA.
+  planned sun (and the sun as it is now), its path, true level and the ridge over the live camera;
+  saved projects open offline; installable as a PWA.
 - Accounts (passwordless email, optional Google), projects with notes and a shoot date, saved
-  viewpoints with thumbnails, planning-card and shot-list export; preferences (metric or imperial, times in the place's zone or your own,
+  viewpoints with thumbnails, planning-card, shot-list and calendar (.ics) export; preferences (metric or imperial, times in the place's zone or your own,
   the lens a new place starts with) kept on the device and in the profile.
 - Subscription plumbing in Stripe test mode with a central entitlement service (Free / Pro).
 - No uploads, no social feed, no location-discovery engine. It is a planning instrument.
