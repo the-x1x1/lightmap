@@ -10,7 +10,8 @@
  * untouched (plan §1E) — only the surface albedo changes. Its inputs are the terrain's own
  * height, slope and aspect (per vertex, from the mesh normals) and a value-noise field over the
  * fragment's world position, so patches are fixed to the ground and do not swim as the camera
- * moves (float ECEF jitter is ~0.5 m; the finest noise octave is 30 m). The colour is blended
+ * moves (float ECEF jitter is ~0.5 m; the finest world-anchored octave is 8 m; a metre-scale
+ * grain near the camera is anchored to the camera's position instead and fades out by 500 m). The colour is blended
  * over the basemap with an alpha that rises on rock and snow and falls on open ground, so a
  * real imagery layer, where one is licensed, still shows through where it matters — vegetation
  * hue, desert, farmland — and the procedural surface supplies the detail the basemap lacks.
@@ -116,6 +117,18 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float snowy = smoothstep(snowline - 220.0, snowline + 160.0, height) * (1.0 - smoothstep(0.85, 1.15, slope));
     snowy = max(snowy, u_ice * (1.0 - smoothstep(0.9, 1.2, slope)));  // an ice sheet is snow at any height
     ground = mix(ground, snow * (0.95 + 0.05 * grain), snowy);
+
+    // Close to the camera (a viewpoint's foreground) a metre-scale grain, anchored to the camera's
+    // own position so float precision holds (ECEF is 0.5 m at best), fading out by 500 m so it
+    // never shimmers at a distance.
+    float dist = length(positionEC);
+    float nearW = smoothstep(500.0, 60.0, dist);
+    if (nearW > 0.0)
+    {
+        vec3 localWC = mat3(czm_inverseView) * positionEC;
+        float fine = lmFbm(localWC / 2.5 + 3.0);
+        ground *= 1.0 + nearW * 0.3 * (fine - 0.47);
+    }
 
     material.diffuse = ground;
     // Rock and snow are what they are; open ground lets the basemap's own hue through.
