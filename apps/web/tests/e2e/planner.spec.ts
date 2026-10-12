@@ -20,6 +20,35 @@ async function setRangeValue(locator: Locator, value: number) {
   }, value);
 }
 
+/** Console errors the page logs, for failure messages (CI's report cannot be downloaded here). */
+function collectConsoleErrors(page: Page): string[] {
+  const errors: string[] = [];
+  page.on('console', (m) => {
+    if (m.type() === 'error') errors.push(m.text().slice(0, 200));
+  });
+  page.on('pageerror', (e) => errors.push(`pageerror: ${e.message.slice(0, 200)}`));
+  return errors;
+}
+
+/** What the compass and the page looked like when an orientation assertion runs. */
+async function compassDiagnostics(page: Page, errors: string[]): Promise<string> {
+  const state = await page.evaluate(() => ({
+    secure: window.isSecureContext,
+    orientationEvent: typeof window.DeviceOrientationEvent,
+    requestPermission: typeof (
+      window.DeviceOrientationEvent as unknown as { requestPermission?: unknown }
+    )?.requestPermission,
+    toggle: document.querySelector('[data-testid="compass-toggle"]')?.textContent ?? null,
+    status: document.querySelector('[data-testid="compass-status"]')?.textContent ?? null,
+    fieldStatus: document.querySelector('[data-testid="field-view-status"]')?.textContent ?? null,
+    heading: document.querySelector('[data-testid="camera-heading"]')?.textContent ?? null,
+    renderer: document
+      .querySelector('[data-testid="world-map"]')
+      ?.getAttribute('data-renderer-mode'),
+  }));
+  return `compass diagnostics: ${JSON.stringify(state)} · console errors: ${JSON.stringify(errors.slice(-5))}`;
+}
+
 async function pickKailua(page: Page) {
   await page.getByTestId('location-search').fill('Kailua');
   await page.getByTestId('location-results').getByRole('option').first().click();
@@ -375,6 +404,7 @@ test('mobile: "Point with phone" follows synthetic orientation readings and stop
   isMobile,
 }) => {
   test.skip(!isMobile, 'mobile project only');
+  const consoleErrors = collectConsoleErrors(page);
   await page.goto('/');
   await pickKailua(page);
   await page.getByTestId('camera-mode-viewpoint').click();
@@ -390,7 +420,10 @@ test('mobile: "Point with phone" follows synthetic orientation readings and stop
       [alpha, beta] as const,
     );
   await fire(90, 90);
-  await expect(page.getByTestId('compass-toggle')).toHaveText('Stop following phone');
+  await expect(
+    page.getByTestId('compass-toggle'),
+    await compassDiagnostics(page, consoleErrors),
+  ).toHaveText('Stop following phone');
   await expect(page.getByTestId('camera-heading')).toContainText('270° W');
   await expect(page.getByTestId('compass-status')).toContainText('Following the phone');
   // Readings are smoothed and throttled: a quarter turn to the south arrives over a few samples.
@@ -410,6 +443,7 @@ test('mobile: the field view shows the planned sun over the (fake) camera and fo
   isMobile,
 }) => {
   test.skip(!isMobile, 'mobile project only');
+  const consoleErrors = collectConsoleErrors(page);
   await page.goto('/');
   await pickKailua(page);
   // 31 May 2026 17:30 HST: the sun is ~30° up in the west-north-west.
@@ -433,7 +467,10 @@ test('mobile: the field view shows the planned sun over the (fake) camera and fo
     await fire(75, 120);
     await page.waitForTimeout(100);
   }
-  await expect(page.getByTestId('field-view-sun')).toBeAttached();
+  await expect(
+    page.getByTestId('field-view-sun'),
+    await compassDiagnostics(page, consoleErrors),
+  ).toBeAttached();
   await expect(page.getByTestId('field-view-sun-edge')).toHaveCount(0);
   // Turn away to the south-east: the sun leaves the frame and the edge arrow says how far.
   for (let i = 0; i < 8; i++) {
