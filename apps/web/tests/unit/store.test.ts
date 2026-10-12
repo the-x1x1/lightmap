@@ -106,7 +106,9 @@ describe('planner store', () => {
       units: 'metric',
       defaultTimezoneBehavior: 'location',
       defaultLensEquivalentMm: 35,
+      paintedGround: false,
     });
+    expect(usePlannerStore.getState().paintedGround).toBe(false);
     s.setLocation(kailua);
     expect(usePlannerStore.getState().camera.focalLengthMm).toBe(35);
     s.setFocalLength(85);
@@ -116,7 +118,9 @@ describe('planner store', () => {
       units: 'metric',
       defaultTimezoneBehavior: 'location',
       defaultLensEquivalentMm: 24,
+      paintedGround: true,
     });
+    expect(usePlannerStore.getState().paintedGround).toBe(true);
   });
   it('switching the time-zone mode keeps the selected instant and re-reads it in the other zone', () => {
     const s = usePlannerStore.getState();
@@ -129,6 +133,7 @@ describe('planner store', () => {
       units: 'imperial',
       defaultTimezoneBehavior: 'device',
       defaultLensEquivalentMm: 24,
+      paintedGround: true,
     });
     const after = usePlannerStore.getState();
     expect(after.units).toBe('imperial');
@@ -147,6 +152,7 @@ describe('planner store', () => {
       units: 'metric',
       defaultTimezoneBehavior: 'location',
       defaultLensEquivalentMm: 24,
+      paintedGround: true,
     });
     const back = usePlannerStore.getState();
     expect(back.minutes).toBe(18 * 60 + 30);
