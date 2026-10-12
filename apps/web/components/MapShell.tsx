@@ -180,7 +180,9 @@ export function MapShell() {
   useTerrainHorizon({
     sampleHeights: rendererInfo.sampleHeights,
     sampleSurface:
-      capabilities?.providers.buildings.kind !== 'none' ? rendererInfo.sampleSurface : null,
+      capabilities && capabilities.providers.buildings.kind !== 'none'
+        ? rendererInfo.sampleSurface
+        : null,
     terrainAvailable: capabilities ? capabilities.providers.terrain.kind !== 'ellipsoid' : false,
     terrainProviderId: capabilities?.providers.terrain.providerId ?? 'ellipsoid',
     eyeHeightM: scene?.camera.eyeHeightM ?? 1.6,

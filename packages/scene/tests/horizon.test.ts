@@ -82,7 +82,17 @@ describe('terrain horizon profile', () => {
     );
     const plain = horizonProfileFromSamples(origin, 0, 1.6, ridgeSamples(), source);
     expect(plain.buildingsReachM).toBeNull();
+    expect(plain.onRoof).toBe(false);
     expect(plain.caveat).toMatch(/^Terrain only/);
+    const roof = horizonProfileFromSamples(origin, 30, 1.6, ridgeSamples(), source, {
+      buildingsReachM: 2500,
+      onRoof: true,
+    });
+    expect(roof.onRoof).toBe(true);
+    expect(roof.caveat).toMatch(
+      /^The pin is on a mapped building, so the horizon is read from its roof/,
+    );
+    expect(roof.caveat).toContain('Terrain and mapped buildings');
   });
 
   it('ignores missing samples and reports coverage', () => {

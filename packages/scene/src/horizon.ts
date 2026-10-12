@@ -55,6 +55,8 @@ export interface HorizonProfile {
   source: { providerId: string; resolutionM: number | null };
   /** How far out mapped buildings were part of the profile, metres; null for terrain alone. */
   buildingsReachM?: number | null;
+  /** True when the pin fell on a mapped building and the profile reads from its roof. */
+  onRoof?: boolean;
   caveat: string;
 }
 
@@ -68,13 +70,20 @@ export const HORIZON_WITH_BUILDINGS_CAVEAT =
  * The caveat with the sampled reach, so "no terrain effect" is never read as "no terrain"; with
  * `buildingsReachM`, the buildings were sampled out to that distance.
  */
-export function horizonCaveat(maxDistanceM: number, buildingsReachM: number | null = null): string {
+export function horizonCaveat(
+  maxDistanceM: number,
+  buildingsReachM: number | null = null,
+  onRoof = false,
+): string {
   const base =
     buildingsReachM !== null
       ? `${HORIZON_WITH_BUILDINGS_CAVEAT} Buildings beyond ${(buildingsReachM / 1000).toFixed(1).replace(/\.0$/, '')} km and terrain beyond ${Math.round(maxDistanceM / 1000)} km were not sampled.`
       : `${HORIZON_CAVEAT} Terrain beyond ${Math.round(maxDistanceM / 1000)} km was not sampled.`;
-  return base;
+  return onRoof ? `${ROOF_CAVEAT} ${base}` : base;
 }
+
+export const ROOF_CAVEAT =
+  'The pin is on a mapped building, so the horizon is read from its roof; move it to the street for the view from the ground.';
 
 /** Degrees to one decimal without a "-0.0" (a tiny sea-level dip reads as flat). */
 export function formatDeg(v: number, digits = 1): string {
@@ -132,7 +141,12 @@ export function horizonProfileFromSamples(
   eyeHeightM: number,
   samples: readonly HorizonSample[],
   source: HorizonProfile['source'],
-  opts: { stepDeg?: number; maxDistanceM?: number; buildingsReachM?: number | null } = {},
+  opts: {
+    stepDeg?: number;
+    maxDistanceM?: number;
+    buildingsReachM?: number | null;
+    onRoof?: boolean;
+  } = {},
 ): HorizonProfile {
   const step = opts.stepDeg ?? 3;
   const n = Math.round(360 / step);
@@ -165,7 +179,8 @@ export function horizonProfileFromSamples(
     maxElevationDeg: Math.max(...elevationDeg),
     source,
     buildingsReachM: opts.buildingsReachM ?? null,
-    caveat: horizonCaveat(maxDist, opts.buildingsReachM ?? null),
+    onRoof: opts.onRoof ?? false,
+    caveat: horizonCaveat(maxDist, opts.buildingsReachM ?? null, opts.onRoof ?? false),
   };
 }
 

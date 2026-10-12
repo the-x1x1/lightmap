@@ -27,6 +27,8 @@ export type SampleSurface = (points: readonly GeoPoint[]) => Promise<Array<numbe
 
 /** How far out mapped buildings join the profile, metres: a city block's skyline, not a distant ridge. */
 export const BUILDINGS_REACH_M = 2500;
+/** A mapped surface this much above the terrain at the pin is a roof the viewer stands on, metres. */
+export const ROOF_MIN_M = 3;
 
 const cache = new Map<string, HorizonProfile>();
 /** Runs in flight by key, so a re-render (quality rung change, re-geocoded pin) joins the run
@@ -78,10 +80,16 @@ export function useTerrainHorizon(input: {
         else byLevel.set(l, [i]);
       });
       const heights: Array<number | null> = new Array<number | null>(pts.length).fill(null);
-      const [ground] = await sampleHeights([origin], 13);
-      // Without the ground height at the pin the eye's datum is unknown: no profile.
-      if (ground === null || ground === undefined) return null;
-      for (const [level, idx] of byLevel) {
+      // The buildings (the near rings plus the pin itself) are sampled alongside the terrain
+      // levels — the two are independent, and the building pass loads tiles.
+      const near = sampleSurface
+        ? pts.map((p, i) => (p.distanceM <= BUILDINGS_REACH_M ? i : -1)).filter((i) => i >= 0)
+        : [];
+      const surfaceJob = sampleSurface
+        ? sampleSurface([origin, ...near.map((i) => pts[i]!.point)]).catch(() => null)
+        : Promise.resolve(null);
+      const groundJob = sampleHeights([origin], 13);
+      const levelJobs = [...byLevel].map(async ([level, idx]) => {
         const res = await sampleHeights(
           idx.map((i) => pts[i]!.point),
           level,
@@ -89,23 +97,30 @@ export function useTerrainHorizon(input: {
         res.forEach((h, j) => {
           heights[idx[j]!] = h;
         });
-      }
+      });
+      const [[terrainAtPin], surface] = await Promise.all([groundJob, surfaceJob, ...levelJobs]);
+      // Without the ground height at the pin the eye's datum is unknown: no profile.
+      if (terrainAtPin === null || terrainAtPin === undefined) return null;
+      let ground = terrainAtPin;
       // Mapped buildings near the pin: the topmost surface (a roof or the ground) replaces the
       // bare terrain where it stands higher. Nothing sampled (no tileset, unsupported, or every
       // point failed) leaves the terrain alone and the caveat honest.
       let buildingsReachM: number | null = null;
-      if (sampleSurface) {
-        const near = pts
-          .map((p, i) => (p.distanceM <= BUILDINGS_REACH_M ? i : -1))
-          .filter((i) => i >= 0);
-        const surface = await sampleSurface(near.map((i) => pts[i]!.point));
-        if (surface && surface.some((h) => h !== null)) {
-          buildingsReachM = BUILDINGS_REACH_M;
-          surface.forEach((h, j) => {
-            const i = near[j]!;
-            if (h !== null) heights[i] = Math.max(heights[i] ?? -Infinity, h);
-          });
+      let onRoof = false;
+      if (surface && surface.some((h) => h !== null)) {
+        buildingsReachM = BUILDINGS_REACH_M;
+        // A pin on a footprint (geocoders land on building centroids) stands the viewer on
+        // that roof: otherwise its own building, 40 m away on every bearing, would wall the
+        // whole sky. The profile then reads from the roof, and the caveat says so.
+        const atPin = surface[0];
+        if (atPin !== null && atPin !== undefined && atPin - terrainAtPin > ROOF_MIN_M) {
+          ground = atPin;
+          onRoof = true;
         }
+        surface.slice(1).forEach((h, j) => {
+          const i = near[j]!;
+          if (h !== null) heights[i] = Math.max(heights[i] ?? -Infinity, h);
+        });
       }
       const profile = horizonProfileFromSamples(
         origin,
@@ -120,7 +135,7 @@ export function useTerrainHorizon(input: {
           providerId: buildingsReachM ? `${terrainProviderId}+buildings` : terrainProviderId,
           resolutionM: null,
         },
-        { buildingsReachM },
+        { buildingsReachM, onRoof },
       );
       // Too little data: no profile rather than a misleading one.
       if (profile.coverage < MIN_COVERAGE) return null;

@@ -543,7 +543,8 @@ carries, every tick: the terrain-horizon elevation at the sun's bearing, whether
 refracted upper limb shows above it, the same for the moon, and today's **first and last light
 over the terrain** with any spells in between (5-minute scan, bisection to 10 s).
 
-Shown as: a **"Sun behind terrain"** badge beside the source and forecast badges while the sun is
+Shown as: a **"Sun behind terrain"** badge ("Sun behind terrain or buildings" when mapped
+buildings are in the profile) beside the source and forecast badges while the sun is
 astronomically up but below the ridge; `▲ Ridge` / `▽ Ridge` markers on the timeline (only when
 they differ from sunrise/sunset by more than three minutes — under that, refraction conventions
 differ by as much); "First/Last light over terrain" and "Terrain horizon at sun" rows in Sun &

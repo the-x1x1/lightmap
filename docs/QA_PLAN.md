@@ -191,11 +191,15 @@ on a failure (`release.yml` runs it after the deploy); the rest are by hand.
       fixed to the ground while panning and walking the pin a few metres (no swimming), fading
       out by 500 m; on Balanced the noise grain is back; the atlas loads once
       (`/textures/ground-detail.png`, one request in the network panel).
-- [ ] Buildings in the horizon (`BUILDINGS_PROVIDER=cesium-osm`): pin a Manhattan cross-street
-      (e.g. 40.7484, −73.9857) in viewpoint mode — the skyline in the level guide shows the
-      blocks, the Terrain row's caveat starts "Terrain and mapped buildings" and names the
-      2.5 km buildings reach, and the `▲ Ridge` marker lands well after astronomical sunrise;
-      without the provider the caveat is the terrain-only one.
+- [ ] Buildings in the horizon (`BUILDINGS_PROVIDER=cesium-osm`): pin open ground ringed by
+      towers (Bryant Park lawn, 40.7536, −73.9832) in viewpoint mode — the skyline in the level
+      guide shows the blocks (20–50° by bearing), the badge reads "Sun behind terrain or
+      buildings", the Terrain row's caveat starts "Terrain and mapped buildings" and names the
+      2.5 km buildings reach, and the `▲ Ridge` marker lands an hour or more after astronomical
+      sunrise; the profile appears within a few seconds of the terrain one. Then pin a building
+      footprint (the Empire State Building, 40.7484, −73.9857): the caveat starts "The pin is on
+      a mapped building" and the horizon is the view from its roof, not an 80° wall. Without
+      the provider the caveat is the terrain-only one.
 - [ ] On a phone (real iPhone and Android, portrait): focusing the search box, a date field or
       the lens box does **not** zoom the page; the sheet's bottom padding clears the home
       indicator and the top bar clears the notch in the installed (standalone) app; swiping the

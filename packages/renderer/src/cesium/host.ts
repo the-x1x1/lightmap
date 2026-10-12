@@ -215,9 +215,11 @@ export interface SceneHost {
    */
   sampleGroundHeights(points: readonly GeoPoint[], level: number): Promise<Array<number | null>>;
   /**
-   * Heights of the topmost surface — terrain or a mapped building — at points, from the loaded
-   * 3D buildings at their finest detail; null when there are no buildings to sample (then the
-   * terrain heights stand alone), null per point when nothing could be sampled there.
+   * Heights above the ellipsoid of the topmost mapped surface at points — a building's roof
+   * where one stands (the loaded 3D buildings at their finest detail), the terrain only where
+   * the globe happens to be in view; null when there are no buildings to sample (then the
+   * terrain heights stand alone), null per point where nothing was hit (the caller keeps its
+   * terrain height there).
    */
   sampleSurfaceHeights(points: readonly GeoPoint[]): Promise<Array<number | null> | null>;
   requestRender(): void;

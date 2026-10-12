@@ -71,11 +71,14 @@ with Earth curvature and standard refraction (`@lightmap/scene` `horizon.ts`). T
 visible when its refracted upper limb clears the profile at its bearing. **Claim:** whether the
 Sun is behind the ridge now, and the day's first/last light over the terrain to within a few
 minutes for ridges the DEM resolves. With `BUILDINGS_PROVIDER=cesium-osm` the mapped buildings
-within 2.5 km of the pin join the profile (`SceneHost.sampleSurfaceHeights`: the topmost surface
-from the loaded tiles at their finest detail, taken where it stands higher than the terrain), so
-"when does the sun clear that block" is answered for a city viewpoint; the caveat then says the
-buildings are as OpenStreetMap has them (heights often estimated or missing) and names both
-reaches. **Caveat:** trees and cloud on the ridge are not in any model, and buildings only
+within 2.5 km of the pin join the profile (`SceneHost.sampleSurfaceHeights`: a roof where a
+mapped building stands, from the loaded tiles at their finest detail, taken where it stands
+higher than the terrain; sampled alongside the terrain, not after it), so "when does the sun
+clear that block" is answered for a city viewpoint; the caveat then says the buildings are as
+OpenStreetMap has them (heights often estimated or missing) and names both reaches. A pin that
+falls on a footprint (geocoders land on building centroids) stands the viewer on that roof —
+its own building would otherwise wall every bearing — and the caveat says to move the pin to
+the street for the view from the ground. **Caveat:** trees and cloud on the ridge are not in any model, and buildings only
 where configured and mapped; a ridgeline can fall between the 3° bearings or the ring distances; DEM resolution
 (≈30 m) rounds sharp crests; the eye-height dip uses the sampled ground height at the pin.
 Terrain beyond the sampled reach (40 km) is unknown, not flat — the caveat says so. Verified:

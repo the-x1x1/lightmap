@@ -18,7 +18,7 @@ export function TerrainHorizonBadge({ scene }: { scene: SceneState }) {
       title={`The terrain horizon at the sun's bearing is ${formatDeg(t.horizonAtSunDeg)}°; the sun's upper limb is at ${formatDeg(scene.solar.apparentElevationDegrees + 0.27)}°. ${t.profile.caveat}`}
       data-testid="terrain-badge"
     >
-      Sun behind terrain
+      {t.profile.buildingsReachM ? 'Sun behind terrain or buildings' : 'Sun behind terrain'}
       <VisuallyHidden>
         . Terrain horizon {formatDeg(t.horizonAtSunDeg)} degrees at the sun's bearing; the sun's
         upper limb is at {formatDeg(scene.solar.apparentElevationDegrees + 0.27)} degrees.{' '}
