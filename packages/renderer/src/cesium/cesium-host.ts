@@ -336,6 +336,7 @@ export class CesiumSceneHost implements SceneHost {
     u['u_ice'] = g.ice;
     u['u_brightness'] = g.brightness;
     u['u_seaLevelM'] = g.seaLevelM;
+    u['u_cloudShadow'] = g.cloudShadow;
     this.scene.requestRender();
   }
 
@@ -387,6 +388,9 @@ export class CesiumSceneHost implements SceneHost {
 
   setGrade(u: HostGradeUniforms): void {
     const g = this.gradeUniforms;
+    // The ground's cloud shadows drift with the same clock as the sky's clouds.
+    if (this.groundMaterial)
+      (this.groundMaterial.uniforms as Record<string, number>)['u_cloudTime'] = u.u_time;
     g['u_saturation'] = u.u_saturation;
     g['u_contrast'] = u.u_contrast;
     g['u_warmth'] = u.u_warmth;

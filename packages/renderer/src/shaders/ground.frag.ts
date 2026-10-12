@@ -45,6 +45,10 @@ export const GROUND_UNIFORM_DEFAULTS = {
   u_brightness: 1,
   /** Ellipsoidal height of sea level at the place, metres (the geoid). */
   u_seaLevelM: 0,
+  /** How strongly broken cloud dapples the ground, 0–1. */
+  u_cloudShadow: 0,
+  /** The planner's clock in minutes (the sky's clouds drift with the same one). */
+  u_cloudTime: 0,
 } as const;
 
 export const GROUND_MATERIAL_SOURCE = /* glsl */ `
@@ -56,6 +60,8 @@ uniform float u_aridity;
 uniform float u_ice;
 uniform float u_brightness;
 uniform float u_seaLevelM;
+uniform float u_cloudShadow;
+uniform float u_cloudTime;
 // The camera's position in grain cells: whole cells and the fraction, set each frame.
 uniform vec3 u_cameraCell;
 uniform vec3 u_cameraFrac;
@@ -176,6 +182,18 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         float flat_ = max(dot(materialInput.normalEC, czm_lightDirectionEC), 0.0);
         float bumped = max(dot(bumpEC, czm_lightDirectionEC), 0.0);
         ground *= clamp(1.0 + reliefW * 0.9 * (bumped - flat_), 0.7, 1.3);
+    }
+
+    // Broken cloud: patches of shadow the size of cumulus (a kilometre or two) drifting with the
+    // planner's clock, over everything but water. A dappling of the albedo — the direct light's
+    // direction, the terrain shadows and the sky are untouched; the patches are a pattern, not
+    // the forecast's own clouds.
+    if (u_cloudShadow > 0.0)
+    {
+        vec3 drift = vec3(u_cloudTime * 8.0, u_cloudTime * 3.0, 0.0);  // ≈ 8 m/min east, 3 north
+        float cloud = lmFbm((positionWC + drift) / 1400.0 + 13.0);
+        float shade = smoothstep(0.38, 0.62, cloud);
+        ground *= 1.0 - 0.45 * u_cloudShadow * shade;
     }
 
     material.diffuse = ground * u_brightness;

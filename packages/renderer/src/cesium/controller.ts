@@ -240,7 +240,7 @@ export class SceneController {
       groundHeightM: this.groundHeightSampled ? this.groundHeightM - this.seaLevelM : null,
     });
     const groundKey = ground
-      ? `${ground.snowlineM}|${ground.treelineM}|${ground.poleward}|${ground.strength}|${ground.aridity}|${ground.ice}|${ground.brightness}|${ground.seaLevelM}`
+      ? `${ground.snowlineM}|${ground.treelineM}|${ground.poleward}|${ground.strength}|${ground.aridity}|${ground.ice}|${ground.brightness}|${ground.seaLevelM}|${ground.cloudShadow}`
       : 'off';
     if (groundKey !== this.lastGroundKey) {
       this.lastGroundKey = groundKey;

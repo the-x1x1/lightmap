@@ -23,6 +23,24 @@ export interface GroundTextureParams {
   brightness: number;
   /** Ellipsoidal height of sea level at the place, metres, so shore and snow read true heights. */
   seaLevelM: number;
+  /** How strongly broken cloud dapples the ground, 0–1 (`cloudShadowStrength`). */
+  cloudShadow: number;
+}
+
+/**
+ * How much the ground is dappled by the shadows of broken cloud: nothing under a clear sky
+ * (no cloud) or an overcast one (the light is already diffuse and dimmed as a whole), most at
+ * half cover of the low and mid decks, and nothing without direct sunlight. 4c(1−c) over the
+ * sun-blocking cover, scaled by the direct-light share.
+ */
+export function cloudShadowStrength(
+  layers: { low: number; mid: number },
+  sunTransmittance: number,
+  sunElevationDeg: number,
+): number {
+  if (sunElevationDeg <= -0.833 || sunTransmittance <= 0.12) return 0;
+  const cover = Math.max(0, Math.min(1, layers.low + 0.6 * layers.mid));
+  return Math.round(4 * cover * (1 - cover) * Math.min(1, sunTransmittance / 0.6) * 100) / 100;
 }
 
 /** What the renderer knows beyond the scene: the chart dimming, the geoid and the ground at the pin. */
@@ -159,5 +177,10 @@ export function groundTextureFor(
     ice: Math.round(hint.ice * 100) / 100,
     brightness: Math.round(Math.max(0, Math.min(1, context.brightness)) * 100) / 100,
     seaLevelM: Math.round(context.seaLevelM),
+    cloudShadow: cloudShadowStrength(
+      scene.atmosphere.parameters.cloudLayers,
+      scene.atmosphere.parameters.sunTransmittance,
+      scene.solar.elevationDegrees,
+    ),
   };
 }

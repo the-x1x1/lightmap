@@ -176,7 +176,12 @@ chart's dimming applies to the surface as to the basemap. The Minimal quality ru
 `groundTexture` flag turns it off everywhere. On bare ground within a few kilometres a **micro-relief** shading
 reads the grain as small bumps lit by the scene's own Sun direction, so rock and scree show a
 texture that turns with the light through the day — a shading of the albedo only, within
-±30 %, gone on snow. **Claim:** the surface lit by the true Sun, with
+±30 %, gone on snow. Under **broken cloud** the ground is dappled with
+cumulus-sized patches of shade (a kilometre or two across) drifting with the planner's clock —
+nothing under a clear sky or an overcast one (the light is already diffuse and dimmed as a
+whole), most at half cover of the low and mid decks, nothing without direct sun
+(`cloudShadowStrength`, 4c(1−c)); the patches are a pattern, not the forecast's own clouds, and
+they do not match the clouds drawn in the sky. **Claim:** the surface lit by the true Sun, with
 shadows and horizon geometry untouched (the material runs before the globe's lighting and
 changes albedo only; the micro-relief uses the light direction but never the shadow map or
 the mesh). **Caveat:** a texture, not land cover — it does not know a forest from a

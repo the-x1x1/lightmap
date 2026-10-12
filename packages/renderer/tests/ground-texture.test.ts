@@ -15,6 +15,7 @@ import {
   landHintFromPixels,
   permanentSnowlineM,
   snowlineM,
+  cloudShadowStrength,
   snowlineWithForecast,
 } from '../src/ground-texture.ts';
 import { GROUND_MATERIAL_SOURCE, GROUND_UNIFORM_DEFAULTS } from '../src/shaders/ground.frag.ts';
@@ -95,6 +96,19 @@ describe('snowlineWithForecast', () => {
     expect(snowlineWithForecast(2800, 0.005, 1600)).toBe(2800); // a dusting is not lying snow
     expect(snowlineWithForecast(2800, null, 1600)).toBe(2800);
     expect(snowlineWithForecast(2800, 0.3, null)).toBe(2800);
+  });
+});
+
+describe('cloudShadowStrength', () => {
+  it('is nothing under a clear or an overcast sky, most at half cover, nothing without direct sun', () => {
+    expect(cloudShadowStrength({ low: 0, mid: 0 }, 1, 40)).toBe(0);
+    expect(cloudShadowStrength({ low: 1, mid: 0 }, 0.3, 40)).toBe(0);
+    expect(cloudShadowStrength({ low: 0.5, mid: 0 }, 0.7, 40)).toBe(1);
+    expect(cloudShadowStrength({ low: 0.25, mid: 0 }, 0.7, 40)).toBeCloseTo(0.75, 2);
+    expect(cloudShadowStrength({ low: 0, mid: 0.5 }, 0.7, 40)).toBeCloseTo(0.84, 2);
+    expect(cloudShadowStrength({ low: 0.5, mid: 0 }, 0.3, 40)).toBeCloseTo(0.5, 2);
+    expect(cloudShadowStrength({ low: 0.5, mid: 0 }, 0.7, -2)).toBe(0);
+    expect(cloudShadowStrength({ low: 0.5, mid: 0 }, 0.1, 40)).toBe(0);
   });
 });
 
