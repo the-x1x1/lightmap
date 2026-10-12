@@ -23,6 +23,11 @@ export type SampleHeights = (
   level: number,
 ) => Promise<Array<number | null>>;
 
+export type SampleSurface = (points: readonly GeoPoint[]) => Promise<Array<number | null> | null>;
+
+/** How far out mapped buildings join the profile, metres: a city block's skyline, not a distant ridge. */
+export const BUILDINGS_REACH_M = 2500;
+
 const cache = new Map<string, HorizonProfile>();
 /** Runs in flight by key, so a re-render (quality rung change, re-geocoded pin) joins the run
  * instead of restarting the 2 640 samples. */
@@ -38,18 +43,21 @@ export function levelForDistance(distanceM: number): number {
 
 export function useTerrainHorizon(input: {
   sampleHeights: SampleHeights | null;
+  /** With 3D buildings configured: terrain-or-building heights near the pin; null otherwise. */
+  sampleSurface?: SampleSurface | null;
   terrainAvailable: boolean;
   terrainProviderId: string;
   eyeHeightM: number;
 }) {
   const { sampleHeights, terrainAvailable, terrainProviderId } = input;
+  const sampleSurface = input.sampleSurface ?? null;
   const eyeHeightM = Math.round(input.eyeHeightM * 2) / 2;
   const location = usePlannerStore((s) => s.location);
   const setHorizonProfile = usePlannerStore((s) => s.setHorizonProfile);
 
   useEffect(() => {
     if (!location || !sampleHeights || !terrainAvailable) return;
-    const key = `${terrainProviderId}|${location.point.latitude.toFixed(5)},${location.point.longitude.toFixed(5)}|${eyeHeightM}`;
+    const key = `${terrainProviderId}${sampleSurface ? '+buildings' : ''}|${location.point.latitude.toFixed(5)},${location.point.longitude.toFixed(5)}|${eyeHeightM}`;
     const hit = cache.get(key);
     if (hit) {
       setHorizonProfile(hit);
@@ -82,6 +90,23 @@ export function useTerrainHorizon(input: {
           heights[idx[j]!] = h;
         });
       }
+      // Mapped buildings near the pin: the topmost surface (a roof or the ground) replaces the
+      // bare terrain where it stands higher. Nothing sampled (no tileset, unsupported, or every
+      // point failed) leaves the terrain alone and the caveat honest.
+      let buildingsReachM: number | null = null;
+      if (sampleSurface) {
+        const near = pts
+          .map((p, i) => (p.distanceM <= BUILDINGS_REACH_M ? i : -1))
+          .filter((i) => i >= 0);
+        const surface = await sampleSurface(near.map((i) => pts[i]!.point));
+        if (surface && surface.some((h) => h !== null)) {
+          buildingsReachM = BUILDINGS_REACH_M;
+          surface.forEach((h, j) => {
+            const i = near[j]!;
+            if (h !== null) heights[i] = Math.max(heights[i] ?? -Infinity, h);
+          });
+        }
+      }
       const profile = horizonProfileFromSamples(
         origin,
         ground,
@@ -91,7 +116,11 @@ export function useTerrainHorizon(input: {
           distanceM: p.distanceM,
           heightM: heights[i] ?? null,
         })),
-        { providerId: terrainProviderId, resolutionM: null },
+        {
+          providerId: buildingsReachM ? `${terrainProviderId}+buildings` : terrainProviderId,
+          resolutionM: null,
+        },
+        { buildingsReachM },
       );
       // Too little data: no profile rather than a misleading one.
       if (profile.coverage < MIN_COVERAGE) return null;
@@ -117,5 +146,13 @@ export function useTerrainHorizon(input: {
     return () => {
       cancelled = true;
     };
-  }, [location, sampleHeights, terrainAvailable, terrainProviderId, eyeHeightM, setHorizonProfile]);
+  }, [
+    location,
+    sampleHeights,
+    sampleSurface,
+    terrainAvailable,
+    terrainProviderId,
+    eyeHeightM,
+    setHorizonProfile,
+  ]);
 }

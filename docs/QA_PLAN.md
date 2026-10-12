@@ -177,6 +177,11 @@ on a failure (`release.yml` runs it after the deploy); the rest are by hand.
       a night the Moon rises behind the ridge, "Moon over terrain" spells in the Moon section), and the
       light finder tags morning matches "behind terrain"; pin a beach facing open sea — no
       badge, no ridge markers; the Preview basis Terrain row names the sampled reach.
+- [ ] Buildings in the horizon (`BUILDINGS_PROVIDER=cesium-osm`): pin a Manhattan cross-street
+      (e.g. 40.7484, −73.9857) in viewpoint mode — the skyline in the level guide shows the
+      blocks, the Terrain row's caveat starts "Terrain and mapped buildings" and names the
+      2.5 km buildings reach, and the `▲ Ridge` marker lands well after astronomical sunrise;
+      without the provider the caveat is the terrain-only one.
 - [ ] On a phone (real iPhone and Android, portrait): focusing the search box, a date field or
       the lens box does **not** zoom the page; the sheet's bottom padding clears the home
       indicator and the top bar clears the notch in the installed (standalone) app; swiping the

@@ -120,7 +120,8 @@ detail textures (rock, grass, sand, snow) under a commercial-compatible licence,
 the same masks, for close viewpoints; (4) a licensed aerial imagery basemap where the contract
 allows (`xyz-imagery`), which the material then only details. **Buildings** — delivered as an operator option (`BUILDINGS_PROVIDER=cesium-osm`: Cesium OSM
 Buildings through ion, lit and shadow-casting with the terrain, ODbL attribution shown;
-`RENDERING_ACCURACY.md`); the terrain horizon still ignores them. The scattering model in
+`RENDERING_ACCURACY.md`); the terrain horizon takes them in within 2.5 km of the pin, so "when does the
+sun clear that block" is answered in a city. The scattering model in
 Cesium's own dome (the haze → Mie wiring is in behind the `physicalSkyDome` flag with a
 smoke-harness shot to judge it; enabling it is the PC's call); a fuller water shader (waves, sky
 reflection) is not planned until Phase 8. Everything stays grounded: geometry and light direction are

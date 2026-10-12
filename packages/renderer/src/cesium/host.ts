@@ -195,6 +195,12 @@ export interface SceneHost {
    * rings, ~13 near the viewpoint). Null per point when unknown; all zeros on the ellipsoid.
    */
   sampleGroundHeights(points: readonly GeoPoint[], level: number): Promise<Array<number | null>>;
+  /**
+   * Heights of the topmost surface — terrain or a mapped building — at points, from the loaded
+   * 3D buildings at their finest detail; null when there are no buildings to sample (then the
+   * terrain heights stand alone), null per point when nothing could be sampled there.
+   */
+  sampleSurfaceHeights(points: readonly GeoPoint[]): Promise<Array<number | null> | null>;
   requestRender(): void;
   stats(): HostStats;
   /** Subscribe to clicks/taps on the ground. */

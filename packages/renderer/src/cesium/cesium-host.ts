@@ -933,6 +933,31 @@ export class CesiumSceneHost implements SceneHost {
     return out;
   }
 
+  async sampleSurfaceHeights(points: readonly GeoPoint[]): Promise<Array<number | null> | null> {
+    const C = this.C;
+    await this.buildingsJob;
+    if (this.destroyed || !this.buildings || !this.scene.sampleHeightSupported) return null;
+    const out: Array<number | null> = new Array<number | null>(points.length).fill(null);
+    // Cesium loads the tiles each query needs at their finest level; chunked so one failure
+    // leaves the rest, and so a long list does not hold every tile request at once.
+    const chunk = 128;
+    for (let i = 0; i < points.length; i += chunk) {
+      const slice = points.slice(i, i + chunk);
+      try {
+        const cartos = slice.map((p) => C.Cartographic.fromDegrees(p.longitude, p.latitude));
+        // A 2 m-wide probe so a thin wall or a roof edge is not missed between two samples.
+        const res = await this.scene.sampleHeightMostDetailed(cartos, [], 2);
+        res.forEach((c, j) => {
+          out[i + j] = c && Number.isFinite(c.height) ? c.height : null;
+        });
+      } catch {
+        // leave nulls
+      }
+      if (this.destroyed) return null;
+    }
+    return out;
+  }
+
   requestRender(): void {
     this.scene.requestRender();
   }

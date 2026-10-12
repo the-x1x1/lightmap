@@ -30,6 +30,8 @@ export interface RendererInfo {
   /** Terrain heights at a tile level, for the terrain horizon; null when no host is running. */
   sampleHeights:
     ((points: readonly GeoPoint[], level: number) => Promise<Array<number | null>>) | null;
+  /** Terrain-or-building heights from the loaded 3D buildings; null without a host. */
+  sampleSurface: ((points: readonly GeoPoint[]) => Promise<Array<number | null> | null>) | null;
 }
 
 export interface WorldMapProps {
@@ -154,6 +156,10 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
         : null,
     [host],
   );
+  const sampleSurface = useMemo(
+    () => (host ? (points: readonly GeoPoint[]) => host.sampleSurfaceHeights(points) : null),
+    [host],
+  );
   useEffect(() => {
     onRendererInfo?.({
       mode: renderer.mode,
@@ -163,6 +169,7 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
       capabilities: renderer.capabilities,
       capture: (maxWidth = 320) => (host ? host.captureThumbnail(maxWidth) : Promise.resolve(null)),
       sampleHeights,
+      sampleSurface,
     });
   }, [
     renderer.mode,
@@ -171,6 +178,7 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
     renderer.capabilities,
     host,
     sampleHeights,
+    sampleSurface,
     onRendererInfo,
   ]);
 

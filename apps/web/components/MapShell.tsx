@@ -93,6 +93,7 @@ export function MapShell() {
     capabilities: null,
     capture: () => Promise.resolve(null),
     sampleHeights: null,
+    sampleSurface: null,
   });
 
   const render = useMemo(
@@ -178,6 +179,8 @@ export function MapShell() {
   // Terrain horizon around the pin (sampled through the renderer; nothing on the ellipsoid).
   useTerrainHorizon({
     sampleHeights: rendererInfo.sampleHeights,
+    sampleSurface:
+      capabilities?.providers.buildings.kind !== 'none' ? rendererInfo.sampleSurface : null,
     terrainAvailable: capabilities ? capabilities.providers.terrain.kind !== 'ellipsoid' : false,
     terrainProviderId: capabilities?.providers.terrain.providerId ?? 'ellipsoid',
     eyeHeightM: scene?.camera.eyeHeightM ?? 1.6,

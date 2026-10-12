@@ -71,6 +71,20 @@ describe('terrain horizon profile', () => {
     expect(b).toBeLessThan(c);
   });
 
+  it('with mapped buildings in the samples the caveat says so and the reach is recorded', () => {
+    const p = horizonProfileFromSamples(origin, 0, 1.6, ridgeSamples(), source, {
+      buildingsReachM: 2500,
+    });
+    expect(p.buildingsReachM).toBe(2500);
+    expect(p.caveat).toMatch(/^Terrain and mapped buildings: trees and cloud/);
+    expect(p.caveat).toContain(
+      'Buildings beyond 2.5 km and terrain beyond 40 km were not sampled.',
+    );
+    const plain = horizonProfileFromSamples(origin, 0, 1.6, ridgeSamples(), source);
+    expect(plain.buildingsReachM).toBeNull();
+    expect(plain.caveat).toMatch(/^Terrain only/);
+  });
+
   it('ignores missing samples and reports coverage', () => {
     const s = ridgeSamples().map((x, i) => (i % 2 ? { ...x, heightM: null } : x));
     const p = horizonProfileFromSamples(origin, 0, 1.6, s, source);

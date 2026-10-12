@@ -53,15 +53,27 @@ export interface HorizonProfile {
   /** Highest terrain-horizon elevation in the profile, degrees. */
   maxElevationDeg: number;
   source: { providerId: string; resolutionM: number | null };
+  /** How far out mapped buildings were part of the profile, metres; null for terrain alone. */
+  buildingsReachM?: number | null;
   caveat: string;
 }
 
 export const HORIZON_CAVEAT =
   'Terrain only: trees, buildings and cloud on the ridge are not in the elevation model, and a sharp ridgeline can sit between samples.';
 
-/** The caveat with the sampled reach, so "no terrain effect" is never read as "no terrain". */
-export function horizonCaveat(maxDistanceM: number): string {
-  return `${HORIZON_CAVEAT} Terrain beyond ${Math.round(maxDistanceM / 1000)} km was not sampled.`;
+export const HORIZON_WITH_BUILDINGS_CAVEAT =
+  'Terrain and mapped buildings: trees and cloud on the ridge are not in the model, buildings are as OpenStreetMap has them (heights often estimated or missing), and a sharp edge can sit between samples.';
+
+/**
+ * The caveat with the sampled reach, so "no terrain effect" is never read as "no terrain"; with
+ * `buildingsReachM`, the buildings were sampled out to that distance.
+ */
+export function horizonCaveat(maxDistanceM: number, buildingsReachM: number | null = null): string {
+  const base =
+    buildingsReachM !== null
+      ? `${HORIZON_WITH_BUILDINGS_CAVEAT} Buildings beyond ${(buildingsReachM / 1000).toFixed(1).replace(/\.0$/, '')} km and terrain beyond ${Math.round(maxDistanceM / 1000)} km were not sampled.`
+      : `${HORIZON_CAVEAT} Terrain beyond ${Math.round(maxDistanceM / 1000)} km was not sampled.`;
+  return base;
 }
 
 /** Degrees to one decimal without a "-0.0" (a tiny sea-level dip reads as flat). */
@@ -120,7 +132,7 @@ export function horizonProfileFromSamples(
   eyeHeightM: number,
   samples: readonly HorizonSample[],
   source: HorizonProfile['source'],
-  opts: { stepDeg?: number; maxDistanceM?: number } = {},
+  opts: { stepDeg?: number; maxDistanceM?: number; buildingsReachM?: number | null } = {},
 ): HorizonProfile {
   const step = opts.stepDeg ?? 3;
   const n = Math.round(360 / step);
@@ -152,7 +164,8 @@ export function horizonProfileFromSamples(
     coverage: samples.length ? got / samples.length : 0,
     maxElevationDeg: Math.max(...elevationDeg),
     source,
-    caveat: horizonCaveat(maxDist),
+    buildingsReachM: opts.buildingsReachM ?? null,
+    caveat: horizonCaveat(maxDist, opts.buildingsReachM ?? null),
   };
 }
 

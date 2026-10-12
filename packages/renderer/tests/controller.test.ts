@@ -93,6 +93,7 @@ function fakeHost() {
         [60, 90, 140],
       ] as Array<[number, number, number]>,
     sampleGroundHeights: async (pts: readonly unknown[]) => pts.map(() => 42),
+    sampleSurfaceHeights: async () => null,
     requestRender: rec('requestRender'),
     stats: () => ({
       fps: 60,
