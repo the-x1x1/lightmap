@@ -5,6 +5,7 @@ import {
   weekAheadCellLabel,
   weekAheadDates,
   weekAheadRows,
+  weekAheadText,
 } from '../../features/planner/week-ahead.ts';
 
 const kailua = { latitude: 21.397, longitude: -157.727 };
@@ -113,5 +114,21 @@ describe('week ahead', () => {
         (r) => !r.darkSky,
       ),
     ).toBe(true);
+  });
+
+  it('renders the week as text, one line per day', () => {
+    const frames = new Map<string, WeatherFrame[]>([['2026-05-31', day('2026-05-31', 5)]]);
+    const rows = weekAheadRows(kailua, tz, { year: 2026, month: 5, day: 31 }, frames);
+    const text = weekAheadText(rows, tz, new Set(['2026-05-31', '2026-06-01']), 'Kailua Beach');
+    const lines = text.split('\n');
+    expect(lines[0]).toBe('The week ahead at Kailua Beach (times Pacific/Honolulu)');
+    expect(lines[1]).toMatch(
+      /^Sun 2026-05-31: morning 0\d:\d\d clear \(5 %\) · evening 1\d:\d\d clear \(5 %\) · Moon (99|100) %$/,
+    );
+    expect(lines[2]).toMatch(
+      /^Mon 2026-06-01: morning 0\d:\d\d no forecast · evening 1\d:\d\d no forecast · Moon \d+ %/,
+    );
+    expect(lines[3]).toContain('beyond the forecast');
+    expect(lines).toHaveLength(9);
   });
 });

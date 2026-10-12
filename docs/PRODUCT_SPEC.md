@@ -153,7 +153,8 @@ cloud_, _clouded out_ — with the mean cloud (`weekAheadRows`, the same `window
 day's line; tested), and the Moon that night — lit fraction, "↓" when it is down at local
 midnight, "✦" when the night holds a dark window for the Milky Way core (one week-long scan,
 the dark windows' own rule) with the forecast's cloud over that window ("20 %☁") when the
-day's frames reach into it — for the night shooter choosing an evening. Days are fetched only while the block is open and only inside the forecast
+day's frames reach into it — for the night shooter choosing an evening; "Copy as text" puts the week on the clipboard, one
+line per day (`weekAheadText`, tested). Days are fetched only while the block is open and only inside the forecast
 horizon (one cached `/api/weather` call per day, the plan's weather budget applies); a day
 beyond the horizon reads "beyond the forecast", one still loading "loading…". The footer says the
 extended range is low confidence. Free plans and visitors see the block named with the paywall

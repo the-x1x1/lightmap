@@ -24,6 +24,7 @@ import {
   weekAheadCellLabel,
   weekAheadDates,
   weekAheadRows,
+  weekAheadText,
 } from '@/features/planner/week-ahead';
 import { weatherQueryOptions } from '@/features/planner/weather-query';
 import { Paywall } from './Paywall';
@@ -49,6 +50,7 @@ export function WeekAhead({
   decision: EntitlementDecision;
 }) {
   const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
   const setDate = usePlannerStore((s) => s.setDate);
   const setMinutes = usePlannerStore((s) => s.setMinutes);
   const caps = useCapabilities();
@@ -223,6 +225,23 @@ export function WeekAhead({
         </tbody>
       </table>
       <p className="mt-1 text-xs text-[var(--lm-text-muted)]">
+        <button
+          type="button"
+          className="underline decoration-dotted underline-offset-2 hover:text-[var(--lm-text)]"
+          data-testid="week-ahead-copy"
+          onClick={() => {
+            void navigator.clipboard
+              .writeText(weekAheadText(rows, tz, new Set(fetchable), scene.location.label))
+              .then(
+                () => setCopied('Copied.'),
+                () => setCopied('Could not reach the clipboard here.'),
+              );
+          }}
+        >
+          Copy as text
+        </button>
+        {copied ? ` ${copied}` : ''}
+        {' · '}
         Cloud over each golden hour from the forecast; the extended range is low confidence, and
         beyond it there is no forecast to show. Moon: lit fraction that night, ↓ when it is down at
         midnight, ✦ when the night has a dark window for the Milky Way core — with the forecast's

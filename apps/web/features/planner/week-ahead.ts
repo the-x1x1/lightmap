@@ -9,6 +9,7 @@ import {
   addCivilDays,
   civilDateString,
   computeDayEvents,
+  formatWallTime,
   milkyWayWindows,
   moonPosition,
   utcToWallClock,
@@ -129,4 +130,27 @@ export function weekAheadCellLabel(
     return `${WEEK_AHEAD_SHORT[outlook.verdict]} (${Math.round(outlook.meanCloudCover)} %)`;
   if (!state.inForecast) return 'beyond the forecast';
   return state.loading ? 'loading…' : 'no forecast';
+}
+
+const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/** The week ahead as plain text for the clipboard — one line per day, in the planning zone. */
+export function weekAheadText(
+  rows: readonly WeekAheadRow[],
+  timeZone: string,
+  fetchable: ReadonlySet<string>,
+  place: string,
+): string {
+  const cell = (w: WeekAheadRow['morning'], date: string) =>
+    w
+      ? `${formatWallTime(w.start, timeZone)} ${weekAheadCellLabel(w.outlook, { inForecast: fetchable.has(date), loading: false })}`
+      : '—';
+  return [
+    `The week ahead at ${place} (times ${timeZone})`,
+    ...rows.map(
+      (r) =>
+        `${WEEKDAY_SHORT[r.weekday] ?? ''} ${r.date}: morning ${cell(r.morning, r.date)} · evening ${cell(r.evening, r.date)} · Moon ${Math.round(r.moon.illuminatedFraction * 100)} %${r.moon.upAtMidnight ? '' : ' (down at midnight)'}${r.darkSky ? ' · Milky Way window' : ''}${r.darkOutlook ? ` (${Math.round(r.darkOutlook.meanCloudCover)} % cloud)` : ''}`,
+    ),
+    'Cloud over each golden hour from the forecast; beyond the horizon there is none.',
+  ].join('\n');
 }
