@@ -187,6 +187,9 @@ on a failure (`release.yml` runs it after the deploy); the rest are by hand.
       land-cover attribution; move the pin 10 km and the paint follows after one read; with the
       wrong `LANDCOVER_PALETTE` (or a host without CORS) the surface is the procedural one and
       the console shows no error.
+- [ ] Painted ground off (Preferences): the terrain shows the bare basemap under the same
+      light and shadows, at once, without a reload; on again repaints; the choice survives a
+      reload and, signed in, a wipe of local storage (E2E covers the save).
 - [ ] Detail atlas (Ultra/High; E2E already checks the atlas is served as a 512 × 512 PNG): in viewpoint mode at 1.6 m eye height look down at the ground
       within 20 m — grass blades or rock faces at 2.5 m tiles with no visible grid, the pattern
       fixed to the ground while panning and walking the pin a few metres (no swimming), fading

@@ -14,7 +14,7 @@ import { useScene } from '@/features/planner/use-scene';
 import { useTerrainHorizon } from '@/features/planner/use-terrain-horizon';
 import { darkSkySpells } from '@/features/planner/dark-sky-band';
 import { useAccount } from '@/features/account/use-account';
-import { usePreferencesSync } from '@/features/account/use-preferences';
+import { usePreferences, usePreferencesSync } from '@/features/account/use-preferences';
 import { useProductEvents } from '@/features/analytics/use-product-events';
 import { useViewpointLink } from '@/features/projects/use-viewpoint-link';
 import { Button, cx } from '@lightmap/ui';
@@ -81,8 +81,10 @@ export function MapShell() {
   const handleSettledByPointer = useRef(false);
   const [desktop, setDesktop] = useState(false);
   const account = useAccount();
-  // Units, time-zone mode and default lens: this device's, then the profile's once signed in.
+  // Units, time-zone mode, default lens and the painted ground: this device's, then the
+  // profile's once signed in.
   usePreferencesSync();
+  const prefs = usePreferences();
   // A `/?viewpoint=<id>` link reopens a saved viewpoint once the account is known.
   const viewpointLink = useViewpointLink(account);
   const [rendererInfo, setRendererInfo] = useState<RendererInfo>({
@@ -101,9 +103,10 @@ export function MapShell() {
       ...DEFAULT_RENDER_SETTINGS,
       reducedMotion,
       physicalSkyDome: isEnabled('physicalSkyDome'),
-      groundTexture: isEnabled('groundTexture'),
+      // The operator's flag, then the photographer's own choice (Preferences, "Painted ground").
+      groundTexture: isEnabled('groundTexture') && prefs.paintedGround,
     }),
-    [reducedMotion],
+    [reducedMotion, prefs.paintedGround],
   );
   const bundle = useScene({
     render,

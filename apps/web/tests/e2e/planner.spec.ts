@@ -421,6 +421,14 @@ test('sign in (dev), create a project, save the viewpoint, reload and reopen it'
   await expect(page.getByTestId('pref-units-imperial')).toHaveAttribute('aria-checked', 'true');
   await page.getByTestId('pref-units-metric').click();
   await expect(page.getByTestId('pref-units-metric')).toHaveAttribute('aria-checked', 'true');
+  // The painted-ground choice travels the same way.
+  await expect(page.getByTestId('pref-painted-ground')).toBeChecked();
+  await page.getByTestId('pref-painted-ground').click();
+  await expect(page.getByTestId('pref-painted-ground')).not.toBeChecked();
+  const profile = await page.request.get('/api/account/profile');
+  expect(((await profile.json()) as { paintedGround: boolean }).paintedGround).toBe(false);
+  await page.getByTestId('pref-painted-ground').click();
+  await expect(page.getByTestId('pref-painted-ground')).toBeChecked();
 });
 
 test('mobile: bottom sheet collapses and the map remains usable', async ({ page, isMobile }) => {

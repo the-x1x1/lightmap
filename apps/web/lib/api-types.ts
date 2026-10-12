@@ -81,6 +81,8 @@ export interface ProfileDto {
   defaultTimezoneBehavior: 'location' | 'device';
   /** Full-frame-equivalent focal length the camera starts at for a new place, mm. */
   defaultLensEquivalentMm: number;
+  /** The procedural ground texture over the basemap; off shows the bare basemap under the real light. */
+  paintedGround: boolean;
 }
 
 export interface ProfileResponse extends ProfileDto {

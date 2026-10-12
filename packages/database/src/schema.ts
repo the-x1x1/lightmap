@@ -89,6 +89,8 @@ export const profiles = pgTable('profiles', {
     .notNull()
     .default('location'),
   defaultLensEquivalentMm: integer('default_lens_equivalent_mm').notNull().default(24),
+  /** The procedural ground texture over the basemap (texture pack); off shows the bare basemap. */
+  paintedGround: boolean('painted_ground').notNull().default(true),
   ...timestamps,
 });
 

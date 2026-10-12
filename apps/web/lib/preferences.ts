@@ -1,6 +1,6 @@
 /**
  * Preferences (plan §17): the few settings a photographer carries between places — units, which
- * zone times are shown in, and the lens the camera starts with. Shared by the API route (as the
+ * zone times are shown in, the lens the camera starts with, and whether the ground is painted. Shared by the API route (as the
  * patch validator) and the client (as the defaults), so it imports nothing server- or
  * browser-only.
  */
@@ -21,6 +21,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   units: 'metric',
   defaultTimezoneBehavior: 'location',
   defaultLensEquivalentMm: 24,
+  paintedGround: true,
 };
 
 /**
@@ -54,6 +55,11 @@ export function parsePreferencesPatch(body: unknown): Partial<Preferences> {
       );
     out.defaultLensEquivalentMm = mm;
   }
+  if (o['paintedGround'] !== undefined) {
+    if (typeof o['paintedGround'] !== 'boolean')
+      throw new Error('paintedGround must be true or false');
+    out.paintedGround = o['paintedGround'];
+  }
   if (Object.keys(out).length === 0) throw new Error('nothing to change');
   return out;
 }
@@ -75,6 +81,10 @@ export function normalizePreferences(raw: unknown): Preferences {
       mm <= DEFAULT_LENS_MAX_MM
         ? mm
         : DEFAULT_PREFERENCES.defaultLensEquivalentMm,
+    paintedGround:
+      typeof o['paintedGround'] === 'boolean'
+        ? o['paintedGround']
+        : DEFAULT_PREFERENCES.paintedGround,
   };
 }
 

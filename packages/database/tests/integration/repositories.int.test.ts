@@ -249,11 +249,17 @@ run('repositories (integration)', () => {
       units: 'imperial',
       defaultTimezoneBehavior: 'location',
       defaultLensEquivalentMm: 35,
+      paintedGround: true,
+    });
+    expect(await profiles.update(alice, { paintedGround: false })).toMatchObject({
+      units: 'imperial',
+      paintedGround: false,
     });
     expect(await profiles.get(alice)).toEqual({
       units: 'imperial',
       defaultTimezoneBehavior: 'location',
       defaultLensEquivalentMm: 35,
+      paintedGround: false,
       customized: true,
     });
     expect(await profiles.get(bob)).toEqual({ ...PROFILE_DEFAULTS, customized: false });

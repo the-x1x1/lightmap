@@ -1,7 +1,7 @@
 'use client';
 /**
- * Preferences (plan §17): units, which zone times are shown in, and the lens a new place starts
- * with. The choices save as soon as they change — to the profile when signed in, to this device
+ * Preferences (plan §17): units, which zone times are shown in, the lens a new place starts
+ * with, and whether the ground is painted. The choices save as soon as they change — to the profile when signed in, to this device
  * otherwise — and the planner follows at once; the lens box saves when it is left (or Enter).
  */
 import { useState } from 'react';
@@ -86,6 +86,23 @@ export function Preferences() {
               : 'Times read as a clock on the spot shows them.'}
           </p>
         </div>
+        <label className="flex items-start gap-2 text-xs text-[var(--lm-text-muted)]">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={prefs.paintedGround}
+            onChange={(e) => update.mutate({ paintedGround: e.target.checked })}
+            data-testid="pref-painted-ground"
+          />
+          <span>
+            Painted ground
+            <span className="block">
+              The terrain's surface drawn by rule — turf, rock, scree, snow by height, slope and
+              season, land cover and a close-up grain where configured — over the map. Off shows the
+              bare map under the same light.
+            </span>
+          </span>
+        </label>
         <label className="block text-xs text-[var(--lm-text-muted)]">
           Lens a new place starts with (mm, full-frame equivalent)
           <input

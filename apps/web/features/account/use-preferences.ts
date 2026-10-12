@@ -1,6 +1,6 @@
 'use client';
 /**
- * Preferences (plan §17): units, time-zone mode and the default lens. They live in the planner
+ * Preferences (plan §17): units, time-zone mode, the default lens and the painted ground. They live in the planner
  * store while the page is open, in local storage so a device keeps them between visits (signed
  * in or not), and in the profile once signed in, which wins over the local copy when it loads.
  */
@@ -47,14 +47,27 @@ export function usePreferences(): Preferences {
   const units = usePlannerStore((s) => s.units);
   const defaultTimezoneBehavior = usePlannerStore((s) => s.timeZoneMode);
   const defaultLensEquivalentMm = usePlannerStore((s) => s.defaultLensMm);
-  return { units, defaultTimezoneBehavior, defaultLensEquivalentMm };
+  const paintedGround = usePlannerStore((s) => s.paintedGround);
+  return { units, defaultTimezoneBehavior, defaultLensEquivalentMm, paintedGround };
+}
+
+/** The planner store's preference fields as a `Preferences`. */
+function livePreferences(): Preferences {
+  const live = usePlannerStore.getState();
+  return {
+    units: live.units,
+    defaultTimezoneBehavior: live.timeZoneMode,
+    defaultLensEquivalentMm: live.defaultLensMm,
+    paintedGround: live.paintedGround,
+  };
 }
 
 function samePreferences(a: Preferences, b: Preferences): boolean {
   return (
     a.units === b.units &&
     a.defaultTimezoneBehavior === b.defaultTimezoneBehavior &&
-    a.defaultLensEquivalentMm === b.defaultLensEquivalentMm
+    a.defaultLensEquivalentMm === b.defaultLensEquivalentMm &&
+    a.paintedGround === b.paintedGround
   );
 }
 
@@ -142,12 +155,7 @@ export function useUpdatePreferences() {
       if (!ctx) return;
       // Take from the response only what this save asked for, and only if it is still the
       // newest word on those keys.
-      const live = usePlannerStore.getState();
-      const merged: Preferences = {
-        units: live.units,
-        defaultTimezoneBehavior: live.timeZoneMode,
-        defaultLensEquivalentMm: live.defaultLensMm,
-      };
+      const merged = livePreferences();
       for (const k of keysOf(patch))
         if (latest.current[k] === ctx.id) merged[k] = saved[k] as never;
       setPreferences(merged);
@@ -157,12 +165,7 @@ export function useUpdatePreferences() {
     onError: (_e, patch, ctx) => {
       if (!ctx) return;
       // Put back what this save changed, unless a newer save has since set the key.
-      const live = usePlannerStore.getState();
-      const restored: Preferences = {
-        units: live.units,
-        defaultTimezoneBehavior: live.timeZoneMode,
-        defaultLensEquivalentMm: live.defaultLensMm,
-      };
+      const restored = livePreferences();
       for (const k of keysOf(patch))
         if (latest.current[k] === ctx.id) restored[k] = ctx.previous[k] as never;
       setPreferences(restored);

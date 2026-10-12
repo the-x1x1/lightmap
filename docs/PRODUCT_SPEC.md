@@ -702,6 +702,10 @@ runs installed. Installed launches arrive at `/?source=pwa`.
 - **Lens a new place starts with**: a full-frame-equivalent focal length (8–600 mm, default 24)
   the camera takes whenever a new place is picked; an existing camera is never changed under the
   photographer.
+- **Painted ground** (default on): the procedural ground texture — and the land cover and the
+  detail atlas with it — drawn over the basemap; off shows the bare basemap under the same
+  light, the plain map some photographers prefer and the quickest way to tell the texture from
+  the imagery. The operator's `groundTexture` flag still turns it off everywhere.
 
 Preferences are kept on the device (local storage) for everyone and saved to the profile when
 signed in (`GET/PATCH /api/account/profile`), the profile winning over the device copy when it

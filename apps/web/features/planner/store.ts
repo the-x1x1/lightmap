@@ -79,6 +79,8 @@ export interface PlannerState {
   timeZoneMode: TimeZoneMode;
   /** Full-frame-equivalent lens the camera starts with at a new place, mm. */
   defaultLensMm: number;
+  /** The procedural ground texture over the basemap (Preferences, "Painted ground"). */
+  paintedGround: boolean;
 }
 
 export interface PlannerActions {
@@ -180,6 +182,7 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
   units: DEFAULT_PREFERENCES.units,
   timeZoneMode: DEFAULT_PREFERENCES.defaultTimezoneBehavior,
   defaultLensMm: DEFAULT_PREFERENCES.defaultLensEquivalentMm,
+  paintedGround: DEFAULT_PREFERENCES.paintedGround,
 
   setLocation(loc, opts) {
     const prev = get();
@@ -332,6 +335,7 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
       units: prefs.units,
       defaultLensMm: prefs.defaultLensEquivalentMm,
       timeZoneMode: prefs.defaultTimezoneBehavior,
+      paintedGround: prefs.paintedGround,
     };
     if (prefs.defaultTimezoneBehavior !== prev.timeZoneMode && prev.location) {
       // Same instant, read in the other zone: "18:30 at the place" becomes "08:30 at home".

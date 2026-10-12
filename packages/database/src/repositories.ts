@@ -452,7 +452,7 @@ export function usersRepo(db: Db) {
 /** The preference columns of a profile (plan §17); what the API reads and patches. */
 export type ProfilePreferences = Pick<
   Profile,
-  'units' | 'defaultTimezoneBehavior' | 'defaultLensEquivalentMm'
+  'units' | 'defaultTimezoneBehavior' | 'defaultLensEquivalentMm' | 'paintedGround'
 >;
 
 /** What a user without a profile row gets — the same values the table defaults to. */
@@ -460,6 +460,7 @@ export const PROFILE_DEFAULTS: ProfilePreferences = {
   units: 'metric',
   defaultTimezoneBehavior: 'location',
   defaultLensEquivalentMm: 24,
+  paintedGround: true,
 };
 
 /**
@@ -476,6 +477,7 @@ export function profilesRepo(db: Db) {
         units: p.units,
         defaultTimezoneBehavior: p.defaultTimezoneBehavior,
         defaultLensEquivalentMm: p.defaultLensEquivalentMm,
+        paintedGround: p.paintedGround,
         customized: true,
       };
     },
@@ -492,6 +494,7 @@ export function profilesRepo(db: Db) {
         units: p.units,
         defaultTimezoneBehavior: p.defaultTimezoneBehavior,
         defaultLensEquivalentMm: p.defaultLensEquivalentMm,
+        paintedGround: p.paintedGround,
       };
     },
   };
