@@ -119,6 +119,11 @@ export interface TerrainHorizonState {
   moonAboveTerrain: boolean | null;
   /** Today's first/last light over the terrain and the visible spells. */
   sunEvents: TerrainSunEvents;
+  /**
+   * The Moon's crossings of the terrain horizon today (its moonrise/moonset as the flat-horizon
+   * comparison); null without the lunar state.
+   */
+  moonEvents: TerrainSunEvents | null;
 }
 
 export interface SceneState {

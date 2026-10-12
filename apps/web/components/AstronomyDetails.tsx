@@ -208,6 +208,22 @@ function MoonDetails({
           label="Moonrise / set"
           value={`${lunar.moonrise ? formatWallTime(lunar.moonrise, tz) : '—'} / ${lunar.moonset ? formatWallTime(lunar.moonset, tz) : '—'}`}
         />
+        {scene.terrainHorizon?.moonEvents?.differsFromAstronomical ? (
+          <Row
+            label="Moon over terrain"
+            value={
+              scene.terrainHorizon.moonEvents.visible.length === 0
+                ? 'never today'
+                : scene.terrainHorizon.moonEvents.visible
+                    .map(
+                      (v) =>
+                        `${formatWallTime(v.from, tz)}–${v.to.getTime() >= scene.dayEvents.dayEnd.getTime() ? '24:00' : formatWallTime(v.to, tz)}`,
+                    )
+                    .join(' · ')
+            }
+            testId="terrain-moon-spells"
+          />
+        ) : null}
         <Row
           label="Moon disc"
           value={describeDisc(

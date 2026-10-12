@@ -7,6 +7,7 @@ import {
   astronomy as defaultAstronomy,
   galacticCentrePosition,
   milkyWayCoreFrom,
+  moonPosition,
   utcToWallClock,
   type AstronomyService,
   type DayEvents,
@@ -72,7 +73,10 @@ export interface SceneInputs {
 
 // Terrain sun events per (profile, civil day): the scan is ~300 solar positions, so it is memoised
 // per profile rather than repeated on every scrub tick.
-const terrainEventCache = new WeakMap<HorizonProfile, Map<string, TerrainSunEvents>>();
+const terrainEventCache = new WeakMap<
+  HorizonProfile,
+  Map<string, { sun: TerrainSunEvents; moon: TerrainSunEvents | null }>
+>();
 
 function terrainHorizonState(
   profile: HorizonProfile,
@@ -89,9 +93,9 @@ function terrainHorizonState(
     perDay = new Map();
     terrainEventCache.set(profile, perDay);
   }
-  let sunEvents = perDay.get(key);
-  if (!sunEvents) {
-    sunEvents = terrainSunEvents(
+  let events = perDay.get(key);
+  if (!events || (lunar && !events.moon)) {
+    const sunEvents = terrainSunEvents(
       profile,
       (t) => {
         const s = svc.getSolarState({
@@ -109,8 +113,26 @@ function terrainHorizonState(
         sunset: dayEvents.sunset,
       },
     );
+    // The Moon's crossings the same way (with the lunar state, i.e. moon planning): "when does
+    // the Moon clear the ridge?" — its own rise/set as the flat-horizon comparison.
+    const moonEvents = lunar
+      ? terrainSunEvents(
+          profile,
+          (t) => {
+            const m = moonPosition(t, location.point.latitude, location.point.longitude);
+            return { azimuthDeg: m.azimuthDeg, elevationDeg: m.topocentricElevationDeg };
+          },
+          {
+            dayStart: dayEvents.dayStart,
+            dayEnd: dayEvents.dayEnd,
+            sunrise: lunar.moonrise,
+            sunset: lunar.moonset,
+          },
+        )
+      : null;
     if (perDay.size > 8) perDay.clear();
-    perDay.set(key, sunEvents);
+    events = { sun: sunEvents, moon: moonEvents };
+    perDay.set(key, events);
   }
   return {
     profile,
@@ -119,7 +141,8 @@ function terrainHorizonState(
     moonAboveTerrain: lunar
       ? aboveTerrain(profile, lunar.azimuthDegrees, lunar.elevationDegrees, MOON_SEMIDIAMETER_DEG)
       : null,
-    sunEvents,
+    sunEvents: events.sun,
+    moonEvents: lunar ? events.moon : null,
   };
 }
 

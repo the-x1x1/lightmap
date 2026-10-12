@@ -519,7 +519,11 @@ moon details; the preview-basis Terrain row names the sampled reach and the high
 light finder tags moments that are **behind terrain** and can hide them. Every surface carries the
 caveat: terrain only — trees, buildings and cloud on the ridge are not in the elevation model,
 a sharp ridgeline can sit between samples, and terrain beyond the sampled reach was not sampled.
-In polar summer the rows read "up at midnight" rather than a time. No profile is kept when fewer
+In polar summer the rows read "up at midnight" rather than a time. With moon planning the same
+scan runs for the Moon (`terrainHorizon.moonEvents`, memoised per profile and day beside the
+Sun's): when the ridge changes its day, the Moon details list the spells it is over the terrain
+— "Moon over terrain: 00:00–05:52 · 21:31–24:00" — the full Moon of 31 May at Kailua clearing
+the test ridge more than an hour after its own moonrise. No profile is kept when fewer
 than 60 % of the samples answered or the ground height at the pin is unknown, and none exists on
 the ellipsoid fallback (every sample answers "unknown", never "flat").
 

@@ -252,6 +252,31 @@ describe('buildSceneState — Kailua Beach, 31 May 2026, 12:30 (acceptance case)
     const noon = buildSceneState(inputs({ horizonProfile: profile }));
     expect(noon.terrainHorizon!.sunAboveTerrain).toBe(true);
     expect(noon.terrainHorizon!.sunEvents).toBe(ev);
+    // Without the lunar state there are no Moon crossings; with it, the full Moon of 31 May
+    // (rising in the ESE that evening, behind the same ridge) clears the terrain late — more than
+    // an hour after its own moonrise — and the sun events are the same memoised object.
+    expect(
+      buildSceneState(inputs({ horizonProfile: profile, includeLunar: false })).terrainHorizon!
+        .moonEvents,
+    ).toBeNull();
+    const night = buildSceneState(
+      inputs({
+        horizonProfile: profile,
+        includeLunar: true,
+        utc: localSelectionToUtc({ year: 2026, month: 5, day: 31 }, 21 * 60, kailua.timeZone),
+      }),
+    );
+    const mev = night.terrainHorizon!.moonEvents!;
+    expect(mev).not.toBeNull();
+    expect(night.terrainHorizon!.sunEvents).toBe(ev);
+    expect(mev.differsFromAstronomical).toBe(true);
+    expect(night.lunar!.moonrise).not.toBeNull();
+    // Up at midnight (it set over the sea at 05:52), then back over the ridge in the evening.
+    expect(mev.startsVisible).toBe(true);
+    expect(mev.visible.length).toBe(2);
+    const evening = mev.visible[1]!;
+    expect(evening.from.getTime() - night.lunar!.moonrise!.getTime()).toBeGreaterThan(60 * 60_000);
+    expect(mev.endsVisible).toBe(true);
   });
 });
 
