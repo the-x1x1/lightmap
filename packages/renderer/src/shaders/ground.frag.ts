@@ -159,6 +159,25 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         ground *= 1.0 + nearW * 0.3 * (fine - 0.45);
     }
 
+    // Micro-relief: the grain read as small bumps, lit by the scene's own Sun direction, so rock
+    // and scree show texture that turns with the light through the day. A shading of the albedo
+    // only (the mesh, its normals and the shadows are untouched), strongest on bare ground, gone
+    // on snow, and fading beyond a few kilometres where it would only shimmer.
+    float reliefW = max(rocky, alpine * 0.7) * (1.0 - snowy) * smoothstep(6000.0, 800.0, dist);
+    if (reliefW > 0.0)
+    {
+        float e = 6.0;
+        vec3 pe = positionWC / 60.0 + 5.0;
+        float gx = lmFbm(pe + vec3(e / 60.0, 0.0, 0.0)) - lmFbm(pe - vec3(e / 60.0, 0.0, 0.0));
+        float gy = lmFbm(pe + vec3(0.0, e / 60.0, 0.0)) - lmFbm(pe - vec3(0.0, e / 60.0, 0.0));
+        // The gradient is in world axes; read it as east/north in the surface frame (the
+        // difference is a rotation of a random field, which changes nothing a viewer can tell).
+        vec3 bumpEC = normalize(materialInput.normalEC + materialInput.tangentToEyeMatrix * vec3(-gx * 2.5, -gy * 2.5, 0.0));
+        float flat_ = max(dot(materialInput.normalEC, czm_lightDirectionEC), 0.0);
+        float bumped = max(dot(bumpEC, czm_lightDirectionEC), 0.0);
+        ground *= clamp(1.0 + reliefW * 0.9 * (bumped - flat_), 0.7, 1.3);
+    }
+
     material.diffuse = ground * u_brightness;
     // Rock and snow are what they are; open ground lets the basemap's own hue through.
     float cover = max(rocky, max(snowy, alpine * 0.8));
