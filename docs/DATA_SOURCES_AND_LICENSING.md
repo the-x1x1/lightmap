@@ -71,9 +71,12 @@ Copernicus Sentinel data (2021) processed by ESA WorldCover consortium". The **C
 Land Cover** (CGLS-LC100, 2015–2019, 100 m) is CC BY 4.0: "© Copernicus Service information
 2019". Either licence allows commercial use with attribution. The product is published as
 GeoTIFF; serving it as XYZ tiles is the operator's job (a TiTiler or a pre-rendered tile set
-on the operator's own host) — the public viewers' tile endpoints are not licensed for third-party
-apps and are not to be configured here. The tile host must send CORS headers (the pixels are
-read); without them the read fails cleanly and the procedural surface stands alone.
+on the operator's own host). ESA also publishes a WMTS for WorldCover on Terrascope
+(`https://services.terrascope.be/wmts/v2?layer=WORLDCOVER_2021_MAP&style=&tilematrixset=EPSG:3857&Service=WMTS&Request=GetTile&Version=1.0.0&Format=image/png&TileMatrix={z}&TileCol={x}&TileRow={y}`
+is the XYZ form of it); before configuring it, confirm Terrascope's terms of use for an
+application and that the endpoint answers with CORS headers — the viewer's own tile cache is
+not a licence. The tile host must send CORS headers (the pixels are read); without them the
+read fails cleanly and the procedural surface stands alone.
 
 ### Ground detail atlas (bundled)
 
