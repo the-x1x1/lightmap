@@ -105,6 +105,12 @@ export function toWinAnsi(text: string): string {
     }
     const high = WINANSI_HIGH[ch];
     const code = high ?? ch.codePointAt(0)!;
+    // Courier has no glyph for a control character: a tab reads as two spaces, the rest vanish.
+    if (code === 0x09) {
+      out += '  ';
+      continue;
+    }
+    if (code < 0x20) continue;
     if (high === undefined && (code > 0xff || (code >= 0x80 && code < 0xa0))) {
       out += '?';
       continue;
@@ -177,28 +183,30 @@ export function buildPdf(
   };
   const textLine = (text: string, size: number) => {
     if (y - LINE_PT < MARGIN) newPage();
-    page.ops.push(
-      `BT /F1 ${size} Tf ${num(MARGIN)} ${num(y - size)} Td ${pdfString(toWinAnsi(text))} Tj ET`,
-    );
+    page.ops.push(`BT /F1 ${size} Tf ${num(MARGIN)} ${num(y - size)} Td ${pdfString(text)} Tj ET`);
     y -= size === FONT_PT ? LINE_PT : LINE_PT + 3;
   };
   for (const block of blocks) {
+    // Wrapped on the WinAnsi text that is drawn (a substitute such as "(cloud)" is wider than
+    // the glyph it stands for), so the columns hold.
     const lines = block.lines.flatMap((l, i) =>
-      wrapLine(l, block.heading && i === 0 ? HEADING_CHARS : LINE_CHARS),
+      wrapLine(toWinAnsi(l), block.heading && i === 0 ? HEADING_CHARS : LINE_CHARS),
     );
     // The heading is the first line of the block; a wrapped heading's continuations are headings too.
-    const headingLines = block.heading ? wrapLine(block.lines[0] ?? '', HEADING_CHARS).length : 0;
-    // The picture never taller than the page's text area.
+    const headingLines = block.heading
+      ? wrapLine(toWinAnsi(block.lines[0] ?? ''), HEADING_CHARS).length
+      : 0;
+    // The picture never taller than what the page leaves after the block's own text, so text
+    // and picture always share a page.
+    const textH = lines.length * LINE_PT + headingLines * 3;
+    const maxImgH = Math.max(60, PAGE_H - 2 * MARGIN - textH - 2 * LINE_PT);
     const imgW = block.image
-      ? Math.min(
-          block.imageWidthPt ?? 240,
-          ((PAGE_H - 2 * MARGIN - LINE_PT) * block.image.width) / block.image.height,
-        )
+      ? Math.min(block.imageWidthPt ?? 240, (maxImgH * block.image.width) / block.image.height)
       : (block.imageWidthPt ?? 240);
     const imgH = block.image ? (imgW * block.image.height) / block.image.width : 0;
-    const need = lines.length * LINE_PT + (block.image ? imgH + LINE_PT : 0) + LINE_PT;
-    // Keep a short block (text and picture) together on one page.
-    if (need < PAGE_H - 2 * MARGIN && y - need < MARGIN) newPage();
+    const need = textH + (block.image ? imgH + LINE_PT : 0) + LINE_PT;
+    // Keep a block (text and picture) together on one page whenever it fits on one.
+    if (need <= PAGE_H - 2 * MARGIN && y - need < MARGIN) newPage();
     lines.forEach((l, i) => textLine(l, i < headingLines ? HEADING_PT : FONT_PT));
     if (block.image) {
       if (y - imgH < MARGIN) newPage();
@@ -281,8 +289,13 @@ function latin1Bytes(s: string): Uint8Array {
   return b;
 }
 
-/** Width and height from a JPEG's start-of-frame marker; null when it is not a JPEG. */
-export function jpegSize(bytes: Uint8Array): { width: number; height: number } | null {
+/**
+ * Width, height and component count from a JPEG's start-of-frame marker; null when it is not a
+ * JPEG, when the frame is empty, or when the scan or the end of the image comes first.
+ */
+export function jpegSize(
+  bytes: Uint8Array,
+): { width: number; height: number; components: number } | null {
   if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) return null;
   let i = 2;
   while (i + 9 < bytes.length) {
@@ -293,13 +306,17 @@ export function jpegSize(bytes: Uint8Array): { width: number; height: number } |
       i += 2;
       continue;
     }
+    // Entropy-coded data (SOS) or the end of the image before any frame: no frame to read.
+    if (marker === 0xda || marker === 0xd9) return null;
     const len = (bytes[i + 2]! << 8) | bytes[i + 3]!;
     // SOF0–SOF15 except the DHT/JPG/DAC markers that share the range.
-    if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc)
-      return {
-        height: (bytes[i + 5]! << 8) | bytes[i + 6]!,
-        width: (bytes[i + 7]! << 8) | bytes[i + 8]!,
-      };
+    if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+      const height = (bytes[i + 5]! << 8) | bytes[i + 6]!;
+      const width = (bytes[i + 7]! << 8) | bytes[i + 8]!;
+      const components = bytes[i + 9]!;
+      if (height === 0 || width === 0) return null;
+      return { height, width, components };
+    }
     i += 2 + len;
   }
   return null;

@@ -59,9 +59,78 @@ describe('pdf writer', () => {
     expect(LINE_CHARS).toBe(92);
   });
 
-  it('reads a JPEG’s size from its frame header', () => {
-    expect(jpegSize(tinyJpeg(320, 180))).toEqual({ width: 320, height: 180 });
+  it('reads a JPEG’s size and component count from its frame header', () => {
+    expect(jpegSize(tinyJpeg(320, 180))).toEqual({ width: 320, height: 180, components: 1 });
     expect(jpegSize(new Uint8Array([0x89, 0x50, 0x4e, 0x47]))).toBeNull();
+    // An APP1 segment and fill bytes before the frame are skipped; a three-component frame.
+    const app1 = [0xff, 0xe1, 0x00, 0x04, 0x41, 0x42];
+    const rgb = new Uint8Array([
+      0xff,
+      0xd8,
+      ...app1,
+      0xff,
+      0xff,
+      0xff,
+      0xc2,
+      0x00,
+      0x11,
+      0x08,
+      0x00,
+      0x10,
+      0x00,
+      0x20,
+      0x03,
+      0x01,
+      0x11,
+      0x00,
+      0x02,
+      0x11,
+      0x00,
+      0x03,
+      0x11,
+      0x00,
+      0xff,
+      0xd9,
+    ]);
+    expect(jpegSize(rgb)).toEqual({ width: 32, height: 16, components: 3 });
+    // The scan before any frame, or an empty frame: nothing to embed.
+    const sosFirst = new Uint8Array([
+      0xff, 0xd8, 0xff, 0xda, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3f, 0x00, 0xff, 0xd9,
+    ]);
+    expect(jpegSize(sosFirst)).toBeNull();
+    expect(jpegSize(tinyJpeg(0, 180))).toBeNull();
+    expect(jpegSize(tinyJpeg(320, 0))).toBeNull();
+  });
+
+  it('control characters never reach the text: a tab is two spaces, the rest vanish', () => {
+    expect(toWinAnsi('a\tb\u0007c\r')).toBe('a  bc');
+  });
+
+  it('keeps a block’s text and picture on one page even when the picture is tall', () => {
+    const tall: PdfImage = { jpeg: tinyJpeg(100, 2000), width: 100, height: 2000 };
+    const bytes = buildPdf(
+      [
+        { lines: Array.from({ length: 50 }, (_, i) => `filler ${i}`) },
+        { heading: true, lines: ['Tall picture', 'under its text'], image: tall },
+      ],
+      { title: 'tall' },
+    );
+    const s = latin1(bytes);
+    // The block moved to a fresh page whole: its text and the image are in the same content stream.
+    const streams = [...s.matchAll(/stream\n([\s\S]*?)\nendstream/g)].map((m) => m[1]!);
+    const withText = streams.find((c) => c.includes('(Tall picture) Tj'));
+    expect(withText).toBeDefined();
+    expect(withText).toContain('/Im0 Do');
+    expect(withText).not.toContain('(filler 0) Tj');
+  });
+
+  it('wraps on the WinAnsi text that is drawn, so a substitute never runs into the margin', () => {
+    const line = `${'x'.repeat(LINE_CHARS - 8)} ≥ 95 % ☁`; // 92 chars as typed, longer once substituted
+    const bytes = buildPdf([{ lines: [line] }], { title: 'wrap' });
+    const drawn = [...latin1(bytes).matchAll(/\(((?:\\.|[^)\\])*)\) Tj/g)].map((m) => m[1]!);
+    expect(drawn.length).toBeGreaterThan(1);
+    expect(drawn.every((t) => t.replace(/\\(.)/g, '$1').length <= LINE_CHARS)).toBe(true);
+    expect(drawn.join('|')).toMatch(/>= 95 %\|\s*\\\(cloud\\\)/);
   });
 
   it('writes a well-formed PDF: header, one object per part, exact xref offsets, trailer', () => {

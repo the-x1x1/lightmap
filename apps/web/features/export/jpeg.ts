@@ -25,7 +25,10 @@ export async function jpegFromDataUrl(dataUrl: string, quality = 0.85): Promise<
   if (dataUrl.startsWith('data:image/jpeg;base64,')) {
     const jpeg = bytesFromDataUrl(dataUrl);
     const size = jpeg ? jpegSize(jpeg) : null;
-    if (jpeg && size) return { jpeg, ...size };
+    // The PDF declares the image RGB: a three-component JPEG goes in as it is; a greyscale or
+    // CMYK one takes the canvas path below, which re-encodes it as RGB.
+    if (jpeg && size && size.components === 3)
+      return { jpeg, width: size.width, height: size.height };
   }
   try {
     const img = new Image();

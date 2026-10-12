@@ -195,6 +195,9 @@ on a failure (`release.yml` runs it after the deploy); the rest are by hand.
       fixed to the ground while panning and walking the pin a few metres (no swimming), fading
       out by 500 m; on Balanced the noise grain is back; the atlas loads once
       (`/textures/ground-detail.png`, one request in the network panel).
+- [ ] Click a building's façade (`BUILDINGS_PROVIDER=cesium-osm`, viewpoint mode at street
+      level): the pin lands on that building's footprint at ground level, not on the terrain
+      behind the tower; a click on open ground lands under the cursor.
 - [ ] Buildings in the horizon (`BUILDINGS_PROVIDER=cesium-osm`): pin open ground ringed by
       towers (Bryant Park lawn, 40.7536, −73.9832) in viewpoint mode — the skyline in the level
       guide shows the blocks (20–50° by bearing), the badge reads "Sun behind terrain or

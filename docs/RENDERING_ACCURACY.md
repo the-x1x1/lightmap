@@ -58,8 +58,9 @@ elevation ≈ 11° and measures the frame — the ground along the shadow line i
 the Sun side and the point just beyond `h / tan(el)` is fully lit (`shadow-tower` scene).
 **Caveat:** buildings only where `BUILDINGS_PROVIDER=cesium-osm` is configured (OpenStreetMap
 heights, which are often estimates or missing; they cast and receive the terrain's shadows and
-are lit by the same light); no trees anywhere; the terrain horizon and the ridge markers sample
-the DEM alone and never see buildings; shadow map resolution is
+are lit by the same light); no trees anywhere; the terrain horizon and the ridge markers take
+the mapped buildings in only within 2.5 km of the pin and only with that provider on (see
+"Terrain horizon"); shadow map resolution is
 finite (1024–4096) and softens with reach; terrain self-shadowing at grazing angles shows some
 shadow-map artefacts.
 

@@ -207,6 +207,8 @@ describe('fieldConditions', () => {
     expect(describeSnow(0.45).note).toMatch(/^deep snow/);
     expect(describeSnow(0.12, 'imperial').value).toBe('5 in on the ground');
     expect(formatSnowDepth(1.26)).toBe('1.3 m');
+    expect(formatSnowDepth(0.997)).toBe('1 m');
+    expect(formatSnowDepth(0.994)).toBe('99 cm');
     expect(formatSnowDepth(0.015)).toBe('2 cm');
     expect(formatSnowDepth(0.012, 'imperial')).toBe('1 in');
   });

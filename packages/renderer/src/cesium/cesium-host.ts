@@ -1241,14 +1241,40 @@ export class CesiumSceneHost implements SceneHost {
           const scene = this.scene;
           const hit = pickSurface(
             {
-              pickPositionSupported: scene.pickPositionSupported,
+              // The globe's own ray pick needs no depth texture; the buildings' does.
+              pickPositionSupported: true,
               pickPosition: (w) => {
-                // The ground, not a roof: with buildings on, the depth pick would land on
-                // the tileset, and the pin's height feeds the geoid and snow rules.
-                const ray = scene.camera.getPickRay(new C.Cartesian2(w.x, w.y));
+                const win = new C.Cartesian2(w.x, w.y);
+                // The ground under the cursor, not a roof and not the terrain behind a façade:
+                // with buildings on, the depth pick lands on the tileset where a building is
+                // under the cursor — keep that spot and put it on the terrain (the pin's height
+                // feeds the geoid and snow rules; the horizon treats a pin on a footprint as a
+                // roof). Without a building under the cursor the globe's ray pick is the ground.
+                if (this.buildings && scene.pickPositionSupported) {
+                  const picked: unknown = scene.pick(win);
+                  const onBuilding =
+                    picked instanceof C.Cesium3DTileFeature ||
+                    (typeof picked === 'object' &&
+                      picked !== null &&
+                      (picked as { primitive?: unknown }).primitive === this.buildings);
+                  if (onBuilding) {
+                    const p = scene.pickPosition(win);
+                    if (p) {
+                      const carto = C.Cartographic.fromCartesian(p);
+                      const h = scene.globe.getHeight(carto);
+                      return C.Cartesian3.fromRadians(
+                        carto.longitude,
+                        carto.latitude,
+                        h ?? carto.height,
+                      );
+                    }
+                  }
+                }
+                const ray = scene.camera.getPickRay(win);
                 const onTerrain = ray ? scene.globe.pick(ray, scene) : undefined;
                 if (onTerrain) return onTerrain;
-                const r = scene.pickPosition(new C.Cartesian2(w.x, w.y));
+                if (!scene.pickPositionSupported) return undefined;
+                const r = scene.pickPosition(win);
                 return r ?? undefined;
               },
               pickEllipsoid: (w) => scene.camera.pickEllipsoid(new C.Cartesian2(w.x, w.y)),
@@ -1304,6 +1330,7 @@ export class CesiumSceneHost implements SceneHost {
     this.destroyed = true;
     this.preRenderRemover?.();
     this.preRenderGroundRemover?.();
+    this.buildings = null;
     this.pickHandler?.destroy();
     this.groundMaterial?.destroy();
     this.groundMaterial = null;
