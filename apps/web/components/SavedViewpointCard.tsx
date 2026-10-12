@@ -71,7 +71,11 @@ export function SavedViewpointCard({
         <p className="mt-1 text-xs text-[var(--lm-text-muted)]">
           {viewpoint.weatherMode === 'SCENARIO'
             ? `Scenario: ${viewpoint.weatherScenario ?? '—'}`
-            : viewpoint.weatherMode.toLowerCase().replace('_', ' ')}
+            : `${viewpoint.weatherMode.toLowerCase().replace('_', ' ')}${
+                viewpoint.cloudCoverAtSave !== null && viewpoint.cloudCoverAtSave !== undefined
+                  ? ` · ${viewpoint.cloudCoverAtSave} % cloud at save`
+                  : ''
+              }`}
         </p>
         {night ? (
           <p
