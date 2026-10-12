@@ -15,6 +15,7 @@ import {
   landHintFromPixels,
   permanentSnowlineM,
   snowlineM,
+  snowlineWithForecast,
 } from '../src/ground-texture.ts';
 import { GROUND_MATERIAL_SOURCE, GROUND_UNIFORM_DEFAULTS } from '../src/shaders/ground.frag.ts';
 
@@ -82,6 +83,18 @@ describe('snowline', () => {
     expect(dayOfYearUtc(new Date('2026-01-01T00:00:00Z'))).toBe(1);
     expect(dayOfYearUtc(new Date('2026-12-31T23:59:59Z'))).toBe(365);
     expect(dayOfYearUtc(new Date('2024-12-31T12:00:00Z'))).toBe(366);
+  });
+});
+
+describe('snowlineWithForecast', () => {
+  it('pulls the line under the pin when the forecast has snow lying, pushes it over when bare, leaves it alone without a frame or ground', () => {
+    expect(snowlineWithForecast(2800, 0.3, 1600)).toBe(1450);
+    expect(snowlineWithForecast(1200, 0.3, 1600)).toBe(1200);
+    expect(snowlineWithForecast(1200, 0, 1600)).toBe(1750);
+    expect(snowlineWithForecast(2800, 0, 1600)).toBe(2800);
+    expect(snowlineWithForecast(2800, 0.01, 1600)).toBe(2800); // a dusting is not lying snow
+    expect(snowlineWithForecast(2800, null, 1600)).toBe(2800);
+    expect(snowlineWithForecast(2800, 0.3, null)).toBe(2800);
   });
 });
 

@@ -52,20 +52,21 @@ already knows it is in scenario mode and should not have asked.
 
 Every vendor response is converted into frames; nothing downstream knows the vendor.
 
-| Field                                                              | Unit                  | Notes                                 |
-| ------------------------------------------------------------------ | --------------------- | ------------------------------------- |
-| `timestamp`                                                        | UTC ISO               | hourly frames start on the hour       |
-| `cloudCoverTotal`                                                  | 0–100 %               | required                              |
-| `cloudCoverLow` / `Mid` / `High`                                   | 0–100 % or null       |                                       |
-| `precipitationProbability`                                         | 0–100 % or null       |                                       |
-| `precipitationAmount`                                              | mm/hour or null       |                                       |
-| `humidity`                                                         | 0–100 % or null       |                                       |
-| `visibility`                                                       | metres or null        |                                       |
-| `windSpeed`                                                        | m/s or null           |                                       |
-| `windDirection`                                                    | degrees from, or null | interpolated as an angle              |
-| `weatherCode`                                                      | WMO 4677 or null      | nearest frame wins when interpolating |
-| `directNormalIrradiance`, `diffuseRadiation`, `shortwaveRadiation` | W/m², optional        |                                       |
-| `temperature`, `dewPoint`, `apparentTemperature`                   | °C at 2 m, optional   | the shoot itself, not the light       |
+| Field                                                              | Unit                      | Notes                                                                          |
+| ------------------------------------------------------------------ | ------------------------- | ------------------------------------------------------------------------------ |
+| `timestamp`                                                        | UTC ISO                   | hourly frames start on the hour                                                |
+| `cloudCoverTotal`                                                  | 0–100 %                   | required                                                                       |
+| `cloudCoverLow` / `Mid` / `High`                                   | 0–100 % or null           |                                                                                |
+| `precipitationProbability`                                         | 0–100 % or null           |                                                                                |
+| `precipitationAmount`                                              | mm/hour or null           |                                                                                |
+| `humidity`                                                         | 0–100 % or null           |                                                                                |
+| `visibility`                                                       | metres or null            |                                                                                |
+| `windSpeed`                                                        | m/s or null               |                                                                                |
+| `windDirection`                                                    | degrees from, or null     | interpolated as an angle                                                       |
+| `weatherCode`                                                      | WMO 4677 or null          | nearest frame wins when interpolating                                          |
+| `directNormalIrradiance`, `diffuseRadiation`, `shortwaveRadiation` | W/m², optional            |                                                                                |
+| `temperature`, `dewPoint`, `apparentTemperature`                   | °C at 2 m, optional       | the shoot itself, not the light                                                |
+| `snowDepth`                                                        | m on the ground, optional | the Snow field line; the ground texture's snowline inside the forecast horizon |
 
 `interpolateFrame(frames, at)` gives a linear blend between the two bracketing hourly frames so
 scrubbing is continuous; null fields interpolate as null. A `WeatherSeries` wraps the frames with

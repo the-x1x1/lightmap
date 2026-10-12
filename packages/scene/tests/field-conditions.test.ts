@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { WeatherFrame } from '@lightmap/weather';
 import {
   describeAir,
+  describeSnow,
+  formatSnowDepth,
   describeWind,
   fieldConditions,
   formatTemperature,
@@ -187,6 +189,25 @@ describe('fieldConditions', () => {
       note: null,
     });
     expect(fieldConditions(frame({ temperature: null, dewPoint: 3 }), 30)[0]?.label).toBe('Wind');
+  });
+
+  it('adds a Snow line after the air when snow lies, and leaves it out for a dusting or bare ground', () => {
+    const lines = fieldConditions(frame({ temperature: -3, snowDepth: 0.12 }), 10);
+    expect(lines.map((l) => l.label)).toEqual(['Air', 'Snow', 'Wind', 'Humidity']);
+    expect(lines[1]).toMatchObject({ value: '12 cm on the ground' });
+    expect(lines[1]?.note).toMatch(/^snow underfoot/);
+    expect(fieldConditions(frame({ snowDepth: 0.004 }), 10).map((l) => l.label)).toEqual([
+      'Wind',
+      'Humidity',
+    ]);
+    expect(fieldConditions(frame({ snowDepth: 0 }), 10).map((l) => l.label)).toEqual([
+      'Wind',
+      'Humidity',
+    ]);
+    expect(describeSnow(0.45).note).toMatch(/^deep snow/);
+    expect(describeSnow(0.12, 'imperial').value).toBe('5 in on the ground');
+    expect(formatSnowDepth(1.26)).toBe('1.3 m');
+    expect(formatSnowDepth(0.015)).toBe('2 cm');
   });
 
   it('lists the wind and the humidity with their notes', () => {

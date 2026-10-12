@@ -36,6 +36,7 @@ const sample = {
     temperature_2m: [24.1, 23.5, 23],
     dew_point_2m: [18.2, 18.6, 19],
     apparent_temperature: [26, 25.5, 25],
+    snow_depth: [0, 0.02, 0.05],
   },
 };
 
@@ -58,6 +59,7 @@ describe('Open-Meteo normalisation', () => {
       visibility: 40000,
       temperature: 24.1,
       dewPoint: 18.2,
+      snowDepth: 0,
       apparentTemperature: 26,
     });
     expect(s.latitude).toBe(21.4);
@@ -103,6 +105,7 @@ describe('Open-Meteo normalisation', () => {
     expect(seen[0]).toContain('temperature_2m');
     expect(seen[0]).toContain('dew_point_2m');
     expect(seen[0]).toContain('apparent_temperature');
+    expect(seen[0]).toContain('snow_depth');
     expect(seen[0]).toContain('timezone=UTC');
     expect(p.getCapabilities().commercialReview).toBe('approved');
     expect(new OpenMeteoProvider().getCapabilities().commercialReview).toBe('conditional');

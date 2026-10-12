@@ -153,7 +153,9 @@ scree and alpine ground above a treeline (900 m under the climatic snowline, fix
 the year), snow above a snowline that follows the latitude
 (≈ 5 200 m at the equator, ≈ 3 000 m at 45°, ≈ 1 700 m at 60°) and the season (lower through
 winter by a share that grows with latitude: the Alps snowy from ≈ 1 500 m in February, bare to
-≈ 3 000 m in August; the tropics barely move) and lies lower on poleward faces, and a strip of
+≈ 3 000 m in August; the tropics barely move) and lies lower on poleward faces — and, inside the forecast horizon, the forecast's own word:
+when the frame has snow lying at the model's grid point (≥ 2 cm) the snowline drops to just
+under the pin's height, and when it has the ground bare it rises to just over it — and a strip of
 shore where flat ground meets sea level (`ground-texture.ts`, tested). The inputs are the
 terrain's own height, slope and aspect and a noise field anchored to the fragment's world
 position, so patches stay put as the camera moves. One regional cue comes from the bundled

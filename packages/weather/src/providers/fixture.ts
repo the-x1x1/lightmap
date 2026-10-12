@@ -138,6 +138,8 @@ export class FixtureWeatherProvider implements WeatherProvider {
       apparentTemperature:
         Math.round((temperature + (temperature < 10 ? -1.5 : temperature > 25 ? 1.5 : 0)) * 10) /
         10,
+      // Snow lies where the fixture's air is freezing (the far north and south).
+      snowDepth: temperature <= 0 ? 0.1 : 0,
     };
   }
 }

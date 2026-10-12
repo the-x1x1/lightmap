@@ -220,6 +220,8 @@ export class SceneController {
     const ground = groundTextureFor(scene, this.landHint, {
       brightness: shading.basemapBrightness,
       seaLevelM: this.seaLevelM,
+      // The pin's height above sea level, for the forecast's snow (null until terrain is sampled).
+      groundHeightM: this.groundHeightKey ? this.groundHeightM - this.seaLevelM : null,
     });
     const groundKey = ground
       ? `${ground.snowlineM}|${ground.treelineM}|${ground.poleward}|${ground.strength}|${ground.aridity}|${ground.ice}|${ground.brightness}|${ground.seaLevelM}`

@@ -167,7 +167,9 @@ cloud cover, the direct and diffuse shares, haze, the WMO conditions, rain chanc
 ("600 m", "4.5 km", "24 km"; feet and miles on imperial), the **air** — the 2 m temperature
 with its dew point ("12 °C, dew point 10 °C"; Fahrenheit on imperial) and, when wind or humidity
 move it a whole degree or more, what it feels like ("2 °C (feels like −4 °C), dew point −1 °C";
-the provider's apparent temperature) — **wind** with the
+the provider's apparent temperature) — the **snow** when the model has it lying ("12 cm on the
+ground", inches on imperial; from 1 cm) with the note that tripod feet sink and the grid point
+may differ from the spot (deep from 30 cm: spikes or snowshoes) — **wind** with the
 quarter it blows from ("4 m/s from the ENE"; "calm" below 0.5 m/s) and **humidity**. Up to three
 field notes follow when there is something to act on (plan §1 B's humidity, fog and wind, and the
 cold): at or below 0 °C the air line says "freezing — batteries drain fast, keep spares warm; let

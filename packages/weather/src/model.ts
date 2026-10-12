@@ -35,6 +35,8 @@ export interface WeatherFrame {
   dewPoint?: number | null;
   /** Apparent ("feels like") temperature, °C: wind chill and humidity on the skin. */
   apparentTemperature?: number | null;
+  /** Snow lying on the ground at the model's grid point, metres (0 when bare). */
+  snowDepth?: number | null;
 }
 
 export interface WeatherCapabilities {
@@ -149,6 +151,7 @@ export function interpolateFrame(frames: readonly WeatherFrame[], at: Date): Wea
     temperature: mix(a.temperature, b.temperature),
     dewPoint: mix(a.dewPoint, b.dewPoint),
     apparentTemperature: mix(a.apparentTemperature, b.apparentTemperature),
+    snowDepth: mix(a.snowDepth, b.snowDepth),
   };
 }
 

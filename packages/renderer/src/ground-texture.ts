@@ -25,10 +25,32 @@ export interface GroundTextureParams {
   seaLevelM: number;
 }
 
-/** What the renderer knows beyond the scene: the chart dimming and the geoid at the pin. */
+/** What the renderer knows beyond the scene: the chart dimming, the geoid and the ground at the pin. */
 export interface GroundTextureContext {
   brightness: number;
   seaLevelM: number;
+  /** The terrain's height at the pin above sea level, metres; null until sampled. */
+  groundHeightM?: number | null;
+}
+
+/** Snow on the ground at the model's grid point from this depth paints the pin's height snowy, metres. */
+export const FORECAST_SNOW_M = 0.02;
+
+/**
+ * The snowline with the forecast's word on it: inside the forecast horizon the frame says
+ * whether snow lies at the pin's own height (the model's grid point), so the line is pulled
+ * down to just under the pin when it does and pushed up to just over it when it does not;
+ * beyond the horizon (a scenario, no frame) the latitude-and-season rule stands alone.
+ */
+export function snowlineWithForecast(
+  climatologicalM: number,
+  snowDepthM: number | null | undefined,
+  groundHeightM: number | null | undefined,
+): number {
+  if (snowDepthM === null || snowDepthM === undefined) return climatologicalM;
+  if (groundHeightM === null || groundHeightM === undefined) return climatologicalM;
+  if (snowDepthM >= FORECAST_SNOW_M) return Math.min(climatologicalM, groundHeightM - 150);
+  return Math.max(climatologicalM, groundHeightM + 150);
 }
 
 /** What the coarse basemap's colour says about the region around a point. */
@@ -123,7 +145,13 @@ export function groundTextureFor(
   if (!scene.render.shadows) return null;
   const lat = scene.location.point.latitude;
   return {
-    snowlineM: Math.round(snowlineM(lat, dayOfYearUtc(scene.utc))),
+    snowlineM: Math.round(
+      snowlineWithForecast(
+        snowlineM(lat, dayOfYearUtc(scene.utc)),
+        scene.atmosphere.frame?.snowDepth,
+        context.groundHeightM,
+      ),
+    ),
     treelineM: Math.round(Math.max(0, permanentSnowlineM(lat) - 900)),
     poleward: lat < 0 ? -1 : 1,
     strength: 1,

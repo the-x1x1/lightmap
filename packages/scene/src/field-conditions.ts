@@ -33,7 +33,7 @@ export function windStrength(mps: number): WindStrength {
 export type MoistureRisk = 'fog' | 'mist' | 'dew-likely' | 'dew-possible' | null;
 
 export interface FieldLine {
-  label: 'Air' | 'Wind' | 'Humidity';
+  label: 'Air' | 'Snow' | 'Wind' | 'Humidity';
   /** "4 °C, dew point 2 °C", "9 mph from the ENE", "calm", "97 %". */
   value: string;
   /** What to do about it, or null when there is nothing to act on. */
@@ -181,8 +181,29 @@ const MOISTURE_NOTE: Record<Exclude<MoistureRisk, null>, string> = {
   'dew-possible': 'a calm, mostly clear night this humid — dew on the glass is possible',
 };
 
+/** Snow on the ground from this depth counts as lying snow, metres (the model's grid-point value). */
+export const SNOW_ON_GROUND_M = 0.01;
+
+/** "12 cm" / "5 in" of lying snow. */
+export function formatSnowDepth(m: number, units: DistanceUnits = 'metric'): string {
+  if (units === 'imperial') return `${Math.round(m / 0.0254)} in`;
+  return m >= 1 ? `${(Math.round(m * 10) / 10).toString()} m` : `${Math.round(m * 100)} cm`;
+}
+
+/** The Snow line: lying snow at the model's grid point, with the practical note. */
+export function describeSnow(depthM: number, units: DistanceUnits = 'metric'): FieldLine {
+  return {
+    label: 'Snow',
+    value: `${formatSnowDepth(depthM, units)} on the ground`,
+    note:
+      depthM >= 0.3
+        ? 'deep snow — tripod legs sink; spikes or snowshoes, and the model’s grid point may differ from the spot'
+        : 'snow underfoot — tripod feet sink, cold batteries; the model’s grid point may differ from the spot',
+  };
+}
+
 /**
- * The lines for the weather details: the air, the wind, then the humidity with its fog or dew
+ * The lines for the weather details: the air, the snow when it lies, the wind, then the humidity with its fog or dew
  * note. Lines whose field the frame lacks are left out; a null frame (a scenario) gives none.
  */
 export function fieldConditions(
@@ -201,6 +222,12 @@ export function fieldConditions(
         frame.apparentTemperature ?? null,
       ),
     );
+  if (
+    frame.snowDepth !== null &&
+    frame.snowDepth !== undefined &&
+    frame.snowDepth >= SNOW_ON_GROUND_M
+  )
+    out.push(describeSnow(frame.snowDepth, units));
   if (frame.windSpeed !== null) out.push(describeWind(frame.windSpeed, frame.windDirection, units));
   if (frame.humidity !== null) {
     const risk = moistureRisk(frame, sunElevationDeg);

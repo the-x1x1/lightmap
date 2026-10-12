@@ -62,6 +62,7 @@ const HOURLY_FIELDS = [
   'temperature_2m',
   'dew_point_2m',
   'apparent_temperature',
+  'snow_depth',
 ] as const;
 
 interface OpenMeteoResponse {
@@ -232,6 +233,7 @@ export function normalizeOpenMeteo(
       temperature: num(h.temperature_2m?.[i]),
       dewPoint: num(h.dew_point_2m?.[i]),
       apparentTemperature: num(h.apparent_temperature?.[i]),
+      snowDepth: num(h.snow_depth?.[i]),
     });
   }
   return {
