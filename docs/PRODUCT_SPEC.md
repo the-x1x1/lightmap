@@ -709,7 +709,8 @@ runs installed. Installed launches arrive at `/?source=pwa`.
 
 Preferences are kept on the device (local storage) for everyone and saved to the profile when
 signed in (`GET/PATCH /api/account/profile`), the profile winning over the device copy when it
-loads — except a profile nobody has changed yet (`customized: false`), which adopts the choices
+loads — except a profile nobody has changed yet (`customized: false`: no row, or only the row
+sign-up creates, `customized_at` null), which adopts the choices
 made on this device while signed out rather than resetting them. A change applies at once and
 saves on its own; if the save fails the previous setting comes back and the panel says so.
 

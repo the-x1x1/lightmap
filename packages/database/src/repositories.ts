@@ -469,7 +469,10 @@ export const PROFILE_DEFAULTS: ProfilePreferences = {
  */
 export function profilesRepo(db: Db) {
   return {
-    /** `customized` is false until the user has changed something (no row yet). */
+    /**
+     * `customized` is false until the user has changed something: no row yet, or only the row
+     * sign-up creates (`customizedAt` null).
+     */
     async get(userId: string): Promise<ProfilePreferences & { customized: boolean }> {
       const [p] = await db.select().from(profiles).where(eq(profiles.userId, userId)).limit(1);
       if (!p) return { ...PROFILE_DEFAULTS, customized: false };
@@ -478,16 +481,30 @@ export function profilesRepo(db: Db) {
         defaultTimezoneBehavior: p.defaultTimezoneBehavior,
         defaultLensEquivalentMm: p.defaultLensEquivalentMm,
         paintedGround: p.paintedGround,
-        customized: true,
+        customized: p.customizedAt !== null,
       };
     },
-    /** Merge a partial change into the row, creating it from the defaults when missing. */
+    /** Merge a partial change into the row, creating it from the defaults when missing; marks it customised. */
     async update(userId: string, patch: Partial<ProfilePreferences>): Promise<ProfilePreferences> {
       const now = new Date();
       const [p] = await db
         .insert(profiles)
-        .values({ userId, ...PROFILE_DEFAULTS, ...patch, createdAt: now, updatedAt: now })
-        .onConflictDoUpdate({ target: profiles.userId, set: { ...patch, updatedAt: now } })
+        .values({
+          userId,
+          ...PROFILE_DEFAULTS,
+          ...patch,
+          customizedAt: now,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: profiles.userId,
+          set: {
+            ...patch,
+            updatedAt: now,
+            customizedAt: sql`coalesce(${profiles.customizedAt}, ${now})`,
+          },
+        })
         .returning();
       if (!p) throw new NotFoundError('profile');
       return {

@@ -91,6 +91,8 @@ export const profiles = pgTable('profiles', {
   defaultLensEquivalentMm: integer('default_lens_equivalent_mm').notNull().default(24),
   /** The procedural ground texture over the basemap (texture pack); off shows the bare basemap. */
   paintedGround: boolean('painted_ground').notNull().default(true),
+  /** When the user first changed a preference; null for the row sign-up creates. */
+  customizedAt: timestamp('customized_at', { withTimezone: true }),
   ...timestamps,
 });
 

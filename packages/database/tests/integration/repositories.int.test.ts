@@ -263,6 +263,13 @@ run('repositories (integration)', () => {
       customized: true,
     });
     expect(await profiles.get(bob)).toEqual({ ...PROFILE_DEFAULTS, customized: false });
+    // The row sign-up creates (Auth.js `createUser`) is not a choice: still not customised,
+    // until the user changes something — then it stays so, even back at the defaults.
+    await h.db.insert(schema.profiles).values({ userId: bob }).onConflictDoNothing();
+    expect(await profiles.get(bob)).toEqual({ ...PROFILE_DEFAULTS, customized: false });
+    await profiles.update(bob, { units: 'imperial' });
+    await profiles.update(bob, { units: 'metric' });
+    expect(await profiles.get(bob)).toEqual({ ...PROFILE_DEFAULTS, customized: true });
   });
 
   it('deletion requests become due after the window', async () => {
