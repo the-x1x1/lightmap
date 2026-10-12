@@ -236,6 +236,8 @@ export function WeekAhead({
                 () => setCopied('Copied.'),
                 () => setCopied('Could not reach the clipboard here.'),
               );
+            // The note fades on its own; a late update after unmount is harmless in React 19.
+            setTimeout(() => setCopied(null), 3000);
           }}
         >
           Copy as text
