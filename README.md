@@ -192,6 +192,9 @@ daily account-erasure / cache-purge job once the production database secret exis
 - **Sky is a model, not a spectral simulation** (single scattering in three bands for the sky
   gradient, Cesium's own dome in 3D); clouds are procedural coverage, not forecast shapes.
 - **Moon accuracy is ±0.02°** (sun ±0.01°); ample for framing, not an eclipse ephemeris.
+- **The exposure estimate is a model, not a meter**: a clear-sky illuminance curve scaled by the
+  forecast's or scenario's cloud, moonlight by phase and a starlight floor; no light pollution,
+  no local terrain shading. Every place it appears says "estimate".
 - **Real-reference imagery is disabled** until a licensed provider contract exists.
 - **Night sky**: Cesium's Moon mesh is hidden (it is lit by Cesium's own Sun and renders black at
   night); a moonlit atmosphere halo marks the Moon's position and lights the scene instead. Stars
