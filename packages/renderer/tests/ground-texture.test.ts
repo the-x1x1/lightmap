@@ -30,8 +30,10 @@ import {
 } from '../src/shaders/ground.frag.ts';
 
 const env: EnvironmentState = {
-  terrainProvider: 'ellipsoid',
-  basemapProvider: 'natural-earth-ii',
+  terrainAvailable: false,
+  terrainProviderId: 'ellipsoid',
+  basemapProviderId: 'natural-earth-ii',
+  basemapDetail: 'coarse',
   buildingsAvailable: false,
   groundElevationM: 2,
   attributions: [],

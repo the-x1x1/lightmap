@@ -925,8 +925,6 @@ export class CesiumSceneHost implements SceneHost {
         // the sun reach this street" needs the buildings in the picture, not just the ground.
         // (The ion token is `Ion.defaultAccessToken`, from `setIonToken` once capabilities arrive.)
         const tileset = await C.createOsmBuildingsAsync({
-          shadows: C.ShadowMode.ENABLED,
-          maximumScreenSpaceError: Math.max(8, this.scene.globe.maximumScreenSpaceError * 6),
           // Hand-set colours from OSM are kept; the default is a neutral light grey that takes
           // the Sun's colour.
           defaultColor: new C.Color(0.78, 0.76, 0.72, 1),
@@ -935,6 +933,9 @@ export class CesiumSceneHost implements SceneHost {
           tileset.destroy();
           return;
         }
+        // Not constructor options of the OSM helper (its typings take colour and style only).
+        tileset.shadows = C.ShadowMode.ENABLED;
+        tileset.maximumScreenSpaceError = Math.max(8, this.scene.globe.maximumScreenSpaceError * 6);
         this.buildings = tileset;
         this.scene.primitives.add(tileset);
         this.scene.requestRender();
@@ -1099,8 +1100,7 @@ export class CesiumSceneHost implements SceneHost {
         typeof OffscreenCanvas !== 'undefined'
           ? new OffscreenCanvas(w, h)
           : Object.assign(document.createElement('canvas'), { width: w, height: h });
-      const ctx = canvas.getContext('2d') as
-        OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D | null;
+      const ctx = canvas.getContext('2d');
       if (!ctx) return null;
       // Cesium decodes tiles for texture upload, which on browsers with ImageBitmap options
       // means flipped vertically; an HTMLImageElement comes as drawn. Undo the flip so a row
@@ -1110,7 +1110,7 @@ export class CesiumSceneHost implements SceneHost {
         ctx.translate(0, h);
         ctx.scale(1, -1);
       }
-      ctx.drawImage(image as CanvasImageSource, 0, 0, w, h);
+      ctx.drawImage(image, 0, 0, w, h);
       if (flipped) ctx.setTransform(1, 0, 0, 1, 0, 0);
       if (typeof ImageBitmap !== 'undefined' && image instanceof ImageBitmap) image.close();
       const fx = (carto.longitude - rect.west) / (rect.east - rect.west);

@@ -191,7 +191,12 @@ export function useScene(
     dayEvents,
     weather: {
       loading: (!dateSettled && Boolean(horizon?.fetchWorthwhile)) || weatherQuery.isLoading,
-      error: dateSettled && weatherQuery.error ? String(weatherQuery.error) : null,
+      error:
+        dateSettled && weatherQuery.error
+          ? weatherQuery.error instanceof Error
+            ? weatherQuery.error.message
+            : 'Weather unavailable'
+          : null,
       providerFailed,
       capabilities: weatherCaps,
       frames,
