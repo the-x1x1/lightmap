@@ -84,6 +84,20 @@ describe('estimateExposure', () => {
     const cloudy = estimateExposure({ sunElevationDeg: -30, sunTransmittance: 0.2, moon: null });
     expect(cloudy.illuminanceLux / stars.illuminanceLux).toBeCloseTo(0.52, 2);
   });
+  it('an overcast sky never steps at the horizon and dims the dusk by a stop or two, not three', () => {
+    const ev = (h: number) => estimateExposure({ sunElevationDeg: h, sunTransmittance: 0.2 }).ev100;
+    for (let h = -3; h <= 8; h += 0.25) expect(Math.abs(ev(h + 0.25) - ev(h))).toBeLessThan(0.6);
+    expect(Math.abs(ev(0.001) - ev(-0.001))).toBeLessThan(0.05);
+    const clearDusk = estimateExposure({ sunElevationDeg: -6, sunTransmittance: 1 }).ev100;
+    const dullDusk = ev(-6);
+    expect(clearDusk - dullDusk).toBeGreaterThan(1);
+    expect(clearDusk - dullDusk).toBeLessThan(2);
+    // By day the full factor applies: overcast noon ≈ 18 klx.
+    expect(
+      estimateExposure({ sunElevationDeg: 89, sunTransmittance: 0.2 }).illuminanceLux / 1000,
+    ).toBeCloseTo(17.6, 0);
+  });
+
   it('formats the value with a true minus and standard shutter steps', () => {
     expect(describeExposure(estimateExposure({ sunElevationDeg: -30, sunTransmittance: 1 }))).toBe(
       'EV −10.3 · 4 min f/2.8 ISO 3200',

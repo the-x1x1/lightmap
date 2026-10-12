@@ -7,7 +7,8 @@
  * illuminance ≈ 118 klx · e^(−0.19·(m−1)) over Kasten–Young air mass m, times sin(elevation)
  * onto the horizontal, plus a diffuse sky term ≈ 12 klx · sin(h)^0.7; twilight falls by a
  * factor of ten every 2.7° of Sun depression from ≈ 600 lx at sunset. Cloud scales the day by
- * the scenario's own direct-light share (overcast noon ≈ 15 klx, storm ≈ 8 klx). At night the
+ * the scenario's own direct-light share (overcast noon ≈ 18 klx, storm ≈ 9 klx), twilight by
+ * its square root, blended over the Sun's first five degrees. At night the
  * Moon adds ≈ 0.26 lx · sin(h) at full, falling steeply with phase, over a 0.002 lx
  * starlight-and-airglow floor; light pollution is not modelled, and the docs say so.
  * EV100 = log2(E / 2.5) (an incident meter's constant C = 250). Pure, unit-tested.
@@ -119,9 +120,14 @@ export function nearestShutter(seconds: number): number {
 
 export function estimateExposure(input: ExposureInput): ExposureEstimate {
   const h = input.sunElevationDeg;
-  const sky =
-    clearSkyIlluminanceLux(h) * (h > 0 ? cloudIlluminanceFactor(input.sunTransmittance) : 1);
-  // Cloud dims twilight and moonlight too, but less: the sky is the source, not the Sun.
+  // Cloud dims the day by the scenario's direct share; twilight by the square root of it (the
+  // sky, not the Sun, is the source then — an overcast dusk is a stop or two darker than a clear
+  // one, not three), blended over the Sun's first five degrees so the figure never steps at the
+  // horizon; the Moon and the stars by a gentler factor still.
+  const cloud = cloudIlluminanceFactor(input.sunTransmittance);
+  const twilightCloud = Math.sqrt(cloud);
+  const blend = Math.max(0, Math.min(1, h / 5));
+  const sky = clearSkyIlluminanceLux(h) * (twilightCloud + (cloud - twilightCloud) * blend);
   const night = input.moon
     ? moonlightLux(input.moon.elevationDeg, input.moon.illuminatedFraction)
     : 0;

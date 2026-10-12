@@ -151,5 +151,8 @@ describe('sky drift', () => {
     expect(formatShutterS(16.6)).toBe('17 s');
     expect(formatShutterS(1.44)).toBe('1.4 s');
     expect(formatShutterS(0.125)).toBe('1/8 s');
+    expect(formatShutterS(0.99)).toBe('1.0 s');
+    expect(formatShutterS(0.5)).toBe('0.5 s');
+    expect(formatShutterS(0.4)).toBe('1/3 s');
   });
 });

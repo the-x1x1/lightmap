@@ -77,8 +77,8 @@ export function shotBlock(
     `  Sun:     ${sun.elevationDeg > -0.833 ? `${Math.round(sun.elevationDeg)}° up, ${Math.round(sun.azimuthDeg)}° ${compassLabel(sun.azimuthDeg)}` : `${Math.round(Math.abs(sun.elevationDeg))}° below the horizon`}`,
     `  Day:     sunrise ${ev.sunrise ? formatWallTime(ev.sunrise, tz) : '—'} · sunset ${ev.sunset ? formatWallTime(ev.sunset, tz) : '—'}`,
   ];
+  const moon = moonPosition(at, v.latitude, v.longitude);
   if (sun.elevationDeg <= -6) {
-    const moon = moonPosition(at, v.latitude, v.longitude);
     const core = milkyWayCore(at, v.latitude, v.longitude);
     // "Up" by the same rise/set threshold the planner and the core verdict use, so the two lines
     // never contradict each other at the horizon.
@@ -93,13 +93,12 @@ export function shotBlock(
   const scenarioId =
     v.weatherScenario !== null && isScenarioId(v.weatherScenario) ? v.weatherScenario : null;
   const scenarioBased = v.weatherMode === 'SCENARIO' && scenarioId !== null;
-  const moonNow = moonPosition(at, v.latitude, v.longitude);
   const exposure = estimateExposure({
     sunElevationDeg: sun.elevationDeg,
     sunTransmittance: scenarioBased ? scenarioById(scenarioId).parameters.sunTransmittance : 1,
     moon: {
-      elevationDeg: moonNow.topocentricElevationDeg,
-      illuminatedFraction: moonNow.illuminatedFraction,
+      elevationDeg: moon.topocentricElevationDeg,
+      illuminatedFraction: moon.illuminatedFraction,
     },
   });
   lines.push(

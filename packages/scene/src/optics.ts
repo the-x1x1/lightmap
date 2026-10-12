@@ -132,6 +132,6 @@ export function skyDriftShutterS(focalLengthMm: number, cocMm: number, declinati
 /** "17 s", "1.4 s", "1/8 s" — a shutter for a read-out, to two significant figures. */
 export function formatShutterS(seconds: number): string {
   if (seconds >= 10) return `${Math.round(seconds)} s`;
-  if (seconds >= 1) return `${seconds.toFixed(1)} s`;
+  if (seconds >= 0.5) return `${seconds.toFixed(1)} s`;
   return `1/${Math.round(1 / seconds)} s`;
 }
