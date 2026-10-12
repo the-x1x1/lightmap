@@ -26,10 +26,14 @@ the shadow probe (a 20 m tower at Sun 11°, shadow measured against `h / tan(el)
   confidence; beyond it, five deterministic scenarios (Clear · Mostly Clear · Partly Cloudy ·
   Overcast · Rain/Storm) that are never called a forecast. Hour by hour with the golden hours'
   own verdicts, the week ahead, the air (temperature, dew point, feels like), wind and humidity on
-  the shoot itself, and an exposure estimate (EV and a starting setting, labelled an estimate).
+  the shoot itself, snow on the ground, and an exposure estimate (EV and a starting setting,
+  labelled an estimate).
 - Rendering: directional sunlight and terrain shadows from the computed sun vector, colour
   temperature by elevation, atmosphere and a weather grade so clear/partly/overcast look obviously
-  different. A 2D sun/shadow overlay always works, even without WebGL2.
+  different; a procedural ground texture (turf, rock, scree, snow by height, slope, season and the
+  forecast; the region's tone from the basemap) so the terrain reads as ground; 3D buildings
+  where an operator configures Cesium OSM Buildings. A 2D sun/shadow overlay always works, even
+  without WebGL2.
 - Every preview carries a source label (Real Reference / Simulated Lighting / Estimated Preview)
   and a confidence breakdown (astronomy, terrain, scene detail, weather, real reference), plus a
   "why does it look like this?" explanation.
@@ -54,7 +58,7 @@ the shadow probe (a 20 m tower at Sun 11°, shadow measured against `h / tan(el)
   planned sun (and the sun as it is now), its path, true level and the ridge over the live camera;
   saved projects open offline; installable as a PWA.
 - Accounts (passwordless email, optional Google), projects with notes and a shoot date, saved
-  viewpoints with thumbnails, planning-card, shot-list and calendar (.ics) export; preferences (metric or imperial, times in the place's zone or your own,
+  viewpoints with thumbnails, planning-card, shot-list (text and PDF) and calendar (.ics) export; preferences (metric or imperial, times in the place's zone or your own,
   the lens a new place starts with) kept on the device and in the profile.
 - Subscription plumbing in Stripe test mode with a central entitlement service (Free / Pro).
 - No uploads, no social feed, no location-discovery engine. It is a planning instrument.
