@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { milkyWayCore } from '@lightmap/astronomy';
-import { describeMilkyWay, describeNextPhases } from '../../features/planner/night-text.ts';
+import { fullMoonsAhead, milkyWayCore } from '@lightmap/astronomy';
+import {
+  describeDisc,
+  describeMilkyWay,
+  describeMoonSize,
+  describeNextPhases,
+  formatFullMoon,
+} from '../../features/planner/night-text.ts';
 
 describe('night read-outs', () => {
   it('names where the core stands and the reason, or that it is below the horizon', () => {
@@ -35,5 +41,38 @@ describe('night read-outs', () => {
     const tokyo = describeNextPhases(new Date('2026-05-31T10:00:00Z'), 'Asia/Tokyo');
     expect(tokyo.split(' · ')).toHaveLength(4);
     expect(tokyo).toMatch(/^Last quarter 8 Jun · New 15 Jun/);
+  });
+});
+
+describe('apparent sizes', () => {
+  it('the disc row: degrees alone on the map, with its share of the frame width at a viewpoint', () => {
+    expect(describeDisc(0.5329, null)).toBe('0.53°');
+    expect(describeDisc(0.5329, 0)).toBe('0.53°');
+    // 24 mm-equivalent (73.7°) and 400 mm (5.15°).
+    expect(describeDisc(0.52, 73.74)).toBe('0.52° · 0.6 % of frame');
+    expect(describeDisc(0.52, 5.153)).toBe('0.52° · 10 % of frame');
+    // A frame as wide as the disc.
+    expect(describeDisc(0.52, 0.52)).toBe('0.52° · 100 % of frame');
+  });
+
+  it('the Moon against its mean: wider, narrower or average, whole percent', () => {
+    expect(describeMoonSize(0.078)).toBe('8 % wider than average');
+    expect(describeMoonSize(-0.055)).toBe('6 % narrower than average');
+    expect(describeMoonSize(0.004)).toBe('average size');
+    expect(describeMoonSize(0)).toBe('average size');
+  });
+
+  it("names a full Moon by its date in the zone and its size: the year's closest and farthest", () => {
+    const r = fullMoonsAhead(new Date('2025-01-01T00:00:00Z'), 12);
+    expect(formatFullMoon(r.moons[r.closest]!, 'Pacific/Honolulu')).toBe('5 Nov (+8 %)');
+    expect(formatFullMoon(r.moons[r.farthest]!, 'Pacific/Honolulu')).toBe('12 Apr (−5 %)');
+    // 13 Apr 00:23 UTC is still 12 April in Hawaii; a zone ahead of UTC keeps the 13th.
+    expect(formatFullMoon(r.moons[r.farthest]!, 'Asia/Tokyo')).toBe('13 Apr (−5 %)');
+    expect(
+      formatFullMoon(
+        { at: new Date('2026-04-20T22:27:21Z'), distanceKm: 384_399, sizeVsMean: 0 },
+        'UTC',
+      ),
+    ).toBe('20 Apr (0 %)');
   });
 });

@@ -7,9 +7,14 @@ import {
   describeMilkyWayWindows,
   formatMilkyWayWindow,
   formatWallTime,
+  fullMoonsAhead,
   milkyWayWindows,
+  moonApparentDiameterDeg,
+  moonSizeVsMean,
+  sunApparentDiameterDeg,
   utcToLocalSelection,
   utcToWallClock,
+  type FullMoonSize,
   type LunarState,
 } from '@lightmap/astronomy';
 import { useMemo, useState } from 'react';
@@ -17,8 +22,11 @@ import { usePlannerStore } from '@/features/planner/store';
 import { useSettled } from '@/lib/use-settled';
 import {
   DARK_WINDOW_NIGHTS,
+  describeDisc,
   describeMilkyWay,
+  describeMoonSize,
   describeNextPhases,
+  formatFullMoon,
 } from '@/features/planner/night-text';
 import { useSeasonalEnvelope } from '@/features/planner/use-seasonal';
 import { describeLightWindows } from '@/features/planner/light-windows';
@@ -94,6 +102,52 @@ function DarkWindows({ scene, windowEnd }: { scene: SceneState; windowEnd: strin
 }
 
 /**
+ * The widest and the narrowest of the twelve full Moons ahead — which one to book the long-lens
+ * trip for — each a click away. Rendered only while the Moon details are open: the year's phase
+ * scan is some tens of milliseconds, memoised per civil day. Dates beyond a Free plan's window
+ * are named (they are almanac facts) but not jumped to.
+ */
+function FullMoons({ scene, windowEnd }: { scene: SceneState; windowEnd: string | null }) {
+  const setDate = usePlannerStore((s) => s.setDate);
+  const setMinutes = usePlannerStore((s) => s.setMinutes);
+  const tz = scene.timeZone;
+  const placeZone = scene.location.timeZone;
+  const from = useSettled(scene.dayEvents.dayStart.getTime(), 300);
+  const ahead = useMemo(() => fullMoonsAhead(new Date(from), 12), [from]);
+  if (ahead.closest < 0 || ahead.farthest < 0) return null;
+  const jump = (at: Date) => {
+    const sel = utcToLocalSelection(at, tz);
+    setDate(sel.date);
+    setMinutes(sel.minutes);
+  };
+  const entry = (m: FullMoonSize, testId: string) => {
+    const inWindow = !windowEnd || civilDateString(utcToWallClock(m.at, placeZone)) <= windowEnd;
+    const text = formatFullMoon(m, tz);
+    return inWindow ? (
+      <button
+        type="button"
+        className="underline decoration-dotted underline-offset-2 hover:text-[var(--lm-text)]"
+        title={`Jump the planner to this full Moon (${Math.round(m.distanceKm).toLocaleString('en-US')} km away)`}
+        data-testid={testId}
+        onClick={() => jump(m.at)}
+      >
+        {text}
+      </button>
+    ) : (
+      <span title="Beyond your plan’s date window · Pro" data-testid={testId}>
+        {text}
+      </span>
+    );
+  };
+  return (
+    <p className="mt-1 text-xs text-[var(--lm-text-muted)]" data-testid="full-moons">
+      Full Moons in the year ahead: widest {entry(ahead.moons[ahead.closest]!, 'full-moon-widest')}{' '}
+      · narrowest {entry(ahead.moons[ahead.farthest]!, 'full-moon-narrowest')}
+    </p>
+  );
+}
+
+/**
  * The Moon section: phase, position, rise/set, the phase calendar, the Milky Way core and — while
  * open — the dark windows ahead. Its open state lives here so it unmounts with the element when
  * the lunar state goes away (the `moon_planning` entitlement) and comes back.
@@ -143,10 +197,24 @@ function MoonDetails({
           label="Moonrise / set"
           value={`${lunar.moonrise ? formatWallTime(lunar.moonrise, tz) : '—'} / ${lunar.moonset ? formatWallTime(lunar.moonset, tz) : '—'}`}
         />
+        <Row
+          label="Moon disc"
+          value={describeDisc(
+            moonApparentDiameterDeg(lunar.distanceKm, lunar.elevationDegrees),
+            scene.camera.mode === 'viewpoint' ? scene.camera.fovDeg : null,
+          )}
+          testId="moon-disc"
+        />
+        <Row
+          label="Distance"
+          value={`${Math.round(lunar.distanceKm).toLocaleString('en-US')} km · ${describeMoonSize(moonSizeVsMean(lunar.distanceKm))}`}
+          testId="moon-distance"
+        />
       </dl>
       <p className="mt-1 text-xs text-[var(--lm-text-muted)]" data-testid="moon-next-phases">
         Next: {nextPhases}
       </p>
+      {moonOpen ? <FullMoons scene={scene} windowEnd={windowEnd} /> : null}
       {scene.nightSky ? (
         <p
           className={
@@ -250,6 +318,14 @@ export function AstronomyDetails({ scene, windowEnd = null }: AstronomyDetailsPr
             .padStart(2, '0')}`}
         />
         <Row label="Colour temp." value={`${Math.round(scene.atmosphere.colorTemperatureK)} K`} />
+        <Row
+          label="Sun disc"
+          value={describeDisc(
+            sunApparentDiameterDeg(s.distanceAu),
+            scene.camera.mode === 'viewpoint' ? scene.camera.fovDeg : null,
+          )}
+          testId="sun-disc"
+        />
         <Row
           label="Daylight"
           value={`${Math.floor(scene.dayEvents.daylightMinutes / 60)} h ${Math.round(scene.dayEvents.daylightMinutes % 60)} min`}

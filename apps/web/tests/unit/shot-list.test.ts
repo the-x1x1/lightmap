@@ -52,6 +52,11 @@ describe('shot list', () => {
     expect(night.find((l) => l.startsWith('  Core:'))).toMatch(
       /^ {2}Core: {4}3\d° up, \d+° S(SW|W) — Astronomical night, core 3\d° up, Moon down$/,
     );
+    // Full-Moon midnight (31 May 00:00 HST): the Moon is up, so the line adds how wide it is.
+    const moonlit = shotBlock({ ...base, id: 'v3', selectedDatetimeUtc: '2026-05-31T10:00:00Z' });
+    expect(moonlit.find((l) => l.startsWith('  Moon:'))).toMatch(
+      /^ {2}Moon: {4}\d+° up, \d+° [NESW]+, (99|100) % lit, 0\.5\d° across$/,
+    );
   });
 
   it('orders by time, nests variants under their parent, carries the notes and the honesty footer', () => {

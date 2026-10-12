@@ -82,6 +82,18 @@ export function relativeBearing(headingDeg: number, targetAzimuthDeg: number): n
   return d;
 }
 
+/**
+ * Share of the frame's width a disc of `diameterDeg` covers when it sits near the centre of a
+ * rectilinear lens: tan(θ/2) / tan(fov/2). The Moon at 0.52° is 0.6 % of a 24 mm-equivalent frame
+ * and 10 % of a 400 mm one. (Away from the centre a rectilinear lens stretches it a little; not
+ * modelled.)
+ */
+export function discFrameShare(diameterDeg: number, fovDeg: number): number {
+  const half = (deg: number) => Math.tan((Math.max(0, deg) * Math.PI) / 360);
+  const denom = half(fovDeg);
+  return denom > 0 ? half(diameterDeg) / denom : 0;
+}
+
 /** Is a direction (e.g. the Sun) inside the horizontal field of view? */
 export function isInFrame(
   camera: Pick<CameraState, 'headingDeg' | 'fovDeg'>,

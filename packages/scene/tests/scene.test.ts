@@ -12,6 +12,7 @@ import {
   actualFocalLengthMm,
   defaultCamera,
   directionFromFrame,
+  discFrameShare,
   equivalentFocalLengthMm,
   focalLengthForFov,
   frameCoordinates,
@@ -370,6 +371,16 @@ describe('camera model', () => {
     expect(frameCoordinates(c, 90, 10)).toBeNull(); // behind the camera
     const tilted = frameCoordinates({ ...c, pitchDeg: 20 }, 270, 20)!;
     expect(tilted.y).toBeCloseTo(0, 6);
+  });
+  it("a disc's share of the frame width follows the lens: the Moon fills 0.6 % of a 24 mm frame, 10 % at 400 mm", () => {
+    expect(discFrameShare(0.52, horizontalFovDeg(24))).toBeCloseTo(0.00605, 4);
+    expect(discFrameShare(0.52, horizontalFovDeg(400))).toBeCloseTo(0.1009, 3);
+    // The disc's own width exactly: a frame as wide as the disc is filled.
+    expect(discFrameShare(0.52, 0.52)).toBeCloseTo(1, 12);
+    // Linear in the disc at small angles, and well-defined at the edges.
+    expect(discFrameShare(1.04, 40) / discFrameShare(0.52, 40)).toBeCloseTo(2, 4);
+    expect(discFrameShare(0.52, 0)).toBe(0);
+    expect(discFrameShare(0, 40)).toBe(0);
   });
   it('names lighting geometry the way photographers do', () => {
     expect(lightingGeometry({ headingDeg: 270 }, 270, 10)).toBe('back-lit');

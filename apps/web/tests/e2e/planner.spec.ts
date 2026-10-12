@@ -107,6 +107,14 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
   await expect(page.getByTestId('moon-next-phases')).toContainText(
     /Last quarter [78] Jun · New 14 Jun/,
   );
+  // Apparent sizes: the Sun at 1.014 AU, the Moon near apogee (406 000 km, 5 % narrower than
+  // average); the widest of the twelve full Moons ahead is the December one, the narrowest June's.
+  await expect(page.getByTestId('sun-disc')).toHaveText('0.53°');
+  await expect(page.getByTestId('moon-disc')).toHaveText('0.48°');
+  await expect(page.getByTestId('moon-distance')).toContainText('5 % narrower than average');
+  await expect(page.getByTestId('full-moons')).toContainText(
+    'widest 23 Dec (+8 %) · narrowest 29 Jun (−5 %)',
+  );
   // Night planning: at noon the Milky Way line rules the sky out before anything else.
   await expect(page.getByTestId('milky-way')).toHaveAttribute('data-verdict', 'daylight');
   await expect(page.getByTestId('milky-way')).toContainText('Milky Way core:');

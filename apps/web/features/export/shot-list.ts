@@ -9,6 +9,7 @@ import {
   computeDayEvents,
   formatWallTime,
   milkyWayCore,
+  moonApparentDiameterDeg,
   moonPosition,
   sunPosition,
   utcToWallClock,
@@ -76,7 +77,7 @@ export function shotBlock(
     // "Up" by the same rise/set threshold the planner and the core verdict use, so the two lines
     // never contradict each other at the horizon.
     lines.push(
-      `  Moon:    ${core.moonUp ? `${Math.round(moon.elevationDeg)}° up, ${Math.round(moon.azimuthDeg)}° ${compassLabel(moon.azimuthDeg)}` : 'down'}, ${Math.round(moon.illuminatedFraction * 100)} % lit`,
+      `  Moon:    ${core.moonUp ? `${Math.round(moon.elevationDeg)}° up, ${Math.round(moon.azimuthDeg)}° ${compassLabel(moon.azimuthDeg)}` : 'down'}, ${Math.round(moon.illuminatedFraction * 100)} % lit${core.moonUp ? `, ${moonApparentDiameterDeg(moon.distanceKm, moon.elevationDeg).toFixed(2)}° across` : ''}`,
       `  Core:    ${core.elevationDeg > 0 ? `${Math.round(core.elevationDeg)}° up, ${Math.round(core.azimuthDeg)}° ${compassLabel(core.azimuthDeg)}` : 'below the horizon'} — ${core.reason}`,
     );
   }

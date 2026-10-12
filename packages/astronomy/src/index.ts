@@ -58,3 +58,4 @@ export {
 } from './solver.ts';
 export * from './phases.ts';
 export * from './night-sky.ts';
+export * from './apparent-size.ts';

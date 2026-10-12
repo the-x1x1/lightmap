@@ -166,6 +166,11 @@ the planning card), the **dark windows ahead** — the next nights the core can 
 click away (`milkyWayWindows()`) — and the core as a Light-finder body ("the core over that
 peak", dark-sky nights only). Geometry only — no sky-brightness or light-pollution model.
 
+Also delivered: **apparent sizes** — how wide the Sun and the Moon look from here and how much
+of the frame that is through the current lens; the Moon's distance against its mean and the
+widest/narrowest of the twelve full Moons ahead, each a click away (`moonApparentDiameterDeg`,
+`sunApparentDiameterDeg`, `fullMoonsAhead`, `discFrameShare`; tested against the almanac).
+
 Also delivered: **camera roll in the frame maths** (`frameCoordinates`/`directionFromFrame`
 optional roll, `levelLineSegment`, roll from the device orientation) — used by the field view
 so a hand-held phone's tilt is honoured. The planner's saved camera stays roll-free; a rolled
