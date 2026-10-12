@@ -6,7 +6,7 @@
  * open (one cached call per day against the plan's weather budget) and only inside the
  * forecast horizon; the rest read "beyond the forecast". A row's time is a jump to that window.
  */
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import {
   formatWallTime,
@@ -89,6 +89,20 @@ export function WeekAhead({
     if (d && r.data) framesByDate.set(d, r.data.frames);
   });
   const loading = open && results.some((r) => r.isLoading);
+  // The rows (seven days' events, windows and the Moon) are tens of milliseconds, and the shell
+  // re-renders this block on every scrub tick: recompute only when the week, the place, the zone,
+  // the dark nights or the fetched days change (the frames are read through a ref so the
+  // identity of the per-render map is not a dependency).
+  const framesKey = results
+    .map((r, i) => `${fetchable[i] ?? ''}:${r.data?.fetchedAt ?? ''}`)
+    .join('|');
+  const framesRef = useRef({ key: framesKey, map: framesByDate });
+  framesRef.current = { key: framesKey, map: framesByDate };
+  const rows = useMemo(() => {
+    const snap = framesRef.current;
+    const frames = snap.key === framesKey ? snap.map : new Map<string, readonly WeatherFrame[]>();
+    return from ? weekAheadRows({ latitude: lat, longitude: lng }, tz, from, frames, dark) : [];
+  }, [from, lat, lng, tz, dark, framesKey]);
   if (!from) return null;
   // Free and signed-out: the block is named and its reason given (plan §38), never hidden.
   if (!decision.allowed)
@@ -109,9 +123,6 @@ export function WeekAhead({
         </div>
       </details>
     );
-  // Seven days' events and windows are a few milliseconds; the block re-renders only on its own
-  // state and the queries, so this is not memoised.
-  const rows = weekAheadRows({ latitude: lat, longitude: lng }, tz, from, framesByDate, dark);
 
   const jump = (at: Date) => {
     const sel = utcToLocalSelection(at, tz);
