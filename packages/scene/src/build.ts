@@ -202,6 +202,7 @@ export function buildSceneState(inputs: SceneInputs): SceneState {
     weather: horizon,
     realReference: inputs.realReference,
     weatherProviderFailed: inputs.weather.providerFailed,
+    groundPainted: inputs.render.groundTexture !== false && inputs.render.shadows,
   });
   // When the user pins a scenario inside the forecast window, the weather dimension is a scenario.
   if (atmosphere.mode === 'SCENARIO' && confidence.weather !== 'SCENARIO') {

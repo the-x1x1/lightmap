@@ -389,6 +389,9 @@ export class CesiumSceneHost implements SceneHost {
     // the terrain providers request; on the ellipsoid fallback it simply does nothing.
     if (this.groundTextureFailed) return;
     if (!this.groundMaterial) {
+      // A fresh material starts with identity axes: the ground frame re-anchors on the next
+      // frame so the detail atlas is projected along the real east/north/up.
+      this.enuScratch.anchored = false;
       this.groundMaterial = new C.Material({
         fabric: {
           type: GROUND_MATERIAL_TYPE,
@@ -1261,12 +1264,11 @@ export class CesiumSceneHost implements SceneHost {
                     const p = scene.pickPosition(win);
                     if (p) {
                       const carto = C.Cartographic.fromCartesian(p);
+                      // The terrain's height there, once its tile is loaded; otherwise the
+                      // façade point's own height is no ground, so the ray pick below decides.
                       const h = scene.globe.getHeight(carto);
-                      return C.Cartesian3.fromRadians(
-                        carto.longitude,
-                        carto.latitude,
-                        h ?? carto.height,
-                      );
+                      if (h !== undefined)
+                        return C.Cartesian3.fromRadians(carto.longitude, carto.latitude, h);
                     }
                   }
                 }

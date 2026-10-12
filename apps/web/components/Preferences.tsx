@@ -86,23 +86,25 @@ export function Preferences() {
               : 'Times read as a clock on the spot shows them.'}
           </p>
         </div>
-        <label className="flex items-start gap-2 text-xs text-[var(--lm-text-muted)]">
+        <div className="flex items-start gap-2 text-xs text-[var(--lm-text-muted)]">
           <input
+            id="lm-pref-painted-ground"
             type="checkbox"
             className="mt-0.5"
             checked={prefs.paintedGround}
+            aria-describedby="lm-pref-painted-ground-help"
             onChange={(e) => update.mutate({ paintedGround: e.target.checked })}
             data-testid="pref-painted-ground"
           />
-          <span>
-            Painted ground
-            <span className="block">
+          <div>
+            <label htmlFor="lm-pref-painted-ground">Painted ground</label>
+            <p id="lm-pref-painted-ground-help">
               The terrain's surface drawn by rule — turf, rock, scree, snow by height, slope and
               season, land cover and a close-up grain where configured — over the map. Off shows the
               bare map under the same light.
-            </span>
-          </span>
-        </label>
+            </p>
+          </div>
+        </div>
         <label className="block text-xs text-[var(--lm-text-muted)]">
           Lens a new place starts with (mm, full-frame equivalent)
           <input

@@ -423,10 +423,19 @@ test('sign in (dev), create a project, save the viewpoint, reload and reopen it'
   await expect(page.getByTestId('pref-units-metric')).toHaveAttribute('aria-checked', 'true');
   // The painted-ground choice travels the same way.
   await expect(page.getByTestId('pref-painted-ground')).toBeChecked();
+  // The box unchecks at once (optimistic); the profile has it once the PATCH has landed.
+  const patched = page.waitForResponse(
+    (r) => r.request().method() === 'PATCH' && r.url().endsWith('/api/account/profile'),
+  );
   await page.getByTestId('pref-painted-ground').click();
   await expect(page.getByTestId('pref-painted-ground')).not.toBeChecked();
-  const profile = await page.request.get('/api/account/profile');
-  expect(((await profile.json()) as { paintedGround: boolean }).paintedGround).toBe(false);
+  await patched;
+  await expect
+    .poll(async () => {
+      const profile = await page.request.get('/api/account/profile');
+      return ((await profile.json()) as { paintedGround: boolean }).paintedGround;
+    })
+    .toBe(false);
   await page.getByTestId('pref-painted-ground').click();
   await expect(page.getByTestId('pref-painted-ground')).toBeChecked();
 });

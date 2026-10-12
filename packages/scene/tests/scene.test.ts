@@ -343,6 +343,20 @@ describe('confidence and source mode', () => {
       /Copernicus land cover$/,
     );
     expect(note(envFlat).notes.environment).toBe('No terrain data here — flat ground assumed');
+    // No terrain, no paint: the globe material does nothing on the ellipsoid; and the preference
+    // or the Minimal rung turns it off.
+    expect(note({ ...envFlat, landCover: 'worldcover' }).notes.environment).not.toContain(
+      'painted',
+    );
+    expect(
+      deriveConfidence({
+        astronomyInputsValid: true,
+        environment: envCoarse,
+        weather: horizon,
+        realReference: false,
+        groundPainted: false,
+      }).notes.environment,
+    ).not.toContain('painted');
   });
   it('maps to the three source labels', () => {
     expect(

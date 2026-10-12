@@ -13,6 +13,8 @@ export interface ConfidenceInput {
   realReference: boolean;
   /** True when the weather provider failed and the app fell back to a scenario. */
   weatherProviderFailed?: boolean;
+  /** Whether the ground texture is drawn at all (the operator's flag, the preference, the quality rung). */
+  groundPainted?: boolean;
 }
 
 export function terrainConfidence(env: EnvironmentState): ConfidenceLevel {
@@ -43,14 +45,15 @@ export function deriveConfidence(input: ConfidenceInput): ConfidenceState {
   const imagery = input.realReference ? 'REAL_REFERENCE' : 'NONE';
 
   // The ground texture's source is named, never graded: a tint on the surface, not detail.
+  const painted = input.groundPainted ?? true;
   const ground =
-    input.environment.landCover === 'worldcover'
-      ? '; ground painted from ESA WorldCover land cover'
-      : input.environment.landCover === 'copernicus'
-        ? '; ground painted from Copernicus land cover'
-        : terrain === 'HIGH'
-          ? '; ground painted by rule (no land-cover data)'
-          : '';
+    terrain !== 'HIGH' || !painted
+      ? ''
+      : input.environment.landCover === 'worldcover'
+        ? '; ground painted from ESA WorldCover land cover'
+        : input.environment.landCover === 'copernicus'
+          ? '; ground painted from Copernicus land cover'
+          : '; ground painted by rule (no land-cover data)';
   const envNote =
     (environment === 'HIGH'
       ? 'Real terrain with detailed imagery and OSM buildings where mapped'
