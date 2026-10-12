@@ -224,6 +224,10 @@ on a failure (`release.yml` runs it after the deploy); the rest are by hand.
       evening golden hours, verdicts with a cloud figure for the days inside the horizon,
       "beyond the forecast" for the rest; a time jumps the planner to that window; the network
       tab shows one `/api/weather` call per fetched day, none until the block was opened.
+- [ ] Calendar files (Pro): "Add to calendar" on a project, "add to calendar" under the dark
+      windows and "Calendar" on finder results each download an `.ics` that imports into the
+      phone's calendar with the right local times, one event per shot / night / moment, and a
+      second import updates rather than duplicates.
 - [ ] Climatology air and wind (Pro): the "Air: typically …" and "Wind: typically …" lines
       follow the selected hour and the unit preference (°F and mph on imperial).
 - [ ] Field view clock (phone): with the planner an hour ahead of now the clock line reads
