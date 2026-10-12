@@ -100,6 +100,7 @@ export function MapShell() {
       ...DEFAULT_RENDER_SETTINGS,
       reducedMotion,
       physicalSkyDome: isEnabled('physicalSkyDome'),
+      groundTexture: isEnabled('groundTexture'),
     }),
     [reducedMotion],
   );

@@ -73,6 +73,7 @@ function fakeHost() {
     setCamera: rec('setCamera'),
     setOverlay: rec('setOverlay'),
     setQuality: rec('setQuality'),
+    setGroundTexture: rec('setGroundTexture'),
     setTerrain: async (...a) => {
       rec('setTerrain')(...a);
     },
@@ -125,6 +126,24 @@ describe('SceneController', () => {
     const grade = calls['setGrade']![1]![0] as { u_sunVisible: number; u_cloudOpacity: number };
     expect(grade.u_sunVisible).toBe(1);
     expect(grade.u_cloudOpacity).toBeLessThan(0.1);
+  });
+
+  it('paints the ground texture once per place and season, and clears it when the rung drops it', () => {
+    const { host, calls } = fakeHost();
+    const c = new SceneController(host, {
+      setTimeoutImpl: () => 0,
+      clearTimeoutImpl: () => {},
+      aspect: () => 16 / 9,
+    });
+    c.apply(scene());
+    c.apply(scene({ utc: new Date(scene().utc.getTime() + 3_600_000) }));
+    expect(calls['setGroundTexture']).toHaveLength(1);
+    const g = calls['setGroundTexture']![0]![0] as { snowlineM: number; poleward: number };
+    expect(g.poleward).toBe(1);
+    expect(g.snowlineM).toBeGreaterThan(4000);
+    c.apply(scene({ render: { ...DEFAULT_RENDER_SETTINGS, shadows: false } }));
+    expect(calls['setGroundTexture']).toHaveLength(2);
+    expect(calls['setGroundTexture']![1]![0]).toBeNull();
   });
 
   it('map mode → orbit camera with fly on pin move; viewpoint mode → eye camera with aspect-corrected fov', () => {

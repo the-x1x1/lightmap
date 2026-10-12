@@ -22,6 +22,11 @@ export const featureFlags = {
    * renderer smoke harness has compared it with the shift-only dome.
    */
   physicalSkyDome: false,
+  /**
+   * Phase 4: the procedural ground texture over the terrain (`RENDERING_ACCURACY.md` "Ground
+   * texture"). A texture, not land cover; on by default so the preview reads as ground.
+   */
+  groundTexture: true,
 } as const;
 
 export type FeatureFlag = keyof typeof featureFlags;

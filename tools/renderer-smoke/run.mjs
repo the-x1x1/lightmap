@@ -2,7 +2,7 @@
  * Renderer smoke test: loads the real SceneController + CesiumSceneHost + grade shader in headless
  * Chromium against a bundled Cesium build, applies seven scenes (noon clear/overcast, golden hour,
  * blue hour, partly cloudy, moonlit night, storm, cirrus and stratus decks after sunset from a
- * forecast frame, a tower's shadow at low Sun) and screenshots each; the shadow scene is also
+ * forecast frame, a tower's shadow at low Sun, the ground texture compiled on a probe) and screenshots each; the shadow scene is also
  * measured (direction, length, no low-Sun fade). Fails on any runtime or
  * shader error. Usage (after `pnpm install`):
  *
@@ -107,5 +107,5 @@ const terrainOk =
   new Date(terrain.firstLight).getTime() > new Date(terrain.sunrise).getTime() + 30 * 60_000;
 console.log(`terrain horizon: ${terrainOk ? 'ok' : 'FAIL'} ${JSON.stringify(terrain)}`);
 process.exit(
-  smoke.errors.length === 0 && Object.keys(shots).length >= 12 && shadowOk && terrainOk ? 0 : 1,
+  smoke.errors.length === 0 && Object.keys(shots).length >= 13 && shadowOk && terrainOk ? 0 : 1,
 );

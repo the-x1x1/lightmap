@@ -12,6 +12,11 @@
 import type * as Cesium from '@cesium/engine';
 import type { BasemapDescriptor, GeoPoint, TerrainDescriptor } from '@lightmap/geospatial';
 import { GRADE_FRAGMENT_SHADER } from '../shaders/grade.frag.ts';
+import {
+  GROUND_MATERIAL_SOURCE,
+  GROUND_MATERIAL_TYPE,
+  GROUND_UNIFORM_DEFAULTS,
+} from '../shaders/ground.frag.ts';
 import { pickSurface } from '../pick.ts';
 import type { Vec3 } from '../sun-vector.ts';
 import type {
@@ -19,6 +24,7 @@ import type {
   HostCamera,
   HostGlobeShading,
   HostGradeUniforms,
+  HostGroundTexture,
   HostLight,
   HostOverlay,
   HostQuality,
@@ -62,6 +68,7 @@ export class CesiumSceneHost implements SceneHost {
   private readonly light: Cesium.DirectionalLight;
   private readonly grade: Cesium.PostProcessStage;
   private readonly gradeUniforms: Record<string, unknown>;
+  private groundMaterial: Cesium.Material | null = null;
   private readonly onError: ((message: string, error: unknown) => void) | undefined;
   private readonly ionToken: string | undefined;
   private pickHandler: Cesium.ScreenSpaceEventHandler | null = null;
@@ -246,6 +253,39 @@ export class CesiumSceneHost implements SceneHost {
       const layer = layers.get(i);
       layer.brightness = shading.basemapBrightness;
     }
+  }
+
+  setGroundTexture(g: HostGroundTexture | null): void {
+    const C = this.C;
+    const globe = this.scene.globe as Cesium.Globe | undefined;
+    if (!globe) return;
+    if (!g) {
+      if (this.groundMaterial) {
+        globe.material = undefined;
+        this.groundMaterial.destroy();
+        this.groundMaterial = null;
+      }
+      return;
+    }
+    // One material for the life of the host; its uniforms are updated in place. Cesium applies
+    // a globe material only when the terrain carries vertex normals (the slope input), which
+    // the terrain providers request; on the ellipsoid fallback it simply does nothing.
+    if (!this.groundMaterial) {
+      this.groundMaterial = new C.Material({
+        fabric: {
+          type: GROUND_MATERIAL_TYPE,
+          uniforms: { ...GROUND_UNIFORM_DEFAULTS },
+          source: GROUND_MATERIAL_SOURCE,
+        },
+        translucent: false,
+      });
+      globe.material = this.groundMaterial;
+    }
+    const u = this.groundMaterial.uniforms as Record<string, number>;
+    u['u_snowlineM'] = g.snowlineM;
+    u['u_poleward'] = g.poleward;
+    u['u_strength'] = g.strength;
+    this.scene.requestRender();
   }
 
   setShadows(s: HostShadows): void {
@@ -845,6 +885,8 @@ export class CesiumSceneHost implements SceneHost {
     this.destroyed = true;
     this.preRenderRemover?.();
     this.pickHandler?.destroy();
+    this.groundMaterial?.destroy();
+    this.groundMaterial = null;
     this.widget.destroy();
   }
 }

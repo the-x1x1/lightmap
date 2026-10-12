@@ -10,7 +10,7 @@ mode but production configuration is still outstanding.
 | 1     | Lighting MVP                                | **Delivered in v0.1.0**                                                                            |
 | 2     | Weather                                     | **Delivered in v0.1.0**; hour by hour, golden-hour verdicts, the week ahead, the air (unreleased)  |
 | 3     | Accounts, projects, billing                 | **Delivered as plumbing in v0.1.0**; production configuration outstanding                          |
-| 4     | Visual quality                              | Started: export, twilight/haze, layered clouds delivered (unreleased)                              |
+| 4     | Visual quality                              | Started: export, twilight/haze, layered clouds, ground texture delivered (unreleased)              |
 | 5     | Real references                             | Future — blocked on licensing                                                                      |
 | 6     | Advanced camera planning / reverse planning | **Solver, finder, point-in-view, variants, DOF, levelling, apparent sizes, exposure (unreleased)** |
 | 7     | Long-range climatology                      | **Delivered (unreleased)** — ERA5 cloud, humidity, air and wind by hour; Pro entitlement           |
@@ -104,7 +104,20 @@ Also delivered (unreleased): **water** — the terrain water mask is requested a
 effect shades sea and lakes with a specular glint from the scene light and a ripple normal map
 (`RENDERING_ACCURACY.md` "Water"); no swell geometry or sky reflection.
 
-Remaining: improved terrain texture; detailed buildings where licensed; the scattering model in
+Also delivered (unreleased): the **ground texture** — a procedural surface over the terrain
+(turf, scrub, rock by slope, scree above the treeline, snow above a latitude- and
+season-following snowline that lies lower on poleward faces, shore at sea level; a Cesium globe
+material from the mesh's own height, slope and aspect; `RENDERING_ACCURACY.md` "Ground
+texture") so the preview reads as ground rather than a grey plane under the coarse basemap;
+blended over the basemap so licensed imagery, where configured, still carries the hue.
+
+Remaining — the **texture pack**, in stages: (1) delivered above, the procedural surface;
+(2) a land-cover tint — a coarse public-domain land-cover raster (e.g. ESA WorldCover at 10 m
+is CC BY 4.0; Copernicus Global Land Cover 100 m is CC BY 4.0) sampled per tile to tell forest
+from field, desert from steppe, built-up from open, feeding the material's palette; (3) tiled
+detail textures (rock, grass, sand, snow) under a commercial-compatible licence, blended by
+the same masks, for close viewpoints; (4) a licensed aerial imagery basemap where the contract
+allows (`xyz-imagery`), which the material then only details. Detailed buildings where licensed; the scattering model in
 Cesium's own dome (the haze → Mie wiring is in behind the `physicalSkyDome` flag with a
 smoke-harness shot to judge it; enabling it is the PC's call); a fuller water shader (waves, sky
 reflection) is not planned until Phase 8. Everything stays grounded: geometry and light direction are

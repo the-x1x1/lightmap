@@ -13,6 +13,7 @@ import {
   type SceneState,
 } from '@lightmap/scene';
 import type { BasemapDescriptor, TerrainDescriptor } from '@lightmap/geospatial';
+import { groundTextureFor } from '../ground-texture.ts';
 import { lightingFromScene, type LightingParameters } from '../lighting.ts';
 import { enuTowardSun, enuToEcef } from '../sun-vector.ts';
 import type {
@@ -62,6 +63,7 @@ export class SceneController {
   private lastShadingKey: string | null = null;
   private lastQualityKey: string | null = null;
   private lastCelestial: string | null = null;
+  private lastGroundKey: string | null = null;
   private lastDayKey: string | null = null;
   private groundHeightM = 0;
   private groundHeightKey: string | null = null;
@@ -198,6 +200,14 @@ export class SceneController {
         softShadows: scene.render.softShadows,
         maximumDistance,
       });
+    }
+
+    // The ground texture: its inputs move with the place, the season and the quality rung only.
+    const ground = groundTextureFor(scene);
+    const groundKey = ground ? `${ground.snowlineM}|${ground.poleward}|${ground.strength}` : 'off';
+    if (groundKey !== this.lastGroundKey) {
+      this.lastGroundKey = groundKey;
+      this.host.setGroundTexture(ground);
     }
 
     const viewpoint = scene.camera.mode === 'viewpoint';

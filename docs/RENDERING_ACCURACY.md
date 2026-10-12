@@ -144,6 +144,28 @@ glint from the scene light, so a low Sun over the sea glitters from the right di
 only — no swell or wave geometry, no wet-surface effect, no reflection of the sky's colour; the
 water mask is the provider's, not a tide model.
 
+### Ground texture
+
+The terrain is painted with a procedural surface (`shaders/ground.frag.ts`, a Cesium globe
+material) so the mesh reads as ground rather than a grey plane under a 40 km-per-pixel basemap:
+turf and scrub in patches on the lower slopes, bare rock where the slope passes about 25–40°,
+scree and alpine ground above the treeline, snow above a snowline that follows the latitude
+(≈ 5 200 m at the equator, ≈ 3 000 m at 45°, ≈ 1 700 m at 60°) and the season (lower through
+winter by a share that grows with latitude: the Alps snowy from ≈ 1 500 m in February, bare to
+≈ 3 000 m in August; the tropics barely move) and lies lower on poleward faces, and a strip of
+shore where flat ground meets sea level (`ground-texture.ts`, tested). The inputs are the
+terrain's own height, slope and aspect and a noise field anchored to the fragment's world
+position, so patches stay put as the camera moves. The colour is blended over the basemap with an
+opacity that rises on rock and snow and falls on open ground, so a licensed imagery layer still
+shows through where it carries the information — vegetation hue, desert, farmland — and the
+procedural surface supplies the detail it lacks. Water (where the terrain carries a mask) is
+left to the water effect. The Minimal quality rung turns it off with the shadows; the
+`groundTexture` flag turns it off everywhere. **Claim:** the surface lit by the true Sun, with
+shadows and horizon geometry untouched (the material runs before the globe's lighting and
+changes albedo only). **Caveat:** a texture, not land cover — it does not know a forest from a
+field, a glacier from a snowfield, farmland, roads or a city, and the snowline is a rule of
+thumb, not a snow model; the preview source label does not rise because of it.
+
 ### Weather scenarios
 
 Deterministic parameter sets (`SCENARIOS`) or continuous parameters derived from a forecast frame.

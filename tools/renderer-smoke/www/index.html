@@ -454,6 +454,57 @@
         await new Promise((r) => {
           window.__takeShot = r;
         });
+        // Ground texture probe: the ellipsoid carries no vertex normals, so the globe never
+        // applies the material here; the same fabric source is compiled on a flat primitive by
+        // the camera instead — a shader error is a runtime error the harness fails on — and the
+        // shot shows the surface (turf and scrub at sea level, no snow at 21° N in May).
+        const Cesium = await import('@cesium/engine');
+        const { GROUND_MATERIAL_SOURCE, GROUND_UNIFORM_DEFAULTS, groundTextureFor } =
+          await import('@lightmap/renderer');
+        const probeParams = groundTextureFor(s1);
+        const probeMaterial = new Cesium.Material({
+          fabric: {
+            type: 'LightMapGroundProbe',
+            uniforms: {
+              ...GROUND_UNIFORM_DEFAULTS,
+              u_snowlineM: probeParams ? probeParams.snowlineM : 3000,
+              u_poleward: probeParams ? probeParams.poleward : 1,
+            },
+            source: GROUND_MATERIAL_SOURCE,
+          },
+          translucent: false,
+        });
+        host.__scene.primitives.add(
+          new Cesium.Primitive({
+            geometryInstances: new Cesium.GeometryInstance({
+              geometry: new Cesium.RectangleGeometry({
+                rectangle: Cesium.Rectangle.fromDegrees(-157.76, 21.38, -157.7, 21.42),
+                height: 3,
+                vertexFormat: Cesium.MaterialAppearance.MaterialSupport.ALL.vertexFormat,
+              }),
+            }),
+            appearance: new Cesium.MaterialAppearance({
+              material: probeMaterial,
+              materialSupport: Cesium.MaterialAppearance.MaterialSupport.ALL,
+            }),
+          }),
+        );
+        controller.apply(scene(12.5, 'clear'));
+        controller.setOrbit({ headingDeg: 20, pitchDeg: -45, rangeM: 2500 });
+        log(
+          'ground texture probe added (snowline ' +
+            (probeParams ? probeParams.snowlineM : '—') +
+            ' m)',
+        );
+        await wait(2500);
+        window.__smoke.groundProbe = {
+          params: probeParams,
+          errorsBefore: window.__smoke.errors.length,
+        };
+        window.__smoke.shot = 'ground-texture';
+        await new Promise((r) => {
+          window.__takeShot = r;
+        });
         const thumb = await host.captureThumbnail(320);
         window.__smoke.thumbnail = thumb
           ? thumb.slice(0, 40) + '… (' + thumb.length + ' chars)'

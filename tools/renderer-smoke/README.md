@@ -9,7 +9,7 @@ It applies twelve scenes for Kailua Beach on 31 May 2026 — noon clear, noon ov
 storm, the same storm with the **physical dome** experiment on (`render.physicalSkyDome`: the
 dome's Mie density from the sky model — judge it against the plain storm shot before enabling the
 flag), two forecast-frame scenes at 19:18 (Sun ≈ −2.4°) with only a cirrus deck and only a
-stratus deck, a **terrain-path** scene, and a **shadow probe** at 18:15 (Sun ≈ 11°): a 20 m tower on flat ground seen from
+stratus deck, a **terrain-path** scene, a **ground-texture** probe (the procedural ground material compiled on a flat primitive — the ellipsoid carries no vertex normals, so the globe itself does not apply it here — so a shader error fails the run), and a **shadow probe** at 18:15 (Sun ≈ 11°): a 20 m tower on flat ground seen from
 above — and screenshots each. The shadow scene is measured, not just looked at: ground luminance
 along the shadow line must be < 70 % of the Sun side, and the point just beyond `h / tan(el)` must
 be as bright as the Sun side (direction, length and "no fade at low Sun" in one check). Any runtime exception, shader compile error or missing screenshot

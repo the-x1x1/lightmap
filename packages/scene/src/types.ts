@@ -102,6 +102,12 @@ export interface RenderSettings {
    * hue/saturation/brightness shifts. Off until the smoke harness has judged it.
    */
   physicalSkyDome?: boolean;
+  /**
+   * Phase 4 "improved terrain texture": the procedural ground surface (turf, rock, scree, snow
+   * by height, slope, aspect and season) painted over the basemap in the 3D views. On unless
+   * set false; the Minimal quality rung turns it off with the shadows.
+   */
+  groundTexture?: boolean;
 }
 
 /**

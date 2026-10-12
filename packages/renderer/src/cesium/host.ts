@@ -126,6 +126,13 @@ export interface HostOverlay {
   visible: boolean;
 }
 
+/** The procedural ground surface's inputs (`ground-texture.ts`); null switches it off. */
+export interface HostGroundTexture {
+  snowlineM: number;
+  poleward: 1 | -1;
+  strength: number;
+}
+
 export interface HostQuality {
   terrainScreenSpaceError: number;
   resolutionScale: number;
@@ -151,6 +158,8 @@ export interface SceneHost {
   setCamera(c: HostCamera): void;
   setOverlay(o: HostOverlay): void;
   setQuality(q: HostQuality): void;
+  /** Paint (or clear) the procedural ground texture over the basemap. */
+  setGroundTexture(g: HostGroundTexture | null): void;
   setTerrain(t: TerrainDescriptor): Promise<void>;
   setBasemap(b: BasemapDescriptor): Promise<void>;
   /** Sun disc / moon / stars in the sky (viewpoint mode; stars only when dark). */
