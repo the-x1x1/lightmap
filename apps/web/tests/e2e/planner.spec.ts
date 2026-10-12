@@ -223,6 +223,20 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
   await setDateTime(page, '2026-05-31', 19 * 60 + 30);
 });
 
+test('the ground detail atlas is served as a PNG the renderer can fetch', async ({ page }) => {
+  // Texture pack stage 3: the bundled atlas (`pnpm textures:ground`) must be a real image at
+  // its public path, or the host falls back to the procedural grain without a word.
+  const res = await page.request.get('/textures/ground-detail.png');
+  expect(res.status()).toBe(200);
+  expect(res.headers()['content-type']).toContain('image/png');
+  const bytes = await res.body();
+  expect(bytes.length).toBeGreaterThan(100_000);
+  // PNG signature and a 512 × 512 IHDR.
+  expect(Array.from(bytes.subarray(0, 8))).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+  expect(bytes.readUInt32BE(16)).toBe(512);
+  expect(bytes.readUInt32BE(20)).toBe(512);
+});
+
 test('a date beyond the forecast horizon is labelled a scenario, never a forecast', async ({
   page,
 }) => {
