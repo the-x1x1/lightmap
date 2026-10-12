@@ -30,6 +30,35 @@ export const BUILDINGS_REACH_M = 2500;
 /** A mapped surface this much above the terrain at the pin is a roof the viewer stands on, metres. */
 export const ROOF_MIN_M = 3;
 
+/**
+ * Mapped buildings near the pin folded into the terrain heights (in place): the topmost
+ * surface (a roof) replaces the bare terrain where it stands higher. `surface[0]` is the pin
+ * itself, the rest follow `near` (indices into `heights`). Nothing sampled (no tileset,
+ * unsupported, every point missed) leaves the terrain alone and the caveat honest. A pin on a
+ * footprint (geocoders land on building centroids) stands the viewer on that roof — otherwise
+ * its own building, 40 m away on every bearing, would wall the whole sky — and says so.
+ */
+export function mergeSurface(
+  terrainAtPin: number,
+  heights: Array<number | null>,
+  near: readonly number[],
+  surface: ReadonlyArray<number | null> | null,
+): { ground: number; buildingsReachM: number | null; onRoof: boolean } {
+  if (!surface || !surface.some((h) => h !== null))
+    return { ground: terrainAtPin, buildingsReachM: null, onRoof: false };
+  const atPin = surface[0];
+  const onRoof = atPin !== null && atPin !== undefined && atPin - terrainAtPin > ROOF_MIN_M;
+  surface.slice(1).forEach((h, j) => {
+    const i = near[j];
+    if (h !== null && i !== undefined) heights[i] = Math.max(heights[i] ?? -Infinity, h);
+  });
+  return {
+    ground: onRoof ? atPin : terrainAtPin,
+    buildingsReachM: BUILDINGS_REACH_M,
+    onRoof,
+  };
+}
+
 const cache = new Map<string, HorizonProfile>();
 /** Runs in flight by key, so a re-render (quality rung change, re-geocoded pin) joins the run
  * instead of restarting the 2 640 samples. */
@@ -101,27 +130,12 @@ export function useTerrainHorizon(input: {
       const [[terrainAtPin], surface] = await Promise.all([groundJob, surfaceJob, ...levelJobs]);
       // Without the ground height at the pin the eye's datum is unknown: no profile.
       if (terrainAtPin === null || terrainAtPin === undefined) return null;
-      let ground = terrainAtPin;
-      // Mapped buildings near the pin: the topmost surface (a roof or the ground) replaces the
-      // bare terrain where it stands higher. Nothing sampled (no tileset, unsupported, or every
-      // point failed) leaves the terrain alone and the caveat honest.
-      let buildingsReachM: number | null = null;
-      let onRoof = false;
-      if (surface && surface.some((h) => h !== null)) {
-        buildingsReachM = BUILDINGS_REACH_M;
-        // A pin on a footprint (geocoders land on building centroids) stands the viewer on
-        // that roof: otherwise its own building, 40 m away on every bearing, would wall the
-        // whole sky. The profile then reads from the roof, and the caveat says so.
-        const atPin = surface[0];
-        if (atPin !== null && atPin !== undefined && atPin - terrainAtPin > ROOF_MIN_M) {
-          ground = atPin;
-          onRoof = true;
-        }
-        surface.slice(1).forEach((h, j) => {
-          const i = near[j]!;
-          if (h !== null) heights[i] = Math.max(heights[i] ?? -Infinity, h);
-        });
-      }
+      const { ground, buildingsReachM, onRoof } = mergeSurface(
+        terrainAtPin,
+        heights,
+        near,
+        surface,
+      );
       const profile = horizonProfileFromSamples(
         origin,
         ground,
