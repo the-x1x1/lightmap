@@ -36,11 +36,13 @@ describe('migration runner', () => {
       '0001_initial.sql',
       '0002_postgis_optional.sql',
       '0003_viewpoint_variants.sql',
+      '0004_profile_painted_ground.sql',
     ]);
     expect(validateMigrationSet(files)).toEqual([]);
     expect(files[0]!.sql).toContain('CREATE TABLE IF NOT EXISTS viewpoints');
     expect(files[1]!.sql).toContain('pg_available_extensions');
     expect(files[2]!.sql).toContain('parent_viewpoint_id');
+    expect(files[3]!.sql).toContain('painted_ground boolean NOT NULL DEFAULT true');
   });
 
   it('applies once, skips on rerun, and refuses modified files', async () => {
