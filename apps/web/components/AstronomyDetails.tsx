@@ -6,6 +6,7 @@ import {
   estimateExposure,
   explainScene,
   formatDeg,
+  frameCoordinates,
 } from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
 import {
@@ -259,6 +260,12 @@ export function AstronomyDetails({ scene, windowEnd = null }: AstronomyDetailsPr
     () => describeLightWindows(dayEvents, { latitude: lat, longitude: lng }, tz),
     [dayEvents, lat, lng, tz],
   );
+  // The Sun inside the frame at a viewpoint: flare and a blown highlight unless exposed for it.
+  const sunInFrame = (() => {
+    if (scene.camera.mode !== 'viewpoint' || !s.isAboveHorizon) return false;
+    const f = frameCoordinates(scene.camera, s.azimuthDegrees, s.apparentElevationDegrees);
+    return f !== null && Math.abs(f.x) <= 1 && Math.abs(f.y) <= 1;
+  })();
   return (
     <div className="space-y-3" data-testid="astronomy-details">
       <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
@@ -327,7 +334,7 @@ export function AstronomyDetails({ scene, windowEnd = null }: AstronomyDetailsPr
         <Row label="Colour temp." value={`${Math.round(scene.atmosphere.colorTemperatureK)} K`} />
         <Row
           label="Exposure (est.)"
-          value={describeExposure(
+          value={`${describeExposure(
             estimateExposure({
               sunElevationDeg: s.elevationDegrees,
               sunTransmittance: scene.atmosphere.parameters.sunTransmittance,
@@ -338,7 +345,7 @@ export function AstronomyDetails({ scene, windowEnd = null }: AstronomyDetailsPr
                   }
                 : null,
             }),
-          )}
+          )}${sunInFrame ? ' · sun in frame: flare, expose for it' : ''}`}
           testId="exposure"
         />
         <Row
