@@ -24,6 +24,8 @@ export const GROUND_MATERIAL_TYPE = 'LightMapGround';
 export const GROUND_UNIFORM_DEFAULTS = {
   /** Height above the ellipsoid from which snow lies, metres. */
   u_snowlineM: 3000,
+  /** Height above which the cover thins to alpine ground and scree, metres (does not move with the season). */
+  u_treelineM: 2100,
   /** +1 in the northern hemisphere (north-facing slopes hold snow), −1 in the southern. */
   u_poleward: 1,
   /** Overall opacity over the basemap, 0–1. */
@@ -32,14 +34,16 @@ export const GROUND_UNIFORM_DEFAULTS = {
 
 export const GROUND_MATERIAL_SOURCE = /* glsl */ `
 uniform float u_snowlineM;
+uniform float u_treelineM;
 uniform float u_poleward;
 uniform float u_strength;
 
+// Hash without axis correlation (Hoskins' hash13), so the noise has no lattice pattern.
 float lmHash(vec3 p)
 {
-    p = fract(p * 0.3183099 + vec3(0.1, 0.2, 0.3));
-    p *= 17.0;
-    return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+    p = fract(p * vec3(0.1031, 0.1030, 0.0973));
+    p += dot(p, p.yxz + 33.33);
+    return fract((p.x + p.y) * p.z);
 }
 
 float lmNoise(vec3 x)
@@ -67,31 +71,30 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // World position of the fragment (ECEF, metres) anchors the noise to the ground.
     vec3 positionEC = -materialInput.positionToEyeEC;
     vec3 positionWC = (czm_inverseView * vec4(positionEC, 1.0)).xyz;
-    float patch = lmFbm(positionWC / 480.0);          // broad patchiness, ~500 m
+    float patches = lmFbm(positionWC / 480.0);          // broad patchiness, ~500 m
     float grain = lmFbm(positionWC / 60.0 + 5.0);     // fine detail, 60 m down to ~8 m
     float slope = materialInput.slope;                // radians, 0 flat
     float height = materialInput.height;              // metres above the ellipsoid
     float aspect = materialInput.aspect;              // radians, 0 east, pi/2 north
 
-    vec3 turf  = vec3(0.34, 0.41, 0.21);
-    vec3 scrub = vec3(0.47, 0.42, 0.27);
-    vec3 rock  = vec3(0.47, 0.45, 0.42);
-    vec3 scree = vec3(0.37, 0.35, 0.32);
+    vec3 turf  = vec3(0.33, 0.45, 0.20);
+    vec3 scrub = vec3(0.52, 0.46, 0.27);
+    vec3 rock  = vec3(0.52, 0.49, 0.45);
+    vec3 scree = vec3(0.40, 0.38, 0.34);
     vec3 snow  = vec3(0.93, 0.95, 0.97);
     vec3 shore = vec3(0.74, 0.69, 0.55);
 
     // Open ground: turf and scrub in patches, grained.
-    vec3 ground = mix(turf, scrub, smoothstep(0.32, 0.62, patch));
+    vec3 ground = mix(turf, scrub, smoothstep(0.32, 0.62, patches));
     ground *= 0.82 + 0.36 * grain;
 
-    // Above the treeline (well below the snowline) the cover thins to alpine ground and scree.
-    float treeline = u_snowlineM - 900.0;
-    float alpine = smoothstep(treeline - 400.0, treeline + 300.0, height + 200.0 * (patch - 0.47));
-    vec3 bare = mix(scree, rock, grain) * (0.84 + 0.32 * patch);
+    // Above the treeline the cover thins to alpine ground and scree.
+    float alpine = smoothstep(u_treelineM - 400.0, u_treelineM + 300.0, height + 200.0 * (patches - 0.47));
+    vec3 bare = mix(scree, rock, grain) * (0.84 + 0.32 * patches);
     ground = mix(ground, bare, alpine);
 
-    // Steep faces are bare rock, from about 25° to 40°, broken up by the grain.
-    float rocky = smoothstep(0.44, 0.72, slope + 0.12 * (grain - 0.47));
+    // Steep faces are bare rock, from about 30° to 45°, broken up by the grain.
+    float rocky = smoothstep(0.52, 0.78, slope + 0.12 * (grain - 0.47));
     ground = mix(ground, bare, rocky);
 
     // Flat ground within a few metres of sea level reads as shore.
@@ -100,14 +103,14 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
 
     // Snow above the snowline: lower on poleward faces, patchy at its edge, thin on cliffs.
     float poleward = sin(aspect) * u_poleward * smoothstep(0.05, 0.4, slope);  // +1 facing the pole
-    float snowline = u_snowlineM - 180.0 * poleward + 320.0 * (patch - 0.47);
+    float snowline = u_snowlineM - 180.0 * poleward + 320.0 * (patches - 0.47);
     float snowy = smoothstep(snowline - 220.0, snowline + 160.0, height) * (1.0 - smoothstep(0.85, 1.15, slope));
     ground = mix(ground, snow * (0.95 + 0.05 * grain), snowy);
 
     material.diffuse = ground;
     // Rock and snow are what they are; open ground lets the basemap's own hue through.
     float cover = max(rocky, max(snowy, alpine * 0.8));
-    float alpha = u_strength * mix(0.6, 0.95, cover);
+    float alpha = u_strength * mix(0.75, 0.95, cover);
 #ifdef HAS_WATER_MASK
     alpha *= 1.0 - materialInput.waterMask;
 #endif

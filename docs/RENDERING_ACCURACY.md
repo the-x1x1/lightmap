@@ -149,7 +149,8 @@ water mask is the provider's, not a tide model.
 The terrain is painted with a procedural surface (`shaders/ground.frag.ts`, a Cesium globe
 material) so the mesh reads as ground rather than a grey plane under a 40 km-per-pixel basemap:
 turf and scrub in patches on the lower slopes, bare rock where the slope passes about 25–40°,
-scree and alpine ground above the treeline, snow above a snowline that follows the latitude
+scree and alpine ground above a treeline (900 m under the climatic snowline, fixed through
+the year), snow above a snowline that follows the latitude
 (≈ 5 200 m at the equator, ≈ 3 000 m at 45°, ≈ 1 700 m at 60°) and the season (lower through
 winter by a share that grows with latitude: the Alps snowy from ≈ 1 500 m in February, bare to
 ≈ 3 000 m in August; the tropics barely move) and lies lower on poleward faces, and a strip of

@@ -129,6 +129,7 @@ export interface HostOverlay {
 /** The procedural ground surface's inputs (`ground-texture.ts`); null switches it off. */
 export interface HostGroundTexture {
   snowlineM: number;
+  treelineM: number;
   poleward: 1 | -1;
   strength: number;
 }

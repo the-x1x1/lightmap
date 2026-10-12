@@ -283,6 +283,7 @@ export class CesiumSceneHost implements SceneHost {
     }
     const u = this.groundMaterial.uniforms as Record<string, number>;
     u['u_snowlineM'] = g.snowlineM;
+    u['u_treelineM'] = g.treelineM;
     u['u_poleward'] = g.poleward;
     u['u_strength'] = g.strength;
     this.scene.requestRender();

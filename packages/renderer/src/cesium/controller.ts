@@ -204,7 +204,9 @@ export class SceneController {
 
     // The ground texture: its inputs move with the place, the season and the quality rung only.
     const ground = groundTextureFor(scene);
-    const groundKey = ground ? `${ground.snowlineM}|${ground.poleward}|${ground.strength}` : 'off';
+    const groundKey = ground
+      ? `${ground.snowlineM}|${ground.treelineM}|${ground.poleward}|${ground.strength}`
+      : 'off';
     if (groundKey !== this.lastGroundKey) {
       this.lastGroundKey = groundKey;
       this.host.setGroundTexture(ground);

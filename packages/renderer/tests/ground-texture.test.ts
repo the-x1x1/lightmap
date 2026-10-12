@@ -88,6 +88,7 @@ describe('groundTextureFor', () => {
     expect(g.poleward).toBe(1);
     expect(g.strength).toBe(1);
     expect(g.snowlineM).toBe(Math.round(snowlineM(21.4, 40)));
+    expect(g.treelineM).toBe(Math.round(permanentSnowlineM(21.4) - 900));
     expect(groundTextureFor(sceneAt(-33.9, new Date('2026-02-09T22:00:00Z')))!.poleward).toBe(-1);
   });
 

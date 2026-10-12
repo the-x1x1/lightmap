@@ -9,6 +9,8 @@ import type { SceneState } from '@lightmap/scene';
 export interface GroundTextureParams {
   /** Height above the ellipsoid from which snow lies, metres. */
   snowlineM: number;
+  /** Height above which the cover thins to alpine ground, metres: the climatic snowline less 900 m, fixed through the year. */
+  treelineM: number;
   /** +1 north of the equator, −1 south: which slopes face away from the Sun's noon side. */
   poleward: 1 | -1;
   /** Opacity over the basemap, 0–1. */
@@ -55,6 +57,7 @@ export function groundTextureFor(scene: SceneState): GroundTextureParams | null 
   const lat = scene.location.point.latitude;
   return {
     snowlineM: Math.round(snowlineM(lat, dayOfYearUtc(scene.utc))),
+    treelineM: Math.round(Math.max(0, permanentSnowlineM(lat) - 900)),
     poleward: lat < 0 ? -1 : 1,
     strength: 1,
   };
