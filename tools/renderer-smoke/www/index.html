@@ -502,8 +502,73 @@
             ' m)',
         );
         await wait(2500);
+        // The real globe program with the material (the path the app takes on terrain with
+        // vertex normals): Cesium's own GlobeVS/GlobeFS with the defines the app's globe uses,
+        // combined by Cesium's ShaderSource (builtins, automatic uniforms, defines) and compiled
+        // and linked on the scene's own GL context. Anything but 'ok' fails the run.
+        let globeProgram = 'unavailable';
+        try {
+          const ctx = host.__scene.context;
+          const gl = ctx._gl;
+          const defines = [
+            'APPLY_MATERIAL',
+            'HAS_WATER_MASK',
+            'SHOW_REFLECTIVE_OCEAN',
+            'ENABLE_VERTEX_LIGHTING',
+            'DYNAMIC_ATMOSPHERE_LIGHTING',
+            'FOG',
+            'GROUND_ATMOSPHERE',
+            'TEXTURE_UNITS 4',
+          ];
+          if (Cesium._shadersGlobeFS && Cesium._shadersGlobeVS && gl) {
+            const fs = new Cesium.ShaderSource({
+              sources: [
+                Cesium._shadersAtmosphereCommon,
+                Cesium._shadersGroundAtmosphere,
+                GROUND_MATERIAL_SOURCE,
+                Cesium._shadersGlobeFS,
+              ],
+              defines,
+            }).createCombinedFragmentShader(ctx);
+            const vs = new Cesium.ShaderSource({
+              sources: [
+                Cesium._shadersAtmosphereCommon,
+                Cesium._shadersGroundAtmosphere,
+                Cesium._shadersGlobeVS,
+              ],
+              defines,
+            }).createCombinedVertexShader(ctx);
+            const compile = (type, src) => {
+              const sh = gl.createShader(type);
+              gl.shaderSource(sh, src);
+              gl.compileShader(sh);
+              if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS))
+                throw new Error(
+                  (type === gl.FRAGMENT_SHADER ? 'FS: ' : 'VS: ') + gl.getShaderInfoLog(sh),
+                );
+              return sh;
+            };
+            const f = compile(gl.FRAGMENT_SHADER, fs);
+            const v = compile(gl.VERTEX_SHADER, vs);
+            const prog = gl.createProgram();
+            gl.attachShader(prog, v);
+            gl.attachShader(prog, f);
+            gl.linkProgram(prog);
+            if (!gl.getProgramParameter(prog, gl.LINK_STATUS))
+              throw new Error('LINK: ' + gl.getProgramInfoLog(prog));
+            gl.deleteProgram(prog);
+            gl.deleteShader(v);
+            gl.deleteShader(f);
+            globeProgram = 'ok';
+          }
+        } catch (e) {
+          globeProgram = 'failed: ' + ((e && e.message) || e);
+          window.__smoke.errors.push('ground texture globe program: ' + globeProgram);
+        }
+        log('ground texture globe program: ' + globeProgram);
         window.__smoke.groundProbe = {
           params: probeParams,
+          globeProgram,
           errorsBefore: window.__smoke.errors.length,
         };
         window.__smoke.shot = 'ground-texture';
