@@ -186,7 +186,7 @@ export const SNOW_ON_GROUND_M = 0.01;
 
 /** "12 cm" / "5 in" of lying snow. */
 export function formatSnowDepth(m: number, units: DistanceUnits = 'metric'): string {
-  if (units === 'imperial') return `${Math.round(m / 0.0254)} in`;
+  if (units === 'imperial') return `${Math.max(1, Math.round(m / 0.0254))} in`;
   return m >= 1 ? `${(Math.round(m * 10) / 10).toString()} m` : `${Math.round(m * 100)} cm`;
 }
 

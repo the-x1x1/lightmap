@@ -79,7 +79,7 @@ export class CesiumSceneHost implements SceneHost {
   private buildingsJob: Promise<void> | null = null;
   private groundTextureFailed = false;
   private readonly onError: ((message: string, error: unknown) => void) | undefined;
-  private readonly ionToken: string | undefined;
+  private ionToken: string | undefined;
   private pickHandler: Cesium.ScreenSpaceEventHandler | null = null;
   private pickListeners = new Set<(p: GeoPoint & { viaTerrain: boolean }) => void>();
   private frameListeners = new Set<(fps: number) => void>();
@@ -666,11 +666,15 @@ export class CesiumSceneHost implements SceneHost {
     this.widget.resolutionScale = Math.min(q.resolutionScale, 2 / dpr);
   }
 
+  setIonToken(token: string | undefined): void {
+    this.ionToken = token;
+    if (token) this.C.Ion.defaultAccessToken = token;
+  }
+
   async setBuildings(b: BuildingsDescriptor): Promise<void> {
     const C = this.C;
-    // One job at a time: a later call waits for the earlier tileset to settle before replacing it.
-    await this.buildingsJob;
-    const job = (async () => {
+    // One job at a time: a later call runs after the earlier tileset has settled.
+    const run = async () => {
       if (this.destroyed) return;
       if (this.buildings) {
         this.scene.primitives.remove(this.buildings); // destroys it
@@ -681,7 +685,7 @@ export class CesiumSceneHost implements SceneHost {
         // Cesium OSM Buildings through ion: lit by the scene light like the terrain, casting and
         // receiving the same shadows, refined to the quality rung. A photographer's "when does
         // the sun reach this street" needs the buildings in the picture, not just the ground.
-        // (The ion token is `Ion.defaultAccessToken`, set in the constructor.)
+        // (The ion token is `Ion.defaultAccessToken`, from `setIonToken` once capabilities arrive.)
         const tileset = await C.createOsmBuildingsAsync({
           shadows: C.ShadowMode.ENABLED,
           maximumScreenSpaceError: Math.max(8, this.scene.globe.maximumScreenSpaceError * 6),
@@ -699,7 +703,8 @@ export class CesiumSceneHost implements SceneHost {
       } catch (error) {
         this.onError?.('Buildings unavailable — showing terrain alone', error);
       }
-    })();
+    };
+    const job = (this.buildingsJob ?? Promise.resolve()).then(run);
     this.buildingsJob = job;
     await job;
   }
@@ -969,6 +974,11 @@ export class CesiumSceneHost implements SceneHost {
             {
               pickPositionSupported: scene.pickPositionSupported,
               pickPosition: (w) => {
+                // The ground, not a roof: with buildings on, the depth pick would land on
+                // the tileset, and the pin's height feeds the geoid and snow rules.
+                const ray = scene.camera.getPickRay(new C.Cartesian2(w.x, w.y));
+                const onTerrain = ray ? scene.globe.pick(ray, scene) : undefined;
+                if (onTerrain) return onTerrain;
                 const r = scene.pickPosition(new C.Cartesian2(w.x, w.y));
                 return r ?? undefined;
               },

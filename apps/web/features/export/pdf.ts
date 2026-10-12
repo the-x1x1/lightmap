@@ -13,6 +13,9 @@ export const FONT_PT = 9;
 export const LINE_PT = 12;
 /** Courier is 0.6 em wide, so this many characters fit a line inside the margins. */
 export const LINE_CHARS = Math.floor((PAGE_W - 2 * MARGIN) / (FONT_PT * 0.6));
+/** The heading size and the characters that fit at it. */
+export const HEADING_PT = 11;
+export const HEADING_CHARS = Math.floor((PAGE_W - 2 * MARGIN) / (HEADING_PT * 0.6));
 
 export interface PdfImage {
   /** Baseline JPEG bytes (DCTDecode); progressive JPEG is fine for every modern reader too. */
@@ -127,7 +130,12 @@ function pdfString(latin1: string): string {
 export function wrapLine(line: string, width = LINE_CHARS): string[] {
   if (line.length <= width) return [line];
   const indent = line.match(/^\s*/)?.[0] ?? '';
-  const words = line.trim().split(/\s+/);
+  // A run longer than the line (a URL, a word without spaces) is cut into pieces that fit.
+  const room = Math.max(8, width - indent.length - 2);
+  const words = line
+    .trim()
+    .split(/\s+/)
+    .flatMap((w) => (w.length <= room ? [w] : (w.match(new RegExp(`.{1,${room}}`, 'g')) ?? [w])));
   const out: string[] = [];
   let current = indent;
   for (const w of words) {
@@ -175,13 +183,23 @@ export function buildPdf(
     y -= size === FONT_PT ? LINE_PT : LINE_PT + 3;
   };
   for (const block of blocks) {
-    const lines = block.lines.flatMap((l) => wrapLine(l));
-    const imgW = block.imageWidthPt ?? 240;
+    const lines = block.lines.flatMap((l, i) =>
+      wrapLine(l, block.heading && i === 0 ? HEADING_CHARS : LINE_CHARS),
+    );
+    // The heading is the first line of the block; a wrapped heading's continuations are headings too.
+    const headingLines = block.heading ? wrapLine(block.lines[0] ?? '', HEADING_CHARS).length : 0;
+    // The picture never taller than the page's text area.
+    const imgW = block.image
+      ? Math.min(
+          block.imageWidthPt ?? 240,
+          ((PAGE_H - 2 * MARGIN - LINE_PT) * block.image.width) / block.image.height,
+        )
+      : (block.imageWidthPt ?? 240);
     const imgH = block.image ? (imgW * block.image.height) / block.image.width : 0;
     const need = lines.length * LINE_PT + (block.image ? imgH + LINE_PT : 0) + LINE_PT;
     // Keep a short block (text and picture) together on one page.
     if (need < PAGE_H - 2 * MARGIN && y - need < MARGIN) newPage();
-    lines.forEach((l, i) => textLine(l, block.heading && i === 0 ? 11 : FONT_PT));
+    lines.forEach((l, i) => textLine(l, i < headingLines ? HEADING_PT : FONT_PT));
     if (block.image) {
       if (y - imgH < MARGIN) newPage();
       const index = images.push(block.image) - 1;
@@ -269,6 +287,7 @@ export function jpegSize(bytes: Uint8Array): { width: number; height: number } |
   let i = 2;
   while (i + 9 < bytes.length) {
     if (bytes[i] !== 0xff) return null;
+    while (bytes[i + 1] === 0xff) i++; // fill bytes before a marker
     const marker = bytes[i + 1]!;
     if (marker === 0xd8 || (marker >= 0xd0 && marker <= 0xd7) || marker === 0x01) {
       i += 2;

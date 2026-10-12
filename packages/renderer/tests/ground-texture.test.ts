@@ -92,7 +92,7 @@ describe('snowlineWithForecast', () => {
     expect(snowlineWithForecast(1200, 0.3, 1600)).toBe(1200);
     expect(snowlineWithForecast(1200, 0, 1600)).toBe(1750);
     expect(snowlineWithForecast(2800, 0, 1600)).toBe(2800);
-    expect(snowlineWithForecast(2800, 0.01, 1600)).toBe(2800); // a dusting is not lying snow
+    expect(snowlineWithForecast(2800, 0.005, 1600)).toBe(2800); // a dusting is not lying snow
     expect(snowlineWithForecast(2800, null, 1600)).toBe(2800);
     expect(snowlineWithForecast(2800, 0.3, null)).toBe(2800);
   });

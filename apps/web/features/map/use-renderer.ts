@@ -179,8 +179,10 @@ export function useRenderer(opts: UseRendererOptions): RendererHandle {
     const c = state.controller;
     const caps = opts.capabilities;
     if (!c || !caps) return;
+    // Capabilities arrive after the host is built: the ion token goes in before the providers.
+    state.host?.setIonToken(caps.ionToken);
     void c.setProviders(caps.providers.terrain, caps.providers.basemap, caps.providers.buildings);
-  }, [state.controller, opts.capabilities]);
+  }, [state.controller, state.host, opts.capabilities]);
 
   return state;
 }

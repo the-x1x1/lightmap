@@ -80,6 +80,8 @@ export class SceneController {
   private pinRefreshPending = false;
   /** Ellipsoidal height of sea level at the pin, metres (the geoid), for the shore and snow rules. */
   private seaLevelM = 0;
+  /** Whether `groundHeightM` is the terrain's own sample for the current pin (false until it lands). */
+  private groundHeightSampled = false;
   private lastDayKey: string | null = null;
   private groundHeightM = 0;
   private groundHeightKey: string | null = null;
@@ -235,7 +237,7 @@ export class SceneController {
       brightness: shading.basemapBrightness,
       seaLevelM: this.seaLevelM,
       // The pin's height above sea level, for the forecast's snow (null until terrain is sampled).
-      groundHeightM: this.groundHeightKey ? this.groundHeightM - this.seaLevelM : null,
+      groundHeightM: this.groundHeightSampled ? this.groundHeightM - this.seaLevelM : null,
     });
     const groundKey = ground
       ? `${ground.snowlineM}|${ground.treelineM}|${ground.poleward}|${ground.strength}|${ground.aridity}|${ground.ice}|${ground.brightness}|${ground.seaLevelM}`
@@ -413,7 +415,9 @@ export class SceneController {
     const key = `${scene.location.point.latitude},${scene.location.point.longitude}|${this.lastTerrain ?? ''}`;
     if (key === this.groundHeightKey) return;
     this.groundHeightKey = key;
+    this.groundHeightSampled = false;
     const h = await this.host.sampleGroundHeight(scene.location.point);
+    if (this.groundHeightKey !== key || this.host.isDestroyed()) return;
     const next = h ?? scene.location.point.elevationM ?? scene.environment.groundElevationM ?? 0;
     // The geoid here: the terrain's ellipsoidal height less the known height above sea level
     // (the ground texture's shore and snow rules read sea level, not the ellipsoid).
@@ -423,13 +427,11 @@ export class SceneController {
     const seaLevelRounded = Math.round(Math.max(-120, Math.min(120, seaLevel)));
     const seaChanged = seaLevelRounded !== this.seaLevelM;
     if (seaChanged) this.seaLevelM = seaLevelRounded;
-    if (next !== this.groundHeightM && this.lastScene) {
-      this.groundHeightM = next;
-      this.applyCamera(this.lastScene, false);
-      this.applyOverlay(this.lastScene);
-      this.host.requestRender();
-    }
-    if (seaChanged && this.lastScene) this.apply(this.lastScene);
+    const groundChanged = next !== this.groundHeightM;
+    this.groundHeightM = next;
+    this.groundHeightSampled = h !== null;
+    // The camera, the overlay and the ground texture's snow all read the height: one apply.
+    if (this.lastScene && (groundChanged || seaChanged || h !== null)) this.apply(this.lastScene);
   }
 
   get groundHeight(): number {

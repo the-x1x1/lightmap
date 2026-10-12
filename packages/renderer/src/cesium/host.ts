@@ -170,6 +170,8 @@ export interface SceneHost {
   setQuality(q: HostQuality): void;
   /** Paint (or clear) the procedural ground texture over the basemap. */
   setGroundTexture(g: HostGroundTexture | null): void;
+  /** The public ion token once capabilities arrive (ion terrain, imagery and buildings use it). */
+  setIonToken(token: string | undefined): void;
   setTerrain(t: TerrainDescriptor): Promise<void>;
   setBasemap(b: BasemapDescriptor): Promise<void>;
   /** 3D buildings over the terrain (lit and shadow-casting like it); `none` removes them. */

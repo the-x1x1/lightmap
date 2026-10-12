@@ -163,7 +163,7 @@ of the direct beam regardless of its total cover.
 
 - Coordinates are quantised to a **0.05° grid cell** (≈ 5.5 km at the equator) before any request.
 - One fetch per **(provider, version, grid cell, civil day at the location)**; key
-  `weather:<provider>:v1:<cell>:<YYYY-MM-DD>`. Server cache lives in `provider_cache` (Postgres)
+  `weather:<provider>:v4:<cell>:<YYYY-MM-DD>`. Server cache lives in `provider_cache` (Postgres)
   with TTL = provider update interval (60 min) for forecasts, 6 h for the recent past, 30 days
   for reanalysis history (settled).
 - The response carries the whole day of hourly frames; the client caches it in TanStack Query and

@@ -170,7 +170,8 @@ opacity that rises on rock and snow and falls on open ground, so a licensed imag
 shows through where it carries the information — vegetation hue, desert, farmland — and the
 procedural surface supplies the detail it lacks. Water (where the terrain carries a mask) is
 left to the water effect; the shore and snow rules read heights above sea level (the geoid at
-the pin from the terrain's ellipsoidal height against the known elevation), and the night
+the pin from the terrain's ellipsoidal height against the known elevation; a click picks the
+ground under the cursor, never a roof, so buildings do not skew it), and the night
 chart's dimming applies to the surface as to the basemap. The Minimal quality rung turns it off with the shadows; the
 `groundTexture` flag turns it off everywhere. **Claim:** the surface lit by the true Sun, with
 shadows and horizon geometry untouched (the material runs before the globe's lighting and

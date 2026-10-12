@@ -1,11 +1,32 @@
 /**
- * Browser side of the PDF export: a saved thumbnail (a PNG data URL from the renderer) becomes
- * JPEG bytes through a canvas, so the PDF can carry it as a DCT image. Null when the browser
- * cannot decode or encode it (the PDF then shows the text alone).
+ * Browser side of the PDF export: a saved thumbnail (a data URL from the renderer — JPEG as
+ * `captureThumbnail` writes it, or PNG from an older save) becomes JPEG bytes the PDF can carry
+ * as a DCT image: a JPEG data URL is decoded straight from its base64 (no second generation of
+ * loss), anything else goes through a canvas. Null when the browser cannot decode or encode it
+ * (the PDF then shows the text alone).
  */
 import { jpegSize, type PdfImage } from './pdf';
 
+/** The bytes of a base64 data URL, or null when it is not one. */
+export function bytesFromDataUrl(dataUrl: string): Uint8Array | null {
+  const m = /^data:([^;,]+);base64,(.*)$/s.exec(dataUrl);
+  if (!m) return null;
+  try {
+    const bin = atob(m[2] ?? '');
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  } catch {
+    return null;
+  }
+}
+
 export async function jpegFromDataUrl(dataUrl: string, quality = 0.85): Promise<PdfImage | null> {
+  if (dataUrl.startsWith('data:image/jpeg;base64,')) {
+    const jpeg = bytesFromDataUrl(dataUrl);
+    const size = jpeg ? jpegSize(jpeg) : null;
+    if (jpeg && size) return { jpeg, ...size };
+  }
   try {
     const img = new Image();
     img.decoding = 'async';

@@ -4,7 +4,7 @@
  * which way is poleward, and how strongly to paint over the basemap. Pure, unit-tested; the
  * rules are a texture's, not a snow model's (`RENDERING_ACCURACY.md`).
  */
-import type { SceneState } from '@lightmap/scene';
+import { SNOW_ON_GROUND_M, type SceneState } from '@lightmap/scene';
 
 export interface GroundTextureParams {
   /** Height above the ellipsoid from which snow lies, metres. */
@@ -33,8 +33,8 @@ export interface GroundTextureContext {
   groundHeightM?: number | null;
 }
 
-/** Snow on the ground at the model's grid point from this depth paints the pin's height snowy, metres. */
-export const FORECAST_SNOW_M = 0.02;
+/** Snow on the ground at the model's grid point from this depth paints the pin's height snowy, metres (the Snow line's own threshold). */
+export const FORECAST_SNOW_M = SNOW_ON_GROUND_M;
 
 /**
  * The snowline with the forecast's word on it: inside the forecast horizon the frame says

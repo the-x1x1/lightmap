@@ -44,7 +44,7 @@ export function deriveConfidence(input: ConfidenceInput): ConfidenceState {
 
   const envNote =
     environment === 'HIGH'
-      ? 'Real terrain with detailed imagery and buildings'
+      ? 'Real terrain with detailed imagery and OSM buildings where mapped'
       : terrain === 'HIGH'
         ? `Real terrain; ${input.environment.basemapDetail === 'coarse' ? 'coarse basemap, no buildings' : 'imagery without 3D buildings'}`
         : 'No terrain data here — flat ground assumed';

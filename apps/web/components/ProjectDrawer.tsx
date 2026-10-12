@@ -58,6 +58,7 @@ export function ProjectDrawer({
   const [error, setError] = useState<{ message: string; upgradeTo?: string } | null>(null);
   /** Last completed action, announced through one permanent status region (plan §28). */
   const [status, setStatus] = useState('');
+  const [pdfBusy, setPdfBusy] = useState(false);
   const restore = usePlannerStore((s) => s.restore);
   const setPanel = usePlannerStore((s) => s.setPanel);
   const units = usePlannerStore((s) => s.units);
@@ -168,28 +169,36 @@ export function ProjectDrawer({
   }
   // The same list as a PDF with each viewpoint's saved thumbnail under its block.
   async function downloadShotListPdf() {
-    if (!selectedProject) return;
+    if (!selectedProject || pdfBusy) return;
+    setPdfBusy(true);
     setError(null);
     setStatus('Preparing the PDF…');
-    const thumbnails = new Map<string, PdfImage>();
-    for (const v of selectedProject.viewpoints) {
-      if (!v.thumbnailDataUrl) continue;
-      const image = await jpegFromDataUrl(v.thumbnailDataUrl);
-      if (image) thumbnails.set(v.id, image);
+    try {
+      const thumbnails = new Map<string, PdfImage>();
+      for (const v of selectedProject.viewpoints) {
+        if (!v.thumbnailDataUrl) continue;
+        const image = await jpegFromDataUrl(v.thumbnailDataUrl);
+        if (image) thumbnails.set(v.id, image);
+      }
+      const bytes = buildShotListPdf(selectedProject, selectedProject.viewpoints, {
+        appUrl: window.location.origin,
+        generatedAt: new Date(),
+        units,
+        forecastAround,
+        thumbnails,
+      });
+      downloadBlob(
+        new Blob([bytes], { type: 'application/pdf' }),
+        `${fileStem(selectedProject.name, 'project')}-shot-list.pdf`,
+      );
+      setStatus('Shot list PDF downloaded.');
+      track('export_made', { kind: 'shot-list-pdf' });
+    } catch {
+      setStatus('');
+      setError({ message: 'Could not build the PDF here — the text download still works.' });
+    } finally {
+      setPdfBusy(false);
     }
-    const bytes = buildShotListPdf(selectedProject, selectedProject.viewpoints, {
-      appUrl: window.location.origin,
-      generatedAt: new Date(),
-      units,
-      forecastAround,
-      thumbnails,
-    });
-    downloadBlob(
-      new Blob([bytes], { type: 'application/pdf' }),
-      `${fileStem(selectedProject.name, 'project')}-shot-list.pdf`,
-    );
-    setStatus('Shot list PDF downloaded.');
-    track('export_made', { kind: 'shot-list-pdf' });
   }
   // The same shots as calendar events (one per viewpoint, re-importing updates them).
   function downloadCalendar() {
@@ -462,6 +471,7 @@ export function ProjectDrawer({
                     size="sm"
                     variant="ghost"
                     onClick={() => void downloadShotListPdf()}
+                    disabled={pdfBusy}
                     title="The same list as a PDF, with each viewpoint’s saved preview under its block"
                     data-testid="shot-list-pdf"
                   >

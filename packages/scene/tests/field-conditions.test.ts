@@ -208,6 +208,7 @@ describe('fieldConditions', () => {
     expect(describeSnow(0.12, 'imperial').value).toBe('5 in on the ground');
     expect(formatSnowDepth(1.26)).toBe('1.3 m');
     expect(formatSnowDepth(0.015)).toBe('2 cm');
+    expect(formatSnowDepth(0.012, 'imperial')).toBe('1 in');
   });
 
   it('lists the wind and the humidity with their notes', () => {
