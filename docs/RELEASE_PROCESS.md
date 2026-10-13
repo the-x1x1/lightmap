@@ -87,6 +87,24 @@ Until a production host exists, steps 3 and 5 are skipped (the workflow checks w
 and prints a notice instead), so tagging still produces a GitHub release from a fully gated build.
 Set both in _Settings → Environments → production_ when the host is ready.
 
+### 5a. Running a release on one machine (no database)
+
+A production build on a laptop or desktop, for its owner only:
+
+```powershell
+git clone https://github.com/the-x1x1/lightmap.git lightmap-release; cd lightmap-release
+git checkout "$(git describe --tags --abbrev=0)"
+"LIGHTMAP_STANDALONE=true" | Set-Content .env
+corepack pnpm@10.28.0 install --frozen-lockfile
+corepack pnpm@10.28.0 build
+corepack pnpm@10.28.0 --filter @lightmap/web start      # http://localhost:3000
+```
+
+`LIGHTMAP_STANDALONE=true` lifts the production requirement for a database, `AUTH_SECRET`,
+`AUTH_URL` and a sign-in method: accounts, projects and billing are off, the map and planning work.
+Without it a production server refuses every request (the strict pre-flight in §7 is the point of
+production mode). The root `.env` is read by `next.config.ts`; never set the flag on a public host.
+
 ## 6. Rollback
 
 **Application**: redeploy the previous tag on the host (`vercel rollback`, `fly deploy --image

@@ -46,6 +46,25 @@ describe('parseEnv', () => {
     expect(keys).toContain('WEATHER_PROVIDER');
   });
 
+  it('standalone production runs with no database and no accounts, and says so', () => {
+    const bare = parseEnv({ NODE_ENV: 'production' });
+    expect(bare.ok).toBe(false);
+    const errors = bare.issues.filter((i) => i.severity === 'error').map((i) => i.key);
+    for (const key of ['DATABASE_URL', 'AUTH_SECRET', 'AUTH_URL', 'EMAIL_SERVER'])
+      expect(errors).toContain(key);
+    const alone = parseEnv({ NODE_ENV: 'production', LIGHTMAP_STANDALONE: 'true' });
+    expect(alone.ok).toBe(true);
+    expect(alone.env.LIGHTMAP_STANDALONE).toBe(true);
+    expect(alone.issues.map((i) => i.key)).toContain('LIGHTMAP_STANDALONE');
+    // It does not loosen anything else.
+    const dev = parseEnv({
+      NODE_ENV: 'production',
+      LIGHTMAP_STANDALONE: 'true',
+      AUTH_DEV_LOGIN: 'true',
+    });
+    expect(dev.ok).toBe(false);
+  });
+
   it('requires a token for ion providers and attribution for xyz imagery', () => {
     const r = parseEnv({
       TERRAIN_PROVIDER: 'cesium-ion',

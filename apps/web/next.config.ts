@@ -1,4 +1,40 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import type { NextConfig } from 'next';
+
+/**
+ * The repo's `.env` lives at the workspace root (README: `cp .env.example .env`), two levels
+ * above this app, where Next does not look. Load it here for `next dev|build|start`, without
+ * overriding anything already in the process environment; the `db:*` and other scripts read the
+ * same file through `node --env-file`.
+ */
+function loadRootEnv(): void {
+  let text: string;
+  try {
+    text = readFileSync(new URL('../../.env', import.meta.url), 'utf8');
+  } catch {
+    return;
+  }
+  for (const line of text.split(/\r?\n/)) {
+    const m = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/.exec(line);
+    if (!m || line.trimStart().startsWith('#')) continue;
+    const [, key, rawValue] = m;
+    if (!key || process.env[key] !== undefined) continue;
+    let value = rawValue ?? '';
+    const quoted = /^(['"])(.*)\1$/.exec(value);
+    if (quoted) value = quoted[2] ?? '';
+    else value = value.replace(/\s+#.*$/, '');
+    process.env[key] = value;
+  }
+}
+loadRootEnv();
+
+/**
+ * `@spz-loader/core` (pulled in by @cesium/engine for Gaussian splats, which LightMap never
+ * renders) inlines its WebAssembly as a binary string that the production minifier breaks —
+ * see lib/stubs/spz-loader.ts. Both bundlers get the same stand-in.
+ */
+const spzStub = fileURLToPath(new URL('./lib/stubs/spz-loader.ts', import.meta.url));
 
 /**
  * Security headers (plan §29). The Content-Security-Policy is set per request with a nonce in
@@ -37,6 +73,11 @@ const nextConfig: NextConfig = {
     '@lightmap/weather',
   ],
   serverExternalPackages: ['geo-tz', 'postgres', 'stripe', 'nodemailer'],
+  webpack(config: { resolve: { alias?: Record<string, unknown> } }) {
+    config.resolve.alias = { ...config.resolve.alias, '@spz-loader/core': spzStub };
+    return config;
+  },
+  turbopack: { resolveAlias: { '@spz-loader/core': spzStub } },
   experimental: {
     optimizePackageImports: [
       '@radix-ui/react-dialog',

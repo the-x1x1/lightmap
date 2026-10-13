@@ -23,6 +23,13 @@ export interface Env {
   AUTH_GOOGLE_ID: string | undefined;
   AUTH_GOOGLE_SECRET: string | undefined;
   AUTH_DEV_LOGIN: boolean;
+  /**
+   * Standalone: a production build run on one machine for its owner, with no database and no
+   * accounts (`pnpm build && pnpm start` on a laptop). Lifts the production requirement for
+   * DATABASE_URL, AUTH_SECRET, AUTH_URL and a sign-in method; everything that needs an account
+   * stays off, map exploration works. Never set it on a public deployment.
+   */
+  LIGHTMAP_STANDALONE: boolean;
   STRIPE_SECRET_KEY: string | undefined;
   STRIPE_WEBHOOK_SECRET: string | undefined;
   STRIPE_PRICE_PRO_MONTHLY: string | undefined;
@@ -142,6 +149,7 @@ export function parseEnv(raw: RawEnv): EnvResult {
     AUTH_GOOGLE_ID: str(raw, 'AUTH_GOOGLE_ID'),
     AUTH_GOOGLE_SECRET: str(raw, 'AUTH_GOOGLE_SECRET'),
     AUTH_DEV_LOGIN: bool(raw, 'AUTH_DEV_LOGIN', false),
+    LIGHTMAP_STANDALONE: bool(raw, 'LIGHTMAP_STANDALONE', false),
     STRIPE_SECRET_KEY: str(raw, 'STRIPE_SECRET_KEY'),
     STRIPE_WEBHOOK_SECRET: str(raw, 'STRIPE_WEBHOOK_SECRET'),
     STRIPE_PRICE_PRO_MONTHLY: str(raw, 'STRIPE_PRICE_PRO_MONTHLY'),
@@ -226,11 +234,18 @@ export function parseEnv(raw: RawEnv): EnvResult {
       message: 'should be at least 32 characters (openssl rand -base64 32)',
     });
   }
+  if (isProd && env.LIGHTMAP_STANDALONE)
+    issues.push({
+      key: 'LIGHTMAP_STANDALONE',
+      severity: 'warning',
+      message: 'standalone production: no database, no accounts; not for a public deployment',
+    });
   if (isProd) {
-    for (const key of ['DATABASE_URL', 'AUTH_SECRET', 'AUTH_URL'] as const) {
-      if (env[key] === undefined)
-        issues.push({ key, severity: 'error', message: 'required in production' });
-    }
+    if (!env.LIGHTMAP_STANDALONE)
+      for (const key of ['DATABASE_URL', 'AUTH_SECRET', 'AUTH_URL'] as const) {
+        if (env[key] === undefined)
+          issues.push({ key, severity: 'error', message: 'required in production' });
+      }
     if (env.AUTH_DEV_LOGIN)
       issues.push({
         key: 'AUTH_DEV_LOGIN',
@@ -262,7 +277,11 @@ export function parseEnv(raw: RawEnv): EnvResult {
         severity: 'warning',
         message: 'Open-Meteo requires a paid API key for commercial use',
       });
-    if (env.EMAIL_SERVER === undefined && env.AUTH_GOOGLE_ID === undefined)
+    if (
+      env.EMAIL_SERVER === undefined &&
+      env.AUTH_GOOGLE_ID === undefined &&
+      !env.LIGHTMAP_STANDALONE
+    )
       issues.push({
         key: 'EMAIL_SERVER',
         severity: 'error',
