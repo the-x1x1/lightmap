@@ -709,12 +709,21 @@ export class CesiumSceneHost implements SceneHost {
         c.targetHeightM,
       );
       const offset = new C.HeadingPitchRange(c.headingDeg * DEG, pitchDeg * DEG, c.rangeM);
-      if (c.fly) {
+      // A flight still under way (to this place, before its ground height was known) would
+      // carry on to its old end and overwrite a correction made now; so a correction during a
+      // flight becomes a short flight to the corrected view instead.
+      const flying = (cam as unknown as { _currentFlight?: unknown })._currentFlight !== undefined;
+      if (c.fly || flying) {
+        cam.cancelFlight();
         cam.lookAtTransform(C.Matrix4.IDENTITY);
         const sphere = new C.BoundingSphere(target, Math.max(1, c.rangeM * 0.15));
         // Cesium sizes the flight to the distance (a hop along a coast is quick, orbit to a
         // street several seconds), which gives the terrain time to load on the way in.
-        cam.flyToBoundingSphere(sphere, { offset, maximumHeight: Math.max(c.rangeM * 4, 2e6) });
+        cam.flyToBoundingSphere(sphere, {
+          offset,
+          maximumHeight: Math.max(c.rangeM * 4, 2e6),
+          ...(c.fly ? {} : { duration: 1 }),
+        });
       } else {
         cam.lookAt(target, offset);
         cam.lookAtTransform(C.Matrix4.IDENTITY); // release so the user can orbit freely
