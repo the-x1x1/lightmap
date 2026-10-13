@@ -557,7 +557,12 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         vec3 sea = mix(vec3(0.05, 0.17, 0.25), vec3(0.08, 0.24, 0.30), patches);
         sea = mix(sea, vec3(0.10, 0.17, 0.24), smoothstep(2000.0, 40000.0, dist));
         material.diffuse = mix(material.diffuse, sea * u_brightness, water);
-        alpha = mix(alpha, 0.8 * u_strength, water);
+        // Water seen at a grazing angle is a mirror (Fresnel): toward the horizon the paint
+        // gives way to the globe's own water shading — the sky's light and the Sun's glint path,
+        // the picture at a sunrise over the sea — and holds only looking down into it.
+        float cosView = clamp(dot(materialInput.normalEC, normalize(materialInput.positionToEyeEC)), 0.0, 1.0);
+        float fresnel = pow(1.0 - cosView, 3.0);
+        alpha = mix(alpha, 0.8 * u_strength * (1.0 - 0.8 * fresnel), water);
     }
 #endif
     // From orbit the bundled basemap is the better picture of the Earth (the procedural ground
