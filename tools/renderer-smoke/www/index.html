@@ -462,12 +462,17 @@
         const {
           GROUND_COVER_BOUNDS_UNIFORM,
           GROUND_COVER_IMAGE_UNIFORM,
-          GROUND_DETAIL_IMAGE_UNIFORM,
+          GROUND_DETAIL_IMAGE_UNIFORMS,
           GROUND_MATERIAL_SOURCE,
+          createDetailTextures,
           GROUND_UNIFORM_DEFAULTS,
           groundTextureFor,
         } = await import('@lightmap/renderer');
         const probeParams = groundTextureFor(s1);
+        const atlasImage = new Image();
+        atlasImage.src = 'textures/ground-detail.png';
+        await atlasImage.decode();
+        const detailTextures = createDetailTextures(Cesium, host.__scene.context, atlasImage) ?? {};
         // A synthetic cover map over the probe rectangle (forest NW, crop NE, built SW, bare SE
         // and an ice patch), packed as `packCover` does, so the cover branch runs for real:
         // the shot must show the quadrants in place (forest at the north-west corner).
@@ -513,9 +518,10 @@
               [GROUND_COVER_BOUNDS_UNIFORM]: coverBounds,
               [GROUND_COVER_IMAGE_UNIFORM]: coverCanvas,
               u_coverOn: 1,
-              // The detail atlas as the app serves it, switched on; the probe's own ENU frame
-              // and camera offsets are kept up each frame below, as the host does for the globe.
-              [GROUND_DETAIL_IMAGE_UNIFORM]: 'textures/ground-detail.png',
+              // The detail tiles as the host builds them from the app's atlas (four wrapping
+              // textures), switched on; the probe's own ENU frame and camera offsets are kept
+              // up each frame below, as the host does for the globe.
+              ...detailTextures,
               u_detailOn: 1,
               u_eastWC: new Cesium.Cartesian3(1, 0, 0),
               u_northWC: new Cesium.Cartesian3(0, 1, 0),

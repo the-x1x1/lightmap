@@ -14,9 +14,12 @@ import { Button, cx } from '@lightmap/ui';
 export function LocationSearch({
   className,
   autoFocus,
+  placeholder,
 }: {
   className?: string;
   autoFocus?: boolean;
+  /** Replaces the default placeholder (the accessible name stays the same). */
+  placeholder?: string;
 }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Place[]>([]);
@@ -173,7 +176,7 @@ export function LocationSearch({
                 void choose(results[active]);
               } else if (e.key === 'Escape') setOpen(false);
             }}
-            placeholder="Search a place or paste coordinates"
+            placeholder={placeholder ?? 'Search a place or paste coordinates'}
             aria-label="Search a place or paste coordinates"
             aria-autocomplete="list"
             aria-controls={listId}

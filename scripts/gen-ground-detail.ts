@@ -7,8 +7,8 @@
  * Generated, not photographed: periodic value noise on a torus so every tile wraps without a
  * seam, shaped per surface (blades and clumps for grass, fractured faces and cracks for rock,
  * fine grain and ripples for sand, soft lumps with a cool shadow for snow), normalised to a mean
- * near 0.5 so the material can use it as a multiplier without shifting the macro colour, each
- * tile with a one-pixel wrapped border (the shader samples its inner 254 px). The
+ * near 0.5 so the material can use it as a multiplier without shifting the macro colour (the
+ * host cuts the quadrants into four wrapping textures, one per surface, at load). The
  * script is deterministic (a fixed seed), dependency-free (its own PNG encoder over `zlib`),
  * and the atlas it writes is committed; re-run `pnpm textures:ground` after changing it. A
  * photographic CC0 set (e.g. ambientCG's Grass/Rock/Ground/Snow, CC0 1.0) can replace the file
@@ -166,14 +166,9 @@ for (const [fn, ox, oy] of surfaces) {
   let mean = 0;
   for (let y = 0; y < TILE; y++)
     for (let x = 0; x < TILE; x++) {
-      // A one-pixel wrapped border: pixel 0 repeats the far edge and pixel 255 the near one,
-      // so the shader can sample the inner 254 px with linear filtering and never bleed into
-      // the neighbouring quadrant at the wrap.
-      const inner = TILE - 2;
-      const c = fn(
-        ((((x - 1) % inner) + inner) % inner) / inner,
-        ((((y - 1) % inner) + inner) % inner) / inner,
-      );
+      // Each tile is one whole period: the host cuts the quadrants into four separate
+      // textures that the GPU wraps and mipmaps on their own, so no border is needed.
+      const c = fn(x / TILE, y / TILE);
       tile.push(c);
       mean += 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2];
     }

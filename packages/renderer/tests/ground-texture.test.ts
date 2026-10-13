@@ -23,7 +23,8 @@ import { QUALITY_LADDER } from '../src/quality-governor.ts';
 import {
   GROUND_COVER_BOUNDS_UNIFORM,
   GROUND_COVER_IMAGE_UNIFORM,
-  GROUND_DETAIL_IMAGE_UNIFORM,
+  GROUND_DETAIL_IMAGE_UNIFORMS,
+  GROUND_DETAIL_QUADRANTS,
   GROUND_DETAIL_PERIOD_M,
   GROUND_MATERIAL_SOURCE,
   GROUND_UNIFORM_DEFAULTS,
@@ -287,7 +288,15 @@ describe('ground material source', () => {
       expect(GROUND_MATERIAL_SOURCE).toContain(`uniform float ${name};`);
     expect(GROUND_MATERIAL_SOURCE).toContain(`uniform sampler2D ${GROUND_COVER_IMAGE_UNIFORM};`);
     expect(GROUND_MATERIAL_SOURCE).toContain(`uniform vec4 ${GROUND_COVER_BOUNDS_UNIFORM};`);
-    expect(GROUND_MATERIAL_SOURCE).toContain(`uniform sampler2D ${GROUND_DETAIL_IMAGE_UNIFORM};`);
+    for (const q of GROUND_DETAIL_QUADRANTS)
+      expect(GROUND_MATERIAL_SOURCE).toContain(
+        `uniform sampler2D ${GROUND_DETAIL_IMAGE_UNIFORMS[q]};`,
+      );
+    expect(GROUND_DETAIL_QUADRANTS).toEqual(['grass', 'rock', 'sand', 'snow']);
+    // Three tiers, each gated by its own size on screen, so no scale pops in with distance.
+    expect(GROUND_MATERIAL_SOURCE.match(/lmDetailTier\(q/g)?.length).toBe(3);
+    expect(GROUND_MATERIAL_SOURCE).toContain('smoothstep(2.0, 12.0, pxPerPeriod)');
+    expect(GROUND_MATERIAL_SOURCE).toContain('u_coarseBasemap');
     for (const v of ['u_eastWC', 'u_northWC', 'u_upWC', 'u_detailOffset'])
       expect(GROUND_MATERIAL_SOURCE).toContain(`uniform vec3 ${v};`);
     expect(GROUND_DETAIL_PERIOD_M).toBe(2.5);

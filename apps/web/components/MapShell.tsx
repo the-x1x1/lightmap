@@ -31,7 +31,6 @@ import { SheetPeek } from './SheetPeek';
 import { AccountMenu, AccountPanel } from './AccountMenu';
 import { DevBanner } from './DevBanner';
 import { OfflineState } from './states/OfflineState';
-import { EmptyState } from './states/EmptyState';
 import { ErrorState } from './states/ErrorState';
 import { Paywall } from './Paywall';
 import { AttributionFooter } from './AttributionFooter';
@@ -287,23 +286,20 @@ export function MapShell() {
             {brand.name}
           </a>
           <div className="pointer-events-auto flex-1 max-w-xl">
-            <LocationSearch />
+            {/* With no pin yet the search box carries the invitation; nothing sits over the globe. */}
+            <LocationSearch
+              placeholder={
+                location
+                  ? undefined
+                  : 'Where will you shoot? Search a place, paste coordinates, or tap the globe'
+              }
+            />
           </div>
           <div className="pointer-events-auto">
             <AccountMenu />
           </div>
         </header>
         <WorldMap scene={scene} capabilities={capabilities} onRendererInfo={onRendererInfo} />
-        {!location ? (
-          <div className="pointer-events-none absolute inset-x-0 bottom-[42%] z-10 flex justify-center px-4 lg:bottom-auto lg:top-1/2 lg:-translate-y-1/2">
-            <div className="pointer-events-auto">
-              <EmptyState
-                title="Where will you shoot?"
-                body="Search a place, paste coordinates, or tap the globe. Then pick a date and drag the timeline to see how the light behaves."
-              />
-            </div>
-          </div>
-        ) : null}
       </div>
 
       {/* Planning panel: bottom sheet (mobile) / right panel (desktop). */}

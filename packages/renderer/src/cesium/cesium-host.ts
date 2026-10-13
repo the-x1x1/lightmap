@@ -18,10 +18,11 @@ import type {
   TerrainDescriptor,
 } from '@lightmap/geospatial';
 import { GRADE_FRAGMENT_SHADER } from '../shaders/grade.frag.ts';
+import { createDetailTextures, type DetailTileCesium } from './detail-tiles.ts';
 import {
   GROUND_COVER_BOUNDS_UNIFORM,
   GROUND_COVER_IMAGE_UNIFORM,
-  GROUND_DETAIL_IMAGE_UNIFORM,
+  GROUND_DETAIL_IMAGE_UNIFORMS,
   GROUND_DETAIL_PERIOD_M,
   GROUND_GRAIN_M,
   GROUND_MATERIAL_SOURCE,
@@ -107,6 +108,10 @@ export class CesiumSceneHost implements SceneHost {
   };
   /** The detail atlas once its image has loaded; the material takes it then, never a URL. */
   private detailAtlas: HTMLImageElement | null = null;
+  /** The four wrapping tile textures cut from the atlas, owned here and destroyed with the host. */
+  private detailTextures: Record<string, { destroy(): void }> | null = null;
+  /** 1 while the basemap is the bundled coarse one (`u_coarseBasemap`). */
+  private coarseBasemap = 1;
   /** The grade's clock, so a material created after the first grade starts on it. */
   private lastGradeTime = 0;
   private readonly onError: ((message: string, error: unknown) => void) | undefined;
@@ -335,7 +340,9 @@ export class CesiumSceneHost implements SceneHost {
       // on this GPU is the one failure the host can recover from: drop the texture, resume.
       if (this.groundMaterial) {
         globe.material = undefined;
+        // The material destroys the textures it holds, the detail tiles among them.
         this.groundMaterial.destroy();
+        this.detailTextures = null;
         this.groundMaterial = null;
         this.groundTextureFailed = true;
         this.onError?.('Ground texture disabled — the renderer could not compile it', error);
@@ -379,7 +386,9 @@ export class CesiumSceneHost implements SceneHost {
     if (!g) {
       if (this.groundMaterial) {
         globe.material = undefined;
+        // The material destroys the textures it holds, the detail tiles among them.
         this.groundMaterial.destroy();
+        this.detailTextures = null;
         this.groundMaterial = null;
       }
       return;
@@ -399,8 +408,14 @@ export class CesiumSceneHost implements SceneHost {
             ...GROUND_UNIFORM_DEFAULTS,
             [GROUND_COVER_BOUNDS_UNIFORM]: new C.Cartesian4(0, 0, 0, 0),
             [GROUND_COVER_IMAGE_UNIFORM]: C.Material.DefaultImageId,
-            [GROUND_DETAIL_IMAGE_UNIFORM]: C.Material.DefaultImageId,
+            ...Object.fromEntries(
+              Object.values(GROUND_DETAIL_IMAGE_UNIFORMS).map((name) => [
+                name,
+                C.Material.DefaultImageId,
+              ]),
+            ),
             u_detailOn: 0,
+            u_coarseBasemap: this.coarseBasemap,
             u_eastWC: new C.Cartesian3(1, 0, 0),
             u_northWC: new C.Cartesian3(0, 1, 0),
             u_upWC: new C.Cartesian3(0, 0, 1),
@@ -833,15 +848,35 @@ export class CesiumSceneHost implements SceneHost {
     img.src = url;
   }
 
+  /**
+   * Cut the atlas into its four tiles and hand the material one wrapping, mipmapped texture
+   * per surface. A material's own image uniforms clamp at their edges and share one mip chain,
+   * so an atlas bled across its quadrants at every level but the first; a `Texture` the host
+   * builds itself takes a REPEAT sampler and is used as is (Material accepts one directly).
+   */
   private applyDetailAtlas(): void {
     const atlas = this.detailAtlas;
     if (!this.groundMaterial || !atlas) return;
     const u = this.groundMaterial.uniforms as Record<string, unknown>;
-    if (u[GROUND_DETAIL_IMAGE_UNIFORM] === atlas) return;
-    u[GROUND_DETAIL_IMAGE_UNIFORM] = atlas;
-    this.afterUpload(() => {
-      u['u_detailOn'] = 1;
-    });
+    if (!this.detailTextures) {
+      const context = (this.scene as unknown as { context?: unknown }).context;
+      if (!context) return;
+      const textures = createDetailTextures(this.C as unknown as DetailTileCesium, context, atlas);
+      if (!textures) return;
+      this.detailTextures = textures;
+    }
+    const first = GROUND_DETAIL_IMAGE_UNIFORMS.grass;
+    if (u[first] === this.detailTextures[first]) return;
+    for (const [name, texture] of Object.entries(this.detailTextures)) u[name] = texture;
+    u['u_detailOn'] = 1;
+  }
+
+  /** Whether the basemap under the paint is the bundled coarse one (`u_coarseBasemap`). */
+  private setCoarseBasemap(coarse: boolean): void {
+    this.coarseBasemap = coarse ? 1 : 0;
+    if (this.groundMaterial)
+      (this.groundMaterial.uniforms as Record<string, unknown>)['u_coarseBasemap'] =
+        this.coarseBasemap;
   }
 
   async loadLandCoverAround(p: GeoPoint): Promise<LandCoverReading | null> {
@@ -1044,7 +1079,9 @@ export class CesiumSceneHost implements SceneHost {
         );
         this.baseLayer = layer;
       }
+      this.setCoarseBasemap(!provider);
     } catch (error) {
+      this.setCoarseBasemap(true);
       this.onError?.('Imagery unavailable — showing Natural Earth II', error);
     }
     this.scene.requestRender();
@@ -1349,6 +1386,7 @@ export class CesiumSceneHost implements SceneHost {
     this.pickHandler?.destroy();
     this.groundMaterial?.destroy();
     this.groundMaterial = null;
+    this.detailTextures = null;
     this.widget.destroy();
   }
 }

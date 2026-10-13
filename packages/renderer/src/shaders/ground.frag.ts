@@ -10,9 +10,9 @@
  * untouched (plan §1E) — only the surface albedo changes. Its inputs are the terrain's own
  * height, slope and aspect (per vertex, from the mesh normals) and a value-noise field over the
  * fragment's world position, so patches are fixed to the ground and do not swim as the camera
- * moves (float ECEF jitter is ~0.5 m; the finest world-anchored octave is 8 m; a metre-scale
- * grain near the camera is computed camera-relative with the camera's own cell offset passed in,
- * and fades out by 500 m). The colour is blended
+ * moves (float ECEF jitter is ~0.5 m; the finest world-anchored octave is 8 m; the detail tiles
+ * nearer the camera are computed camera-relative along a ground-anchored frame, in three tiers
+ * that each fade in by their size on screen). The colour is blended
  * over the basemap with an alpha that rises on rock and snow and falls on open ground, so a
  * real imagery layer, where one is licensed, still shows through where it matters — vegetation
  * hue, desert, farmland — and the procedural surface supplies the detail the basemap lacks.
@@ -59,13 +59,31 @@ export const GROUND_UNIFORM_DEFAULTS = {
   u_detail: 2,
   /** 1 when a cover map is loaded and its bounds set; 0 leaves the procedural rules alone. */
   u_coverOn: 0,
-  /** 1 when the detail atlas is loaded: the near field takes its grain from it instead of the noise. */
+  /** 1 when the detail tiles are loaded: the near field takes its grain from them instead of the noise. */
   u_detailOn: 0,
+  /**
+   * 1 when the basemap is the bundled coarse one (Natural Earth, ~500 m per pixel): the paint
+   * then covers the land almost completely, so the basemap's blocky coastline and lakes never
+   * show through as water on land; 0 with real imagery, which shows through where it matters.
+   */
+  u_coarseBasemap: 1,
 } as const;
 
-/** The detail atlas sampler (texture pack stage 3): grass NW, rock NE, sand SW, snow SE, each tile wrapping. */
-export const GROUND_DETAIL_IMAGE_UNIFORM = 'u_detailAtlas';
-/** Ground period of one detail tile, metres. */
+/**
+ * The detail tiles (texture pack stage 3): four wrapping 256 px textures, one per surface, each
+ * its own sampler so it carries a full mip chain and the GPU's own REPEAT wrap — an atlas's
+ * quadrants bleed into each other at every mip level below the first, which showed as the
+ * near field going grey and then popping as the camera pulled back.
+ */
+export const GROUND_DETAIL_IMAGE_UNIFORMS = {
+  grass: 'u_detailGrass',
+  rock: 'u_detailRock',
+  sand: 'u_detailSand',
+  snow: 'u_detailSnow',
+} as const;
+/** The bundled atlas's quadrants, in the order the generator writes them (NW, NE, SW, SE). */
+export const GROUND_DETAIL_QUADRANTS = ['grass', 'rock', 'sand', 'snow'] as const;
+/** Ground period of one detail tile, metres (the finest tier; the others are 4.3 × and 18.5 × it). */
 export const GROUND_DETAIL_PERIOD_M = 2.5;
 
 /** The cover map's sampler uniform (an image uniform in Cesium's material fabric: a canvas, or `Material.DefaultImageId`). */
@@ -90,7 +108,11 @@ uniform float u_coverOn;
 uniform vec4 u_coverBounds;
 uniform sampler2D u_coverMap;
 uniform float u_detailOn;
-uniform sampler2D u_detailAtlas;
+uniform float u_coarseBasemap;
+uniform sampler2D u_detailGrass;
+uniform sampler2D u_detailRock;
+uniform sampler2D u_detailSand;
+uniform sampler2D u_detailSnow;
 // The camera's east/north/up axes in world (ECEF) coordinates, and its own position along them
 // in detail periods (the fraction), set each frame so the atlas is anchored to the ground.
 uniform vec3 u_eastWC;
@@ -162,28 +184,44 @@ vec2 lmCoverUv(vec3 p)
                 (merc - u_coverBounds.w) / (u_coverBounds.z - u_coverBounds.w));
 }
 
-// One wrapped tile of the atlas (quadrant q: 0 grass, 1 rock, 2 sand, 3 snow). The image is
-// uploaded bottom-up, so the PNG's top row (grass, rock) is t in [0.5, 1). Each tile carries a
-// one-pixel wrapped border, so the wrap samples its inner 254 px and never bleeds into the
-// neighbouring quadrant; the unwrapped coordinate's derivatives (computed by the caller,
-// outside any branch) keep the mip level continuous across the seam.
-vec3 lmDetail(vec2 uv, vec2 duvdx, vec2 duvdy, float q)
+// One wrapping tile (t: 0 grass, 1 rock, 2 sand, 3 snow) at an unwrapped coordinate in tile
+// periods; the sampler wraps and chooses the mip level from the derivatives the caller took
+// outside any branch. The tiles are normalised to a mean of 0.5, so a minified sample tends to
+// 0.5 and the multiplier below to 1: at a distance the tile fades out by itself, with no seam.
+vec3 lmDetail(vec2 uv, vec2 duvdx, vec2 duvdy, float t)
 {
-    vec2 quad = vec2(q == 1.0 || q == 3.0 ? 0.5 : 0.0, q >= 2.0 ? 0.0 : 0.5);
-    vec2 st = quad + (fract(uv) * 254.0 + 1.0) / 512.0;
 #if __VERSION__ >= 300
-    return textureGrad(u_detailAtlas, st, duvdx * (254.0 / 512.0), duvdy * (254.0 / 512.0)).rgb;
+    if (t < 0.5) return textureGrad(u_detailGrass, uv, duvdx, duvdy).rgb;
+    if (t < 1.5) return textureGrad(u_detailRock, uv, duvdx, duvdy).rgb;
+    if (t < 2.5) return textureGrad(u_detailSand, uv, duvdx, duvdy).rgb;
+    return textureGrad(u_detailSnow, uv, duvdx, duvdy).rgb;
 #else
-    return texture(u_detailAtlas, st).rgb;
+    if (t < 0.5) return texture(u_detailGrass, uv).rgb;
+    if (t < 1.5) return texture(u_detailRock, uv).rgb;
+    if (t < 2.5) return texture(u_detailSand, uv).rgb;
+    return texture(u_detailSnow, uv).rgb;
 #endif
 }
 
-// The atlas across the three projections of a point and its normal weights.
+// The tile across the three projections of a point and its normal weights.
 vec3 lmDetailTri(vec3 q, vec3 dqx, vec3 dqy, vec3 w, float tile)
 {
     return lmDetail(q.yz, dqx.yz, dqy.yz, tile) * w.x
          + lmDetail(q.xz, dqx.xz, dqy.xz, tile) * w.y
          + lmDetail(q.xy, dqx.xy, dqy.xy, tile) * w.z;
+}
+
+// One tier of the detail: the two tiles blended, as a multiplier about 1, weighted by how many
+// screen pixels one period spans (from the coordinate's own derivatives): full from 12 px per
+// period, gone below 2, so each tier fades in smoothly as the camera closes and never pops.
+vec3 lmDetailTier(vec3 q, vec3 dqx, vec3 dqy, vec3 w, float t1, float t2, float blend, float amount)
+{
+    float pxPerPeriod = 1.0 / max(max(length(dqx), length(dqy)), 1e-6);
+    float tierW = smoothstep(2.0, 12.0, pxPerPeriod) * amount;
+    if (tierW <= 0.001) return vec3(1.0);
+    vec3 d = lmDetailTri(q, dqx, dqy, w, t1);
+    if (blend > 0.02) d = mix(d, lmDetailTri(q, dqx, dqy, w, t2), blend);
+    return mix(vec3(1.0), d * 2.0, tierW);
 }
 
 czm_material czm_getMaterial(czm_materialInput materialInput)
@@ -290,27 +328,27 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         }
     }
 
-    // Close to the camera (a viewpoint's foreground) a metre-scale grain, fading out by 500 m so
-    // it never shimmers at a distance. It is anchored to the ground, not the camera: the
-    // camera-relative position (precise) plus the camera's own position in grain cells (whole
-    // cells into the lattice, the fraction into the coordinate, both from the CPU in double).
+    // Nearer the camera, the detail tiles in three tiers — 46 m, 10.75 m and 2.5 m periods —
+    // each fading in by its own size on screen, so there is texture at every zoom from a few
+    // kilometres down to the viewpoint's foreground and no scale ever pops in. Anchored to the
+    // ground, not the camera: the camera-relative position (precise) along an east/north/up
+    // frame the host anchors to the ground (re-anchored only when the camera has moved
+    // kilometres), plus the camera's own offset along that frame in tile periods — so the
+    // pattern stays put as the camera moves. Derivatives are taken here, outside any branch,
+    // as GLSL requires.
     float dist = length(positionEC);
-    float nearW = u_detail >= 2.0 ? smoothstep(500.0, 60.0, dist) : 0.0;
-    // The atlas coordinate: metres from the camera along an east/north/up frame the host
-    // anchors to the ground (re-anchored only when the camera has moved kilometres), plus the
-    // camera's own offset along that frame in tile periods — so the pattern stays put as the
-    // camera moves. Its derivatives are taken here, outside any branch, as GLSL requires.
+    float nearW = u_detail >= 2.0 ? smoothstep(12000.0, 3000.0, dist) : 0.0;
     vec3 local = czm_inverseViewRotation * positionEC;
     vec3 q = vec3(dot(local, u_eastWC), dot(local, u_northWC), dot(local, u_upWC)) / 2.5 + u_detailOffset;
     vec3 dqx = dFdx(q);
     vec3 dqy = dFdy(q);
     if (nearW > 0.0 && u_detailOn > 0.5)
     {
-        // The detail atlas — grass, rock, sand or snow, whichever the rules above made this
-        // ground, the two nearest blended across their edge — projected along the three axes
-        // and blended by the surface normal (a sharp triplanar, so a face takes one
-        // projection). A multiplier about 1 on the colour the macro rules chose; it never
-        // changes what the ground is.
+        // The tiles — grass, rock, sand or snow, whichever the rules above made this ground,
+        // the two nearest blended across their edge — projected along the three axes and
+        // blended by the surface normal (a sharp triplanar, so a face takes one projection).
+        // A multiplier about 1 on the colour the macro rules chose; it never changes what the
+        // ground is.
         vec3 w = abs(vec3(dot(nW, u_eastWC), dot(nW, u_northWC), dot(nW, u_upWC)));
         w = w * w * w * w;
         w = w * w;
@@ -328,22 +366,20 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         if (wRock > w1 && t1 != 1.0) { t2 = t1; w2 = w1; t1 = 1.0; w1 = wRock; }
         if (wSnow > w1) { t2 = t1; w2 = w1; t1 = 3.0; w1 = wSnow; } else if (wSnow > w2) { t2 = 3.0; w2 = wSnow; }
         float blend = w2 / max(w1 + w2, 1e-4);
-        // The same tiles again at 4.3 × the period, so the 2.5 m repeat does not read as a grid.
-        vec3 q2 = q * 0.23 + 0.37;
-        vec3 d1 = mix(lmDetailTri(q, dqx, dqy, w, t1), lmDetailTri(q2, dqx * 0.23, dqy * 0.23, w, t1), 0.4);
-        vec3 d = d1;
-        if (blend > 0.02)
-        {
-            vec3 d2 = mix(lmDetailTri(q, dqx, dqy, w, t2), lmDetailTri(q2, dqx * 0.23, dqy * 0.23, w, t2), 0.4);
-            d = mix(d1, d2, blend);
-        }
-        ground *= mix(vec3(1.0), d * 2.0, nearW * 0.7);
+        // The same tiles at 18.5 × and 4.3 × the period (offset so the repeats never line up),
+        // then the period itself: three multipliers, each about 1, the finer ones a little
+        // stronger than the coarse so the foreground keeps the strongest grain.
+        vec3 d = lmDetailTier(q * 0.054 + 0.61, dqx * 0.054, dqy * 0.054, w, t1, t2, blend, 0.35 * nearW)
+               * lmDetailTier(q * 0.23 + 0.37, dqx * 0.23, dqy * 0.23, w, t1, t2, blend, 0.45 * nearW)
+               * lmDetailTier(q, dqx, dqy, w, t1, t2, blend, 0.5 * nearW);
+        ground *= d;
     }
     else if (nearW > 0.0)
     {
+        float fineW = smoothstep(500.0, 60.0, dist);
         vec3 local = czm_inverseViewRotation * positionEC / 2.5 + u_cameraFrac;
         float fine = lmNoiseAt(local, u_cameraCell) * 0.6 + lmNoiseAt(local * 2.0 + 0.5, u_cameraCell * 2.0) * 0.3;
-        ground *= 1.0 + nearW * 0.3 * (fine - 0.45);
+        ground *= 1.0 + fineW * 0.3 * (fine - 0.45);
     }
 
     // Micro-relief: the grain read as small bumps, lit by the scene's own Sun direction, so rock
@@ -393,9 +429,13 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     }
 
     material.diffuse = ground * u_brightness;
-    // Rock and snow are what they are; open ground lets the basemap's own hue through.
+    // Rock and snow are what they are; open ground lets real imagery's own hue through. Over
+    // the bundled coarse basemap the paint is all but opaque on land: that map's 500 m pixels
+    // put sea and lakes well onto the land near every coast, and at 25 % through the paint
+    // they read as blue blocks on the ground. Water itself (the terrain's own mask, from
+    // OpenStreetMap at tile resolution) stays unpainted, so the shoreline is the terrain's.
     float cover = max(rocky, max(snowy, max(alpine * 0.8, known * 0.9)));
-    float alpha = u_strength * mix(0.75, 0.95, cover);
+    float alpha = u_strength * mix(mix(0.75, 0.95, cover), 0.985, u_coarseBasemap);
 #ifdef HAS_WATER_MASK
     alpha *= 1.0 - materialInput.waterMask;
 #endif

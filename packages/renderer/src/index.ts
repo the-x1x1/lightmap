@@ -16,7 +16,8 @@ export { GRADE_FRAGMENT_SHADER, GRADE_UNIFORM_NAMES } from './shaders/grade.frag
 export {
   GROUND_COVER_BOUNDS_UNIFORM,
   GROUND_COVER_IMAGE_UNIFORM,
-  GROUND_DETAIL_IMAGE_UNIFORM,
+  GROUND_DETAIL_IMAGE_UNIFORMS,
+  GROUND_DETAIL_QUADRANTS,
   GROUND_DETAIL_PERIOD_M,
   GROUND_MATERIAL_SOURCE,
   GROUND_MATERIAL_TYPE,
@@ -24,3 +25,4 @@ export {
 } from './shaders/ground.frag.ts';
 export * from './ground-texture.ts';
 export * from './land-cover.ts';
+export * from './cesium/detail-tiles.ts';

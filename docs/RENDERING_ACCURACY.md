@@ -213,15 +213,22 @@ region's aridity, permanent snow and ice snow at any height; grass and wetland l
 procedural open ground. Steep rock and the seasonal snow still win, water stays with the
 water mask, and a texel the palette did not know (no tile, a wrong palette, beyond the
 map's reach) changes nothing. The read is re-done when the pin moves more than 0.05°; the
-cover's attribution joins the footer. Within 500 m of the camera (texture pack stage 3, Ultra
-and High) the near grain is a **detail atlas** — grass, rock, sand and snow tiles, 2.5 m to a
-tile, generated seamless by `scripts/gen-ground-detail.ts` (`pnpm textures:ground`) and
-bundled at `public/textures/ground-detail.png` — chosen by what the rules above made the
-ground, projected along the camera's own east, north and up axes and blended by the surface
-normal (a sharp triplanar, so a face takes one projection), anchored to the ground through the
-camera's position in double precision, at two scales so the repeat does not read as a grid; a
-multiplier about 1 on the colour the macro rules chose, never a change of what the ground is.
-A photographic CC0 set can replace the file as long as its quadrant order and wrap are kept.
+cover's attribution joins the footer. Within a few kilometres of the camera (texture pack
+stage 3, Ultra and High) the ground takes its grain from **detail tiles** — grass, rock, sand
+and snow, generated seamless by `scripts/gen-ground-detail.ts` (`pnpm textures:ground`) and
+bundled as one atlas at `public/textures/ground-detail.png`, which the host cuts into four
+wrapping, mipmapped textures at load (an atlas sampled as one texture bled its quadrants into
+each other at every mip level, which read as the near field going grey and popping while
+zooming) — chosen by what the rules above made the ground, projected along the camera's own
+east, north and up axes and blended by the surface normal (a sharp triplanar, so a face takes
+one projection), anchored to the ground through the camera's position in double precision,
+in three tiers (46 m, 10.75 m and 2.5 m periods) that each fade in by their own size on
+screen, so there is texture at every zoom and no scale pops in; a multiplier about 1 on the
+colour the macro rules chose, never a change of what the ground is. A photographic CC0 set
+can replace the file as long as its quadrant order and wrap are kept. Over the bundled coarse
+basemap (Natural Earth, ~500 m per pixel) the paint covers land almost fully: that map's sea
+and lakes reach well onto the land at every coast and showed through as blue blocks on the
+ground; the shoreline is the terrain's own water mask.
 Verified so far: both branches compiled and rendered in a bare WebGL2 harness on a synthetic
 range (a synthetic cover map in place, the atlas close up), and, in the renderer smoke
 probe (`tools/renderer-smoke`), the cover map through Cesium's own upload and the atlas close up
