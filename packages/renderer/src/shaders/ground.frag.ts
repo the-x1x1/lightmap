@@ -466,10 +466,8 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // 12 m and 3 m cells, never repeating, each fading in as its cells grow past a few pixels
     // on screen (and out again as they shrink, so it never aliases). The broad scale also
     // shifts the hue — drier and yellower in its light patches — as real ground does.
-    // The 48 m and 12 m noise once, for the mottling and the coast's jitter below: each inlined
-    // copy of the hash is a few dozen integer ops, and with a third and fourth copy the shader
-    // grew past what the Direct3D translation compiled faithfully (on Windows the town blocks
-    // silently vanished while the coast's copies were in the program).
+    // The 48 m and 12 m noise once, for the mottling, the town and the coast's jitter below
+    // (each inlined copy of the hash is a few dozen integer ops).
     float n48 = lmNoiseI(enu / 48.0 + u_mottleFrac2, u_mottleCell2) - 0.5;
     float n12 = lmNoiseI(enu / 12.0 + u_mottleFrac1, u_mottleCell1) - 0.5;
     if (u_detail > 1.0)
@@ -589,13 +587,15 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // Along the mask's soft, stepped edge the threshold is jittered by ground-fixed noise, so
     // the shore reads as an irregular line rather than a staircase of blurred squares.
     float m = materialInput.waterMask;
-    if (m > 0.02 && m < 0.98)
-        m = smoothstep(0.3, 0.7, m
-            + 0.5 * n48
-            + 0.3 * n12
-            // From further out the mask's tiles are coarser and their steps longer: a broader
-            // jitter (≈ 350 m, world-anchored) takes over with distance.
-            + 0.7 * smoothstep(2000.0, 20000.0, dist) * (lmFbm(positionWC / 350.0 + 17.0) - 0.47));
+    // Branch-free on purpose: as a conditional assignment, this made the Direct3D translation
+    // (Chrome and Edge on Windows) drop the town blocks above from the whole program.
+    float mJitter = smoothstep(0.3, 0.7, m
+        + 0.5 * n48
+        + 0.3 * n12
+        // From further out the mask's tiles are coarser and their steps longer: a broader
+        // jitter (≈ 350 m, world-anchored) takes over with distance.
+        + 0.7 * smoothstep(2000.0, 20000.0, dist) * (lmFbm(positionWC / 350.0 + 17.0) - 0.47));
+    m = mix(m, mJitter, step(0.02, m) * step(m, 0.98));
     float water = m * (1.0 - smoothstep(0.008, 0.025, slope));
     // On water the paint is a deep sea colour (a little mottled, greyer toward the horizon)
     // over most of Cesium's own water shading — whose wave highlight, under HDR, turned every
