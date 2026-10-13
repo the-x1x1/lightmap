@@ -3,10 +3,8 @@ import { GRADE_FRAGMENT_SHADER } from '../src/shaders/grade.frag.ts';
 import { GROUND_MATERIAL_SOURCE } from '../src/shaders/ground.frag.ts';
 
 /**
- * GLSL ES allows only ASCII, comments included. A "≈" or an em dash in a comment compiled on
- * most drivers, but through ANGLE's Direct3D translation (Chrome and Edge on Windows) it
- * silently dropped part of the ground material — the town blocks vanished while every other
- * rule still drew.
+ * GLSL ES allows only ASCII, comments included; a stray "≈" or em dash from prose-style
+ * comments is invalid source to a strict compiler.
  */
 describe('shader sources', () => {
   for (const [name, src] of [

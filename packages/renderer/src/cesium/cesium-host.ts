@@ -539,9 +539,11 @@ export class CesiumSceneHost implements SceneHost {
           source: GROUND_MATERIAL_SOURCE,
         },
         translucent: false,
-        // The atlas is a 1 cm-per-texel image read out to 500 m: it needs a mip chain (the
-        // cover map, a 768 px canvas, gets one too — fine on the WebGL2 the app requires).
-        minificationFilter: C.TextureMinificationFilter.LINEAR_MIPMAP_LINEAR,
+        // Applies to the images the material loads itself — only the cover map, which gets no
+        // mip chain: a mipmapped filter on it leaves the texture incomplete, sampling black
+        // everywhere (no town ever drew). The detail tiles are textures of their own, with
+        // their own mipmapped samplers.
+        minificationFilter: C.TextureMinificationFilter.LINEAR,
         magnificationFilter: C.TextureMagnificationFilter.LINEAR,
       });
       globe.material = this.groundMaterial;
