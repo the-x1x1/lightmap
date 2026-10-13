@@ -31,7 +31,9 @@ a token designed for browser use (Cesium ion, when configured).
 ## 3. Content Security Policy and headers
 
 The CSP is generated per request in `apps/web/middleware.ts` with a random nonce; Next.js reads
-the nonce from the request's CSP header and applies it to its own inline scripts, so production
+the nonce from the request's CSP header and applies it to its own inline scripts (which needs
+every page rendered per request — `dynamic = 'force-dynamic'` in the root layout; a statically
+prerendered page would ship nonce-less scripts that `'strict-dynamic'` refuses), so production
 needs neither `'unsafe-inline'` nor `'unsafe-eval'`. The remaining security headers are static in
 `apps/web/next.config.ts`.
 

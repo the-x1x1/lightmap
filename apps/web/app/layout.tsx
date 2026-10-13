@@ -3,6 +3,16 @@ import { brand } from '@lightmap/config';
 import '@/styles/globals.css';
 import { Providers } from './providers';
 
+/**
+ * Every page renders per request: the middleware's per-request CSP nonce can only reach Next's
+ * `<script>` tags on a dynamically rendered page. A statically prerendered page (what `next
+ * build` makes of a page that reads no request data) ships its scripts without the nonce, and
+ * under `script-src 'nonce-…' 'strict-dynamic'` the browser then runs none of them — the app
+ * never got past "Loading LightMap…" in a production build. Dev mode renders everything
+ * dynamically, which is why it never showed there.
+ */
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: { default: brand.name, template: `%s · ${brand.name}` },
   description: brand.description,
