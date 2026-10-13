@@ -86,9 +86,10 @@ const WGS84_B = 6356752.314245;
 /**
  * Whether a point on the ellipsoid's surface faces a camera at `camera` (ECEF metres): exact,
  * in the space where the ellipsoid is the unit sphere (a surface point p is visible from c when
- * p·c > 1 there). A small margin keeps labels from flickering right on the limb.
+ * p·c > 1 there). The margin must stay tiny: a camera 3 km up sees ground at p·c ≈ 1.0005, so a
+ * margin of a few thousandths would hide every label once the camera is near the ground.
  */
-export function aboveHorizon(point: Vec3, camera: Vec3, margin = 0.002): boolean {
+export function aboveHorizon(point: Vec3, camera: Vec3, margin = 1e-6): boolean {
   const a2 = WGS84_A * WGS84_A;
   const b2 = WGS84_B * WGS84_B;
   return (point.x * camera.x + point.y * camera.y) / a2 + (point.z * camera.z) / b2 > 1 + margin;

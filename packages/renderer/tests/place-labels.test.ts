@@ -65,6 +65,10 @@ describe('place labels', () => {
     const low = ecef(0, 0, 4e5);
     expect(aboveHorizon(ecef(0, 25), low)).toBe(false);
     expect(aboveHorizon(ecef(0, 15), low)).toBe(true);
+    // Near the ground: a town 2 km away from a camera 3 km up is in view, one 300 km off is not.
+    const near = ecef(21.3, -157.86, 3000);
+    expect(aboveHorizon(ecef(21.3, -157.84), near)).toBe(true);
+    expect(aboveHorizon(ecef(21.3, -155), near)).toBe(false);
     // Polar points work on the flattened ellipsoid too.
     expect(aboveHorizon(ecef(89.9, 0), ecef(90, 0, 1e6))).toBe(true);
   });

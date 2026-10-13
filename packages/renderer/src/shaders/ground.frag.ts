@@ -453,12 +453,24 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // Rock and snow are what they are; open ground lets real imagery's own hue through. Over
     // the bundled coarse basemap the paint is all but opaque on land: that map's 500 m pixels
     // put sea and lakes well onto the land near every coast, and at 25 % through the paint
-    // they read as blue blocks on the ground. Water itself (the terrain's own mask, from
-    // OpenStreetMap at tile resolution) stays unpainted, so the shoreline is the terrain's.
+    // they read as blue blocks on the ground.
     float cover = max(rocky, max(snowy, max(alpine * 0.8, known * 0.9)));
     float alpha = u_strength * mix(mix(0.75, 0.95, cover), 0.985, u_coarseBasemap);
 #ifdef HAS_WATER_MASK
-    alpha *= 1.0 - materialInput.waterMask;
+    // Water, from the terrain's own mask. The mask arrives with coarse tiles and is upsampled
+    // for finer ones, so its edge climbs the land in 50–100 m steps; water is flat, so where
+    // the mask meets a slope the ground wins and the coast follows the terrain. On water the
+    // paint is a deep sea colour (darker toward the horizon, a little mottled) over most of
+    // Cesium's own water shading — whose wave highlight, under HDR, turned every bay and
+    // pond a flat bright cyan — leaving a fifth of it for the Sun's glint and the waves.
+    float water = materialInput.waterMask * (1.0 - smoothstep(0.04, 0.10, slope));
+    if (water > 0.0)
+    {
+        vec3 sea = mix(vec3(0.05, 0.17, 0.25), vec3(0.08, 0.24, 0.30), patches);
+        sea = mix(sea, vec3(0.10, 0.17, 0.24), smoothstep(2000.0, 40000.0, dist));
+        material.diffuse = mix(material.diffuse, sea * u_brightness, water);
+        alpha = mix(alpha, 0.8 * u_strength, water);
+    }
 #endif
     material.alpha = alpha;
     return material;
