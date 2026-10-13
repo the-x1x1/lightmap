@@ -1045,15 +1045,19 @@ export class CesiumSceneHost implements SceneHost {
       this.labelCam.x = NaN;
       this.scene.requestRender();
     };
-    if (this.scene.globe.tilesLoaded) reveal();
-    else {
-      const remove = this.scene.globe.tileLoadProgressEvent.addEventListener((queued: number) => {
-        if (queued === 0 && this.scene.globe.tilesLoaded) {
-          remove();
-          reveal();
-        }
-      });
-    }
+    // "Loaded" is not "drawn": wait for a frame that drew globe tiles with none left to load
+    // (or eight seconds, whichever comes first).
+    const started = performance.now();
+    const remove = this.scene.postRender.addEventListener(() => {
+      const surface = (this.scene.globe as unknown as { _surface?: { _tilesToRender?: unknown[] } })
+        ._surface;
+      const drawn = (surface?._tilesToRender?.length ?? 0) > 0 && this.scene.globe.tilesLoaded;
+      if (drawn || performance.now() - started > 8000) {
+        remove();
+        reveal();
+      }
+    });
+    this.scene.requestRender();
     this.labelCam.x = NaN;
     this.preRenderLabelsRemover = this.scene.preRender.addEventListener(() => this.cullLabels());
     this.scene.requestRender();

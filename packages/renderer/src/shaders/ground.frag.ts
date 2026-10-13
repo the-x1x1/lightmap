@@ -464,8 +464,8 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         float n2 = w2 > 0.0 ? lmNoiseI(enu / 48.0 + u_mottleFrac2, u_mottleCell2) - 0.5 : 0.0;
         float n1 = w1 > 0.0 ? lmNoiseI(enu / 12.0 + u_mottleFrac1, u_mottleCell1) - 0.5 : 0.0;
         float n0 = w0 > 0.0 ? lmNoiseI(enu / 3.0 + u_mottleFrac0, u_mottleCell0) - 0.5 : 0.0;
-        ground = mix(ground, ground * vec3(1.10, 1.04, 0.86), clamp(mW * w2 * n2 * 1.4, 0.0, 0.5));
-        ground *= 1.0 + mW * (0.32 * w2 * n2 + 0.22 * w1 * n1 + 0.14 * w0 * n0);
+        ground = mix(ground, ground * vec3(1.08, 1.03, 0.88), clamp(mW * w2 * n2 * 0.9, 0.0, 0.4));
+        ground *= 1.0 + mW * (0.26 * w2 * n2 + 0.2 * w1 * n1 + 0.14 * w0 * n0);
     }
 
     // Micro-relief: the grain read as small bumps, lit by the scene's own Sun direction, so rock
@@ -523,17 +523,14 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
 #ifdef HAS_WATER_MASK
     // Water, from the terrain's own mask — but the mask arrives with coarse tiles and is
     // upsampled for finer ones, so its edge runs in 50–100 m stair steps across the coast.
-    // The terrain itself knows better: water is flat, and near the coast it is at sea level.
-    // So where the mask meets a slope the ground wins, and within 30 m of sea level (where the
-    // coastal steps are) the mask counts only below 2 m — while flat ground right at sea level
-    // the mask's steps cut out is water again (polders, metres below the sea, are not). Higher
-    // up the mask stands alone: a mountain lake is flat but nowhere near sea level.
-    float flatW = 1.0 - smoothstep(0.04, 0.10, slope);
+    // The terrain itself knows better: a water surface in the elevation model is flat to a
+    // fraction of a degree, and near the coast it sits within a few metres of sea level (a few,
+    // because sea level here is itself an estimate). So within 30 m of sea level, where the
+    // coastal steps are, the mask counts only on near-perfectly flat ground below 6 m; higher
+    // up — a mountain lake — it needs only to be flat.
     float coastal = 1.0 - smoothstep(20.0, 40.0, height);
-    float maskW = materialInput.waterMask * mix(1.0, smoothstep(2.0, 0.6, height), coastal);
-    float seaLevelW = coastal * smoothstep(-0.9, -0.5, height) * smoothstep(0.5, 0.15, height)
-        * (1.0 - smoothstep(0.015, 0.035, slope));
-    float water = max(maskW, seaLevelW) * flatW;
+    float flatW = mix(1.0 - smoothstep(0.04, 0.10, slope), 1.0 - smoothstep(0.006, 0.02, slope), coastal);
+    float water = materialInput.waterMask * flatW * mix(1.0, smoothstep(6.0, 2.5, height), coastal);
     // On water the paint is a deep sea colour (a little mottled, greyer toward the horizon)
     // over most of Cesium's own water shading — whose wave highlight, under HDR, turned every
     // bay and pond a flat bright cyan — leaving a fifth of it for the Sun's glint and waves.
