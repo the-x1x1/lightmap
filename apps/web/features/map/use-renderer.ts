@@ -211,6 +211,13 @@ export function useRenderer(opts: UseRendererOptions): RendererHandle {
 /** Push each SceneState into the controller. Separate hook so the map shell stays declarative. */
 export function useApplyScene(controller: SceneController | null, scene: SceneState | null): void {
   useEffect(() => {
-    if (controller && scene) controller.apply(scene);
+    if (!controller || !scene) return;
+    // A renderer fault must not take the planner down with it (an exception thrown in an effect
+    // unmounts the whole page): the frame keeps its last good state and the fault is logged.
+    try {
+      controller.apply(scene);
+    } catch (error) {
+      console.error('[renderer] could not apply the scene', error);
+    }
   }, [controller, scene]);
 }
