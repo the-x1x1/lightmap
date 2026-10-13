@@ -466,36 +466,65 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // 12 m and 3 m cells, never repeating, each fading in as its cells grow past a few pixels
     // on screen (and out again as they shrink, so it never aliases). The broad scale also
     // shifts the hue — drier and yellower in its light patches — as real ground does.
+    // The 48 m and 12 m noise once, for the mottling and the coast's jitter below: each inlined
+    // copy of the hash is a few dozen integer ops, and with a third and fourth copy the shader
+    // grew past what the Direct3D translation compiled faithfully (on Windows the town blocks
+    // silently vanished while the coast's copies were in the program).
+    float n48 = lmNoiseI(enu / 48.0 + u_mottleFrac2, u_mottleCell2) - 0.5;
+    float n12 = lmNoiseI(enu / 12.0 + u_mottleFrac1, u_mottleCell1) - 0.5;
     if (u_detail > 1.0)
     {
         float mW = clamp(u_detail - 1.0, 0.0, 1.0) * (1.0 - 0.6 * snowy);
         float w2 = smoothstep(3.0, 10.0, pxPerM * 48.0);
         float w1 = smoothstep(3.0, 10.0, pxPerM * 12.0);
         float w0 = smoothstep(3.0, 10.0, pxPerM * 3.0);
-        float n2 = w2 > 0.0 ? lmNoiseI(enu / 48.0 + u_mottleFrac2, u_mottleCell2) - 0.5 : 0.0;
-        float n1 = w1 > 0.0 ? lmNoiseI(enu / 12.0 + u_mottleFrac1, u_mottleCell1) - 0.5 : 0.0;
+        float n2 = n48;
+        float n1 = n12;
         float n0 = w0 > 0.0 ? lmNoiseI(enu / 3.0 + u_mottleFrac0, u_mottleCell0) - 0.5 : 0.0;
         ground = mix(ground, ground * vec3(1.08, 1.03, 0.88), clamp(mW * w2 * n2 * 0.9, 0.0, 0.4));
         ground *= 1.0 + mW * (0.26 * w2 * n2 + 0.2 * w1 * n1 + 0.14 * w0 * n0);
     }
 
-    // Built-up ground close enough to read: city blocks on a ~48 m grid (the mottling's own
-    // ground-fixed cells along the place's east and north), each a tone of its own — roofs,
-    // lots, pavement — with darker streets between, fading in as the blocks grow past a few
-    // pixels. A pattern of a city, not its streets: the grid does not follow the real ones.
-    float townW = known * built * (1.0 - snowy) * smoothstep(4.0, 12.0, pxPerM * 48.0);
+    // Built-up ground close enough to read: a street grid on the mottling's ground-fixed 48 m
+    // cells along the place's east and north — blocks two cells long (48 × 96 m), every fourth
+    // street east–west and every third north–south a wider avenue — and inside each block lots
+    // of about 16 × 12 m, each a roof or yard of its own (grey, warm, a few pale roofs, a few
+    // trees), with one block in ten a park. It fades in as the blocks grow past a few pixels and
+    // the lots as they do; steep ground stays as it is. A pattern of a city, not its streets:
+    // the grid does not follow the real ones.
+    float townW = known * built * (1.0 - snowy) * (1.0 - rocky) * smoothstep(4.0, 12.0, pxPerM * 48.0);
     if (townW > 0.0)
     {
         vec2 bq = enu.xy / 48.0 + u_mottleFrac2.xy;
         vec2 bf = fract(bq);
         vec2 bi = floor(bq) + u_mottleCell2.xy;
-        float tone = lmHashI(vec3(bi, 3.0));
-        vec3 block = mix(vec3(0.42, 0.41, 0.40), vec3(0.66, 0.60, 0.52), tone);
-        block = mix(block, vec3(0.30, 0.40, 0.24), step(0.86, lmHashI(vec3(bi, 7.0))));  // a park
-        float edge = min(min(bf.x, 1.0 - bf.x), min(bf.y, 1.0 - bf.y));
-        float street = 1.0 - smoothstep(0.04, 0.09, edge);
-        vec3 city = mix(block, vec3(0.30, 0.30, 0.31), street);
-        ground = mix(ground, city, townW * 0.85);
+        // Along north the blocks pair cells: where in the pair, and which street line is nearest.
+        float pairY = floor(bi.y * 0.5);
+        float fy = (bi.y - 2.0 * pairY + bf.y) * 0.5;
+        float lineX = bf.x < 0.5 ? bi.x : bi.x + 1.0;
+        float lineY = fy < 0.5 ? pairY : pairY + 1.0;
+        float halfX = mod(lineX, 4.0) < 0.5 ? 9.0 : 5.0;   // half the street's width, metres
+        float halfY = mod(lineY, 3.0) < 0.5 ? 9.0 : 5.0;
+        float ex = min(bf.x, 1.0 - bf.x) * 48.0;           // metres to the street's centre line
+        float ey = min(fy, 1.0 - fy) * 96.0;
+        float aa = 1.0 / max(pxPerM, 1e-3);                // a pixel, in metres
+        float street = max(1.0 - smoothstep(halfX - aa, halfX + aa, ex),
+                           1.0 - smoothstep(halfY - aa, halfY + aa, ey));
+        vec2 blockId = vec2(bi.x, pairY);
+        float park = step(0.9, lmHashI(vec3(blockId, 7.0)));
+        // Lots: three across a cell, four along it, numbered on the same ground-fixed lattice.
+        vec2 lotId = bi * vec2(3.0, 4.0) + floor(bf * vec2(3.0, 4.0));
+        float lot = lmHashI(vec3(lotId, 5.0));
+        float kind = fract(lot * 7.31);
+        vec3 roof = mix(vec3(0.40, 0.39, 0.38), vec3(0.60, 0.56, 0.50), lot);
+        roof = mix(roof, vec3(0.74, 0.73, 0.71), step(0.9, kind));                       // pale roofs
+        roof = mix(roof, vec3(0.20, 0.29, 0.15) * (0.85 + 0.6 * n12), step(kind, 0.16)); // trees
+        float lotW = smoothstep(3.0, 8.0, pxPerM * 12.0);
+        vec3 block = mix(vec3(0.50, 0.48, 0.45), roof, lotW);
+        vec3 green = vec3(0.24, 0.34, 0.18) * (0.85 + 0.5 * n12);
+        block = mix(block, green, park);
+        vec3 city = mix(block, vec3(0.31, 0.31, 0.32), street);
+        ground = mix(ground, city, townW * 0.8);
     }
 
     // Micro-relief: the grain read as small bumps, lit by the scene's own Sun direction, so rock
@@ -562,8 +591,8 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float m = materialInput.waterMask;
     if (m > 0.02 && m < 0.98)
         m = smoothstep(0.3, 0.7, m
-            + 0.5 * (lmNoiseI(enu / 48.0 + u_mottleFrac2, u_mottleCell2) - 0.5)
-            + 0.3 * (lmNoiseI(enu / 12.0 + u_mottleFrac1, u_mottleCell1) - 0.5)
+            + 0.5 * n48
+            + 0.3 * n12
             // From further out the mask's tiles are coarser and their steps longer: a broader
             // jitter (≈ 350 m, world-anchored) takes over with distance.
             + 0.7 * smoothstep(2000.0, 20000.0, dist) * (lmFbm(positionWC / 350.0 + 17.0) - 0.47));
