@@ -177,7 +177,10 @@ void main() {
     // the scenario's haze (about 60 km clear, 20 km overcast, 4 km in thick haze, the fog's
     // own scale), shortened when a low Sun lengthens the path (u_horizonHaze); the haze takes
     // the light's colour.
-    vec4 eyePos = czm_windowToEyeCoordinates(v_textureCoordinates * czm_viewport.zw, depth);
+    // czm_windowToEyeCoordinates takes the depth as stored (logarithmic), not czm_readDepth's
+    // reversed value — given that, it put everything at an enormous distance.
+    float storedDepth = texture(depthTexture, v_textureCoordinates).r;
+    vec4 eyePos = czm_windowToEyeCoordinates(v_textureCoordinates * czm_viewport.zw, storedDepth);
     float distM = length(eyePos.xyz / eyePos.w);
     float visibilityM = 4000.0 * pow(20.0, 1.0 - clamp(u_haze, 0.0, 1.0)) / (1.0 + 2.0 * u_horizonHaze);
     float dist = 1.0 - exp(-3.0 * distM / visibilityM);
