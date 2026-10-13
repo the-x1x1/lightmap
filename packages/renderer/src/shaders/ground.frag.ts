@@ -523,14 +523,11 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
 #ifdef HAS_WATER_MASK
     // Water, from the terrain's own mask — but the mask arrives with coarse tiles and is
     // upsampled for finer ones, so its edge runs in 50–100 m stair steps across the coast.
-    // The terrain itself knows better: a water surface in the elevation model is flat to a
-    // fraction of a degree, and near the coast it sits within a few metres of sea level (a few,
-    // because sea level here is itself an estimate). So within 30 m of sea level, where the
-    // coastal steps are, the mask counts only on near-perfectly flat ground below 6 m; higher
-    // up — a mountain lake — it needs only to be flat.
-    float coastal = 1.0 - smoothstep(20.0, 40.0, height);
-    float flatW = mix(1.0 - smoothstep(0.04, 0.10, slope), 1.0 - smoothstep(0.006, 0.02, slope), coastal);
-    float water = materialInput.waterMask * flatW * mix(1.0, smoothstep(6.0, 2.5, height), coastal);
+    // The terrain knows better: a water surface in the elevation model is flat to a fraction
+    // of a degree, so where the mask lies on ground that slopes even a degree the ground wins
+    // and the coast follows the terrain. (Height is no guide: sea level here is an estimate
+    // good to several metres, and a cut on it dropped whole harbours.)
+    float water = materialInput.waterMask * (1.0 - smoothstep(0.008, 0.025, slope));
     // On water the paint is a deep sea colour (a little mottled, greyer toward the horizon)
     // over most of Cesium's own water shading — whose wave highlight, under HDR, turned every
     // bay and pond a flat bright cyan — leaving a fifth of it for the Sun's glint and waves.
