@@ -23,6 +23,8 @@ uniform float u_contrast;
 uniform float u_warmth;
 uniform vec3  u_tint;
 uniform float u_haze;
+uniform vec3 u_eyeUpEC;         // the local up at the camera, in eye coordinates (per frame)
+uniform float u_eyeHeightM;     // the camera's height above the ellipsoid (per frame)
 uniform float u_cloudCoverage;
 uniform float u_cloudDensity;
 uniform float u_cloudOpacity;
@@ -64,16 +66,16 @@ void main() {
   // drawn (terrain still loading, or out in another frustum) also reads as no depth, and the
   // cloud decks painted over it turned a whole overcast valley into a grey sheet. So a ray
   // that meets the Earth (a sphere of the polar radius) is never sky, whatever the depth.
+  // The view ray's elevation against the camera's own horizontal (the host passes the local up
+  // in eye space and the camera's height each frame); below the horizon's dip it meets the Earth.
   vec4 nearEC = czm_inverseProjection * vec4(v_textureCoordinates * 2.0 - 1.0, -1.0, 1.0);
-  vec3 rayWC = czm_inverseViewRotation * normalize(nearEC.xyz / nearEC.w);
-  vec3 eyeWC = czm_viewerPositionWC;
-  float rb = dot(eyeWC, rayWC);
-  float rc = dot(eyeWC, eyeWC) - 6356752.0 * 6356752.0;
-  bool hitsEarth = rb < 0.0 && rb * rb - rc > 0.0;
+  vec3 rayEC = normalize(nearEC.xyz / nearEC.w);
+  float horizonDip = sqrt(2.0 * max(u_eyeHeightM, 0.0) / 6371000.0);
+  bool hitsEarth = asin(clamp(dot(rayEC, u_eyeUpEC), -1.0, 1.0)) < -horizonDip;
   bool isSky = depth >= 1.0 - 1e-6 && !hitsEarth;
   // The decks are a sky seen from under them: from above ~10 km (an orbit) there are none, and
   // space around the globe stays dark.
-  float underDecks = 1.0 - smoothstep(6000.0, 14000.0, length(eyeWC) - 6371000.0);
+  float underDecks = 1.0 - smoothstep(6000.0, 14000.0, u_eyeHeightM);
 
   // Sky: three procedural cloud decks — high (cirrus), mid (alto-), low (stratus/cumulus) — each
   // with the cover the forecast (or scenario) gives that band, composited far to near. Cloud
@@ -229,4 +231,6 @@ export const GRADE_UNIFORM_NAMES = [
   'u_time',
   'u_sunScreen',
   'u_sunVisible',
+  'u_eyeUpEC',
+  'u_eyeHeightM',
 ] as const;

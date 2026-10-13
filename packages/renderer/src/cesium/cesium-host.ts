@@ -128,6 +128,7 @@ export class CesiumSceneHost implements SceneHost {
   private detailTextures: Record<string, { destroy(): void }> | null = null;
   /** 1 while the basemap is the bundled coarse one (`u_coarseBasemap`). */
   private coarseBasemap = 1;
+  private readonly eyeUpScratch: Cesium.Cartesian3;
   /** The quality rung's ground detail level, which `u_detail` eases toward. */
   private detailTarget: number | null = null;
   private detailEaseAt = 0;
@@ -176,6 +177,7 @@ export class CesiumSceneHost implements SceneHost {
     this.onError = options.onError;
     this.ionToken = options.ionToken;
     this.detailAtlasUrl = options.groundDetailAtlasUrl;
+    this.eyeUpScratch = new C.Cartesian3();
     this.enuScratch = {
       east: new C.Cartesian3(),
       north: new C.Cartesian3(),
@@ -282,6 +284,16 @@ export class CesiumSceneHost implements SceneHost {
       u_time: 0,
       u_sunScreen: new C.Cartesian2(-1, -1),
       u_sunVisible: 0,
+      // Evaluated every frame (a function uniform): where "up" is in the view, and how high the
+      // camera is — the grade tells sky from ground by the view ray, not by the depth buffer.
+      u_eyeUpEC: () => {
+        const cam = scene.camera;
+        const up =
+          C.Ellipsoid.WGS84.geodeticSurfaceNormal(cam.positionWC, this.eyeUpScratch) ??
+          C.Cartesian3.clone(C.Cartesian3.UNIT_Z, this.eyeUpScratch);
+        return C.Matrix4.multiplyByPointAsVector(cam.viewMatrix, up, this.eyeUpScratch);
+      },
+      u_eyeHeightM: () => scene.camera.positionCartographic.height,
     };
     this.grade = new C.PostProcessStage({
       fragmentShader: GRADE_FRAGMENT_SHADER,
