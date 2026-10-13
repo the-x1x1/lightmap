@@ -547,6 +547,10 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         alpha = mix(alpha, 0.8 * u_strength, water);
     }
 #endif
+    // From orbit the bundled basemap is the better picture of the Earth (the procedural ground
+    // is made for a few kilometres around a place, and the water mask's level-0 tiles are
+    // blocky continents): the paint fades out between 150 and 600 km from the camera.
+    alpha *= 1.0 - smoothstep(150000.0, 600000.0, dist);
     material.alpha = alpha;
     return material;
 }
