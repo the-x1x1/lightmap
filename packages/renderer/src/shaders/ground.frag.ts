@@ -544,7 +544,10 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     if (m > 0.02 && m < 0.98)
         m = smoothstep(0.3, 0.7, m
             + 0.5 * (lmNoiseI(enu / 48.0 + u_mottleFrac2, u_mottleCell2) - 0.5)
-            + 0.3 * (lmNoiseI(enu / 12.0 + u_mottleFrac1, u_mottleCell1) - 0.5));
+            + 0.3 * (lmNoiseI(enu / 12.0 + u_mottleFrac1, u_mottleCell1) - 0.5)
+            // From further out the mask's tiles are coarser and their steps longer: a broader
+            // jitter (≈ 350 m, world-anchored) takes over with distance.
+            + 0.7 * smoothstep(2000.0, 20000.0, dist) * (lmFbm(positionWC / 350.0 + 17.0) - 0.47));
     float water = m * (1.0 - smoothstep(0.008, 0.025, slope));
     // On water the paint is a deep sea colour (a little mottled, greyer toward the horizon)
     // over most of Cesium's own water shading — whose wave highlight, under HDR, turned every
