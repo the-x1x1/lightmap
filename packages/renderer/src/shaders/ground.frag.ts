@@ -71,6 +71,13 @@ export const GROUND_UNIFORM_DEFAULTS = {
    * show through as water on land; 0 with real imagery, which shows through where it matters.
    */
   u_coarseBasemap: 1,
+  /**
+   * 1 once sea level at the place is known (the terrain's height at the pin against its height
+   * above sea level); until then — or where only the ellipsoid is known — no ground is painted
+   * as shore. (Washington D.C. sits on a geoid 33 m below the ellipsoid: read as sea level 0,
+   * the whole flat city was sand.)
+   */
+  u_shore: 0,
 } as const;
 
 /**
@@ -136,6 +143,7 @@ uniform vec4 u_coverBounds;
 uniform sampler2D u_coverMap;
 uniform float u_detailOn;
 uniform float u_coarseBasemap;
+uniform float u_shore;
 uniform sampler2D u_detailGrass;
 uniform sampler2D u_detailRock;
 uniform sampler2D u_detailSand;
@@ -340,7 +348,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     ground = mix(ground, bare, rocky);
 
     // Flat ground within a few metres of sea level reads as shore.
-    float shoreline = smoothstep(14.0, 3.0, height) * smoothstep(0.10, 0.02, slope);
+    float shoreline = u_shore * smoothstep(6.0, 2.0, height) * smoothstep(0.10, 0.02, slope);
     ground = mix(ground, shore * (0.9 + 0.2 * grain), shoreline);
 
     // Snow above the snowline: lower on poleward faces, patchy at its edge, thin on cliffs.

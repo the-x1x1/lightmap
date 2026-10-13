@@ -23,6 +23,8 @@ export interface GroundTextureParams {
   brightness: number;
   /** Ellipsoidal height of sea level at the place, metres, so shore and snow read true heights. */
   seaLevelM: number;
+  /** 1 when that sea level was measured (the shore is painted only then), 0 while it is a guess. */
+  shore: 0 | 1;
   /** How strongly broken cloud dapples the ground, 0–1 (`cloudShadowStrength`). */
   cloudShadow: number;
   /** How wet the ground is, 0–1, from the scenario's precipitation. */
@@ -58,6 +60,8 @@ export function cloudShadowStrength(
 export interface GroundTextureContext {
   brightness: number;
   seaLevelM: number;
+  /** Whether `seaLevelM` was measured at the place (default false: no shore is painted). */
+  seaLevelKnown?: boolean;
   /** The terrain's height at the pin above sea level, metres; null until sampled. */
   groundHeightM?: number | null;
 }
@@ -198,6 +202,7 @@ export function groundTextureFor(
     ice: Math.round(hint.ice * 100) / 100,
     brightness: Math.round(Math.max(0, Math.min(1, context.brightness)) * 100) / 100,
     seaLevelM: Math.round(context.seaLevelM),
+    shore: context.seaLevelKnown ? 1 : 0,
     // Ultra/High (soft shadows) carry everything; Balanced drops the per-fragment relief and
     // grain; Battery keeps the base surface only.
     wet:

@@ -266,9 +266,23 @@ describe('landHintFromColor', () => {
     })!;
     expect(g.brightness).toBe(0.45);
     expect(g.seaLevelM).toBe(47);
+    // A sea level that was not measured paints no shore (D.C.'s geoid is 33 m under the
+    // ellipsoid: read as 0, the whole flat city was sand).
+    expect(g.shore).toBe(0);
+    const known = groundTextureFor(
+      sceneAt(30, new Date('2026-07-01T00:00:00Z')),
+      NEUTRAL_LAND_HINT,
+      {
+        brightness: 1,
+        seaLevelM: -33,
+        seaLevelKnown: true,
+      },
+    )!;
+    expect(known.shore).toBe(1);
     const d = groundTextureFor(sceneAt(30, new Date('2026-07-01T00:00:00Z')))!;
     expect(d.brightness).toBe(1);
     expect(d.seaLevelM).toBe(0);
+    expect(d.shore).toBe(0);
   });
 
   it('carries the hint into the params, rounded to a hundredth', () => {

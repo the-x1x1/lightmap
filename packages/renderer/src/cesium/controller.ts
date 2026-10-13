@@ -85,6 +85,8 @@ export class SceneController {
   private pinRefreshPending = false;
   /** Ellipsoidal height of sea level at the pin, metres (the geoid), for the shore and snow rules. */
   private seaLevelM = 0;
+  /** Whether `seaLevelM` was measured (terrain height and height above sea level both known). */
+  private seaLevelKnown = false;
   /** Whether `groundHeightM` is the terrain's own sample for the current pin (false until it lands). */
   private groundHeightSampled = false;
   private lastDayKey: string | null = null;
@@ -250,11 +252,12 @@ export class SceneController {
     const ground = groundTextureFor(scene, this.landHint, {
       brightness: shading.basemapBrightness,
       seaLevelM: this.seaLevelM,
+      seaLevelKnown: this.seaLevelKnown,
       // The pin's height above sea level, for the forecast's snow (null until terrain is sampled).
       groundHeightM: this.groundHeightSampled ? this.groundHeightM - this.seaLevelM : null,
     });
     const groundKey = ground
-      ? `${ground.snowlineM}|${ground.treelineM}|${ground.poleward}|${ground.strength}|${ground.aridity}|${ground.ice}|${ground.brightness}|${ground.seaLevelM}|${ground.cloudShadow}|${ground.wet}|${ground.detail}`
+      ? `${ground.snowlineM}|${ground.treelineM}|${ground.poleward}|${ground.strength}|${ground.aridity}|${ground.ice}|${ground.brightness}|${ground.seaLevelM}|${ground.shore}|${ground.cloudShadow}|${ground.wet}|${ground.detail}`
       : 'off';
     if (groundKey !== this.lastGroundKey) {
       this.lastGroundKey = groundKey;
@@ -467,8 +470,12 @@ export class SceneController {
     const seaLevel =
       h !== null && orthometric !== null && orthometric !== undefined ? h - orthometric : 0;
     const seaLevelRounded = Math.round(Math.max(-120, Math.min(120, seaLevel)));
-    const seaChanged = seaLevelRounded !== this.seaLevelM;
-    if (seaChanged) this.seaLevelM = seaLevelRounded;
+    const known = h !== null && orthometric !== null && orthometric !== undefined;
+    const seaChanged = seaLevelRounded !== this.seaLevelM || known !== this.seaLevelKnown;
+    if (seaChanged) {
+      this.seaLevelM = seaLevelRounded;
+      this.seaLevelKnown = known;
+    }
     const groundChanged = next !== this.groundHeightM;
     this.groundHeightM = next;
     this.groundHeightSampled = h !== null;

@@ -181,10 +181,12 @@ scrub, tan to steppe and desert, white to an ice sheet — a tint, never a class
 (`landHintFromColor`, tested). The colour is blended over the basemap with an
 opacity that rises on rock and snow and falls on open ground, so a licensed imagery layer still
 shows through where it carries the information — vegetation hue, desert, farmland — and the
-procedural surface supplies the detail it lacks. Water (where the terrain carries a mask) is
-left to the water effect; the shore and snow rules read heights above sea level (the geoid at
+procedural surface supplies the detail it lacks. Water (where the terrain carries a mask, on
+ground flat to about a degree) is painted a deep sea colour over a fifth of the globe's own
+water shading; the shore and snow rules read heights above sea level (the geoid at
 the pin from the terrain's ellipsoidal height against the known elevation; a click picks the
-ground under the cursor, never a roof, so buildings do not skew it), and the night
+ground under the cursor, never a roof, so buildings do not skew it) — the shore, a band within
+6 m of it, only once that sea level has actually been measured — and the night
 chart's dimming applies to the surface as to the basemap. The quality rung sets its detail: Ultra and High carry everything, Balanced drops the
 per-fragment relief and the near grain, Battery keeps the base surface alone, Minimal turns it
 off with the shadows; the `groundTexture` flag turns it off everywhere. On bare ground within a few kilometres a **micro-relief** shading

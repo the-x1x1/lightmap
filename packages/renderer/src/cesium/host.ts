@@ -152,6 +152,8 @@ export interface HostGroundTexture {
   ice: number;
   brightness: number;
   seaLevelM: number;
+  /** 1 when the sea level was measured: only then is flat ground near it painted as shore. */
+  shore: 0 | 1;
   cloudShadow: number;
   wet: number;
   detail: 0 | 1 | 2;

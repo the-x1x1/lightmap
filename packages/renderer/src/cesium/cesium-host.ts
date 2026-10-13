@@ -541,6 +541,7 @@ export class CesiumSceneHost implements SceneHost {
     u['u_ice'] = g.ice;
     u['u_brightness'] = g.brightness;
     u['u_seaLevelM'] = g.seaLevelM;
+    u['u_shore'] = g.shore;
     u['u_cloudShadow'] = g.cloudShadow;
     // Eased toward in the frame loop (a rung change mid-flight fades, never switches); a fresh
     // material starts at its target.
