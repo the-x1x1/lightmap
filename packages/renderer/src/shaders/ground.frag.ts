@@ -527,7 +527,12 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // of a degree, so where the mask lies on ground that slopes even a degree the ground wins
     // and the coast follows the terrain. (Height is no guide: sea level here is an estimate
     // good to several metres, and a cut on it dropped whole harbours.)
-    float water = materialInput.waterMask * (1.0 - smoothstep(0.008, 0.025, slope));
+    // Along the mask's soft, stepped edge the threshold is jittered by ground-fixed noise, so
+    // the shore reads as an irregular line rather than a staircase of blurred squares.
+    float m = materialInput.waterMask;
+    if (m > 0.02 && m < 0.98)
+        m = smoothstep(0.3, 0.7, m + 0.45 * (lmNoiseI(enu / 12.0 + u_mottleFrac1, u_mottleCell1) - 0.5));
+    float water = m * (1.0 - smoothstep(0.008, 0.025, slope));
     // On water the paint is a deep sea colour (a little mottled, greyer toward the horizon)
     // over most of Cesium's own water shading — whose wave highlight, under HDR, turned every
     // bay and pond a flat bright cyan — leaving a fifth of it for the Sun's glint and waves.
