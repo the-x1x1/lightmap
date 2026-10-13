@@ -9,7 +9,12 @@ import { buildCsp } from '@/lib/csp';
 
 export function middleware(request: NextRequest) {
   const nonce = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString('base64');
-  const csp = buildCsp(nonce, process.env.NODE_ENV === 'development');
+  // Only a page that itself arrived over HTTPS (directly or behind a proxy) asks the browser to
+  // upgrade insecure requests; a production build on http://localhost must not.
+  const secure =
+    request.nextUrl.protocol === 'https:' ||
+    request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim() === 'https';
+  const csp = buildCsp(nonce, process.env.NODE_ENV === 'development', undefined, { secure });
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);
   requestHeaders.set('Content-Security-Policy', csp);

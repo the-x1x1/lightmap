@@ -44,8 +44,14 @@ export function buildCsp(
   nonce: string,
   dev: boolean,
   env?: Record<string, string | undefined>,
+  opts: { secure?: boolean } = {},
 ): string {
   const hosts = (env ? dataHosts(env) : DATA_HOSTS).join(' ');
+  // `upgrade-insecure-requests` belongs on a page served over HTTPS (it turns any stray http:
+  // subresource into https:). On a page served over plain HTTP — a production build run with
+  // `next start` on http://localhost — it upgrades every chunk request to https://localhost,
+  // which nothing answers, and the app never gets past "Loading LightMap…".
+  const secure = opts.secure ?? !dev;
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval' blob:${dev ? " 'unsafe-eval'" : ''}`,
@@ -59,6 +65,6 @@ export function buildCsp(
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self' https://checkout.stripe.com https://billing.stripe.com",
-    ...(dev ? [] : ['upgrade-insecure-requests']),
+    ...(secure && !dev ? ['upgrade-insecure-requests'] : []),
   ].join('; ');
 }

@@ -50,6 +50,12 @@ describe('CSP builder', () => {
     expect(both.split('https://t.example.org').length - 1).toBe(2); // img-src and connect-src
     expect(buildCsp('n', false, {})).not.toContain('example');
   });
+  it('asks for insecure requests to be upgraded only on a page served over HTTPS', () => {
+    expect(buildCsp('n', false, {}, { secure: true })).toContain('upgrade-insecure-requests');
+    // A production build on http://localhost (`next start`) must not upgrade its own chunks.
+    expect(buildCsp('n', false, {}, { secure: false })).not.toContain('upgrade-insecure-requests');
+    expect(buildCsp('n', true, {}, { secure: true })).not.toContain('upgrade-insecure-requests');
+  });
   it('development allows eval and websockets for HMR', () => {
     const csp = buildCsp('n', true);
     expect(csp).toContain("'unsafe-eval'");

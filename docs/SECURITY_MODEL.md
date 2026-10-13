@@ -48,7 +48,7 @@ frame-src https://js.stripe.com https://checkout.stripe.com
 frame-ancestors 'none'
 base-uri 'self'
 form-action 'self' https://checkout.stripe.com https://billing.stripe.com
-upgrade-insecure-requests
+upgrade-insecure-requests   (only on a page served over HTTPS — never on http://localhost)
 ```
 
 `'wasm-unsafe-eval'` and `blob:` are required by Cesium's Web Workers and Draco/KTX decoders.
