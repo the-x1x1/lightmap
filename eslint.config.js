@@ -24,7 +24,7 @@ export default tseslint.config(
       parserOptions: {
         projectService: {
           // The root Vitest config belongs to no package tsconfig.
-          allowDefaultProject: ['vitest.config.ts'],
+          allowDefaultProject: ['vitest.config.ts', 'vitest.package.ts'],
         },
         tsconfigRootDir: import.meta.dirname,
       },
