@@ -5,7 +5,10 @@ import {
   countryDistanceBandM,
   parsePlaceLabels,
   placeMaxDistanceM,
+  placeRank,
+  visibleLabelIndices,
   zoomToDistanceM,
+  type LabelCandidate,
 } from '../src/place-labels.ts';
 
 const ecef = (latDeg: number, lonDeg: number, h = 0) => {
@@ -87,5 +90,46 @@ describe('place labels', () => {
     expect(set.countries.length).toBeGreaterThan(170);
     expect(set.places.filter((p) => p.capital).length).toBeGreaterThan(150);
     expect(set.places.some((p) => p.name === 'Honolulu')).toBe(true);
+  });
+});
+
+describe('visibleLabelIndices', () => {
+  const R = 6378137;
+  const onEquator = (lonDeg: number) => {
+    const l = (lonDeg * Math.PI) / 180;
+    return { x: R * Math.cos(l), y: R * Math.sin(l), z: 0 };
+  };
+  const cand = (lonDeg: number, far: number, rank: number, near = 0): LabelCandidate => ({
+    at: onEquator(lonDeg),
+    near,
+    far,
+    rank,
+  });
+
+  it('keeps names in their band and facing the camera, drops the rest', () => {
+    const cam = { x: R + 1e6, y: 0, z: 0 }; // 1000 km above 0°, 0°
+    const entries = [
+      cand(0, 2e6, 3), // under the camera: shown
+      cand(5, 2e6, 3), // ~1100 km away: shown
+      cand(30, 2e6, 3), // too far for its band
+      cand(180, 4e7, 0), // behind the Earth
+      cand(0, 4e7, 0, 6e5 + 1e6), // closer than its band (a country, from close in)
+    ];
+    expect(visibleLabelIndices(entries, cam, 100)).toEqual([0, 1]);
+  });
+
+  it('caps the count, best ranked then nearest first, and returns indices in order', () => {
+    const cam = { x: R + 2e6, y: 0, z: 0 };
+    const entries = [cand(8, 5e6, 5), cand(1, 5e6, 5), cand(10, 5e6, 1), cand(3, 5e6, 9)];
+    expect(visibleLabelIndices(entries, cam, 2)).toEqual([1, 2]);
+  });
+
+  it('ranks capitals above towns of the same zoom', () => {
+    expect(placeRank({ minZoom: 4, capital: true })).toBeLessThan(
+      placeRank({ minZoom: 4, capital: false }),
+    );
+    expect(placeRank({ minZoom: 3, capital: false })).toBeLessThan(
+      placeRank({ minZoom: 6, capital: false }),
+    );
   });
 });

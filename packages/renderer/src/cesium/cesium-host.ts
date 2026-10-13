@@ -23,10 +23,12 @@ import { NOISE_TEXTURE_SIZE, makeNoiseTexture } from '../noise-texture.ts';
 import { FrameRateSampler } from '../frame-sampler.ts';
 import { clearOrbitPitch, orbitSightLine, steeperPitches } from '../camera-math.ts';
 import {
-  aboveHorizon,
   countryDistanceBandM,
   parsePlaceLabels,
   placeMaxDistanceM,
+  placeRank,
+  visibleLabelIndices,
+  type LabelCandidate,
   type PlaceLabelSet,
 } from '../place-labels.ts';
 import {
@@ -104,6 +106,10 @@ export async function createCesiumHost(options: CesiumHostOptions): Promise<Scen
 const DEG = Math.PI / 180;
 
 const HIDDEN_RUN_POOL = 6;
+/** Most place names held in the label collection at once (the best ranked in view). */
+const PLACE_LABELS_MAX = 400;
+/** Least time between two picks of the names while the camera keeps moving. */
+const LABEL_PICK_INTERVAL_MS = 200;
 /**
  * Without a pin to anchor to, the detail tiles' ground frame is re-anchored when the point under
  * the camera has moved this far, metres. A re-anchor shifts the whole pattern, so it must be
@@ -154,7 +160,16 @@ export class CesiumSceneHost implements SceneHost {
   private detailAnchorTarget: Cesium.Cartesian3 | null = null;
   /** Place and country names on the globe (orbit only), with their ECEF positions for the horizon test. */
   private labels: Cesium.LabelCollection | null = null;
-  private labelEntries: Array<{ label: Cesium.Label; at: Vec3 }> = [];
+  /** Every name that may be drawn; only the visible few hold a label in the collection. */
+  private labelEntries: Array<
+    LabelCandidate & {
+      text: string;
+      font: string;
+      color: Cesium.Color;
+      label: Cesium.Label | null;
+    }
+  > = [];
+  private labelPickAt = 0;
   private labelsWanted = true;
   private globeReady = false;
   private readonly labelCam = { x: NaN, y: NaN, z: NaN };
@@ -1147,25 +1162,19 @@ export class CesiumSceneHost implements SceneHost {
       color: Cesium.Color,
       near: number,
       far: number,
+      rank: number,
     ) => {
-      const position = C.Cartesian3.fromDegrees(lon, lat, 0);
-      const label = labels.add({
+      const p = C.Cartesian3.fromDegrees(lon, lat, 0);
+      this.labelEntries.push({
         text,
-        position,
         font,
-        // Rasterised at twice the size and drawn at half: crisp on any display.
-        scale: 0.5,
-        fillColor: color,
-        outlineColor: C.Color.BLACK.withAlpha(0.85),
-        outlineWidth: 3,
-        style: C.LabelStyle.FILL_AND_OUTLINE,
-        horizontalOrigin: C.HorizontalOrigin.CENTER,
-        verticalOrigin: C.VerticalOrigin.CENTER,
-        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-        distanceDisplayCondition: new C.DistanceDisplayCondition(near, far),
-        translucencyByDistance: new C.NearFarScalar(far * 0.66, 1, far, 0),
+        color,
+        near,
+        far,
+        rank,
+        at: { x: p.x, y: p.y, z: p.z },
+        label: null,
       });
-      this.labelEntries.push({ label, at: { x: position.x, y: position.y, z: position.z } });
     };
     const country = C.Color.fromCssColorString('#e8dcc4');
     const capital = C.Color.fromCssColorString('#ffffff');
@@ -1180,6 +1189,7 @@ export class CesiumSceneHost implements SceneHost {
         country,
         near,
         far,
+        0,
       );
     }
     for (const p of set.places)
@@ -1191,6 +1201,7 @@ export class CesiumSceneHost implements SceneHost {
         p.capital ? capital : town,
         0,
         placeMaxDistanceM(p),
+        placeRank(p),
       );
     // Held back until the globe's first tiles are in, so the names never float over black.
     labels.show = false;
@@ -1219,20 +1230,56 @@ export class CesiumSceneHost implements SceneHost {
     this.scene.requestRender();
   }
 
-  /** Hide the labels on the far side of the Earth; only when the camera has moved. */
+  /**
+   * Keep in the collection only the names in their distance band and facing the camera (at
+   * most PLACE_LABELS_MAX, best ranked first): re-picked when the camera has moved, at most a
+   * few times a second while it keeps moving and once more when it stops. A new name is a
+   * handful of billboards over glyphs already in the atlas; a name leaving is removed.
+   */
   private cullLabels(): void {
-    if (!this.labels?.show) return;
+    const labels = this.labels;
+    if (!labels?.show) return;
     const cam = this.scene.camera.positionWC;
     const last = this.labelCam;
     if (Math.abs(cam.x - last.x) + Math.abs(cam.y - last.y) + Math.abs(cam.z - last.z) < 1) return;
+    const now = performance.now();
+    if (now - this.labelPickAt < LABEL_PICK_INTERVAL_MS) {
+      // Still moving: pick again shortly, so the frame the camera stops on is current.
+      this.scene.requestRender();
+      return;
+    }
+    this.labelPickAt = now;
     last.x = cam.x;
     last.y = cam.y;
     last.z = cam.z;
-    const c = { x: cam.x, y: cam.y, z: cam.z };
-    for (const e of this.labelEntries) {
-      const show = aboveHorizon(e.at, c);
-      if (e.label.show !== show) e.label.show = show;
-    }
+    const C = this.C;
+    const keep = new Set(
+      visibleLabelIndices(this.labelEntries, { x: cam.x, y: cam.y, z: cam.z }, PLACE_LABELS_MAX),
+    );
+    this.labelEntries.forEach((e, i) => {
+      if (keep.has(i)) {
+        if (e.label) return;
+        e.label = labels.add({
+          text: e.text,
+          position: new C.Cartesian3(e.at.x, e.at.y, e.at.z),
+          font: e.font,
+          // Rasterised at twice the size and drawn at half: crisp on any display.
+          scale: 0.5,
+          fillColor: e.color,
+          outlineColor: C.Color.BLACK.withAlpha(0.85),
+          outlineWidth: 3,
+          style: C.LabelStyle.FILL_AND_OUTLINE,
+          horizontalOrigin: C.HorizontalOrigin.CENTER,
+          verticalOrigin: C.VerticalOrigin.CENTER,
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
+          distanceDisplayCondition: new C.DistanceDisplayCondition(e.near, e.far),
+          translucencyByDistance: new C.NearFarScalar(e.far * 0.66, 1, e.far, 0),
+        });
+      } else if (e.label) {
+        labels.remove(e.label);
+        e.label = null;
+      }
+    });
   }
 
   private setLabelsForCamera(kind: HostCamera['kind']): void {

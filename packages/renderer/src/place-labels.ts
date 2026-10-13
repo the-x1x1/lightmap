@@ -94,3 +94,49 @@ export function aboveHorizon(point: Vec3, camera: Vec3, margin = 1e-6): boolean 
   const b2 = WGS84_B * WGS84_B;
   return (point.x * camera.x + point.y * camera.y) / a2 + (point.z * camera.z) / b2 > 1 + margin;
 }
+
+/** One name the host may draw: where it is, the distance band it shows in, and its rank. */
+export interface LabelCandidate {
+  at: Vec3;
+  /** Camera distances (metres) between which the name shows. */
+  near: number;
+  far: number;
+  /** Lower first when there are more names than the cap: countries, capitals, then by zoom. */
+  rank: number;
+}
+
+/**
+ * Which names to draw for a camera: those in their distance band and facing the camera,
+ * at most `max`, the best ranked (then nearest) first; indices into `entries`, ascending.
+ *
+ * The host keeps only these in its label collection. Holding all ~5 700 there and toggling
+ * `show` as the horizon swept across them rebuilt the glyph buffers by the thousand: frames of
+ * 150–850 ms while a flight approached the ground.
+ */
+export function visibleLabelIndices(
+  entries: readonly LabelCandidate[],
+  camera: Vec3,
+  max: number,
+): number[] {
+  const picked: Array<{ i: number; rank: number; d: number }> = [];
+  for (let i = 0; i < entries.length; i++) {
+    const e = entries[i]!;
+    const dx = e.at.x - camera.x;
+    const dy = e.at.y - camera.y;
+    const dz = e.at.z - camera.z;
+    const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    if (d < e.near || d > e.far) continue;
+    if (!aboveHorizon(e.at, camera)) continue;
+    picked.push({ i, rank: e.rank, d });
+  }
+  if (picked.length > max) {
+    picked.sort((a, b) => a.rank - b.rank || a.d - b.d);
+    picked.length = max;
+  }
+  return picked.map((p) => p.i).sort((a, b) => a - b);
+}
+
+/** A place's rank for `visibleLabelIndices`: capitals first, then the zoom it is labelled from. */
+export function placeRank(p: Pick<PlaceLabel, 'minZoom' | 'capital'>): number {
+  return (p.capital ? 1 : 2) + p.minZoom;
+}
