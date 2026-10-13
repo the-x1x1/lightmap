@@ -26,6 +26,7 @@ import {
   GROUND_DETAIL_IMAGE_UNIFORMS,
   GROUND_DETAIL_QUADRANTS,
   GROUND_DETAIL_PERIOD_M,
+  GROUND_DETAIL_TIERS,
   GROUND_MATERIAL_SOURCE,
   GROUND_UNIFORM_DEFAULTS,
 } from '../src/shaders/ground.frag.ts';
@@ -297,6 +298,14 @@ describe('ground material source', () => {
     expect(GROUND_MATERIAL_SOURCE.match(/lmDetailTier\(q/g)?.length).toBe(3);
     expect(GROUND_MATERIAL_SOURCE).toContain('smoothstep(2.0, 12.0, pxPerPeriod)');
     expect(GROUND_MATERIAL_SOURCE).toContain('u_coarseBasemap');
+    // Each tier has its own camera offset (a scaled fine coordinate would jump every 2.5 m).
+    for (const t of GROUND_DETAIL_TIERS) {
+      expect(GROUND_MATERIAL_SOURCE).toContain(`uniform vec3 ${t.offsetUniform};`);
+      expect(GROUND_MATERIAL_SOURCE).toContain(
+        `enu / ${t.periodM % 1 === 0 ? t.periodM.toFixed(1) : t.periodM} + ${t.offsetUniform}`,
+      );
+    }
+    expect(GROUND_DETAIL_TIERS[0].periodM).toBe(GROUND_DETAIL_PERIOD_M);
     for (const v of ['u_eastWC', 'u_northWC', 'u_upWC', 'u_detailOffset'])
       expect(GROUND_MATERIAL_SOURCE).toContain(`uniform vec3 ${v};`);
     expect(GROUND_DETAIL_PERIOD_M).toBe(2.5);

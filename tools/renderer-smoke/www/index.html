@@ -527,6 +527,8 @@
               u_northWC: new Cesium.Cartesian3(0, 1, 0),
               u_upWC: new Cesium.Cartesian3(0, 0, 1),
               u_detailOffset: new Cesium.Cartesian3(0, 0, 0),
+              u_detailOffset1: new Cesium.Cartesian3(0, 0, 0),
+              u_detailOffset2: new Cesium.Cartesian3(0, 0, 0),
             },
             source: GROUND_MATERIAL_SOURCE,
           },
@@ -551,9 +553,15 @@
           host.__scene.preRender.addEventListener(() => {
             const cam = host.__scene.camera.positionWC;
             const f = (v) => v - Math.floor(v);
-            u.u_detailOffset.x = f(Cesium.Cartesian3.dot(cam, east) / 2.5);
-            u.u_detailOffset.y = f(Cesium.Cartesian3.dot(cam, north) / 2.5);
-            u.u_detailOffset.z = f(Cesium.Cartesian3.dot(cam, up) / 2.5);
+            for (const [name, period] of [
+              ['u_detailOffset', 2.5],
+              ['u_detailOffset1', 10.75],
+              ['u_detailOffset2', 46],
+            ]) {
+              u[name].x = f(Cesium.Cartesian3.dot(cam, east) / period);
+              u[name].y = f(Cesium.Cartesian3.dot(cam, north) / period);
+              u[name].z = f(Cesium.Cartesian3.dot(cam, up) / period);
+            }
           });
         }
         host.__scene.primitives.add(

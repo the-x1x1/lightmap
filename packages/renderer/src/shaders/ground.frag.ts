@@ -83,8 +83,19 @@ export const GROUND_DETAIL_IMAGE_UNIFORMS = {
 } as const;
 /** The bundled atlas's quadrants, in the order the generator writes them (NW, NE, SW, SE). */
 export const GROUND_DETAIL_QUADRANTS = ['grass', 'rock', 'sand', 'snow'] as const;
-/** Ground period of one detail tile, metres (the finest tier; the others are 4.3 × and 18.5 × it). */
+/** Ground period of one detail tile, metres (the finest tier). */
 export const GROUND_DETAIL_PERIOD_M = 2.5;
+/**
+ * The three tiers' periods, finest first, and the offset uniform each takes: the camera's own
+ * position along the frame in that tier's periods (the fraction, from the CPU in double). Each
+ * tier needs its own — a coarser tier derived by scaling the finest one's coordinate would jump
+ * every time the camera crossed a fine period, since only the fraction reaches the shader.
+ */
+export const GROUND_DETAIL_TIERS = [
+  { periodM: 2.5, offsetUniform: 'u_detailOffset' },
+  { periodM: 10.75, offsetUniform: 'u_detailOffset1' },
+  { periodM: 46, offsetUniform: 'u_detailOffset2' },
+] as const;
 
 /** The cover map's sampler uniform (an image uniform in Cesium's material fabric: a canvas, or `Material.DefaultImageId`). */
 export const GROUND_COVER_IMAGE_UNIFORM = 'u_coverMap';
@@ -119,6 +130,8 @@ uniform vec3 u_eastWC;
 uniform vec3 u_northWC;
 uniform vec3 u_upWC;
 uniform vec3 u_detailOffset;
+uniform vec3 u_detailOffset1;
+uniform vec3 u_detailOffset2;
 // The camera's position in grain cells: whole cells and the fraction, set each frame.
 uniform vec3 u_cameraCell;
 uniform vec3 u_cameraFrac;
@@ -339,7 +352,10 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float dist = length(positionEC);
     float nearW = u_detail >= 2.0 ? smoothstep(12000.0, 3000.0, dist) : 0.0;
     vec3 local = czm_inverseViewRotation * positionEC;
-    vec3 q = vec3(dot(local, u_eastWC), dot(local, u_northWC), dot(local, u_upWC)) / 2.5 + u_detailOffset;
+    vec3 enu = vec3(dot(local, u_eastWC), dot(local, u_northWC), dot(local, u_upWC));
+    vec3 q = enu / 2.5 + u_detailOffset;
+    vec3 q1 = enu / 10.75 + u_detailOffset1 + 0.37;
+    vec3 q2 = enu / 46.0 + u_detailOffset2 + 0.61;
     vec3 dqx = dFdx(q);
     vec3 dqy = dFdy(q);
     if (nearW > 0.0 && u_detailOn > 0.5)
@@ -366,11 +382,13 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         if (wRock > w1 && t1 != 1.0) { t2 = t1; w2 = w1; t1 = 1.0; w1 = wRock; }
         if (wSnow > w1) { t2 = t1; w2 = w1; t1 = 3.0; w1 = wSnow; } else if (wSnow > w2) { t2 = 3.0; w2 = wSnow; }
         float blend = w2 / max(w1 + w2, 1e-4);
-        // The same tiles at 18.5 × and 4.3 × the period (offset so the repeats never line up),
-        // then the period itself: three multipliers, each about 1, the finer ones a little
-        // stronger than the coarse so the foreground keeps the strongest grain.
-        vec3 d = lmDetailTier(q * 0.054 + 0.61, dqx * 0.054, dqy * 0.054, w, t1, t2, blend, 0.35 * nearW)
-               * lmDetailTier(q * 0.23 + 0.37, dqx * 0.23, dqy * 0.23, w, t1, t2, blend, 0.45 * nearW)
+        // The same tiles at 46 m and 10.75 m periods (shifted so the repeats never line up),
+        // then 2.5 m: three multipliers, each about 1, the finer ones a little stronger than
+        // the coarse so the foreground keeps the strongest grain.
+        float k1 = 2.5 / 10.75;
+        float k2 = 2.5 / 46.0;
+        vec3 d = lmDetailTier(q2, dqx * k2, dqy * k2, w, t1, t2, blend, 0.35 * nearW)
+               * lmDetailTier(q1, dqx * k1, dqy * k1, w, t1, t2, blend, 0.45 * nearW)
                * lmDetailTier(q, dqx, dqy, w, t1, t2, blend, 0.5 * nearW);
         ground *= d;
     }

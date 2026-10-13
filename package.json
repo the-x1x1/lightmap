@@ -31,6 +31,7 @@
     "smoke:prod": "node --experimental-strip-types scripts/smoke-prod.ts",
     "renderer:smoke": "cd tools/renderer-smoke && node run.mjs",
     "textures:ground": "node --experimental-strip-types scripts/gen-ground-detail.ts",
+    "labels:places": "node --experimental-strip-types scripts/gen-place-labels.ts",
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down"
   },

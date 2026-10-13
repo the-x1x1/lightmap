@@ -20,10 +20,17 @@ import type {
 import { GRADE_FRAGMENT_SHADER } from '../shaders/grade.frag.ts';
 import { createDetailTextures, type DetailTileCesium } from './detail-tiles.ts';
 import {
+  aboveHorizon,
+  countryDistanceBandM,
+  parsePlaceLabels,
+  placeMaxDistanceM,
+  type PlaceLabelSet,
+} from '../place-labels.ts';
+import {
   GROUND_COVER_BOUNDS_UNIFORM,
   GROUND_COVER_IMAGE_UNIFORM,
   GROUND_DETAIL_IMAGE_UNIFORMS,
-  GROUND_DETAIL_PERIOD_M,
+  GROUND_DETAIL_TIERS,
   GROUND_GRAIN_M,
   GROUND_MATERIAL_SOURCE,
   GROUND_MATERIAL_TYPE,
@@ -62,6 +69,8 @@ export interface CesiumHostOptions {
    * image); absent, the near field keeps its procedural grain.
    */
   groundDetailAtlasUrl?: string;
+  /** URL of the bundled place labels (`place-labels.json`); absent, the globe carries no names. */
+  placeLabelsUrl?: string;
   onError?: (message: string, error: unknown) => void;
 }
 
@@ -79,8 +88,12 @@ const DEG = Math.PI / 180;
 export const MIN_FRAMES_FOR_SAMPLE = 12;
 
 const HIDDEN_RUN_POOL = 6;
-/** The detail atlas's ground frame is re-anchored when the camera is this far from the anchor, metres. */
-const DETAIL_REANCHOR_M = 3000;
+/**
+ * Without a pin to anchor to, the detail tiles' ground frame is re-anchored when the point under
+ * the camera has moved this far, metres. A re-anchor shifts the whole pattern, so it must be
+ * rare: with a pin the frame stays at the pin (zooming in and out never moves it).
+ */
+const DETAIL_REANCHOR_M = 200_000;
 
 export class CesiumSceneHost implements SceneHost {
   private readonly C: CesiumModule;
@@ -112,6 +125,14 @@ export class CesiumSceneHost implements SceneHost {
   private detailTextures: Record<string, { destroy(): void }> | null = null;
   /** 1 while the basemap is the bundled coarse one (`u_coarseBasemap`). */
   private coarseBasemap = 1;
+  /** Where the detail tiles' ground frame is anchored: the pin, from the camera request. */
+  private detailAnchorTarget: Cesium.Cartesian3 | null = null;
+  /** Place and country names on the globe (orbit only), with their ECEF positions for the horizon test. */
+  private labels: Cesium.LabelCollection | null = null;
+  private labelEntries: Array<{ label: Cesium.Label; at: Vec3 }> = [];
+  private labelsWanted = true;
+  private readonly labelCam = { x: NaN, y: NaN, z: NaN };
+  private preRenderLabelsRemover: (() => void) | null = null;
   /** The grade's clock, so a material created after the first grade starts on it. */
   private lastGradeTime = 0;
   private readonly onError: ((message: string, error: unknown) => void) | undefined;
@@ -268,6 +289,7 @@ export class CesiumSceneHost implements SceneHost {
     // split into a whole number of cells and a fraction in double precision each frame.
     // The detail atlas is fetched once, up front; the material takes it when both exist.
     if (this.detailAtlasUrl) this.loadDetailAtlas(this.detailAtlasUrl);
+    if (options.placeLabelsUrl) void this.loadPlaceLabels(options.placeLabelsUrl);
     this.preRenderGroundRemover = scene.preRender.addEventListener(() => {
       const m = this.groundMaterial;
       if (!m) return;
@@ -293,17 +315,30 @@ export class CesiumSceneHost implements SceneHost {
       if (this.detailAtlasUrl) {
         const anchor = this.enuScratch.anchor;
         const { east, north, up } = this.enuScratch;
-        const stale =
-          !this.enuScratch.anchored || C.Cartesian3.distance(anchor, cam) > DETAIL_REANCHOR_M;
-        if (stale) {
-          const n = C.Ellipsoid.WGS84.geodeticSurfaceNormal(cam, up);
-          const h = Math.hypot(cam.x, cam.y);
+        // Anchor at the pin when there is one (the orbit's target, the viewpoint's eye), so
+        // the frame never moves while zooming; otherwise at the point under the camera, kept
+        // until that has travelled far.
+        const pin = this.detailAnchorTarget;
+        let want: Cesium.Cartesian3 | undefined;
+        if (pin) {
+          if (!this.enuScratch.anchored || C.Cartesian3.distance(anchor, pin) > 1) want = pin;
+        } else {
+          const under = C.Ellipsoid.WGS84.scaleToGeodeticSurface(cam, new C.Cartesian3());
+          if (
+            under &&
+            (!this.enuScratch.anchored || C.Cartesian3.distance(anchor, under) > DETAIL_REANCHOR_M)
+          )
+            want = under;
+        }
+        if (want) {
+          const n = C.Ellipsoid.WGS84.geodeticSurfaceNormal(want, up);
+          const h = Math.hypot(want.x, want.y);
           if (n && h >= 1) {
-            east.x = -cam.y / h;
-            east.y = cam.x / h;
+            east.x = -want.y / h;
+            east.y = want.x / h;
             east.z = 0;
             C.Cartesian3.cross(up, east, north);
-            C.Cartesian3.clone(cam, anchor);
+            C.Cartesian3.clone(want, anchor);
             this.enuScratch.anchored = true;
             C.Cartesian3.clone(east, u['u_eastWC'] as Cesium.Cartesian3);
             C.Cartesian3.clone(north, u['u_northWC'] as Cesium.Cartesian3);
@@ -311,12 +346,16 @@ export class CesiumSceneHost implements SceneHost {
           }
         }
         if (this.enuScratch.anchored) {
-          const off = u['u_detailOffset'] as Cesium.Cartesian3;
-          const P = GROUND_DETAIL_PERIOD_M;
           const f = (v: number) => v - Math.floor(v);
-          off.x = f(C.Cartesian3.dot(cam, east) / P);
-          off.y = f(C.Cartesian3.dot(cam, north) / P);
-          off.z = f(C.Cartesian3.dot(cam, up) / P);
+          const ce = C.Cartesian3.dot(cam, east);
+          const cn = C.Cartesian3.dot(cam, north);
+          const cu = C.Cartesian3.dot(cam, up);
+          for (const tier of GROUND_DETAIL_TIERS) {
+            const off = u[tier.offsetUniform] as Cesium.Cartesian3;
+            off.x = f(ce / tier.periodM);
+            off.y = f(cn / tier.periodM);
+            off.z = f(cu / tier.periodM);
+          }
         }
       }
     });
@@ -419,7 +458,9 @@ export class CesiumSceneHost implements SceneHost {
             u_eastWC: new C.Cartesian3(1, 0, 0),
             u_northWC: new C.Cartesian3(0, 1, 0),
             u_upWC: new C.Cartesian3(0, 0, 1),
-            u_detailOffset: new C.Cartesian3(0, 0, 0),
+            ...Object.fromEntries(
+              GROUND_DETAIL_TIERS.map((t) => [t.offsetUniform, new C.Cartesian3(0, 0, 0)]),
+            ),
             u_cameraCell: new C.Cartesian3(0, 0, 0),
             u_cameraFrac: new C.Cartesian3(0, 0, 0),
           },
@@ -537,6 +578,9 @@ export class CesiumSceneHost implements SceneHost {
     const key = JSON.stringify(c);
     if (key === this.lastCameraKey) return;
     this.lastCameraKey = key;
+    const pin = c.kind === 'viewpoint' ? c.eye : c.target;
+    this.detailAnchorTarget = C.Cartesian3.fromDegrees(pin.longitude, pin.latitude, 0);
+    this.setLabelsForCamera(c.kind);
     if (c.kind === 'viewpoint') {
       ssc.enableInputs = false; // React layer handles drag-to-look via CameraState
       cam.lookAtTransform(C.Matrix4.IDENTITY);
@@ -869,6 +913,109 @@ export class CesiumSceneHost implements SceneHost {
     if (u[first] === this.detailTextures[first]) return;
     for (const [name, texture] of Object.entries(this.detailTextures)) u[name] = texture;
     u['u_detailOn'] = 1;
+  }
+
+  /**
+   * Names on the globe: countries from orbit, then capitals and cities, then towns as the camera
+   * closes in (each label's distance from Natural Earth's own zoom, `place-labels.ts`), fading
+   * in over the last third of its range. Drawn over the terrain (a sea-level label would sink
+   * under a mountain town), so those on the far side of the Earth are hidden by an exact horizon
+   * test whenever the camera moves; hidden altogether at a viewpoint, where they would float
+   * over the photograph.
+   */
+  private async loadPlaceLabels(url: string): Promise<void> {
+    const C = this.C;
+    let set: PlaceLabelSet;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      set = parsePlaceLabels(await res.json());
+    } catch (error) {
+      this.onError?.('Place names unavailable', error);
+      return;
+    }
+    if (this.destroyed) return;
+    const labels = new C.LabelCollection();
+    const add = (
+      text: string,
+      lat: number,
+      lon: number,
+      font: string,
+      color: Cesium.Color,
+      near: number,
+      far: number,
+    ) => {
+      const position = C.Cartesian3.fromDegrees(lon, lat, 0);
+      const label = labels.add({
+        text,
+        position,
+        font,
+        fillColor: color,
+        outlineColor: C.Color.BLACK.withAlpha(0.85),
+        outlineWidth: 3,
+        style: C.LabelStyle.FILL_AND_OUTLINE,
+        horizontalOrigin: C.HorizontalOrigin.CENTER,
+        verticalOrigin: C.VerticalOrigin.CENTER,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+        distanceDisplayCondition: new C.DistanceDisplayCondition(near, far),
+        translucencyByDistance: new C.NearFarScalar(far * 0.66, 1, far, 0),
+      });
+      this.labelEntries.push({ label, at: { x: position.x, y: position.y, z: position.z } });
+    };
+    const country = C.Color.fromCssColorString('#e8dcc4');
+    const capital = C.Color.fromCssColorString('#ffffff');
+    const town = C.Color.fromCssColorString('#e6e9ee');
+    for (const c of set.countries) {
+      const [near, far] = countryDistanceBandM(c);
+      add(
+        c.name.toUpperCase(),
+        c.latitude,
+        c.longitude,
+        '600 12px system-ui, sans-serif',
+        country,
+        near,
+        far,
+      );
+    }
+    for (const p of set.places)
+      add(
+        p.name,
+        p.latitude,
+        p.longitude,
+        p.capital ? '600 14px system-ui, sans-serif' : '500 12px system-ui, sans-serif',
+        p.capital ? capital : town,
+        0,
+        placeMaxDistanceM(p),
+      );
+    labels.show = this.labelsWanted;
+    this.labels = this.scene.primitives.add(labels) as Cesium.LabelCollection;
+    this.labelCam.x = NaN;
+    this.preRenderLabelsRemover = this.scene.preRender.addEventListener(() => this.cullLabels());
+    this.scene.requestRender();
+  }
+
+  /** Hide the labels on the far side of the Earth; only when the camera has moved. */
+  private cullLabels(): void {
+    if (!this.labels?.show) return;
+    const cam = this.scene.camera.positionWC;
+    const last = this.labelCam;
+    if (Math.abs(cam.x - last.x) + Math.abs(cam.y - last.y) + Math.abs(cam.z - last.z) < 1) return;
+    last.x = cam.x;
+    last.y = cam.y;
+    last.z = cam.z;
+    const c = { x: cam.x, y: cam.y, z: cam.z };
+    for (const e of this.labelEntries) {
+      const show = aboveHorizon(e.at, c);
+      if (e.label.show !== show) e.label.show = show;
+    }
+  }
+
+  private setLabelsForCamera(kind: HostCamera['kind']): void {
+    this.labelsWanted = kind !== 'viewpoint';
+    if (this.labels) {
+      this.labels.show = this.labelsWanted;
+      this.labelCam.x = NaN;
+    }
   }
 
   /** Whether the basemap under the paint is the bundled coarse one (`u_coarseBasemap`). */
@@ -1387,6 +1534,10 @@ export class CesiumSceneHost implements SceneHost {
     this.groundMaterial?.destroy();
     this.groundMaterial = null;
     this.detailTextures = null;
+    this.preRenderLabelsRemover?.();
+    this.preRenderLabelsRemover = null;
+    this.labels = null; // owned by scene.primitives, destroyed with the widget
+    this.labelEntries = [];
     this.widget.destroy();
   }
 }
