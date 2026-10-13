@@ -41,18 +41,19 @@ export function decodeUrbanCell(json: unknown, key: string): UrbanPolygon[] {
   const q = typeof o.q === 'number' && o.q > 0 ? o.q : 10_000;
   if (!Array.isArray(o.polys)) return [];
   const out: UrbanPolygon[] = [];
-  for (const poly of o.polys) {
+  for (const poly of o.polys as unknown[]) {
     if (!Array.isArray(poly)) continue;
     const rings: Array<Array<[number, number]>> = [];
-    for (const ring of poly) {
+    for (const ring of poly as unknown[]) {
       if (!Array.isArray(ring) || ring.length < 6 || ring.length % 2 !== 0) continue;
+      const values = ring as unknown[];
       const pts: Array<[number, number]> = [];
       let x = 0;
       let y = 0;
       let ok = true;
       for (let i = 0; i < ring.length; i += 2) {
-        const dx = ring[i];
-        const dy = ring[i + 1];
+        const dx = values[i];
+        const dy = values[i + 1];
         if (typeof dx !== 'number' || typeof dy !== 'number') {
           ok = false;
           break;
