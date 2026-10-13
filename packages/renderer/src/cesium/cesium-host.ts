@@ -645,6 +645,8 @@ export class CesiumSceneHost implements SceneHost {
     this.setLabelsForCamera(c.kind);
     if (c.kind === 'viewpoint') {
       ssc.enableInputs = false; // React layer handles drag-to-look via CameraState
+      // A flight still under way (to the place's orbit view) would carry on over this view.
+      cam.cancelFlight();
       cam.lookAtTransform(C.Matrix4.IDENTITY);
       const frustum = cam.frustum;
       if (frustum instanceof C.PerspectiveFrustum) frustum.fov = c.fovDeg * DEG;
