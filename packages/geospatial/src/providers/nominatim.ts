@@ -41,6 +41,10 @@ interface NominatimResult {
   lon?: string;
   boundingbox?: [string, string, string, string];
   address?: { country_code?: string };
+  /** Nominatim's 0–1 prominence (Wikipedia links, population, place rank). */
+  importance?: number;
+  /** OSM key of the main tag (jsonv2): natural, place, boundary, amenity, … */
+  category?: string;
 }
 
 export class NominatimGeocoder implements GeocodingProvider {
@@ -69,7 +73,9 @@ export class NominatimGeocoder implements GeocodingProvider {
     url.searchParams.set('limit', String(Math.min(opts?.limit ?? 5, 10)));
     url.searchParams.set('addressdetails', '1');
     const data = await this.request<NominatimResult[]>(url, opts?.signal);
-    return (Array.isArray(data) ? data : []).map(toPlace).filter((p): p is Place => p !== null);
+    return rankForPhotographers(Array.isArray(data) ? data : [])
+      .map(toPlace)
+      .filter((p): p is Place => p !== null);
   }
 
   async reverse(point: GeoPoint, opts?: { signal?: AbortSignal }): Promise<Place | null> {
@@ -95,6 +101,24 @@ export class NominatimGeocoder implements GeocodingProvider {
     if (!res.ok) throw new Error(`Nominatim ${res.status}`);
     return (await res.json()) as T;
   }
+}
+
+/**
+ * Results in the order a photographer means them: by Nominatim's own prominence, with natural
+ * features (peaks, lakes, beaches, waterfalls) a little ahead of the towns named after them —
+ * "Mount Rainier" is the volcano, not the town in Maryland that Nominatim's text match put
+ * first. Stable, so equal scores keep Nominatim's order.
+ */
+export function rankForPhotographers<T extends { importance?: number; category?: string }>(
+  results: readonly T[],
+): T[] {
+  const score = (r: T) =>
+    (typeof r.importance === 'number' && Number.isFinite(r.importance) ? r.importance : 0) +
+    (r.category === 'natural' || r.category === 'waterway' ? 0.1 : 0);
+  return results
+    .map((r, i) => ({ r, i, s: score(r) }))
+    .sort((a, b) => b.s - a.s || a.i - b.i)
+    .map((x) => x.r);
 }
 
 function toPlace(r: NominatimResult): Place | null {

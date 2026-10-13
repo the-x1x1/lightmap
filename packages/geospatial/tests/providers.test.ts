@@ -78,6 +78,41 @@ describe('Nominatim adapter', () => {
     expect(slept).toEqual([800]);
     expect(calls[0]).toContain('format=jsonv2');
   });
+  it('puts the volcano ahead of the town named after it (prominence, natural features first)', async () => {
+    const fetchImpl = (async () =>
+      new Response(
+        JSON.stringify([
+          {
+            place_id: 1,
+            display_name: 'Mount Rainier, Maryland',
+            lat: '38.94',
+            lon: '-76.96',
+            importance: 0.45,
+            category: 'place',
+          },
+          {
+            place_id: 2,
+            display_name: 'Mount Rainier, Washington',
+            lat: '46.85',
+            lon: '-121.76',
+            importance: 0.62,
+            category: 'natural',
+          },
+          {
+            place_id: 3,
+            display_name: 'Mount Rainier National Park',
+            lat: '46.88',
+            lon: '-121.73',
+            importance: 0.62,
+            category: 'boundary',
+          },
+        ]),
+        { status: 200 },
+      )) as unknown as typeof fetch;
+    const g = new NominatimGeocoder({ userAgent: 'LightMap-test', fetchImpl });
+    const hits = await g.search('Mount Rainier');
+    expect(hits.map((h) => h.sourceId)).toEqual(['nominatim:2', 'nominatim:3', 'nominatim:1']);
+  });
   it('drops results without coordinates', async () => {
     const fetchImpl = (async () =>
       new Response(JSON.stringify([{ display_name: 'x' }]), {
