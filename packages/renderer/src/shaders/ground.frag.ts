@@ -200,7 +200,7 @@ float lmNoiseAt(vec3 x, vec3 cell)
         f.z);
 }
 
-// Four octaves, 0..~0.94, mean ≈ 0.47.
+// Four octaves, 0..~0.94, mean ~ 0.47.
 float lmFbm(vec3 p)
 {
     return 0.5 * lmNoise(p) + 0.25 * lmNoise(p * 2.03 + 11.0) + 0.125 * lmNoise(p * 4.07 + 23.0) + 0.0625 * lmNoise(p * 8.11 + 37.0);
@@ -312,7 +312,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float slope = materialInput.slope;                // radians, 0 flat
     float height = materialInput.height - u_seaLevelM; // metres above sea level
 
-    // Open ground leans from turf and scrub toward steppe and desert with the region's aridity —
+    // Open ground leans from turf and scrub toward steppe and desert with the region's aridity -
     // and, on a slope, with which way it faces: the equatorward face takes the noon Sun and
     // dries to scrub, the poleward face stays greener (a rule of the mid-latitudes; flat ground
     // and the tropics barely move). Computed before the snow uses the same facing below.
@@ -343,7 +343,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     vec3 bare = mix(scree, rock, grain) * (0.84 + 0.32 * patches);
     ground = mix(ground, bare, alpine);
 
-    // Steep faces are bare rock, from about 30° to 45°, broken up by the grain.
+    // Steep faces are bare rock, from about 30 deg to 45 deg, broken up by the grain.
     float rocky = smoothstep(0.52, 0.78, slope + 0.12 * (grain - 0.47));
     ground = mix(ground, bare, rocky);
 
@@ -406,11 +406,11 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     }
 
     // Nearer the camera, the detail tiles at two scales (2.5 m and 6.7 m periods), each fading
-    // in by its size on screen, below a mottling that carries the zooms in between — so there
+    // in by its size on screen, below a mottling that carries the zooms in between - so there
     // is texture at every zoom and no scale ever pops in. Anchored to the
     // ground, not the camera: the camera-relative position (precise) along an east/north/up
     // frame the host anchors to the ground (re-anchored only when the camera has moved
-    // kilometres), plus the camera's own offset along that frame in tile periods — so the
+    // kilometres), plus the camera's own offset along that frame in tile periods - so the
     // pattern stays put as the camera moves. Derivatives are taken here, outside any branch,
     // as GLSL requires.
     float dist = length(positionEC);
@@ -425,8 +425,8 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float pxPerM = 1.0 / max(max(length(dqx), length(dqy)) / 2.5, 1e-6);
     if (nearW > 0.0 && u_detailOn > 0.5)
     {
-        // The tiles — grass, rock, sand or snow, whichever the rules above made this ground,
-        // the two nearest blended across their edge — projected along the three axes and
+        // The tiles - grass, rock, sand or snow, whichever the rules above made this ground,
+        // the two nearest blended across their edge - projected along the three axes and
         // blended by the surface normal (a sharp triplanar, so a face takes one projection).
         // A multiplier about 1 on the colour the macro rules chose; it never changes what the
         // ground is.
@@ -465,7 +465,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // Mottling between the macro patches and the tiles: world-anchored value noise at 48 m,
     // 12 m and 3 m cells, never repeating, each fading in as its cells grow past a few pixels
     // on screen (and out again as they shrink, so it never aliases). The broad scale also
-    // shifts the hue — drier and yellower in its light patches — as real ground does.
+    // shifts the hue - drier and yellower in its light patches - as real ground does.
     // The 48 m and 12 m noise once, for the mottling, the town and the coast's jitter below
     // (each inlined copy of the hash is a few dozen integer ops).
     float n48 = lmNoiseI(enu / 48.0 + u_mottleFrac2, u_mottleCell2) - 0.5;
@@ -484,9 +484,9 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     }
 
     // Built-up ground close enough to read: a street grid on the mottling's ground-fixed 48 m
-    // cells along the place's east and north — blocks two cells long (48 × 96 m), every fourth
-    // street east–west and every third north–south a wider avenue — and inside each block lots
-    // of about 16 × 12 m, each a roof or yard of its own (grey, warm, a few pale roofs, a few
+    // cells along the place's east and north - blocks two cells long (48 x 96 m), every fourth
+    // street east-west and every third north-south a wider avenue - and inside each block lots
+    // of about 16 x 12 m, each a roof or yard of its own (grey, warm, a few pale roofs, a few
     // trees), with one block in ten a park. It fades in as the blocks grow past a few pixels and
     // the lots as they do; steep ground stays as it is. A pattern of a city, not its streets:
     // the grid does not follow the real ones.
@@ -547,14 +547,14 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     }
 
     // Broken cloud: patches of shadow the size of cumulus (a kilometre or two) drifting with the
-    // planner's clock, over everything but water. A dappling of the albedo — the direct light's
+    // planner's clock, over everything but water. A dappling of the albedo - the direct light's
     // direction, the terrain shadows and the sky are untouched; the patches are a pattern, not
     // the forecast's own clouds.
     if (u_cloudShadow > 0.0 && u_detail > 0.0)
     {
-        // The patches move with the planner's clock toward the north-east at ≈ 200 m/min (a
-        // 12 km/h wind — a pattern, not the forecast's wind), along the place's own east and
-        // north; sampling at position − drift moves the pattern with +drift. They fade toward
+        // The patches move with the planner's clock toward the north-east at ~ 200 m/min (a
+        // 12 km/h wind - a pattern, not the forecast's wind), along the place's own east and
+        // north; sampling at position - drift moves the pattern with +drift. They fade toward
         // the horizon, where their finest octave would only shimmer.
         vec3 drift = (eastW * 190.0 + northW * 60.0) * u_cloudTime;
         float cloud = lmFbm((positionWC - drift) / 1400.0 + 13.0);
@@ -578,8 +578,8 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float cover = max(rocky, max(snowy, max(alpine * 0.8, known * 0.9)));
     float alpha = u_strength * mix(mix(0.75, 0.95, cover), 0.985, u_coarseBasemap);
 #ifdef HAS_WATER_MASK
-    // Water, from the terrain's own mask — but the mask arrives with coarse tiles and is
-    // upsampled for finer ones, so its edge runs in 50–100 m stair steps across the coast.
+    // Water, from the terrain's own mask - but the mask arrives with coarse tiles and is
+    // upsampled for finer ones, so its edge runs in 50-100 m stair steps across the coast.
     // The terrain knows better: a water surface in the elevation model is flat to a fraction
     // of a degree, so where the mask lies on ground that slopes even a degree the ground wins
     // and the coast follows the terrain. (Height is no guide: sea level here is an estimate
@@ -587,27 +587,25 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // Along the mask's soft, stepped edge the threshold is jittered by ground-fixed noise, so
     // the shore reads as an irregular line rather than a staircase of blurred squares.
     float m = materialInput.waterMask;
-    // Branch-free on purpose: as a conditional assignment, this made the Direct3D translation
-    // (Chrome and Edge on Windows) drop the town blocks above from the whole program.
     float mJitter = smoothstep(0.3, 0.7, m
         + 0.5 * n48
         + 0.3 * n12
         // From further out the mask's tiles are coarser and their steps longer: a broader
-        // jitter (≈ 350 m, world-anchored) takes over with distance.
+        // jitter (~ 350 m, world-anchored) takes over with distance.
         + 0.7 * smoothstep(2000.0, 20000.0, dist) * (lmFbm(positionWC / 350.0 + 17.0) - 0.47));
     m = mix(m, mJitter, step(0.02, m) * step(m, 0.98));
     float water = m * (1.0 - smoothstep(0.008, 0.025, slope));
     // On water the paint is a deep sea colour (a little mottled, greyer toward the horizon)
-    // over most of Cesium's own water shading — whose wave highlight, under HDR, turned every
-    // bay and pond a flat bright cyan — leaving a fifth of it for the Sun's glint and waves.
+    // over most of Cesium's own water shading - whose wave highlight, under HDR, turned every
+    // bay and pond a flat bright cyan - leaving a fifth of it for the Sun's glint and waves.
     if (water > 0.0)
     {
         vec3 sea = mix(vec3(0.05, 0.17, 0.25), vec3(0.08, 0.24, 0.30), patches);
         sea = mix(sea, vec3(0.10, 0.17, 0.24), smoothstep(2000.0, 40000.0, dist));
         material.diffuse = mix(material.diffuse, sea * u_brightness, water);
         // Water seen at a grazing angle is a mirror (Fresnel): toward the horizon the paint
-        // gives way to the globe's own water shading — the sky's light and the Sun's glint path,
-        // the picture at a sunrise over the sea — and holds only looking down into it.
+        // gives way to the globe's own water shading - the sky's light and the Sun's glint path,
+        // the picture at a sunrise over the sea - and holds only looking down into it.
         float cosView = clamp(dot(materialInput.normalEC, normalize(materialInput.positionToEyeEC)), 0.0, 1.0);
         float fresnel = pow(1.0 - cosView, 3.0);
         alpha = mix(alpha, 0.8 * u_strength * (1.0 - 0.8 * fresnel), water);

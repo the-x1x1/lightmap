@@ -77,24 +77,24 @@ void main() {
   // space around the globe stays dark.
   float underDecks = 1.0 - smoothstep(6000.0, 14000.0, u_eyeHeightM);
 
-  // Sky: three procedural cloud decks — high (cirrus), mid (alto-), low (stratus/cumulus) — each
+  // Sky: three procedural cloud decks - high (cirrus), mid (alto-), low (stratus/cumulus) - each
   // with the cover the forecast (or scenario) gives that band, composited far to near. Cloud
   // *placement* is noise; cloud *amount per band* and *how each band is lit* follow the data and
   // the true Sun elevation. Scroll slowly so scrubbing time reads as "the sky moves".
   if (isSky) {
     vec2 uv = v_textureCoordinates;
     // The clear dome first (Cesium's single-scattering sky, corrected for twilight), then the
-    // decks composite over it — a cloud's colour comes from how *it* is lit, not from the dome.
+    // decks composite over it - a cloud's colour comes from how *it* is lit, not from the dome.
     vec3 dome = color * (0.95 + 0.15 * u_skyLuminance);
     dome *= mix(1.0, u_skyLuminance, 0.6);
-    // Twilight → night: the atmosphere is lit at a grazing angle (see lighting.ts), so darken and
+    // Twilight -> night: the atmosphere is lit at a grazing angle (see lighting.ts), so darken and
     // cool the sky here as the real Sun sinks. Blue hour keeps ~65 % luminance with a blue cast;
     // astronomical night ends near black.
     float twilight = smoothstep(0.0, 1.0, u_nightFactor);
     dome = mix(dome, dome * vec3(0.55, 0.68, 1.05), twilight * 0.8);
-    // Blue hour proper (sun −6°…0°): the dome is lit only by multiple scattering, which the
-    // single-scattering sky model cannot produce — restore the deep, saturated blue and a little
-    // of the luminance it loses. Peaks around −4°, gone by −12° (nautical twilight is dark).
+    // Blue hour proper (sun -6 deg...0 deg): the dome is lit only by multiple scattering, which the
+    // single-scattering sky model cannot produce - restore the deep, saturated blue and a little
+    // of the luminance it loses. Peaks around -4 deg, gone by -12 deg (nautical twilight is dark).
     float blueHour = (1.0 - smoothstep(-6.0, 0.5, u_sunElevation)) * smoothstep(-12.0, -6.0, u_sunElevation);
     // The bright band where the sun set stays warm (forward scattering); only the dome goes blue.
     float glowKeep = smoothstep(0.35, 0.8, dot(dome, vec3(0.2126, 0.7152, 0.0722)));
@@ -108,10 +108,10 @@ void main() {
     // Clouds share the scene's sky-luminance dimming (overcast decks are darker than fair ones).
     float deckLum = mix(1.0, u_skyLuminance, 0.6);
     // How each deck is lit. A cloud at height h over the observer stays in sunlight until the Sun
-    // is acos(R/(R+h)) below the horizon — 1.0° for a 1 km base, 2.0° at 4 km, 3.2–3.5° at
-    // 10–12 km (R = 6371 km) — plus ≈0.5° of refraction: ≈1.5°, ≈2.5°, ≈3.7–4.0°. Each ramp is
+    // is acos(R/(R+h)) below the horizon - 1.0 deg for a 1 km base, 2.0 deg at 4 km, 3.2-3.5 deg at
+    // 10-12 km (R = 6371 km) - plus ~0.5 deg of refraction: ~1.5 deg, ~2.5 deg, ~3.7-4.0 deg. Each ramp is
     // centred on its band's typical height, so low cloud goes into shadow just after sunset while
-    // cirrus stays lit — and pink — for another 15–20 minutes. The transition is applied across
+    // cirrus stays lit - and pink - for another 15-20 minutes. The transition is applied across
     // the whole sky; a real deck stays lit a little longer toward the Sun (known simplification).
     float sunUp   = smoothstep(-2.0, -0.5, u_sunElevation);
     float midLit  = smoothstep(-3.0, -1.5, u_sunElevation);
@@ -174,13 +174,13 @@ void main() {
     color = mix(dome, sky, underDecks);
   } else {
     // Aerial perspective: lift toward the sky colour with the real distance through the air
-    // (the depth turned back into eye space — a curve on raw depth, which is logarithmic and
+    // (the depth turned back into eye space - a curve on raw depth, which is logarithmic and
     // per-frustum, put a camera 1.5 km over a valley into 85 % haze). The visibility follows
     // the scenario's haze (about 60 km clear, 20 km overcast, 4 km in thick haze, the fog's
     // own scale), shortened when a low Sun lengthens the path (u_horizonHaze); the haze takes
     // the light's colour.
     // czm_windowToEyeCoordinates takes the depth as stored (logarithmic), not czm_readDepth's
-    // reversed value — given that, it put everything at an enormous distance.
+    // reversed value - given that, it put everything at an enormous distance.
     float storedDepth = texture(depthTexture, v_textureCoordinates).r;
     vec4 eyePos = czm_windowToEyeCoordinates(v_textureCoordinates * czm_viewport.zw, storedDepth);
     float distM = length(eyePos.xyz / eyePos.w);
