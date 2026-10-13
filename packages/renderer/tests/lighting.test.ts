@@ -8,7 +8,7 @@ import {
   type SceneInputs,
 } from '@lightmap/scene';
 import { OPEN_METEO_CAPABILITIES, type WeatherScenarioId } from '@lightmap/weather';
-import { lightingFromScene, skyGradientFor } from '../src/lighting.ts';
+import { lightingFromScene, skyGradientFor, visibilityFromHaze } from '../src/lighting.ts';
 import { azElFromEcefToward, type Vec3 } from '../src/sun-vector.ts';
 
 const neg = (v: Vec3): Vec3 => ({ x: -v.x, y: -v.y, z: -v.z });
@@ -222,5 +222,23 @@ describe('moonlight', () => {
     const noMoon = lightingFromScene(scene(23, 'clear', { includeLunar: false }));
     expect(noMoon.moonlit).toBe(false);
     expect(noMoon.sunIntensity).toBe(0);
+  });
+});
+
+describe('visibility and fog', () => {
+  it('maps haze to a visibility: ~60 km clear, ~20 km overcast, ~10 km rain, 4 km thick haze', () => {
+    expect(visibilityFromHaze(0.1)).toBeGreaterThan(50_000);
+    expect(visibilityFromHaze(0.45)).toBeGreaterThan(15_000);
+    expect(visibilityFromHaze(0.45)).toBeLessThan(30_000);
+    expect(visibilityFromHaze(0.7)).toBeCloseTo(9_800, -3);
+    expect(visibilityFromHaze(1)).toBe(4000);
+    expect(visibilityFromHaze(5)).toBe(4000);
+  });
+
+  it('overcast fog leaves the ground 1.5 km from the camera almost clear (it was a grey sheet)', () => {
+    const d = lightingFromScene(scene(12, 'overcast')).fogDensity;
+    const fogAt = (m: number) => 1 - Math.exp(-((d * m) ** 2));
+    expect(fogAt(1500)).toBeLessThan(0.05);
+    expect(fogAt(40_000)).toBeGreaterThan(0.9);
   });
 });

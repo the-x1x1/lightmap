@@ -158,15 +158,20 @@ void main() {
     }
     color = sky;
   } else {
-    // Aerial perspective: lift toward the sky colour with distance. Depth is non-linear; use a
-    // steep curve so only the far ground near the horizon is affected. Low sun lengthens the
-    // path through the air (u_horizonHaze), and the haze takes the light's colour.
-    float d = clamp(depth, 0.0, 1.0);
-    float dist = pow(d, 60.0);
+    // Aerial perspective: lift toward the sky colour with the real distance through the air
+    // (the depth turned back into eye space — a curve on raw depth, which is logarithmic and
+    // per-frustum, put a camera 1.5 km over a valley into 85 % haze). The visibility follows
+    // the scenario's haze (about 60 km clear, 20 km overcast, 4 km in thick haze, the fog's
+    // own scale), shortened when a low Sun lengthens the path (u_horizonHaze); the haze takes
+    // the light's colour.
+    vec4 eyePos = czm_windowToEyeCoordinates(v_textureCoordinates * czm_viewport.zw, depth);
+    float distM = length(eyePos.xyz / eyePos.w);
+    float visibilityM = 4000.0 * pow(20.0, 1.0 - clamp(u_haze, 0.0, 1.0)) / (1.0 + 2.0 * u_horizonHaze);
+    float dist = 1.0 - exp(-3.0 * distM / visibilityM);
     vec3 hazeCol = mix(vec3(0.72, 0.78, 0.86), vec3(0.6, 0.62, 0.66), u_cloudOpacity);
     hazeCol = mix(hazeCol, hazeCol * u_tint, 0.5 * (1.0 - u_cloudOpacity));
     hazeCol = mix(hazeCol, vec3(0.05, 0.06, 0.1), u_nightFactor);
-    color = mix(color, hazeCol, clamp(u_horizonHaze * dist * 0.9, 0.0, 0.85));
+    color = mix(color, hazeCol, clamp(dist * 0.85, 0.0, 0.85));
   }
 
   // Global grade.

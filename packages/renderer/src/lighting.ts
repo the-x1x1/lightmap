@@ -81,6 +81,11 @@ function smooth(a: number, b: number, x: number): number {
   return t * t * (3 - 2 * t);
 }
 
+/** Meteorological visibility for the scenario's haze (0 clear – 1 thick haze), metres. */
+export function visibilityFromHaze(haze: number): number {
+  return 4000 * 20 ** (1 - clamp01(haze));
+}
+
 export function lightingFromScene(s: SceneState): LightingParameters {
   const { solar, atmosphere, location } = s;
   const el = solar.elevationDegrees;
@@ -142,7 +147,12 @@ export function lightingFromScene(s: SceneState): LightingParameters {
   const atmosphereSaturation = -0.35 * p.cloudOpacity + 0.1 * twilightWarm;
   const atmosphereBrightness =
     -0.25 * p.cloudOpacity - 0.05 * p.haze + 0.2 * (p.skyLuminance - 1) + lowSunLift;
-  const fogDensity = 0.00002 + 0.0009 * p.haze;
+  // Fog from a visibility: about 60 km in clear air, 20 km under overcast, 10 km in rain, 4 km
+  // in thick haze. Cesium's fog is 1 − exp(−(density · distance)²), nearly opaque at
+  // density · distance = 2, so density = 2 / visibility. (The old linear 0.0009 × haze fogged
+  // ground 1.5 km from an overcast camera to a grey sheet.)
+  const visibilityM = visibilityFromHaze(p.haze);
+  const fogDensity = 2 / visibilityM;
 
   const skyGradient = skyGradientFor(el, p.cloudOpacity, atmosphere.warmth, p.skyLuminance, p.haze);
 
