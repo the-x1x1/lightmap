@@ -107,6 +107,14 @@ export function useRenderer(opts: UseRendererOptions): RendererHandle {
           host.destroy();
           return;
         }
+        // Diagnostics: with localStorage['lightmap:debug'] = '1' the host is reachable from the
+        // console as window.__lightmapHost (nothing is exposed otherwise).
+        try {
+          if (window.localStorage.getItem('lightmap:debug') === '1')
+            (window as unknown as { __lightmapHost?: unknown }).__lightmapHost = host;
+        } catch {
+          /* storage blocked: no diagnostics */
+        }
         const controller = new SceneController(host, {
           aspect: () =>
             opts.container.current
