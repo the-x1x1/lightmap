@@ -457,13 +457,22 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float cover = max(rocky, max(snowy, max(alpine * 0.8, known * 0.9)));
     float alpha = u_strength * mix(mix(0.75, 0.95, cover), 0.985, u_coarseBasemap);
 #ifdef HAS_WATER_MASK
-    // Water, from the terrain's own mask. The mask arrives with coarse tiles and is upsampled
-    // for finer ones, so its edge climbs the land in 50–100 m steps; water is flat, so where
-    // the mask meets a slope the ground wins and the coast follows the terrain. On water the
-    // paint is a deep sea colour (darker toward the horizon, a little mottled) over most of
-    // Cesium's own water shading — whose wave highlight, under HDR, turned every bay and
-    // pond a flat bright cyan — leaving a fifth of it for the Sun's glint and the waves.
-    float water = materialInput.waterMask * (1.0 - smoothstep(0.04, 0.10, slope));
+    // Water, from the terrain's own mask — but the mask arrives with coarse tiles and is
+    // upsampled for finer ones, so its edge runs in 50–100 m stair steps across the coast.
+    // The terrain itself knows better: water is flat, and near the coast it is at sea level.
+    // So where the mask meets a slope the ground wins, and within 30 m of sea level (where the
+    // coastal steps are) the mask counts only below 2 m — while flat ground right at sea level
+    // the mask's steps cut out is water again (polders, metres below the sea, are not). Higher
+    // up the mask stands alone: a mountain lake is flat but nowhere near sea level.
+    float flatW = 1.0 - smoothstep(0.04, 0.10, slope);
+    float coastal = 1.0 - smoothstep(20.0, 40.0, height);
+    float maskW = materialInput.waterMask * mix(1.0, smoothstep(2.0, 0.6, height), coastal);
+    float seaLevelW = coastal * smoothstep(-0.9, -0.5, height) * smoothstep(0.5, 0.15, height)
+        * (1.0 - smoothstep(0.015, 0.035, slope));
+    float water = max(maskW, seaLevelW) * flatW;
+    // On water the paint is a deep sea colour (a little mottled, greyer toward the horizon)
+    // over most of Cesium's own water shading — whose wave highlight, under HDR, turned every
+    // bay and pond a flat bright cyan — leaving a fifth of it for the Sun's glint and waves.
     if (water > 0.0)
     {
         vec3 sea = mix(vec3(0.05, 0.17, 0.25), vec3(0.08, 0.24, 0.30), patches);
