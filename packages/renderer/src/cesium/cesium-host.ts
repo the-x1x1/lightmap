@@ -125,6 +125,9 @@ export class CesiumSceneHost implements SceneHost {
   private detailTextures: Record<string, { destroy(): void }> | null = null;
   /** 1 while the basemap is the bundled coarse one (`u_coarseBasemap`). */
   private coarseBasemap = 1;
+  /** The quality rung's ground detail level, which `u_detail` eases toward. */
+  private detailTarget: number | null = null;
+  private detailEaseAt = 0;
   /** Where the detail tiles' ground frame is anchored: the pin, from the camera request. */
   private detailAnchorTarget: Cesium.Cartesian3 | null = null;
   /** Place and country names on the globe (orbit only), with their ECEF positions for the horizon test. */
@@ -206,8 +209,11 @@ export class CesiumSceneHost implements SceneHost {
     globe.showWaterEffect = true; // needs a terrain water mask (requested below); otherwise inert
     globe.depthTestAgainstTerrain = true;
     globe.shadows = C.ShadowMode.ENABLED;
-    globe.tileCacheSize = 300;
+    // A larger tile cache and the ancestors kept loaded: zooming out and back in redraws from
+    // tiles already in hand instead of dropping to coarse ones and re-fetching (the "pop").
+    globe.tileCacheSize = 1000;
     globe.preloadSiblings = true;
+    globe.preloadAncestors = true;
     globe.baseColor = new C.Color(0.16, 0.18, 0.2, 1);
     scene.backgroundColor = new C.Color(0.02, 0.03, 0.05, 1);
     scene.atmosphere.dynamicLighting = C.DynamicAtmosphereLightingType.SCENE_LIGHT;
@@ -295,6 +301,20 @@ export class CesiumSceneHost implements SceneHost {
       if (!m) return;
       const cam = scene.camera.positionWC;
       const u = m.uniforms as Record<string, unknown>;
+      // Ease the detail level toward the rung's, two levels per second.
+      const now = performance.now();
+      const dt = Math.min(0.1, Math.max(0, (now - this.detailEaseAt) / 1000));
+      this.detailEaseAt = now;
+      const target = this.detailTarget;
+      const current = u['u_detail'] as number;
+      if (target !== null && current !== target) {
+        const step = 2 * dt;
+        u['u_detail'] =
+          Math.abs(target - current) <= step
+            ? target
+            : current + Math.sign(target - current) * step;
+        scene.requestRender();
+      }
       const cell = u['u_cameraCell'] as Cesium.Cartesian3;
       const frac = u['u_cameraFrac'] as Cesium.Cartesian3;
       const cx = Math.floor(cam.x / GROUND_GRAIN_M);
@@ -440,6 +460,7 @@ export class CesiumSceneHost implements SceneHost {
       // A fresh material starts with identity axes: the ground frame re-anchors on the next
       // frame so the detail atlas is projected along the real east/north/up.
       this.enuScratch.anchored = false;
+      this.detailTarget = null;
       this.groundMaterial = new C.Material({
         fabric: {
           type: GROUND_MATERIAL_TYPE,
@@ -486,7 +507,10 @@ export class CesiumSceneHost implements SceneHost {
     u['u_brightness'] = g.brightness;
     u['u_seaLevelM'] = g.seaLevelM;
     u['u_cloudShadow'] = g.cloudShadow;
-    u['u_detail'] = g.detail;
+    // Eased toward in the frame loop (a rung change mid-flight fades, never switches); a fresh
+    // material starts at its target.
+    if (this.detailTarget === null) u['u_detail'] = g.detail;
+    this.detailTarget = g.detail;
     u['u_wet'] = g.wet;
     u['u_cloudTime'] = this.lastGradeTime;
     this.scene.requestRender();
@@ -608,7 +632,9 @@ export class CesiumSceneHost implements SceneHost {
       if (c.fly) {
         cam.lookAtTransform(C.Matrix4.IDENTITY);
         const sphere = new C.BoundingSphere(target, Math.max(1, c.rangeM * 0.15));
-        cam.flyToBoundingSphere(sphere, { duration: 1.2, offset });
+        // Cesium sizes the flight to the distance (a hop along a coast is quick, orbit to a
+        // street several seconds), which gives the terrain time to load on the way in.
+        cam.flyToBoundingSphere(sphere, { offset, maximumHeight: Math.max(c.rangeM * 4, 2e6) });
       } else {
         cam.lookAt(target, offset);
         cam.lookAtTransform(C.Matrix4.IDENTITY); // release so the user can orbit freely

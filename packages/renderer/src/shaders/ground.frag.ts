@@ -55,7 +55,11 @@ export const GROUND_UNIFORM_DEFAULTS = {
   u_cloudTime: 0,
   /** How wet the ground is, 0–1 (the scenario's precipitation): wet ground is darker and duller. */
   u_wet: 0,
-  /** Detail level from the quality rung: 0 base surface, 1 adds cloud shadows, 2 adds relief and the near grain. */
+  /**
+   * Detail level from the quality rung: 0 base surface, 1 adds cloud shadows, 2 adds relief and
+   * the detail tiles. Continuous: the host eases it between rungs over half a second, so a
+   * quality change mid-flight fades the detail rather than switching it.
+   */
   u_detail: 2,
   /** 1 when a cover map is loaded and its bounds set; 0 leaves the procedural rules alone. */
   u_coverOn: 0,
@@ -350,7 +354,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // pattern stays put as the camera moves. Derivatives are taken here, outside any branch,
     // as GLSL requires.
     float dist = length(positionEC);
-    float nearW = u_detail >= 2.0 ? smoothstep(12000.0, 3000.0, dist) : 0.0;
+    float nearW = clamp(u_detail - 1.0, 0.0, 1.0) * smoothstep(12000.0, 3000.0, dist);
     vec3 local = czm_inverseViewRotation * positionEC;
     vec3 enu = vec3(dot(local, u_eastWC), dot(local, u_northWC), dot(local, u_upWC));
     vec3 q = enu / 2.5 + u_detailOffset;
@@ -404,9 +408,8 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // and scree show texture that turns with the light through the day. A shading of the albedo
     // only (the mesh, its normals and the shadows are untouched), strongest on bare ground, gone
     // on snow, and fading beyond a few kilometres where it would only shimmer.
-    float reliefW = u_detail >= 2.0
-        ? max(rocky, alpine * 0.7) * (1.0 - snowy) * smoothstep(6000.0, 800.0, dist)
-        : 0.0;
+    float reliefW = clamp(u_detail - 1.0, 0.0, 1.0)
+        * max(rocky, alpine * 0.7) * (1.0 - snowy) * smoothstep(6000.0, 800.0, dist);
     if (reliefW > 0.0)
     {
         // Forward differences from the grain already in hand: two more samples, not four.
@@ -426,7 +429,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // planner's clock, over everything but water. A dappling of the albedo — the direct light's
     // direction, the terrain shadows and the sky are untouched; the patches are a pattern, not
     // the forecast's own clouds.
-    if (u_cloudShadow > 0.0 && u_detail >= 1.0)
+    if (u_cloudShadow > 0.0 && u_detail > 0.0)
     {
         // The patches move with the planner's clock toward the north-east at ≈ 200 m/min (a
         // 12 km/h wind — a pattern, not the forecast's wind), along the place's own east and
@@ -435,7 +438,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         vec3 drift = (eastW * 190.0 + northW * 60.0) * u_cloudTime;
         float cloud = lmFbm((positionWC - drift) / 1400.0 + 13.0);
         float shade = smoothstep(0.38, 0.62, cloud) * smoothstep(80000.0, 15000.0, dist);
-        ground *= 1.0 - 0.45 * u_cloudShadow * shade;
+        ground *= 1.0 - 0.45 * u_cloudShadow * clamp(u_detail, 0.0, 1.0) * shade;
     }
 
     // Rain: wet ground is darker and duller (water in the surface), snow apart.
