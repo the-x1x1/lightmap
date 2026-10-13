@@ -19,7 +19,7 @@ export function LocationSearch({
   className?: string;
   autoFocus?: boolean;
   /** Replaces the default placeholder (the accessible name stays the same). */
-  placeholder?: string;
+  placeholder?: string | undefined;
 }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Place[]>([]);
