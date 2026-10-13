@@ -27,6 +27,7 @@ import {
   GROUND_DETAIL_QUADRANTS,
   GROUND_DETAIL_PERIOD_M,
   GROUND_DETAIL_TIERS,
+  GROUND_MOTTLE_SCALES,
   GROUND_MATERIAL_SOURCE,
   GROUND_UNIFORM_DEFAULTS,
 } from '../src/shaders/ground.frag.ts';
@@ -294,9 +295,8 @@ describe('ground material source', () => {
         `uniform sampler2D ${GROUND_DETAIL_IMAGE_UNIFORMS[q]};`,
       );
     expect(GROUND_DETAIL_QUADRANTS).toEqual(['grass', 'rock', 'sand', 'snow']);
-    // Three tiers, each gated by its own size on screen, so no scale pops in with distance.
-    expect(GROUND_MATERIAL_SOURCE.match(/lmDetailTier\(q/g)?.length).toBe(3);
-    expect(GROUND_MATERIAL_SOURCE).toContain('smoothstep(2.0, 12.0, pxPerPeriod)');
+    // Two tile scales, each gated by its own size on screen, so no scale pops in with distance.
+    expect(GROUND_MATERIAL_SOURCE.match(/lmDetailTier\(q/g)?.length).toBe(2);
     expect(GROUND_MATERIAL_SOURCE).toContain('u_coarseBasemap');
     // Each tier has its own camera offset (a scaled fine coordinate would jump every 2.5 m).
     for (const t of GROUND_DETAIL_TIERS) {
@@ -306,6 +306,16 @@ describe('ground material source', () => {
       );
     }
     expect(GROUND_DETAIL_TIERS[0].periodM).toBe(GROUND_DETAIL_PERIOD_M);
+    // A shrunk tile repeats into a grid of dots: tiles only where a period spans ≥ 40 px.
+    expect(GROUND_MATERIAL_SOURCE).toContain('smoothstep(40.0, 160.0, pxPerPeriod)');
+    // The zooms between are carried by non-repeating noise on whole cells passed from the CPU.
+    for (const m of GROUND_MOTTLE_SCALES) {
+      expect(GROUND_MATERIAL_SOURCE).toContain(`uniform vec3 ${m.cellUniform};`);
+      expect(GROUND_MATERIAL_SOURCE).toContain(`uniform vec3 ${m.fracUniform};`);
+      expect(GROUND_MATERIAL_SOURCE).toContain(
+        `lmNoiseI(enu / ${m.cellM.toFixed(1)} + ${m.fracUniform}, ${m.cellUniform})`,
+      );
+    }
     for (const v of ['u_eastWC', 'u_northWC', 'u_upWC', 'u_detailOffset'])
       expect(GROUND_MATERIAL_SOURCE).toContain(`uniform vec3 ${v};`);
     expect(GROUND_DETAIL_PERIOD_M).toBe(2.5);

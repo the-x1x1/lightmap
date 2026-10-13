@@ -90,15 +90,27 @@ export const GROUND_DETAIL_QUADRANTS = ['grass', 'rock', 'sand', 'snow'] as cons
 /** Ground period of one detail tile, metres (the finest tier). */
 export const GROUND_DETAIL_PERIOD_M = 2.5;
 /**
- * The three tiers' periods, finest first, and the offset uniform each takes: the camera's own
- * position along the frame in that tier's periods (the fraction, from the CPU in double). Each
- * tier needs its own — a coarser tier derived by scaling the finest one's coordinate would jump
- * every time the camera crossed a fine period, since only the fraction reaches the shader.
+ * The detail tiles' two periods and the offset uniform each takes: the camera's own position
+ * along the frame in that period (the fraction, from the CPU in double). Each needs its own — a
+ * second scale derived by scaling the first's coordinate would jump every time the camera
+ * crossed a period, since only the fraction reaches the shader. The ratio (2.68) is far from a
+ * whole number, so the two repeats never line up into a grid.
  */
 export const GROUND_DETAIL_TIERS = [
   { periodM: 2.5, offsetUniform: 'u_detailOffset' },
-  { periodM: 10.75, offsetUniform: 'u_detailOffset1' },
-  { periodM: 46, offsetUniform: 'u_detailOffset2' },
+  { periodM: 6.7, offsetUniform: 'u_detailOffset1' },
+] as const;
+
+/**
+ * The mottling between the macro patches and the tiles: value noise over the ground at these
+ * cell sizes, which never repeats (a tile shrunk to a few pixels repeats into a visible grid).
+ * Each takes the camera's position along the ground frame in its own cells — the whole cells
+ * and the fraction, from the CPU in double — so it is fixed to the ground and precise.
+ */
+export const GROUND_MOTTLE_SCALES = [
+  { cellM: 3, cellUniform: 'u_mottleCell0', fracUniform: 'u_mottleFrac0' },
+  { cellM: 12, cellUniform: 'u_mottleCell1', fracUniform: 'u_mottleFrac1' },
+  { cellM: 48, cellUniform: 'u_mottleCell2', fracUniform: 'u_mottleFrac2' },
 ] as const;
 
 /** The cover map's sampler uniform (an image uniform in Cesium's material fabric: a canvas, or `Material.DefaultImageId`). */
@@ -135,7 +147,12 @@ uniform vec3 u_northWC;
 uniform vec3 u_upWC;
 uniform vec3 u_detailOffset;
 uniform vec3 u_detailOffset1;
-uniform vec3 u_detailOffset2;
+uniform vec3 u_mottleCell0;
+uniform vec3 u_mottleFrac0;
+uniform vec3 u_mottleCell1;
+uniform vec3 u_mottleFrac1;
+uniform vec3 u_mottleCell2;
+uniform vec3 u_mottleFrac2;
 // The camera's position in grain cells: whole cells and the fraction, set each frame.
 uniform vec3 u_cameraCell;
 uniform vec3 u_cameraFrac;
@@ -201,6 +218,37 @@ vec2 lmCoverUv(vec3 p)
                 (merc - u_coverBounds.w) / (u_coverBounds.z - u_coverBounds.w));
 }
 
+// Value noise on an integer lattice given as whole cells (large: a camera's position in
+// metre-scale cells runs to millions) plus a small local coordinate. The hash works on the
+// integers themselves (PCG), so it stays random however large they are.
+#if __VERSION__ >= 300
+float lmHashI(vec3 c)
+{
+    uvec3 v = uvec3(ivec3(c) + ivec3(1 << 24));
+    v = v * 1664525u + 1013904223u;
+    v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+    v ^= v >> 16u;
+    v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+    return float(v.x & 0xffffffu) / 16777216.0;
+}
+#else
+float lmHashI(vec3 c) { return lmHash(mod(c, 4096.0)); }
+#endif
+
+float lmNoiseI(vec3 local, vec3 cell)
+{
+    vec3 fl = floor(local);
+    vec3 i = fl + cell;
+    vec3 f = local - fl;
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(
+        mix(mix(lmHashI(i), lmHashI(i + vec3(1.0, 0.0, 0.0)), f.x),
+            mix(lmHashI(i + vec3(0.0, 1.0, 0.0)), lmHashI(i + vec3(1.0, 1.0, 0.0)), f.x), f.y),
+        mix(mix(lmHashI(i + vec3(0.0, 0.0, 1.0)), lmHashI(i + vec3(1.0, 0.0, 1.0)), f.x),
+            mix(lmHashI(i + vec3(0.0, 1.0, 1.0)), lmHashI(i + vec3(1.0, 1.0, 1.0)), f.x), f.y),
+        f.z);
+}
+
 // One wrapping tile (t: 0 grass, 1 rock, 2 sand, 3 snow) at an unwrapped coordinate in tile
 // periods; the sampler wraps and chooses the mip level from the derivatives the caller took
 // outside any branch. The tiles are normalised to a mean of 0.5, so a minified sample tends to
@@ -228,13 +276,14 @@ vec3 lmDetailTri(vec3 q, vec3 dqx, vec3 dqy, vec3 w, float tile)
          + lmDetail(q.xy, dqx.xy, dqy.xy, tile) * w.z;
 }
 
-// One tier of the detail: the two tiles blended, as a multiplier about 1, weighted by how many
-// screen pixels one period spans (from the coordinate's own derivatives): full from 12 px per
-// period, gone below 2, so each tier fades in smoothly as the camera closes and never pops.
+// One scale of the detail: the two tiles blended, as a multiplier about 1, weighted by how many
+// screen pixels one period spans (from the coordinate's own derivatives): gone below 40 px per
+// period (shrunk further, a tile's repeat reads as a grid of dots), full from 160 px, so it
+// fades in smoothly as the camera closes and never pops.
 vec3 lmDetailTier(vec3 q, vec3 dqx, vec3 dqy, vec3 w, float t1, float t2, float blend, float amount)
 {
     float pxPerPeriod = 1.0 / max(max(length(dqx), length(dqy)), 1e-6);
-    float tierW = smoothstep(2.0, 12.0, pxPerPeriod) * amount;
+    float tierW = smoothstep(40.0, 160.0, pxPerPeriod) * amount;
     if (tierW <= 0.001) return vec3(1.0);
     vec3 d = lmDetailTri(q, dqx, dqy, w, t1);
     if (blend > 0.02) d = mix(d, lmDetailTri(q, dqx, dqy, w, t2), blend);
@@ -345,9 +394,9 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         }
     }
 
-    // Nearer the camera, the detail tiles in three tiers — 46 m, 10.75 m and 2.5 m periods —
-    // each fading in by its own size on screen, so there is texture at every zoom from a few
-    // kilometres down to the viewpoint's foreground and no scale ever pops in. Anchored to the
+    // Nearer the camera, the detail tiles at two scales (2.5 m and 6.7 m periods), each fading
+    // in by its size on screen, below a mottling that carries the zooms in between — so there
+    // is texture at every zoom and no scale ever pops in. Anchored to the
     // ground, not the camera: the camera-relative position (precise) along an east/north/up
     // frame the host anchors to the ground (re-anchored only when the camera has moved
     // kilometres), plus the camera's own offset along that frame in tile periods — so the
@@ -358,10 +407,11 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     vec3 local = czm_inverseViewRotation * positionEC;
     vec3 enu = vec3(dot(local, u_eastWC), dot(local, u_northWC), dot(local, u_upWC));
     vec3 q = enu / 2.5 + u_detailOffset;
-    vec3 q1 = enu / 10.75 + u_detailOffset1 + 0.37;
-    vec3 q2 = enu / 46.0 + u_detailOffset2 + 0.61;
+    vec3 q1 = enu / 6.7 + u_detailOffset1 + 0.37;
     vec3 dqx = dFdx(q);
     vec3 dqy = dFdy(q);
+    // Screen pixels per metre of ground here, for the mottling's fade.
+    float pxPerM = 1.0 / max(max(length(dqx), length(dqy)) / 2.5, 1e-6);
     if (nearW > 0.0 && u_detailOn > 0.5)
     {
         // The tiles — grass, rock, sand or snow, whichever the rules above made this ground,
@@ -386,14 +436,11 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         if (wRock > w1 && t1 != 1.0) { t2 = t1; w2 = w1; t1 = 1.0; w1 = wRock; }
         if (wSnow > w1) { t2 = t1; w2 = w1; t1 = 3.0; w1 = wSnow; } else if (wSnow > w2) { t2 = 3.0; w2 = wSnow; }
         float blend = w2 / max(w1 + w2, 1e-4);
-        // The same tiles at 46 m and 10.75 m periods (shifted so the repeats never line up),
-        // then 2.5 m: three multipliers, each about 1, the finer ones a little stronger than
-        // the coarse so the foreground keeps the strongest grain.
-        float k1 = 2.5 / 10.75;
-        float k2 = 2.5 / 46.0;
-        vec3 d = lmDetailTier(q2, dqx * k2, dqy * k2, w, t1, t2, blend, 0.35 * nearW)
-               * lmDetailTier(q1, dqx * k1, dqy * k1, w, t1, t2, blend, 0.45 * nearW)
-               * lmDetailTier(q, dqx, dqy, w, t1, t2, blend, 0.5 * nearW);
+        // The same tiles at 6.7 m (shifted, and at a ratio that never lines up) and 2.5 m: two
+        // multipliers about 1, the finer a little stronger.
+        float k1 = 2.5 / 6.7;
+        vec3 d = lmDetailTier(q1, dqx * k1, dqy * k1, w, t1, t2, blend, 0.4 * nearW)
+               * lmDetailTier(q, dqx, dqy, w, t1, t2, blend, 0.55 * nearW);
         ground *= d;
     }
     else if (nearW > 0.0)
@@ -402,6 +449,23 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         vec3 local = czm_inverseViewRotation * positionEC / 2.5 + u_cameraFrac;
         float fine = lmNoiseAt(local, u_cameraCell) * 0.6 + lmNoiseAt(local * 2.0 + 0.5, u_cameraCell * 2.0) * 0.3;
         ground *= 1.0 + fineW * 0.3 * (fine - 0.45);
+    }
+
+    // Mottling between the macro patches and the tiles: world-anchored value noise at 48 m,
+    // 12 m and 3 m cells, never repeating, each fading in as its cells grow past a few pixels
+    // on screen (and out again as they shrink, so it never aliases). The broad scale also
+    // shifts the hue — drier and yellower in its light patches — as real ground does.
+    if (u_detail > 1.0)
+    {
+        float mW = clamp(u_detail - 1.0, 0.0, 1.0) * (1.0 - 0.6 * snowy);
+        float w2 = smoothstep(3.0, 10.0, pxPerM * 48.0);
+        float w1 = smoothstep(3.0, 10.0, pxPerM * 12.0);
+        float w0 = smoothstep(3.0, 10.0, pxPerM * 3.0);
+        float n2 = w2 > 0.0 ? lmNoiseI(enu / 48.0 + u_mottleFrac2, u_mottleCell2) - 0.5 : 0.0;
+        float n1 = w1 > 0.0 ? lmNoiseI(enu / 12.0 + u_mottleFrac1, u_mottleCell1) - 0.5 : 0.0;
+        float n0 = w0 > 0.0 ? lmNoiseI(enu / 3.0 + u_mottleFrac0, u_mottleCell0) - 0.5 : 0.0;
+        ground = mix(ground, ground * vec3(1.10, 1.04, 0.86), clamp(mW * w2 * n2 * 1.4, 0.0, 0.5));
+        ground *= 1.0 + mW * (0.32 * w2 * n2 + 0.22 * w1 * n1 + 0.14 * w0 * n0);
     }
 
     // Micro-relief: the grain read as small bumps, lit by the scene's own Sun direction, so rock

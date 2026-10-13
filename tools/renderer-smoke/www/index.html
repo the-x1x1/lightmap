@@ -528,7 +528,6 @@
               u_upWC: new Cesium.Cartesian3(0, 0, 1),
               u_detailOffset: new Cesium.Cartesian3(0, 0, 0),
               u_detailOffset1: new Cesium.Cartesian3(0, 0, 0),
-              u_detailOffset2: new Cesium.Cartesian3(0, 0, 0),
             },
             source: GROUND_MATERIAL_SOURCE,
           },
@@ -555,8 +554,7 @@
             const f = (v) => v - Math.floor(v);
             for (const [name, period] of [
               ['u_detailOffset', 2.5],
-              ['u_detailOffset1', 10.75],
-              ['u_detailOffset2', 46],
+              ['u_detailOffset1', 6.7],
             ]) {
               u[name].x = f(Cesium.Cartesian3.dot(cam, east) / period);
               u[name].y = f(Cesium.Cartesian3.dot(cam, north) / period);

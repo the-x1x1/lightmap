@@ -31,6 +31,7 @@ import {
   GROUND_COVER_IMAGE_UNIFORM,
   GROUND_DETAIL_IMAGE_UNIFORMS,
   GROUND_DETAIL_TIERS,
+  GROUND_MOTTLE_SCALES,
   GROUND_GRAIN_M,
   GROUND_MATERIAL_SOURCE,
   GROUND_MATERIAL_TYPE,
@@ -134,6 +135,7 @@ export class CesiumSceneHost implements SceneHost {
   private labels: Cesium.LabelCollection | null = null;
   private labelEntries: Array<{ label: Cesium.Label; at: Vec3 }> = [];
   private labelsWanted = true;
+  private globeReady = false;
   private readonly labelCam = { x: NaN, y: NaN, z: NaN };
   private preRenderLabelsRemover: (() => void) | null = null;
   /** The grade's clock, so a material created after the first grade starts on it. */
@@ -376,6 +378,19 @@ export class CesiumSceneHost implements SceneHost {
             off.y = f(cn / tier.periodM);
             off.z = f(cu / tier.periodM);
           }
+          for (const m of GROUND_MOTTLE_SCALES) {
+            const cellU = u[m.cellUniform] as Cesium.Cartesian3;
+            const fracU = u[m.fracUniform] as Cesium.Cartesian3;
+            const x = ce / m.cellM;
+            const y = cn / m.cellM;
+            const z = cu / m.cellM;
+            cellU.x = Math.floor(x);
+            cellU.y = Math.floor(y);
+            cellU.z = Math.floor(z);
+            fracU.x = x - cellU.x;
+            fracU.y = y - cellU.y;
+            fracU.z = z - cellU.z;
+          }
         }
       }
     });
@@ -481,6 +496,12 @@ export class CesiumSceneHost implements SceneHost {
             u_upWC: new C.Cartesian3(0, 0, 1),
             ...Object.fromEntries(
               GROUND_DETAIL_TIERS.map((t) => [t.offsetUniform, new C.Cartesian3(0, 0, 0)]),
+            ),
+            ...Object.fromEntries(
+              GROUND_MOTTLE_SCALES.flatMap((m) => [
+                [m.cellUniform, new C.Cartesian3(0, 0, 0)],
+                [m.fracUniform, new C.Cartesian3(0, 0, 0)],
+              ]),
             ),
             u_cameraCell: new C.Cartesian3(0, 0, 0),
             u_cameraFrac: new C.Cartesian3(0, 0, 0),
@@ -1015,8 +1036,24 @@ export class CesiumSceneHost implements SceneHost {
         0,
         placeMaxDistanceM(p),
       );
-    labels.show = this.labelsWanted;
+    // Held back until the globe's first tiles are in, so the names never float over black.
+    labels.show = false;
     this.labels = this.scene.primitives.add(labels) as Cesium.LabelCollection;
+    const reveal = () => {
+      this.globeReady = true;
+      if (this.labels) this.labels.show = this.labelsWanted;
+      this.labelCam.x = NaN;
+      this.scene.requestRender();
+    };
+    if (this.scene.globe.tilesLoaded) reveal();
+    else {
+      const remove = this.scene.globe.tileLoadProgressEvent.addEventListener((queued: number) => {
+        if (queued === 0 && this.scene.globe.tilesLoaded) {
+          remove();
+          reveal();
+        }
+      });
+    }
     this.labelCam.x = NaN;
     this.preRenderLabelsRemover = this.scene.preRender.addEventListener(() => this.cullLabels());
     this.scene.requestRender();
@@ -1040,7 +1077,7 @@ export class CesiumSceneHost implements SceneHost {
 
   private setLabelsForCamera(kind: HostCamera['kind']): void {
     this.labelsWanted = kind !== 'viewpoint';
-    if (this.labels) {
+    if (this.labels && this.globeReady) {
       this.labels.show = this.labelsWanted;
       this.labelCam.x = NaN;
     }
