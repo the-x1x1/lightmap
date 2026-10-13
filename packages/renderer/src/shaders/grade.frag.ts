@@ -60,7 +60,20 @@ void main() {
   vec4 src = texture(colorTexture, v_textureCoordinates);
   vec3 color = src.rgb;
   float depth = czm_readDepth(depthTexture, v_textureCoordinates);
-  bool isSky = depth >= 1.0 - 1e-6;
+  // Sky is what the view ray reaches past the Earth, not merely "no depth": ground not yet
+  // drawn (terrain still loading, or out in another frustum) also reads as no depth, and the
+  // cloud decks painted over it turned a whole overcast valley into a grey sheet. So a ray
+  // that meets the Earth (a sphere of the polar radius) is never sky, whatever the depth.
+  vec4 nearEC = czm_inverseProjection * vec4(v_textureCoordinates * 2.0 - 1.0, -1.0, 1.0);
+  vec3 rayWC = czm_inverseViewRotation * normalize(nearEC.xyz / nearEC.w);
+  vec3 eyeWC = czm_viewerPositionWC;
+  float rb = dot(eyeWC, rayWC);
+  float rc = dot(eyeWC, eyeWC) - 6356752.0 * 6356752.0;
+  bool hitsEarth = rb < 0.0 && rb * rb - rc > 0.0;
+  bool isSky = depth >= 1.0 - 1e-6 && !hitsEarth;
+  // The decks are a sky seen from under them: from above ~10 km (an orbit) there are none, and
+  // space around the globe stays dark.
+  float underDecks = 1.0 - smoothstep(6000.0, 14000.0, length(eyeWC) - 6371000.0);
 
   // Sky: three procedural cloud decks — high (cirrus), mid (alto-), low (stratus/cumulus) — each
   // with the cover the forecast (or scenario) gives that band, composited far to near. Cloud
@@ -156,7 +169,7 @@ void main() {
       cloudCol *= deckLum * mix(1.0, 0.15, u_nightFactor * (1.0 - sunUp));
       sky = mix(sky, cloudCol, cloud * (0.75 + 0.25 * thickness));
     }
-    color = sky;
+    color = mix(dome, sky, underDecks);
   } else {
     // Aerial perspective: lift toward the sky colour with the real distance through the air
     // (the depth turned back into eye space — a curve on raw depth, which is logarithmic and
@@ -171,7 +184,8 @@ void main() {
     vec3 hazeCol = mix(vec3(0.72, 0.78, 0.86), vec3(0.6, 0.62, 0.66), u_cloudOpacity);
     hazeCol = mix(hazeCol, hazeCol * u_tint, 0.5 * (1.0 - u_cloudOpacity));
     hazeCol = mix(hazeCol, vec3(0.05, 0.06, 0.1), u_nightFactor);
-    color = mix(color, hazeCol, clamp(dist * 0.85, 0.0, 0.85));
+    // (Ground with no depth yet has no distance to haze by.)
+    if (depth < 1.0 - 1e-6) color = mix(color, hazeCol, clamp(dist * 0.85, 0.0, 0.85));
   }
 
   // Global grade.
