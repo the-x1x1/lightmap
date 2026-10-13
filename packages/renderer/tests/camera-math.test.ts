@@ -3,7 +3,10 @@ import {
   altitudeForBounds,
   altitudeToZoom,
   clampOrbit,
+  clearOrbitPitch,
   normalizeHeadingDegrees,
+  orbitSightLine,
+  steeperPitches,
   zoomToAltitudeM,
 } from '../src/camera-math.ts';
 
@@ -38,5 +41,48 @@ describe('camera math (ported from WorldView view.ts / contract.ts)', () => {
       rangeM: 50,
     });
     expect(clampOrbit({ headingDeg: 0, pitchDeg: -95, rangeM: 1e9 }).pitchDeg).toBe(-89);
+  });
+});
+
+describe('orbit terrain clearance', () => {
+  const target = { latitude: 37.7327, longitude: -119.6057, heightM: 1200 };
+
+  it('puts the camera back along the view: heading north, pitch −30° → south of and above the target', () => {
+    const line = orbitSightLine(target, 0, -30, 2000, 4);
+    const cam = line[0]!;
+    expect(cam.latitude).toBeLessThan(target.latitude);
+    expect(cam.longitude).toBeCloseTo(target.longitude, 9);
+    expect(cam.heightM).toBeCloseTo(1200 + 1000, 6);
+    // 2000 m × cos 30° ≈ 1732 m south.
+    expect((target.latitude - cam.latitude) * 111_320).toBeCloseTo(1732, 0);
+    expect(line).toHaveLength(4);
+    expect(line.at(-1)!.heightM).toBeCloseTo(1200 + 250, 6);
+  });
+
+  it('steepens until the camera and its sight line clear the ground (a valley wall)', () => {
+    const pitches = steeperPitches(-20);
+    expect(pitches[0]).toBe(-20);
+    expect(pitches.at(-1)).toBe(-85);
+    const candidates = pitches.map((p) => ({
+      pitchDeg: p,
+      line: orbitSightLine(target, 0, p, 1500),
+    }));
+    // A 1 000 m wall everywhere more than 400 m from the target.
+    const ground = (ci: number, pi: number) => {
+      const pt = candidates[ci]!.line[pi]!;
+      const d = Math.abs(target.latitude - pt.latitude) * 111_320;
+      return d > 400 ? 2200 : 1200;
+    };
+    const p = clearOrbitPitch(-20, candidates, ground);
+    expect(p).toBeLessThan(-20);
+    const chosen = candidates.find((c) => c.pitchDeg === p)!;
+    chosen.line.forEach((pt, i) => {
+      const d = Math.abs(target.latitude - pt.latitude) * 111_320;
+      expect(pt.heightM).toBeGreaterThanOrEqual((d > 400 ? 2200 : 1200) + 40 - 1e-6);
+      expect(i).toBeGreaterThanOrEqual(0);
+    });
+    // Open ground: the requested pitch stands; unknown ground counts as clear.
+    expect(clearOrbitPitch(-20, candidates, () => 1200)).toBe(-20);
+    expect(clearOrbitPitch(-20, candidates, () => null)).toBe(-20);
   });
 });

@@ -64,3 +64,65 @@ export function clampOrbit(v: OrbitView, minRange = 50, maxRange = 5_000_000): O
     rangeM: Math.max(minRange, Math.min(maxRange, v.rangeM)),
   };
 }
+
+/**
+ * Points along the sight line from an orbit camera to its target, for a terrain-clearance check:
+ * `samples` points from the camera end (t = 1) toward the target (excluded), as latitude,
+ * longitude and height above the ellipsoid (a local flat-earth step, fine over the few
+ * kilometres an orbit spans). Heading clockwise from north, pitch negative looking down —
+ * Cesium's HeadingPitchRange convention, the camera standing back along the view direction.
+ */
+export function orbitSightLine(
+  target: { latitude: number; longitude: number; heightM: number },
+  headingDeg: number,
+  pitchDeg: number,
+  rangeM: number,
+  samples = 6,
+): Array<{ latitude: number; longitude: number; heightM: number }> {
+  const h = (headingDeg * Math.PI) / 180;
+  const p = (pitchDeg * Math.PI) / 180;
+  const east = -rangeM * Math.cos(p) * Math.sin(h);
+  const north = -rangeM * Math.cos(p) * Math.cos(h);
+  const up = -rangeM * Math.sin(p);
+  const mPerDegLat = 111_320;
+  const mPerDegLon = 111_320 * Math.max(0.01, Math.cos((target.latitude * Math.PI) / 180));
+  const out = [];
+  for (let i = samples; i >= 1; i--) {
+    const t = i / samples;
+    out.push({
+      latitude: target.latitude + (north * t) / mPerDegLat,
+      longitude: target.longitude + (east * t) / mPerDegLon,
+      heightM: target.heightM + up * t,
+    });
+  }
+  return out;
+}
+
+/**
+ * The orbit pitch that keeps the camera and its sight line clear of the ground: the requested
+ * pitch if it clears, otherwise the first of ever steeper ones (7.5° at a time, to −85°) that
+ * does. `groundAt` gives the terrain height for each candidate's sight-line points (null where
+ * unknown, which counts as clear). A camera parked inside a valley wall drew nothing at all.
+ */
+export function clearOrbitPitch(
+  pitchDeg: number,
+  candidates: ReadonlyArray<{ pitchDeg: number; line: ReadonlyArray<{ heightM: number }> }>,
+  groundAt: (candidate: number, point: number) => number | null,
+  clearanceM = 40,
+): number {
+  for (const [ci, c] of candidates.entries()) {
+    const clear = c.line.every((pt, pi) => {
+      const g = groundAt(ci, pi);
+      return g === null || pt.heightM >= g + clearanceM;
+    });
+    if (clear) return c.pitchDeg;
+  }
+  return candidates.at(-1)?.pitchDeg ?? pitchDeg;
+}
+
+/** Candidate pitches for `clearOrbitPitch`: the requested one, then steeper by 7.5° to −85°. */
+export function steeperPitches(pitchDeg: number): number[] {
+  const out = [Math.max(-85, Math.min(-1, pitchDeg))];
+  while (out.at(-1)! > -85) out.push(Math.max(-85, out.at(-1)! - 7.5));
+  return out;
+}

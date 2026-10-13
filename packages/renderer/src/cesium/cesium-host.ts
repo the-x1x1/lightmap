@@ -19,6 +19,7 @@ import type {
 } from '@lightmap/geospatial';
 import { GRADE_FRAGMENT_SHADER } from '../shaders/grade.frag.ts';
 import { createDetailTextures, type DetailTileCesium } from './detail-tiles.ts';
+import { clearOrbitPitch, orbitSightLine, steeperPitches } from '../camera-math.ts';
 import {
   aboveHorizon,
   countryDistanceBandM,
@@ -47,6 +48,7 @@ import type {
   HostGradeUniforms,
   HostGroundTexture,
   HostLight,
+  HostOrbitCamera,
   HostOverlay,
   HostQuality,
   HostShadows,
@@ -644,12 +646,54 @@ export class CesiumSceneHost implements SceneHost {
       ssc.enableLook = false;
       const frustum = cam.frustum;
       if (frustum instanceof C.PerspectiveFrustum) frustum.fov = 60 * DEG;
+      // Clear of the ground first: an orbit's camera, set back along a shallow pitch, can land
+      // inside a valley wall (Yosemite), and then nothing at all is drawn. The pitch steepens
+      // until the camera and its sight line clear the terrain; the move waits for the check.
+      const key0 = key;
+      void this.clearPitch(c).then((pitchDeg) => {
+        if (this.destroyed || key0 !== this.lastCameraKey) return;
+        this.orbitTo(c, pitchDeg);
+      });
+    }
+  }
+
+  /** The orbit's pitch, steepened as needed to keep the camera clear of the terrain. */
+  private async clearPitch(c: HostOrbitCamera): Promise<number> {
+    const candidates = steeperPitches(c.pitchDeg).map((p) => ({
+      pitchDeg: p,
+      line: orbitSightLine(
+        { latitude: c.target.latitude, longitude: c.target.longitude, heightM: c.targetHeightM },
+        c.headingDeg,
+        p,
+        c.rangeM,
+      ),
+    }));
+    // Only worth asking where an orbit is close enough to meet the ground.
+    if (c.rangeM > 60_000) return c.pitchDeg;
+    const pts = candidates.flatMap((cand) => cand.line);
+    let heights: Array<number | null>;
+    try {
+      heights = await Promise.race([
+        this.sampleGroundHeights(pts, 13),
+        new Promise<Array<number | null>>((r) => setTimeout(() => r(pts.map(() => null)), 2500)),
+      ]);
+    } catch {
+      return c.pitchDeg;
+    }
+    const per = candidates[0]?.line.length ?? 0;
+    return clearOrbitPitch(c.pitchDeg, candidates, (ci, pi) => heights[ci * per + pi] ?? null);
+  }
+
+  private orbitTo(c: HostOrbitCamera, pitchDeg: number): void {
+    const C = this.C;
+    const cam = this.scene.camera;
+    {
       const target = C.Cartesian3.fromDegrees(
         c.target.longitude,
         c.target.latitude,
         c.targetHeightM,
       );
-      const offset = new C.HeadingPitchRange(c.headingDeg * DEG, c.pitchDeg * DEG, c.rangeM);
+      const offset = new C.HeadingPitchRange(c.headingDeg * DEG, pitchDeg * DEG, c.rangeM);
       if (c.fly) {
         cam.lookAtTransform(C.Matrix4.IDENTITY);
         const sphere = new C.BoundingSphere(target, Math.max(1, c.rangeM * 0.15));
