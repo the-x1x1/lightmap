@@ -287,6 +287,9 @@ vec3 lmDetailTier(vec3 q, vec3 dqx, vec3 dqy, vec3 w, float t1, float t2, float 
     if (tierW <= 0.001) return vec3(1.0);
     vec3 d = lmDetailTri(q, dqx, dqy, w, t1);
     if (blend > 0.02) d = mix(d, lmDetailTri(q, dqx, dqy, w, t2), blend);
+    // Mostly the tile's light and shade, little of its hue: the macro rules already chose the
+    // colour, and the full tile hue on top (a lime grass over green turf) went cartoonish.
+    d = mix(vec3(dot(d, vec3(0.3, 0.59, 0.11))), d, 0.3);
     return mix(vec3(1.0), d * 2.0, tierW);
 }
 
@@ -316,7 +319,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float northness = dot(nH, northW) / max(length(nH), 1e-4);
     float facing = slope > 0.05 ? northness * u_poleward * smoothstep(0.05, 0.4, slope) : 0.0;  // +1 facing the pole
     float dryness = clamp(u_aridity - 0.18 * facing, 0.0, 1.0);
-    vec3 turf  = mix(vec3(0.33, 0.45, 0.20), vec3(0.62, 0.55, 0.36), dryness);
+    vec3 turf  = mix(vec3(0.34, 0.43, 0.22), vec3(0.62, 0.55, 0.36), dryness);
     vec3 scrub = mix(vec3(0.52, 0.46, 0.27), vec3(0.74, 0.64, 0.44), dryness);
     vec3 rock  = vec3(0.52, 0.49, 0.45);
     vec3 scree = vec3(0.40, 0.38, 0.34);
