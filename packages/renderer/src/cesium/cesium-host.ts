@@ -18,7 +18,9 @@ import type {
   TerrainDescriptor,
 } from '@lightmap/geospatial';
 import { GRADE_FRAGMENT_SHADER } from '../shaders/grade.frag.ts';
-import { createDetailTextures, type DetailTileCesium } from './detail-tiles.ts';
+import { createDetailTexture, createNoiseTexture, type DetailTileCesium } from './detail-tiles.ts';
+import { NOISE_TEXTURE_SIZE, makeNoiseTexture } from '../noise-texture.ts';
+import { FrameRateSampler } from '../frame-sampler.ts';
 import { clearOrbitPitch, orbitSightLine, steeperPitches } from '../camera-math.ts';
 import {
   aboveHorizon,
@@ -30,11 +32,12 @@ import {
 import {
   GROUND_COVER_BOUNDS_UNIFORM,
   GROUND_COVER_IMAGE_UNIFORM,
-  GROUND_DETAIL_IMAGE_UNIFORMS,
   GROUND_DETAIL_TIERS,
-  GROUND_MOTTLE_SCALES,
-  GROUND_GRAIN_M,
+  GROUND_DETAIL_UNIFORM,
   GROUND_MATERIAL_SOURCE,
+  GROUND_NOISE_UNIFORM,
+  GROUND_NOISE_WRAP_M,
+  GROUND_TOWN_GRID,
   GROUND_MATERIAL_TYPE,
   GROUND_UNIFORM_DEFAULTS,
 } from '../shaders/ground.frag.ts';
@@ -99,8 +102,6 @@ export async function createCesiumHost(options: CesiumHostOptions): Promise<Scen
 }
 
 const DEG = Math.PI / 180;
-/** Frames in a one-second window below which the scene is judged idle, not slow. */
-export const MIN_FRAMES_FOR_SAMPLE = 12;
 
 const HIDDEN_RUN_POOL = 6;
 /**
@@ -139,8 +140,10 @@ export class CesiumSceneHost implements SceneHost {
   };
   /** The detail atlas once its image has loaded; the material takes it then, never a URL. */
   private detailAtlas: HTMLImageElement | null = null;
-  /** The four wrapping tile textures cut from the atlas, owned here and destroyed with the host. */
-  private detailTextures: Record<string, { destroy(): void }> | null = null;
+  /** The detail tiles' texture once handed to the material (which destroys it with itself). */
+  private detailTexture: { destroy(): void } | null = null;
+  /** The baked noise, computed once; a texture of it is made for each material. */
+  private noiseBytes: Uint8Array | null = null;
   /** 1 while the basemap is the bundled coarse one (`u_coarseBasemap`). */
   private coarseBasemap = 1;
   private readonly eyeUpScratch: Cesium.Cartesian3;
@@ -163,8 +166,8 @@ export class CesiumSceneHost implements SceneHost {
   private pickHandler: Cesium.ScreenSpaceEventHandler | null = null;
   private pickListeners = new Set<(p: GeoPoint & { viaTerrain: boolean }) => void>();
   private frameListeners = new Set<(fps: number) => void>();
-  private frameCount = 0;
-  private frameWindowStart = 0;
+  private readonly frameSampler = new FrameRateSampler();
+  private readonly lastView: Cesium.Matrix4;
   private lastFps = 0;
   /** Last Mie coefficient applied (so a scrub tick does not allocate a Cartesian3 each frame). */
   private mieCoefficient: number | undefined;
@@ -318,13 +321,9 @@ export class CesiumSceneHost implements SceneHost {
     });
     scene.postProcessStages.add(this.grade);
 
-    // Frame-rate sampling for the quality governor. With requestRenderMode the scene draws only on
-    // demand, so frames-per-wall-clock is meaningless while idle; a sample is emitted only for a
-    // one-second window with at least MIN_FRAMES_FOR_SAMPLE frames (continuous interaction: a
-    // scrub, an orbit, a flight). Idle windows are discarded.
-    this.frameWindowStart = performance.now();
-    // The ground texture's near grain is anchored to the ground through the camera's position,
-    // split into a whole number of cells and a fraction in double precision each frame.
+    // Frame-rate sampling for the quality governor (`frame-sampler.ts`): only frames drawn
+    // back to back while the camera moves.
+    this.lastView = new C.Matrix4();
     // The detail atlas is fetched once, up front; the material takes it when both exist.
     if (this.detailAtlasUrl) this.loadDetailAtlas(this.detailAtlasUrl);
     if (options.placeLabelsUrl) void this.loadPlaceLabels(options.placeLabelsUrl);
@@ -347,95 +346,84 @@ export class CesiumSceneHost implements SceneHost {
             : current + Math.sign(target - current) * step;
         scene.requestRender();
       }
-      const cell = u['u_cameraCell'] as Cesium.Cartesian3;
-      const frac = u['u_cameraFrac'] as Cesium.Cartesian3;
-      const cx = Math.floor(cam.x / GROUND_GRAIN_M);
-      const cy = Math.floor(cam.y / GROUND_GRAIN_M);
-      const cz = Math.floor(cam.z / GROUND_GRAIN_M);
-      cell.x = cx;
-      cell.y = cy;
-      cell.z = cz;
-      frac.x = cam.x / GROUND_GRAIN_M - cx;
-      frac.y = cam.y / GROUND_GRAIN_M - cy;
-      frac.z = cam.z / GROUND_GRAIN_M - cz;
-      // The detail atlas is projected along an east/north/up frame anchored to the ground: the
-      // frame is taken at an anchor point and kept until the camera has moved kilometres from
-      // it (well beyond the 500 m the atlas reaches, so a re-anchor is never seen), and each
-      // frame only the camera's own position along those fixed axes, in tile periods — the
-      // fraction, in double — goes to the shader. A frame that followed the camera would drag
-      // the pattern with it.
-      if (this.detailAtlasUrl) {
-        const anchor = this.enuScratch.anchor;
-        const { east, north, up } = this.enuScratch;
-        // Anchor at the pin when there is one (the orbit's target, the viewpoint's eye), so
-        // the frame never moves while zooming; otherwise at the point under the camera, kept
-        // until that has travelled far.
-        const pin = this.detailAnchorTarget;
-        let want: Cesium.Cartesian3 | undefined;
-        if (pin) {
-          if (!this.enuScratch.anchored || C.Cartesian3.distance(anchor, pin) > 1) want = pin;
-        } else {
-          const under = C.Ellipsoid.WGS84.scaleToGeodeticSurface(cam, new C.Cartesian3());
-          if (
-            under &&
-            (!this.enuScratch.anchored || C.Cartesian3.distance(anchor, under) > DETAIL_REANCHOR_M)
-          )
-            want = under;
+      // Every pattern on the ground is laid along an east/north/up frame anchored to the
+      // ground: taken at an anchor point and kept until the camera has moved far from it, and
+      // each frame only the camera's own position along those fixed axes goes to the shader —
+      // modulo the noise's wrap, and as fractions of each detail period and the town grid, all
+      // computed here in double. A frame that followed the camera would drag the pattern with it.
+      const anchor = this.enuScratch.anchor;
+      const { east, north, up } = this.enuScratch;
+      // Anchor at the pin when there is one (the orbit's target, the viewpoint's eye), so the
+      // frame never moves while zooming; otherwise at the point under the camera, kept until
+      // that has travelled far.
+      const pin = this.detailAnchorTarget;
+      let want: Cesium.Cartesian3 | undefined;
+      if (pin) {
+        if (!this.enuScratch.anchored || C.Cartesian3.distance(anchor, pin) > 1) want = pin;
+      } else {
+        const under = C.Ellipsoid.WGS84.scaleToGeodeticSurface(cam, new C.Cartesian3());
+        if (
+          under &&
+          (!this.enuScratch.anchored || C.Cartesian3.distance(anchor, under) > DETAIL_REANCHOR_M)
+        )
+          want = under;
+      }
+      if (want) {
+        const n = C.Ellipsoid.WGS84.geodeticSurfaceNormal(want, up);
+        const h = Math.hypot(want.x, want.y);
+        if (n && h >= 1) {
+          east.x = -want.y / h;
+          east.y = want.x / h;
+          east.z = 0;
+          C.Cartesian3.cross(up, east, north);
+          C.Cartesian3.clone(want, anchor);
+          this.enuScratch.anchored = true;
+          C.Cartesian3.clone(east, u['u_eastWC'] as Cesium.Cartesian3);
+          C.Cartesian3.clone(north, u['u_northWC'] as Cesium.Cartesian3);
+          C.Cartesian3.clone(up, u['u_upWC'] as Cesium.Cartesian3);
         }
-        if (want) {
-          const n = C.Ellipsoid.WGS84.geodeticSurfaceNormal(want, up);
-          const h = Math.hypot(want.x, want.y);
-          if (n && h >= 1) {
-            east.x = -want.y / h;
-            east.y = want.x / h;
-            east.z = 0;
-            C.Cartesian3.cross(up, east, north);
-            C.Cartesian3.clone(want, anchor);
-            this.enuScratch.anchored = true;
-            C.Cartesian3.clone(east, u['u_eastWC'] as Cesium.Cartesian3);
-            C.Cartesian3.clone(north, u['u_northWC'] as Cesium.Cartesian3);
-            C.Cartesian3.clone(up, u['u_upWC'] as Cesium.Cartesian3);
-          }
+      }
+      if (this.enuScratch.anchored) {
+        const f = (v: number) => v - Math.floor(v);
+        const ce = C.Cartesian3.dot(cam, east);
+        const cn = C.Cartesian3.dot(cam, north);
+        const cu = C.Cartesian3.dot(cam, up);
+        const wrap = (v: number) => v - Math.floor(v / GROUND_NOISE_WRAP_M) * GROUND_NOISE_WRAP_M;
+        const camMod = u['u_camMod'] as Cesium.Cartesian3;
+        camMod.x = wrap(ce);
+        camMod.y = wrap(cn);
+        camMod.z = wrap(cu);
+        for (const tier of GROUND_DETAIL_TIERS) {
+          const off = u[tier.offsetUniform] as Cesium.Cartesian3;
+          off.x = f(ce / tier.periodM);
+          off.y = f(cn / tier.periodM);
+          off.z = f(cu / tier.periodM);
         }
-        if (this.enuScratch.anchored) {
-          const f = (v: number) => v - Math.floor(v);
-          const ce = C.Cartesian3.dot(cam, east);
-          const cn = C.Cartesian3.dot(cam, north);
-          const cu = C.Cartesian3.dot(cam, up);
-          for (const tier of GROUND_DETAIL_TIERS) {
-            const off = u[tier.offsetUniform] as Cesium.Cartesian3;
-            off.x = f(ce / tier.periodM);
-            off.y = f(cn / tier.periodM);
-            off.z = f(cu / tier.periodM);
-          }
-          for (const m of GROUND_MOTTLE_SCALES) {
-            const cellU = u[m.cellUniform] as Cesium.Cartesian3;
-            const fracU = u[m.fracUniform] as Cesium.Cartesian3;
-            const x = ce / m.cellM;
-            const y = cn / m.cellM;
-            const z = cu / m.cellM;
-            cellU.x = Math.floor(x);
-            cellU.y = Math.floor(y);
-            cellU.z = Math.floor(z);
-            fracU.x = x - cellU.x;
-            fracU.y = y - cellU.y;
-            fracU.z = z - cellU.z;
-          }
-        }
+        const cellU = u[GROUND_TOWN_GRID.cellUniform] as Cesium.Cartesian3;
+        const fracU = u[GROUND_TOWN_GRID.fracUniform] as Cesium.Cartesian3;
+        const x = ce / GROUND_TOWN_GRID.cellM;
+        const y = cn / GROUND_TOWN_GRID.cellM;
+        const z = cu / GROUND_TOWN_GRID.cellM;
+        cellU.x = Math.floor(x);
+        cellU.y = Math.floor(y);
+        cellU.z = Math.floor(z);
+        fracU.x = x - cellU.x;
+        fracU.y = y - cellU.y;
+        fracU.z = z - cellU.z;
       }
     });
     this.preRenderRemover = scene.postRender.addEventListener(() => {
-      this.frameCount++;
-      const now = performance.now();
-      if (now - this.frameWindowStart >= 1000) {
-        const fps = (this.frameCount * 1000) / (now - this.frameWindowStart);
-        const continuous = this.frameCount >= MIN_FRAMES_FOR_SAMPLE;
-        this.frameCount = 0;
-        this.frameWindowStart = now;
-        if (continuous) {
-          this.lastFps = fps;
-          for (const l of this.frameListeners) l(fps);
-        }
+      // Only frames drawn back to back while the camera moves say what the machine can do: the
+      // scene renders on demand, so a frame drawn because a tile arrived (or the page was
+      // throttled in the background) says nothing about the GPU, and counting those read as a
+      // slow machine and stepped the quality down for nothing.
+      const view = scene.camera.viewMatrix;
+      const moving = !C.Matrix4.equalsEpsilon(view, this.lastView, 1e-9);
+      C.Matrix4.clone(view, this.lastView);
+      const fps = this.frameSampler.frame(performance.now(), moving);
+      if (fps !== null) {
+        this.lastFps = fps;
+        for (const l of this.frameListeners) l(fps);
       }
     });
 
@@ -446,7 +434,7 @@ export class CesiumSceneHost implements SceneHost {
         globe.material = undefined;
         // The material destroys the textures it holds, the detail tiles among them.
         this.groundMaterial.destroy();
-        this.detailTextures = null;
+        this.detailTexture = null;
         this.groundMaterial = null;
         this.groundTextureFailed = true;
         this.onError?.('Ground texture disabled — the renderer could not compile it', error);
@@ -492,7 +480,7 @@ export class CesiumSceneHost implements SceneHost {
         globe.material = undefined;
         // The material destroys the textures it holds, the detail tiles among them.
         this.groundMaterial.destroy();
-        this.detailTextures = null;
+        this.detailTexture = null;
         this.groundMaterial = null;
       }
       return;
@@ -513,12 +501,8 @@ export class CesiumSceneHost implements SceneHost {
             ...GROUND_UNIFORM_DEFAULTS,
             [GROUND_COVER_BOUNDS_UNIFORM]: new C.Cartesian4(0, 0, 0, 0),
             [GROUND_COVER_IMAGE_UNIFORM]: C.Material.DefaultImageId,
-            ...Object.fromEntries(
-              Object.values(GROUND_DETAIL_IMAGE_UNIFORMS).map((name) => [
-                name,
-                C.Material.DefaultImageId,
-              ]),
-            ),
+            [GROUND_DETAIL_UNIFORM]: C.Material.DefaultImageId,
+            [GROUND_NOISE_UNIFORM]: C.Material.DefaultImageId,
             u_detailOn: 0,
             u_coarseBasemap: this.coarseBasemap,
             u_eastWC: new C.Cartesian3(1, 0, 0),
@@ -527,14 +511,9 @@ export class CesiumSceneHost implements SceneHost {
             ...Object.fromEntries(
               GROUND_DETAIL_TIERS.map((t) => [t.offsetUniform, new C.Cartesian3(0, 0, 0)]),
             ),
-            ...Object.fromEntries(
-              GROUND_MOTTLE_SCALES.flatMap((m) => [
-                [m.cellUniform, new C.Cartesian3(0, 0, 0)],
-                [m.fracUniform, new C.Cartesian3(0, 0, 0)],
-              ]),
-            ),
-            u_cameraCell: new C.Cartesian3(0, 0, 0),
-            u_cameraFrac: new C.Cartesian3(0, 0, 0),
+            u_camMod: new C.Cartesian3(0, 0, 0),
+            [GROUND_TOWN_GRID.cellUniform]: new C.Cartesian3(0, 0, 0),
+            [GROUND_TOWN_GRID.fracUniform]: new C.Cartesian3(0, 0, 0),
           },
           source: GROUND_MATERIAL_SOURCE,
         },
@@ -547,6 +526,7 @@ export class CesiumSceneHost implements SceneHost {
         magnificationFilter: C.TextureMagnificationFilter.LINEAR,
       });
       globe.material = this.groundMaterial;
+      this.applyNoise();
       this.applyCoverMap();
       this.applyDetailAtlas();
     }
@@ -1106,26 +1086,36 @@ export class CesiumSceneHost implements SceneHost {
   }
 
   /**
-   * Cut the atlas into its four tiles and hand the material one wrapping, mipmapped texture
-   * per surface. A material's own image uniforms clamp at their edges and share one mip chain,
-   * so an atlas bled across its quadrants at every level but the first; a `Texture` the host
-   * builds itself takes a REPEAT sampler and is used as is (Material accepts one directly).
+   * The detail tiles' light and shade as one wrapping, mipmapped texture (`detail-tiles.ts`);
+   * the material takes it as is (Material accepts a `Texture` directly) and destroys it with
+   * itself.
    */
   private applyDetailAtlas(): void {
     const atlas = this.detailAtlas;
-    if (!this.groundMaterial || !atlas) return;
+    if (!this.groundMaterial || !atlas || this.detailTexture) return;
+    const context = (this.scene as unknown as { context?: unknown }).context;
+    if (!context) return;
+    const texture = createDetailTexture(this.C as unknown as DetailTileCesium, context, atlas);
+    if (!texture) return;
+    this.detailTexture = texture;
     const u = this.groundMaterial.uniforms as Record<string, unknown>;
-    if (!this.detailTextures) {
-      const context = (this.scene as unknown as { context?: unknown }).context;
-      if (!context) return;
-      const textures = createDetailTextures(this.C as unknown as DetailTileCesium, context, atlas);
-      if (!textures) return;
-      this.detailTextures = textures;
-    }
-    const first = GROUND_DETAIL_IMAGE_UNIFORMS.grass;
-    if (u[first] === this.detailTextures[first]) return;
-    for (const [name, texture] of Object.entries(this.detailTextures)) u[name] = texture;
+    u[GROUND_DETAIL_UNIFORM] = texture;
     u['u_detailOn'] = 1;
+  }
+
+  /** The baked noise for a new material (computed once, a few milliseconds; uploaded per material). */
+  private applyNoise(): void {
+    if (!this.groundMaterial) return;
+    const context = (this.scene as unknown as { context?: unknown }).context;
+    if (!context) return;
+    this.noiseBytes ??= makeNoiseTexture(NOISE_TEXTURE_SIZE);
+    const u = this.groundMaterial.uniforms as Record<string, unknown>;
+    u[GROUND_NOISE_UNIFORM] = createNoiseTexture(
+      this.C as unknown as DetailTileCesium,
+      context,
+      this.noiseBytes,
+      NOISE_TEXTURE_SIZE,
+    );
   }
 
   /**
@@ -1769,7 +1759,7 @@ export class CesiumSceneHost implements SceneHost {
     this.pickHandler?.destroy();
     this.groundMaterial?.destroy();
     this.groundMaterial = null;
-    this.detailTextures = null;
+    this.detailTexture = null;
     this.preRenderLabelsRemover?.();
     this.preRenderLabelsRemover = null;
     this.labels = null; // owned by scene.primitives, destroyed with the widget

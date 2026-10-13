@@ -140,7 +140,7 @@ describe('SceneController', () => {
     expect(grade.u_cloudOpacity).toBeLessThan(0.1);
   });
 
-  it('paints the ground texture once per place and season, and clears it when the rung drops it', () => {
+  it('paints the ground texture once per place and season, and only clears it when turned off', () => {
     const { host, calls } = fakeHost();
     const c = new SceneController(host, {
       setTimeoutImpl: () => 0,
@@ -162,9 +162,13 @@ describe('SceneController', () => {
     );
     expect(calls['setGroundTexture']).toHaveLength(3);
     expect((calls['setGroundTexture']![2]![0] as { detail: number }).detail).toBe(1);
+    // The Minimal rung keeps the base surface; only the setting turns the paint off.
     c.apply(scene({ render: { ...DEFAULT_RENDER_SETTINGS, shadows: false } }));
     expect(calls['setGroundTexture']).toHaveLength(4);
-    expect(calls['setGroundTexture']![3]![0]).toBeNull();
+    expect((calls['setGroundTexture']![3]![0] as { detail: number }).detail).toBe(0);
+    c.apply(scene({ render: { ...DEFAULT_RENDER_SETTINGS, groundTexture: false } }));
+    expect(calls['setGroundTexture']).toHaveLength(5);
+    expect(calls['setGroundTexture']![4]![0]).toBeNull();
   });
 
   it('reads the basemap’s colour around a new pin and re-paints with the land hint', async () => {

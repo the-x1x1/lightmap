@@ -185,7 +185,6 @@ export function groundTextureFor(
   context: GroundTextureContext = { brightness: 1, seaLevelM: 0 },
 ): GroundTextureParams | null {
   if (scene.render.groundTexture === false) return null;
-  if (!scene.render.shadows) return null;
   const lat = scene.location.point.latitude;
   return {
     snowlineM: Math.round(
@@ -203,11 +202,19 @@ export function groundTextureFor(
     brightness: Math.round(Math.max(0, Math.min(1, context.brightness)) * 100) / 100,
     seaLevelM: Math.round(context.seaLevelM),
     shore: context.seaLevelKnown ? 1 : 0,
-    // Ultra/High (soft shadows) carry everything; Balanced drops the per-fragment relief and
-    // grain; Battery keeps the base surface only.
+    // Ultra/High (soft shadows) carry everything; Balanced drops the detail tiles, mottling and
+    // relief; Battery and Minimal keep the base surface only.
     wet:
       Math.round(Math.max(0, Math.min(1, scene.atmosphere.parameters.precipitation)) * 100) / 100,
-    detail: scene.render.softShadows ? 2 : scene.render.shadowMapSize >= 2048 ? 1 : 0,
+    // The Minimal rung (no shadows) keeps the base surface: without the paint the coarse
+    // basemap's sea and lakes show on the land, and the look would jump with the rung.
+    detail: !scene.render.shadows
+      ? 0
+      : scene.render.softShadows
+        ? 2
+        : scene.render.shadowMapSize >= 2048
+          ? 1
+          : 0,
     cloudShadow: cloudShadowStrength(
       scene.atmosphere.parameters.cloudLayers,
       scene.atmosphere.parameters.sunTransmittance,

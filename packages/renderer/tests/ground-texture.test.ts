@@ -23,12 +23,15 @@ import { QUALITY_LADDER } from '../src/quality-governor.ts';
 import {
   GROUND_COVER_BOUNDS_UNIFORM,
   GROUND_COVER_IMAGE_UNIFORM,
-  GROUND_DETAIL_IMAGE_UNIFORMS,
   GROUND_DETAIL_QUADRANTS,
   GROUND_DETAIL_PERIOD_M,
   GROUND_DETAIL_TIERS,
-  GROUND_MOTTLE_SCALES,
+  GROUND_DETAIL_UNIFORM,
   GROUND_MATERIAL_SOURCE,
+  GROUND_NOISE_PERIODS_M,
+  GROUND_NOISE_UNIFORM,
+  GROUND_NOISE_WRAP_M,
+  GROUND_TOWN_GRID,
   GROUND_UNIFORM_DEFAULTS,
 } from '../src/shaders/ground.frag.ts';
 
@@ -177,7 +180,7 @@ describe('groundTextureFor', () => {
     ).toBeCloseTo(-0.96, 2);
   });
 
-  it('detail follows the real quality ladder: Ultra/High 2, Balanced 1, Battery 0, Minimal off', () => {
+  it('detail follows the real quality ladder: Ultra/High 2, Balanced 1, Battery and Minimal 0', () => {
     const byLabel = Object.fromEntries(
       QUALITY_LADDER.map((r) => [
         r.label,
@@ -191,7 +194,7 @@ describe('groundTextureFor', () => {
         )?.detail ?? null,
       ]),
     );
-    expect(byLabel).toEqual({ Ultra: 2, High: 2, Balanced: 1, Battery: 0, Minimal: null });
+    expect(byLabel).toEqual({ Ultra: 2, High: 2, Balanced: 1, Battery: 0, Minimal: 0 });
   });
 
   it('wet ground follows the scenario’s precipitation, clamped', () => {
@@ -212,7 +215,7 @@ describe('groundTextureFor', () => {
     expect(groundTextureFor(storm)!.wet).toBeLessThanOrEqual(1);
   });
 
-  it('is off when the setting says so or the Minimal rung has dropped the shadows', () => {
+  it('is off when the setting says so; the Minimal rung keeps the base surface', () => {
     expect(
       groundTextureFor(
         sceneAt(21.4, new Date('2026-02-09T22:00:00Z'), {
@@ -221,14 +224,14 @@ describe('groundTextureFor', () => {
         }),
       ),
     ).toBeNull();
-    expect(
-      groundTextureFor(
-        sceneAt(21.4, new Date('2026-02-09T22:00:00Z'), {
-          ...DEFAULT_RENDER_SETTINGS,
-          shadows: false,
-        }),
-      ),
-    ).toBeNull();
+    const minimal = groundTextureFor(
+      sceneAt(21.4, new Date('2026-02-09T22:00:00Z'), {
+        ...DEFAULT_RENDER_SETTINGS,
+        shadows: false,
+      }),
+    );
+    expect(minimal).not.toBeNull();
+    expect(minimal!.detail).toBe(0);
   });
 });
 
@@ -304,11 +307,11 @@ describe('ground material source', () => {
       expect(GROUND_MATERIAL_SOURCE).toContain(`uniform float ${name};`);
     expect(GROUND_MATERIAL_SOURCE).toContain(`uniform sampler2D ${GROUND_COVER_IMAGE_UNIFORM};`);
     expect(GROUND_MATERIAL_SOURCE).toContain(`uniform vec4 ${GROUND_COVER_BOUNDS_UNIFORM};`);
-    for (const q of GROUND_DETAIL_QUADRANTS)
-      expect(GROUND_MATERIAL_SOURCE).toContain(
-        `uniform sampler2D ${GROUND_DETAIL_IMAGE_UNIFORMS[q]};`,
-      );
+    expect(GROUND_MATERIAL_SOURCE).toContain(`uniform sampler2D ${GROUND_DETAIL_UNIFORM};`);
+    expect(GROUND_MATERIAL_SOURCE).toContain(`uniform sampler2D ${GROUND_NOISE_UNIFORM};`);
+    // The four surfaces are the detail texture's channels, in the atlas's quadrant order.
     expect(GROUND_DETAIL_QUADRANTS).toEqual(['grass', 'rock', 'sand', 'snow']);
+    expect(GROUND_MATERIAL_SOURCE).toContain('vec4 tiles = vec4(wGrass, wRock, wSand, wSnow);');
     // Two tile scales, each gated by its own size on screen, so no scale pops in with distance.
     expect(GROUND_MATERIAL_SOURCE.match(/lmDetailTier\(q/g)?.length).toBe(2);
     expect(GROUND_MATERIAL_SOURCE).toContain('u_coarseBasemap');
@@ -320,24 +323,31 @@ describe('ground material source', () => {
       );
     }
     expect(GROUND_DETAIL_TIERS[0].periodM).toBe(GROUND_DETAIL_PERIOD_M);
-    // A shrunk tile repeats into a grid of dots: tiles only where a period spans ≥ 40 px.
+    // A shrunk tile repeats into a grid of dots: tiles only where a period spans >= 40 px.
     expect(GROUND_MATERIAL_SOURCE).toContain('smoothstep(40.0, 160.0, pxPerPeriod)');
-    // The zooms between are carried by non-repeating noise on whole cells passed from the CPU.
-    for (const m of GROUND_MOTTLE_SCALES) {
-      expect(GROUND_MATERIAL_SOURCE).toContain(`uniform vec3 ${m.cellUniform};`);
-      expect(GROUND_MATERIAL_SOURCE).toContain(`uniform vec3 ${m.fracUniform};`);
-      expect(GROUND_MATERIAL_SOURCE).toContain(
-        `lmNoiseI(enu / ${m.cellM.toFixed(1)} + ${m.fracUniform}, ${m.cellUniform})`,
-      );
+    // Noise is read from the baked texture, never computed per fragment (the procedural version
+    // took ~1.7 s to compile on a Windows PC), along the ground frame plus the camera's place on
+    // it modulo a wrap every period divides, so the pattern never jumps when that wraps.
+    expect(GROUND_MATERIAL_SOURCE).not.toMatch(/lmFbm|lmNoise\(|lmNoiseI\(/);
+    expect(GROUND_MATERIAL_SOURCE).toContain('vec3 g = enu + u_camMod;');
+    for (const period of Object.values(GROUND_NOISE_PERIODS_M)) {
+      expect(GROUND_NOISE_WRAP_M % period).toBe(0);
+      expect(GROUND_MATERIAL_SOURCE).toContain(period.toFixed(1));
     }
-    for (const v of ['u_eastWC', 'u_northWC', 'u_upWC', 'u_detailOffset'])
+    expect(GROUND_NOISE_WRAP_M % (GROUND_NOISE_PERIODS_M.patches / 2)).toBe(0);
+    expect(GROUND_NOISE_WRAP_M % (GROUND_NOISE_PERIODS_M.clouds / 2)).toBe(0);
+    // The town grid's lattice: whole cells and the fraction from the CPU.
+    expect(GROUND_MATERIAL_SOURCE).toContain(`uniform vec3 ${GROUND_TOWN_GRID.cellUniform};`);
+    expect(GROUND_MATERIAL_SOURCE).toContain(`uniform vec3 ${GROUND_TOWN_GRID.fracUniform};`);
+    expect(GROUND_MATERIAL_SOURCE).toContain(
+      `enu.xy / ${GROUND_TOWN_GRID.cellM.toFixed(1)} + ${GROUND_TOWN_GRID.fracUniform}.xy`,
+    );
+    for (const v of ['u_eastWC', 'u_northWC', 'u_upWC', 'u_detailOffset', 'u_camMod'])
       expect(GROUND_MATERIAL_SOURCE).toContain(`uniform vec3 ${v};`);
     expect(GROUND_DETAIL_PERIOD_M).toBe(2.5);
     expect(GROUND_MATERIAL_SOURCE).toContain(
       `/ ${GROUND_DETAIL_PERIOD_M.toFixed(1)} + u_detailOffset`,
     );
-    expect(GROUND_MATERIAL_SOURCE).toContain('uniform vec3 u_cameraCell;');
-    expect(GROUND_MATERIAL_SOURCE).toContain('uniform vec3 u_cameraFrac;');
     expect(GROUND_MATERIAL_SOURCE).toMatch(/materialInput\.slope/);
     expect(GROUND_MATERIAL_SOURCE).toMatch(/#ifdef HAS_WATER_MASK[\s\S]*waterMask[\s\S]*#endif/);
     expect(GROUND_MATERIAL_SOURCE).toMatch(

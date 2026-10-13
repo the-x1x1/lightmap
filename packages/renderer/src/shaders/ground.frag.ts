@@ -8,11 +8,11 @@
  * It is a Cesium globe material (`globe.material`): the fragment runs before the globe's own
  * lighting and shadows, so the Sun's direction, the terrain shadows and the horizon geometry are
  * untouched (plan §1E) — only the surface albedo changes. Its inputs are the terrain's own
- * height, slope and aspect (per vertex, from the mesh normals) and a value-noise field over the
- * fragment's world position, so patches are fixed to the ground and do not swim as the camera
- * moves (float ECEF jitter is ~0.5 m; the finest world-anchored octave is 8 m; the detail tiles
- * nearer the camera are computed camera-relative along a ground-anchored frame, in three tiers
- * that each fade in by their size on screen). The colour is blended
+ * height, slope and aspect (per vertex, from the mesh normals) and noise baked into a small
+ * wrapping texture (`noise-texture.ts`), read along a ground-anchored east/north/up frame so
+ * patches are fixed to the ground and do not swim as the camera moves, and mipmapped so they
+ * settle to their mean at a distance instead of shimmering; the detail tiles nearer the camera
+ * fade in by their size on screen. The colour is blended
  * over the basemap with an alpha that rises on rock and snow and falls on open ground, so a
  * real imagery layer, where one is licensed, still shows through where it matters — vegetation
  * hue, desert, farmland — and the procedural surface supplies the detail the basemap lacks.
@@ -27,9 +27,6 @@
  * `RENDERING_ACCURACY.md` says so.
  */
 export const GROUND_MATERIAL_TYPE = 'LightMapGround';
-
-/** Cell size of the near grain, metres; the host passes the camera's position in these cells. */
-export const GROUND_GRAIN_M = 2.5;
 
 /** Uniforms the material takes, with their defaults; `groundTextureFor()` sets them per scene. */
 export const GROUND_UNIFORM_DEFAULTS = {
@@ -81,18 +78,11 @@ export const GROUND_UNIFORM_DEFAULTS = {
 } as const;
 
 /**
- * The detail tiles (texture pack stage 3): four wrapping 256 px textures, one per surface, each
- * its own sampler so it carries a full mip chain and the GPU's own REPEAT wrap — an atlas's
- * quadrants bleed into each other at every mip level below the first, which showed as the
- * near field going grey and then popping as the camera pulled back.
+ * The detail tiles (texture pack stage 3): one wrapping, mipmapped texture carrying the four
+ * surfaces' light and shade as its channels, in this order (`detail-tiles.ts`).
  */
-export const GROUND_DETAIL_IMAGE_UNIFORMS = {
-  grass: 'u_detailGrass',
-  rock: 'u_detailRock',
-  sand: 'u_detailSand',
-  snow: 'u_detailSnow',
-} as const;
-/** The bundled atlas's quadrants, in the order the generator writes them (NW, NE, SW, SE). */
+export const GROUND_DETAIL_UNIFORM = 'u_detailLum';
+/** The bundled atlas's quadrants (NW, NE, SW, SE) and the channel each becomes (R, G, B, A). */
 export const GROUND_DETAIL_QUADRANTS = ['grass', 'rock', 'sand', 'snow'] as const;
 /** Ground period of one detail tile, metres (the finest tier). */
 export const GROUND_DETAIL_PERIOD_M = 2.5;
@@ -108,22 +98,46 @@ export const GROUND_DETAIL_TIERS = [
   { periodM: 6.7, offsetUniform: 'u_detailOffset1' },
 ] as const;
 
+/** The baked noise (`noise-texture.ts`): one wrapping, mipmapped texture. */
+export const GROUND_NOISE_UNIFORM = 'u_noise';
 /**
- * The mottling between the macro patches and the tiles: value noise over the ground at these
- * cell sizes, which never repeats (a tile shrunk to a few pixels repeats into a visible grid).
- * Each takes the camera's position along the ground frame in its own cells — the whole cells
- * and the fraction, from the CPU in double — so it is fixed to the ground and precise.
+ * Every noise period on the ground divides this (metres), so the camera's position along the
+ * ground frame is passed modulo it (`u_camMod`, from the CPU in double) and the pattern never
+ * jumps when that wraps; 16 km also keeps the float coordinates precise to millimetres.
  */
-export const GROUND_MOTTLE_SCALES = [
-  { cellM: 3, cellUniform: 'u_mottleCell0', fracUniform: 'u_mottleFrac0' },
-  { cellM: 12, cellUniform: 'u_mottleCell1', fracUniform: 'u_mottleFrac1' },
-  { cellM: 48, cellUniform: 'u_mottleCell2', fracUniform: 'u_mottleFrac2' },
-] as const;
+export const GROUND_NOISE_WRAP_M = 16384;
+/** Ground size of one repeat of the noise texture for each use, metres (each divides the wrap). */
+export const GROUND_NOISE_PERIODS_M = {
+  /** Turf/scrub patches and the snowline's wobble: fractal cells of 512 m. */
+  patches: 4096,
+  /** Grain on the ground and on rock: fractal cells of 64 m. */
+  grain: 512,
+  /** Forest crowns: fractal cells of 64 m, the other seed. */
+  crowns: 512,
+  /** Cloud shadows: fractal cells of 2 km. */
+  clouds: 16384,
+  /** The coast's broad jitter: fractal cells of 256 m. */
+  coast: 2048,
+  /** Mottling: value-noise cells of 64, 16 and 4 m. */
+  mottleCoarse: 4096,
+  mottleMid: 1024,
+  mottleFine: 256,
+} as const;
+
+/** The town grid's lattice: 48 m cells, as whole cells and a fraction of the camera's position. */
+export const GROUND_TOWN_GRID = {
+  cellM: 48,
+  cellUniform: 'u_townCell',
+  fracUniform: 'u_townFrac',
+} as const;
 
 /** The cover map's sampler uniform (an image uniform in Cesium's material fabric: a canvas, or `Material.DefaultImageId`). */
 export const GROUND_COVER_IMAGE_UNIFORM = 'u_coverMap';
 /** The cover map's bounds uniform, a vec4 (Cartesian4): longitude in radians (west, east), mercator y (north, south). */
 export const GROUND_COVER_BOUNDS_UNIFORM = 'u_coverBounds';
+
+const P = GROUND_NOISE_PERIODS_M;
+const f = (n: number) => n.toFixed(1);
 
 export const GROUND_MATERIAL_SOURCE = /* glsl */ `
 uniform float u_snowlineM;
@@ -144,28 +158,21 @@ uniform sampler2D u_coverMap;
 uniform float u_detailOn;
 uniform float u_coarseBasemap;
 uniform float u_shore;
-uniform sampler2D u_detailGrass;
-uniform sampler2D u_detailRock;
-uniform sampler2D u_detailSand;
-uniform sampler2D u_detailSnow;
-// The camera's east/north/up axes in world (ECEF) coordinates, and its own position along them
-// in detail periods (the fraction), set each frame so the atlas is anchored to the ground.
+uniform sampler2D u_detailLum;
+uniform sampler2D u_noise;
+// The ground frame (east/north/up in world coordinates, anchored to the ground by the host),
+// the camera's position along it modulo the noise wrap, in each detail period (the fraction),
+// and on the town grid (whole cells and the fraction).
 uniform vec3 u_eastWC;
 uniform vec3 u_northWC;
 uniform vec3 u_upWC;
+uniform vec3 u_camMod;
 uniform vec3 u_detailOffset;
 uniform vec3 u_detailOffset1;
-uniform vec3 u_mottleCell0;
-uniform vec3 u_mottleFrac0;
-uniform vec3 u_mottleCell1;
-uniform vec3 u_mottleFrac1;
-uniform vec3 u_mottleCell2;
-uniform vec3 u_mottleFrac2;
-// The camera's position in grain cells: whole cells and the fraction, set each frame.
-uniform vec3 u_cameraCell;
-uniform vec3 u_cameraFrac;
+uniform vec3 u_townCell;
+uniform vec3 u_townFrac;
 
-// Hash without axis correlation (Hoskins' hash13), so the noise has no lattice pattern.
+// Hash without axis correlation (Hoskins' hash13): one value per cell.
 float lmHash(vec3 p)
 {
     p = fract(p * vec3(0.1031, 0.1030, 0.0973));
@@ -173,37 +180,32 @@ float lmHash(vec3 p)
     return fract((p.x + p.y) * p.z);
 }
 
-float lmNoise(vec3 x)
+// The same on whole cells too large for a float hash (a position in metre cells runs to
+// millions): PCG on the integers themselves.
+#if __VERSION__ >= 300
+float lmHashI(vec3 c)
 {
-    vec3 i = floor(x);
-    vec3 f = fract(x);
-    f = f * f * (3.0 - 2.0 * f);
-    return mix(
-        mix(mix(lmHash(i), lmHash(i + vec3(1.0, 0.0, 0.0)), f.x),
-            mix(lmHash(i + vec3(0.0, 1.0, 0.0)), lmHash(i + vec3(1.0, 1.0, 0.0)), f.x), f.y),
-        mix(mix(lmHash(i + vec3(0.0, 0.0, 1.0)), lmHash(i + vec3(1.0, 0.0, 1.0)), f.x),
-            mix(lmHash(i + vec3(0.0, 1.0, 1.0)), lmHash(i + vec3(1.0, 1.0, 1.0)), f.x), f.y),
-        f.z);
+    uvec3 v = uvec3(ivec3(c) + ivec3(1 << 24));
+    v = v * 1664525u + 1013904223u;
+    v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+    v ^= v >> 16u;
+    v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+    return float(v.x & 0xffffffu) / 16777216.0;
 }
+#else
+float lmHashI(vec3 c) { return lmHash(mod(c, 4096.0)); }
+#endif
 
-// Value noise with the lattice offset by whole cells, for coordinates kept small for precision.
-float lmNoiseAt(vec3 x, vec3 cell)
+// The baked noise at a ground position (metres along the ground frame, wrapped) with a repeat
+// of S metres, with explicit derivatives so it can be read inside branches; mipmapped, so a
+// pattern too fine for the pixel fades to its mean instead of shimmering.
+vec4 lmNoiseTex(vec2 p, float S, vec2 dpx, vec2 dpy)
 {
-    vec3 i = floor(x) + cell;
-    vec3 f = fract(x);
-    f = f * f * (3.0 - 2.0 * f);
-    return mix(
-        mix(mix(lmHash(i), lmHash(i + vec3(1.0, 0.0, 0.0)), f.x),
-            mix(lmHash(i + vec3(0.0, 1.0, 0.0)), lmHash(i + vec3(1.0, 1.0, 0.0)), f.x), f.y),
-        mix(mix(lmHash(i + vec3(0.0, 0.0, 1.0)), lmHash(i + vec3(1.0, 0.0, 1.0)), f.x),
-            mix(lmHash(i + vec3(0.0, 1.0, 1.0)), lmHash(i + vec3(1.0, 1.0, 1.0)), f.x), f.y),
-        f.z);
-}
-
-// Four octaves, 0..~0.94, mean ~ 0.47.
-float lmFbm(vec3 p)
-{
-    return 0.5 * lmNoise(p) + 0.25 * lmNoise(p * 2.03 + 11.0) + 0.125 * lmNoise(p * 4.07 + 23.0) + 0.0625 * lmNoise(p * 8.11 + 37.0);
+#if __VERSION__ >= 300
+    return textureGrad(u_noise, p / S, dpx / S, dpy / S);
+#else
+    return texture(u_noise, p / S);
+#endif
 }
 
 // Geodetic longitude/latitude of an ECEF position (WGS84; one Bowring step, < 1e-6 rad), then
@@ -226,106 +228,66 @@ vec2 lmCoverUv(vec3 p)
                 (merc - u_coverBounds.w) / (u_coverBounds.z - u_coverBounds.w));
 }
 
-// Value noise on an integer lattice given as whole cells (large: a camera's position in
-// metre-scale cells runs to millions) plus a small local coordinate. The hash works on the
-// integers themselves (PCG), so it stays random however large they are.
-#if __VERSION__ >= 300
-float lmHashI(vec3 c)
-{
-    uvec3 v = uvec3(ivec3(c) + ivec3(1 << 24));
-    v = v * 1664525u + 1013904223u;
-    v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
-    v ^= v >> 16u;
-    v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
-    return float(v.x & 0xffffffu) / 16777216.0;
-}
-#else
-float lmHashI(vec3 c) { return lmHash(mod(c, 4096.0)); }
-#endif
-
-float lmNoiseI(vec3 local, vec3 cell)
-{
-    vec3 fl = floor(local);
-    vec3 i = fl + cell;
-    vec3 f = local - fl;
-    f = f * f * (3.0 - 2.0 * f);
-    return mix(
-        mix(mix(lmHashI(i), lmHashI(i + vec3(1.0, 0.0, 0.0)), f.x),
-            mix(lmHashI(i + vec3(0.0, 1.0, 0.0)), lmHashI(i + vec3(1.0, 1.0, 0.0)), f.x), f.y),
-        mix(mix(lmHashI(i + vec3(0.0, 0.0, 1.0)), lmHashI(i + vec3(1.0, 0.0, 1.0)), f.x),
-            mix(lmHashI(i + vec3(0.0, 1.0, 1.0)), lmHashI(i + vec3(1.0, 1.0, 1.0)), f.x), f.y),
-        f.z);
-}
-
-// One wrapping tile (t: 0 grass, 1 rock, 2 sand, 3 snow) at an unwrapped coordinate in tile
-// periods; the sampler wraps and chooses the mip level from the derivatives the caller took
-// outside any branch. The tiles are normalised to a mean of 0.5, so a minified sample tends to
-// 0.5 and the multiplier below to 1: at a distance the tile fades out by itself, with no seam.
-vec3 lmDetail(vec2 uv, vec2 duvdx, vec2 duvdy, float t)
-{
-#if __VERSION__ >= 300
-    if (t < 0.5) return textureGrad(u_detailGrass, uv, duvdx, duvdy).rgb;
-    if (t < 1.5) return textureGrad(u_detailRock, uv, duvdx, duvdy).rgb;
-    if (t < 2.5) return textureGrad(u_detailSand, uv, duvdx, duvdy).rgb;
-    return textureGrad(u_detailSnow, uv, duvdx, duvdy).rgb;
-#else
-    if (t < 0.5) return texture(u_detailGrass, uv).rgb;
-    if (t < 1.5) return texture(u_detailRock, uv).rgb;
-    if (t < 2.5) return texture(u_detailSand, uv).rgb;
-    return texture(u_detailSnow, uv).rgb;
-#endif
-}
-
-// The tile across the three projections of a point and its normal weights.
-vec3 lmDetailTri(vec3 q, vec3 dqx, vec3 dqy, vec3 w, float tile)
-{
-    return lmDetail(q.yz, dqx.yz, dqy.yz, tile) * w.x
-         + lmDetail(q.xz, dqx.xz, dqy.xz, tile) * w.y
-         + lmDetail(q.xy, dqx.xy, dqy.xy, tile) * w.z;
-}
-
-// One scale of the detail: the two tiles blended, as a multiplier about 1, weighted by how many
-// screen pixels one period spans (from the coordinate's own derivatives): gone below 40 px per
-// period (shrunk further, a tile's repeat reads as a grid of dots), full from 160 px, so it
-// fades in smoothly as the camera closes and never pops.
-vec3 lmDetailTier(vec3 q, vec3 dqx, vec3 dqy, vec3 w, float t1, float t2, float blend, float amount)
+// The detail tiles' light and shade at one scale, all four surfaces blended by their weights
+// (one fetch per projection: the surfaces are the texture's channels), across the three
+// projections of the point by the normal's weights, as a multiplier about 1. Weighted by how
+// many screen pixels one period spans: gone below 40 px per period (shrunk further, a tile's
+// repeat reads as a grid of dots), full from 160 px, so it fades in as the camera closes.
+float lmDetailTier(vec3 q, vec3 dqx, vec3 dqy, vec3 w, vec4 tiles, float amount)
 {
     float pxPerPeriod = 1.0 / max(max(length(dqx), length(dqy)), 1e-6);
     float tierW = smoothstep(40.0, 160.0, pxPerPeriod) * amount;
-    if (tierW <= 0.001) return vec3(1.0);
-    vec3 d = lmDetailTri(q, dqx, dqy, w, t1);
-    if (blend > 0.02) d = mix(d, lmDetailTri(q, dqx, dqy, w, t2), blend);
-    // Mostly the tile's light and shade, little of its hue: the macro rules already chose the
-    // colour, and the full tile hue on top (a lime grass over green turf) went cartoonish.
-    d = mix(vec3(dot(d, vec3(0.3, 0.59, 0.11))), d, 0.3);
-    return mix(vec3(1.0), d * 2.0, tierW);
+    if (tierW <= 0.001) return 1.0;
+#if __VERSION__ >= 300
+    float l = dot(textureGrad(u_detailLum, q.yz, dqx.yz, dqy.yz), tiles) * w.x
+            + dot(textureGrad(u_detailLum, q.xz, dqx.xz, dqy.xz), tiles) * w.y
+            + dot(textureGrad(u_detailLum, q.xy, dqx.xy, dqy.xy), tiles) * w.z;
+#else
+    float l = dot(texture(u_detailLum, q.xy), tiles);
+#endif
+    return mix(1.0, l * 2.0, tierW);
 }
 
 czm_material czm_getMaterial(czm_materialInput materialInput)
 {
     czm_material material = czm_getDefaultMaterial(materialInput);
-    // World position of the fragment (ECEF, metres) anchors the noise to the ground.
     vec3 positionEC = -materialInput.positionToEyeEC;
     vec3 positionWC = (czm_inverseView * vec4(positionEC, 1.0)).xyz;
-    float patches = lmFbm(positionWC / 480.0);          // broad patchiness, ~500 m
-    float grain = lmFbm(positionWC / 60.0 + 5.0);     // fine detail, 60 m down to ~8 m
+    float dist = length(positionEC);
     float slope = materialInput.slope;                // radians, 0 flat
     float height = materialInput.height - u_seaLevelM; // metres above sea level
+
+    // The fragment on the ground frame: camera-relative (precise) plus the camera's own place on
+    // it modulo the wrap, so every pattern is fixed to the ground. Its normal on the same axes.
+    vec3 local = czm_inverseViewRotation * positionEC;
+    vec3 enu = vec3(dot(local, u_eastWC), dot(local, u_northWC), dot(local, u_upWC));
+    vec3 g = enu + u_camMod;
+    vec3 nW = czm_inverseViewRotation * materialInput.normalEC;
+    vec3 nF = vec3(dot(nW, u_eastWC), dot(nW, u_northWC), dot(nW, u_upWC));
+    // Steep faces take the noise on a vertical plane facing them (a horizontal projection
+    // smears into streaks down a cliff).
+    float vert = smoothstep(0.45, 0.75, 1.0 - abs(nF.z));
+    vec2 gv = abs(nF.x) > abs(nF.y) ? g.yz : g.xz;
+    // Derivatives outside any branch, as GLSL requires.
+    vec2 gdx = dFdx(g.xy);
+    vec2 gdy = dFdy(g.xy);
+    vec2 gvdx = dFdx(gv);
+    vec2 gvdy = dFdy(gv);
+
+    // Broad patchiness (~500 m cells, with a second, rotated sample against repetition) and the
+    // grain (64 m cells down to 8 m).
+    float patches = 0.7 * lmNoiseTex(g.xy, ${f(P.patches)}, gdx, gdy).r
+                  + 0.3 * lmNoiseTex(vec2(g.y, -g.x), ${f(P.patches / 2)}, vec2(gdx.y, -gdx.x), vec2(gdy.y, -gdy.x)).b;
+    float grain = mix(lmNoiseTex(g.xy, ${f(P.grain)}, gdx, gdy).r,
+                      lmNoiseTex(gv, ${f(P.grain)}, gvdx, gvdy).r, vert);
 
     // Open ground leans from turf and scrub toward steppe and desert with the region's aridity -
     // and, on a slope, with which way it faces: the equatorward face takes the noon Sun and
     // dries to scrub, the poleward face stays greener (a rule of the mid-latitudes; flat ground
-    // and the tropics barely move). Computed before the snow uses the same facing below.
-    // Which way the slope faces, from the fragment's own normal (the interpolated aspect angle
-    // wraps at east and would sweep through every value inside a triangle there): the
-    // horizontal part of the normal against local north, +1 facing the pole.
-    vec3 nW = czm_inverseViewRotation * materialInput.normalEC;
-    vec3 upW = normalize(positionWC);
-    vec3 eastW = normalize(cross(vec3(0.0, 0.0, 1.0), upW));
-    vec3 northW = cross(upW, eastW);
-    vec3 nH = nW - upW * dot(nW, upW);
-    float northness = dot(nH, northW) / max(length(nH), 1e-4);
-    float facing = slope > 0.05 ? northness * u_poleward * smoothstep(0.05, 0.4, slope) : 0.0;  // +1 facing the pole
+    // and the tropics barely move). +1 facing the pole.
+    vec2 nH = nF.xy;
+    float northness = nH.y / max(length(nH), 1e-4);
+    float facing = slope > 0.05 ? northness * u_poleward * smoothstep(0.05, 0.4, slope) : 0.0;
     float dryness = clamp(u_aridity - 0.18 * facing, 0.0, 1.0);
     vec3 turf  = mix(vec3(0.34, 0.43, 0.22), vec3(0.62, 0.55, 0.36), dryness);
     vec3 scrub = mix(vec3(0.52, 0.46, 0.27), vec3(0.74, 0.64, 0.44), dryness);
@@ -352,18 +314,16 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     ground = mix(ground, shore * (0.9 + 0.2 * grain), shoreline);
 
     // Snow above the snowline: lower on poleward faces, patchy at its edge, thin on cliffs.
-    // (The aspect of a perfectly flat vertex is undefined; flat ground has no poleward face.)
-    float poleward = facing;
-    float snowline = u_snowlineM - 180.0 * poleward + 320.0 * (patches - 0.47);
+    float snowline = u_snowlineM - 180.0 * facing + 320.0 * (patches - 0.47);
     float snowy = smoothstep(snowline - 220.0, snowline + 160.0, height) * (1.0 - smoothstep(0.85, 1.15, slope));
     snowy = max(snowy, u_ice * (1.0 - smoothstep(0.9, 1.2, slope)));  // an ice sheet is snow at any height
     ground = mix(ground, snow * (0.95 + 0.05 * grain), snowy);
 
     // The land cover, where a map is loaded and this fragment lies inside it: what the open
     // ground is. Canopy darkens and greens it with a crown-sized grain; fields are a patchwork
-    // of tones in cells a few hundred metres across; built-up ground is warm grey with a
-    // block-sized grain; bare is sand and rock by the region's aridity; ice is snow at any
-    // height. Rock on steep faces and the seasonal snow still win; unknown texels change nothing.
+    // of tones in cells a few hundred metres across; built-up ground is warm grey; bare is sand
+    // and rock by the region's aridity; ice is snow at any height. Rock on steep faces and the
+    // seasonal snow still win; unknown texels change nothing.
     float known = 0.0;
     float canopy = 0.0;
     float built = 0.0;
@@ -383,17 +343,11 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
             bareC = smoothstep(0.55, 0.64, cv.b) * (1.0 - smoothstep(0.86, 0.95, cv.b));
             float iceC = smoothstep(0.86, 0.95, cv.b);
             float open = known * (1.0 - snowy) * (1.0 - rocky * 0.7);
-            vec3 forest = vec3(0.0);
-            if (canopy > 0.0)
-            {
-                float crowns = lmFbm(positionWC / 45.0 + 3.0);
-                forest = mix(vec3(0.13, 0.25, 0.10), vec3(0.27, 0.38, 0.17), crowns) * (0.9 + 0.2 * grain);
-            }
-            vec3 cell = floor(positionWC / 260.0);
-            float fieldTone = lmHash(cell + 7.0);
+            float crowns = lmNoiseTex(g.xy, ${f(P.crowns)}, gdx, gdy).b;
+            vec3 forest = mix(vec3(0.13, 0.25, 0.10), vec3(0.27, 0.38, 0.17), crowns) * (0.9 + 0.2 * grain);
+            float fieldTone = lmHash(floor(positionWC / 260.0) + 7.0);
             vec3 field = mix(vec3(0.50, 0.52, 0.28), vec3(0.72, 0.64, 0.40), fieldTone) * (0.9 + 0.2 * grain);
-            float block = lmHash(floor(positionWC / 24.0) + 11.0);
-            vec3 town = mix(vec3(0.46, 0.44, 0.42), vec3(0.58, 0.54, 0.50), block) * (0.9 + 0.15 * grain);
+            vec3 town = vec3(0.50, 0.48, 0.45) * (0.9 + 0.15 * grain);
             vec3 sand = mix(vec3(0.60, 0.56, 0.48), vec3(0.76, 0.66, 0.46), u_aridity) * (0.86 + 0.28 * grain);
             ground = mix(ground, sand, open * bareC);
             ground = mix(ground, field, open * crop);
@@ -407,95 +361,64 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
 
     // Nearer the camera, the detail tiles at two scales (2.5 m and 6.7 m periods), each fading
     // in by its size on screen, below a mottling that carries the zooms in between - so there
-    // is texture at every zoom and no scale ever pops in. Anchored to the
-    // ground, not the camera: the camera-relative position (precise) along an east/north/up
-    // frame the host anchors to the ground (re-anchored only when the camera has moved
-    // kilometres), plus the camera's own offset along that frame in tile periods - so the
-    // pattern stays put as the camera moves. Derivatives are taken here, outside any branch,
-    // as GLSL requires.
-    float dist = length(positionEC);
+    // is texture at every zoom and no scale ever pops in. On the ground frame plus the camera's
+    // own offset in tile periods, so the pattern stays put as the camera moves.
     float nearW = clamp(u_detail - 1.0, 0.0, 1.0) * smoothstep(12000.0, 3000.0, dist);
-    vec3 local = czm_inverseViewRotation * positionEC;
-    vec3 enu = vec3(dot(local, u_eastWC), dot(local, u_northWC), dot(local, u_upWC));
     vec3 q = enu / 2.5 + u_detailOffset;
     vec3 q1 = enu / 6.7 + u_detailOffset1 + 0.37;
     vec3 dqx = dFdx(q);
     vec3 dqy = dFdy(q);
-    // Screen pixels per metre of ground here, for the mottling's fade.
+    // Screen pixels per metre of ground here, for the fades below.
     float pxPerM = 1.0 / max(max(length(dqx), length(dqy)) / 2.5, 1e-6);
     if (nearW > 0.0 && u_detailOn > 0.5)
     {
-        // The tiles - grass, rock, sand or snow, whichever the rules above made this ground,
-        // the two nearest blended across their edge - projected along the three axes and
-        // blended by the surface normal (a sharp triplanar, so a face takes one projection).
-        // A multiplier about 1 on the colour the macro rules chose; it never changes what the
-        // ground is.
-        vec3 w = abs(vec3(dot(nW, u_eastWC), dot(nW, u_northWC), dot(nW, u_upWC)));
+        // A sharp triplanar: a face takes one projection.
+        vec3 w = abs(nF);
         w = w * w * w * w;
         w = w * w;
         w /= (w.x + w.y + w.z + 1e-5);
-        // Tile weights: snow, then rock on steep or alpine ground (and streets), sand on the
-        // shore, bare desert and arid open ground, grass (and the forest floor) for the rest.
+        // The surfaces' weights: snow, then rock on steep or alpine ground (and streets), sand
+        // on the shore, bare desert and arid open ground, grass (and the forest floor) for the rest.
         float wSnow = snowy;
         float wRock = (1.0 - snowy) * max(rocky, max(alpine * (1.0 - 0.6 * u_aridity), built));
         float wSand = (1.0 - snowy) * (1.0 - rocky) * max(shoreline, max(bareC, u_aridity * (1.0 - canopy)));
         float wGrass = (1.0 - snowy) * (1.0 - max(wRock, wSand));
-        // The two strongest tiles, blended by their weights.
-        float t1 = 0.0; float w1 = wGrass;
-        float t2 = 1.0; float w2 = wRock;
-        if (wSand > w1) { t2 = t1; w2 = w1; t1 = 2.0; w1 = wSand; } else if (wSand > w2) { t2 = 2.0; w2 = wSand; }
-        if (wRock > w1 && t1 != 1.0) { t2 = t1; w2 = w1; t1 = 1.0; w1 = wRock; }
-        if (wSnow > w1) { t2 = t1; w2 = w1; t1 = 3.0; w1 = wSnow; } else if (wSnow > w2) { t2 = 3.0; w2 = wSnow; }
-        float blend = w2 / max(w1 + w2, 1e-4);
-        // The same tiles at 6.7 m (shifted, and at a ratio that never lines up) and 2.5 m: two
-        // multipliers about 1, the finer a little stronger.
+        vec4 tiles = vec4(wGrass, wRock, wSand, wSnow);
+        tiles /= max(dot(tiles, vec4(1.0)), 1e-4);
         float k1 = 2.5 / 6.7;
-        vec3 d = lmDetailTier(q1, dqx * k1, dqy * k1, w, t1, t2, blend, 0.4 * nearW)
-               * lmDetailTier(q, dqx, dqy, w, t1, t2, blend, 0.55 * nearW);
-        ground *= d;
-    }
-    else if (nearW > 0.0)
-    {
-        float fineW = smoothstep(500.0, 60.0, dist);
-        vec3 local = czm_inverseViewRotation * positionEC / 2.5 + u_cameraFrac;
-        float fine = lmNoiseAt(local, u_cameraCell) * 0.6 + lmNoiseAt(local * 2.0 + 0.5, u_cameraCell * 2.0) * 0.3;
-        ground *= 1.0 + fineW * 0.3 * (fine - 0.45);
+        ground *= lmDetailTier(q1, dqx * k1, dqy * k1, w, tiles, 0.4 * nearW)
+                * lmDetailTier(q, dqx, dqy, w, tiles, 0.55 * nearW);
     }
 
-    // Mottling between the macro patches and the tiles: world-anchored value noise at 48 m,
-    // 12 m and 3 m cells, never repeating, each fading in as its cells grow past a few pixels
-    // on screen (and out again as they shrink, so it never aliases). The broad scale also
-    // shifts the hue - drier and yellower in its light patches - as real ground does.
-    // The 48 m and 12 m noise once, for the mottling, the town and the coast's jitter below
-    // (each inlined copy of the hash is a few dozen integer ops).
-    float n48 = lmNoiseI(enu / 48.0 + u_mottleFrac2, u_mottleCell2) - 0.5;
-    float n12 = lmNoiseI(enu / 12.0 + u_mottleFrac1, u_mottleCell1) - 0.5;
+    // Mottling between the macro patches and the tiles: value noise at 64, 16 and 4 m cells,
+    // each fading in as its cells grow past a few pixels on screen (the mip chain fades it out
+    // again as they shrink). The broad scale also shifts the hue - drier and yellower in its
+    // light patches - as real ground does. The coarser two also jitter the coast below.
+    float n64 = lmNoiseTex(g.xy, ${f(P.mottleCoarse)}, gdx, gdy).g - 0.5;
+    float n16 = lmNoiseTex(g.xy, ${f(P.mottleMid)}, gdx, gdy).a - 0.5;
     if (u_detail > 1.0)
     {
         float mW = clamp(u_detail - 1.0, 0.0, 1.0) * (1.0 - 0.6 * snowy);
-        float w2 = smoothstep(3.0, 10.0, pxPerM * 48.0);
-        float w1 = smoothstep(3.0, 10.0, pxPerM * 12.0);
-        float w0 = smoothstep(3.0, 10.0, pxPerM * 3.0);
-        float n2 = n48;
-        float n1 = n12;
-        float n0 = w0 > 0.0 ? lmNoiseI(enu / 3.0 + u_mottleFrac0, u_mottleCell0) - 0.5 : 0.0;
-        ground = mix(ground, ground * vec3(1.08, 1.03, 0.88), clamp(mW * w2 * n2 * 0.9, 0.0, 0.4));
-        ground *= 1.0 + mW * (0.26 * w2 * n2 + 0.2 * w1 * n1 + 0.14 * w0 * n0);
+        float w2 = smoothstep(3.0, 10.0, pxPerM * 64.0);
+        float w1 = smoothstep(3.0, 10.0, pxPerM * 16.0);
+        float w0 = smoothstep(3.0, 10.0, pxPerM * 4.0);
+        float n4 = lmNoiseTex(g.xy, ${f(P.mottleFine)}, gdx, gdy).g - 0.5;
+        ground = mix(ground, ground * vec3(1.08, 1.03, 0.88), clamp(mW * w2 * n64 * 0.9, 0.0, 0.4));
+        ground *= 1.0 + mW * (0.26 * w2 * n64 + 0.2 * w1 * n16 + 0.14 * w0 * n4);
     }
 
-    // Built-up ground close enough to read: a street grid on the mottling's ground-fixed 48 m
-    // cells along the place's east and north - blocks two cells long (48 x 96 m), every fourth
-    // street east-west and every third north-south a wider avenue - and inside each block lots
-    // of about 16 x 12 m, each a roof or yard of its own (grey, warm, a few pale roofs, a few
-    // trees), with one block in ten a park. It fades in as the blocks grow past a few pixels and
-    // the lots as they do; steep ground stays as it is. A pattern of a city, not its streets:
-    // the grid does not follow the real ones.
+    // Built-up ground close enough to read: a street grid on ground-fixed 48 m cells along the
+    // place's east and north - blocks two cells long (48 x 96 m), every fourth street east-west
+    // and every third north-south a wider avenue - and inside each block lots of about 16 x 12 m,
+    // each a roof or yard of its own (grey, warm, a few pale roofs, a few trees), with one block
+    // in ten a park. It fades in as the blocks grow past a few pixels and the lots as they do;
+    // steep ground stays as it is. A pattern of a city, not its streets.
     float townW = known * built * (1.0 - snowy) * (1.0 - rocky) * smoothstep(4.0, 12.0, pxPerM * 48.0);
     if (townW > 0.0)
     {
-        vec2 bq = enu.xy / 48.0 + u_mottleFrac2.xy;
+        vec2 bq = enu.xy / 48.0 + u_townFrac.xy;
         vec2 bf = fract(bq);
-        vec2 bi = floor(bq) + u_mottleCell2.xy;
+        vec2 bi = floor(bq) + u_townCell.xy;
         // Along north the blocks pair cells: where in the pair, and which street line is nearest.
         float pairY = floor(bi.y * 0.5);
         float fy = (bi.y - 2.0 * pairY + bf.y) * 0.5;
@@ -508,18 +431,17 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         float aa = 1.0 / max(pxPerM, 1e-3);                // a pixel, in metres
         float street = max(1.0 - smoothstep(halfX - aa, halfX + aa, ex),
                            1.0 - smoothstep(halfY - aa, halfY + aa, ey));
-        vec2 blockId = vec2(bi.x, pairY);
-        float park = step(0.9, lmHashI(vec3(blockId, 7.0)));
+        float park = step(0.9, lmHashI(vec3(bi.x, pairY, 7.0)));
         // Lots: three across a cell, four along it, numbered on the same ground-fixed lattice.
         vec2 lotId = bi * vec2(3.0, 4.0) + floor(bf * vec2(3.0, 4.0));
         float lot = lmHashI(vec3(lotId, 5.0));
         float kind = fract(lot * 7.31);
         vec3 roof = mix(vec3(0.40, 0.39, 0.38), vec3(0.60, 0.56, 0.50), lot);
         roof = mix(roof, vec3(0.74, 0.73, 0.71), step(0.9, kind));                       // pale roofs
-        roof = mix(roof, vec3(0.20, 0.29, 0.15) * (0.85 + 0.6 * n12), step(kind, 0.16)); // trees
+        roof = mix(roof, vec3(0.20, 0.29, 0.15) * (0.85 + 1.2 * n16), step(kind, 0.16)); // trees
         float lotW = smoothstep(3.0, 8.0, pxPerM * 12.0);
         vec3 block = mix(vec3(0.50, 0.48, 0.45), roof, lotW);
-        vec3 green = vec3(0.24, 0.34, 0.18) * (0.85 + 0.5 * n12);
+        vec3 green = vec3(0.24, 0.34, 0.18) * (0.85 + n16);
         block = mix(block, green, park);
         vec3 city = mix(block, vec3(0.31, 0.31, 0.32), street);
         ground = mix(ground, city, townW * 0.8);
@@ -533,13 +455,13 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         * max(rocky, alpine * 0.7) * (1.0 - snowy) * smoothstep(6000.0, 800.0, dist);
     if (reliefW > 0.0)
     {
-        // Forward differences from the grain already in hand: two more samples, not four.
-        float e = 6.0 / 60.0;
-        vec3 pe = positionWC / 60.0 + 5.0;
-        float gx = lmFbm(pe + vec3(e, 0.0, 0.0)) - grain;
-        float gy = lmFbm(pe + vec3(0.0, e, 0.0)) - grain;
-        // The gradient is in world axes; read it as east/north in the surface frame (the
-        // difference is a rotation of a random field, which changes nothing a viewer can tell).
+        // Forward differences of the grain on its own plane: two more samples.
+        vec2 pr = mix(g.xy, gv, step(0.5, vert));
+        vec2 prdx = mix(gdx, gvdx, step(0.5, vert));
+        vec2 prdy = mix(gdy, gvdy, step(0.5, vert));
+        float g0 = lmNoiseTex(pr, ${f(P.grain)}, prdx, prdy).r;
+        float gx = lmNoiseTex(pr + vec2(6.0, 0.0), ${f(P.grain)}, prdx, prdy).r - g0;
+        float gy = lmNoiseTex(pr + vec2(0.0, 6.0), ${f(P.grain)}, prdx, prdy).r - g0;
         vec3 bumpEC = normalize(materialInput.normalEC + materialInput.tangentToEyeMatrix * vec3(-gx * 2.5, -gy * 2.5, 0.0));
         float flat_ = max(dot(materialInput.normalEC, czm_lightDirectionEC), 0.0);
         float bumped = max(dot(bumpEC, czm_lightDirectionEC), 0.0);
@@ -547,17 +469,14 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     }
 
     // Broken cloud: patches of shadow the size of cumulus (a kilometre or two) drifting with the
-    // planner's clock, over everything but water. A dappling of the albedo - the direct light's
-    // direction, the terrain shadows and the sky are untouched; the patches are a pattern, not
-    // the forecast's own clouds.
+    // planner's clock toward the north-east at ~ 200 m/min, over everything but water. A
+    // dappling of the albedo - the light's direction, the terrain shadows and the sky are
+    // untouched; the patches are a pattern, not the forecast's own clouds.
     if (u_cloudShadow > 0.0 && u_detail > 0.0)
     {
-        // The patches move with the planner's clock toward the north-east at ~ 200 m/min (a
-        // 12 km/h wind - a pattern, not the forecast's wind), along the place's own east and
-        // north; sampling at position - drift moves the pattern with +drift. They fade toward
-        // the horizon, where their finest octave would only shimmer.
-        vec3 drift = (eastW * 190.0 + northW * 60.0) * u_cloudTime;
-        float cloud = lmFbm((positionWC - drift) / 1400.0 + 13.0);
+        vec2 pc = g.xy - vec2(190.0, 60.0) * u_cloudTime;
+        float cloud = 0.7 * lmNoiseTex(pc, ${f(P.clouds)}, gdx, gdy).r
+                    + 0.3 * lmNoiseTex(vec2(pc.y, -pc.x), ${f(P.clouds / 2)}, vec2(gdx.y, -gdx.x), vec2(gdy.y, -gdy.x)).b;
         float shade = smoothstep(0.38, 0.62, cloud) * smoothstep(80000.0, 15000.0, dist);
         ground *= 1.0 - 0.45 * u_cloudShadow * clamp(u_detail, 0.0, 1.0) * shade;
     }
@@ -573,47 +492,36 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     material.diffuse = ground * u_brightness;
     // Rock and snow are what they are; open ground lets real imagery's own hue through. Over
     // the bundled coarse basemap the paint is all but opaque on land: that map's 500 m pixels
-    // put sea and lakes well onto the land near every coast, and at 25 % through the paint
-    // they read as blue blocks on the ground.
+    // put sea and lakes well onto the land near every coast.
     float cover = max(rocky, max(snowy, max(alpine * 0.8, known * 0.9)));
     float alpha = u_strength * mix(mix(0.75, 0.95, cover), 0.985, u_coarseBasemap);
 #ifdef HAS_WATER_MASK
-    // Water, from the terrain's own mask - but the mask arrives with coarse tiles and is
-    // upsampled for finer ones, so its edge runs in 50-100 m stair steps across the coast.
-    // The terrain knows better: a water surface in the elevation model is flat to a fraction
-    // of a degree, so where the mask lies on ground that slopes even a degree the ground wins
-    // and the coast follows the terrain. (Height is no guide: sea level here is an estimate
-    // good to several metres, and a cut on it dropped whole harbours.)
-    // Along the mask's soft, stepped edge the threshold is jittered by ground-fixed noise, so
-    // the shore reads as an irregular line rather than a staircase of blurred squares.
+    // Water, from the terrain's own mask - which arrives with coarse tiles and is upsampled for
+    // finer ones, so its edge runs in 50-100 m stair steps. A water surface in the elevation
+    // model is flat to a fraction of a degree, so where the mask lies on ground that slopes even
+    // a degree the ground wins. Along the mask's soft edge the threshold is jittered by
+    // ground-fixed noise, so the shore reads as an irregular line rather than a staircase.
     float m = materialInput.waterMask;
-    float mJitter = smoothstep(0.3, 0.7, m
-        + 0.5 * n48
-        + 0.3 * n12
-        // From further out the mask's tiles are coarser and their steps longer: a broader
-        // jitter (~ 350 m, world-anchored) takes over with distance.
-        + 0.7 * smoothstep(2000.0, 20000.0, dist) * (lmFbm(positionWC / 350.0 + 17.0) - 0.47));
+    float mJitter = smoothstep(0.3, 0.7, m + 0.5 * n64 + 0.3 * n16
+        + 0.7 * smoothstep(2000.0, 20000.0, dist) * (lmNoiseTex(g.xy, ${f(P.coast)}, gdx, gdy).r - 0.47));
     m = mix(m, mJitter, step(0.02, m) * step(m, 0.98));
     float water = m * (1.0 - smoothstep(0.008, 0.025, slope));
-    // On water the paint is a deep sea colour (a little mottled, greyer toward the horizon)
-    // over most of Cesium's own water shading - whose wave highlight, under HDR, turned every
-    // bay and pond a flat bright cyan - leaving a fifth of it for the Sun's glint and waves.
+    // On water the paint is a deep sea colour (a little mottled, greyer toward the horizon) over
+    // most of Cesium's own water shading, leaving some for the Sun's glint and waves.
     if (water > 0.0)
     {
         vec3 sea = mix(vec3(0.05, 0.17, 0.25), vec3(0.08, 0.24, 0.30), patches);
         sea = mix(sea, vec3(0.10, 0.17, 0.24), smoothstep(2000.0, 40000.0, dist));
         material.diffuse = mix(material.diffuse, sea * u_brightness, water);
         // Water seen at a grazing angle is a mirror (Fresnel): toward the horizon the paint
-        // gives way to the globe's own water shading - the sky's light and the Sun's glint path,
-        // the picture at a sunrise over the sea - and holds only looking down into it.
+        // gives way to the globe's own water shading - the sky's light and the Sun's glint.
         float cosView = clamp(dot(materialInput.normalEC, normalize(materialInput.positionToEyeEC)), 0.0, 1.0);
         float fresnel = pow(1.0 - cosView, 3.0);
         alpha = mix(alpha, 0.8 * u_strength * (1.0 - 0.8 * fresnel), water);
     }
 #endif
-    // From orbit the bundled basemap is the better picture of the Earth (the procedural ground
-    // is made for a few kilometres around a place, and the water mask's level-0 tiles are
-    // blocky continents): the paint fades out between 150 and 600 km from the camera.
+    // From orbit the bundled basemap is the better picture of the Earth: the paint fades out
+    // between 150 and 600 km from the camera.
     alpha *= 1.0 - smoothstep(150000.0, 600000.0, dist);
     material.alpha = alpha;
     return material;
