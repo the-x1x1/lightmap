@@ -25,6 +25,8 @@ import type { CapabilitiesResponse } from '@/lib/api-types';
 export const GROUND_DETAIL_ATLAS_URL = '/textures/ground-detail.png';
 /** Bundled place and country names for the globe (Natural Earth, `pnpm labels:places`). */
 export const PLACE_LABELS_URL = '/data/place-labels.json';
+/** Bundled built-up areas (Natural Earth urban areas, `pnpm urban:areas`), painted with no land-cover source. */
+export const URBAN_AREAS_URL = '/data/urban';
 
 export interface RendererHandle {
   mode: '3D' | 'OVERLAY' | 'loading';
@@ -97,6 +99,7 @@ export function useRenderer(opts: UseRendererOptions): RendererHandle {
           // Texture pack stage 3: the bundled detail atlas for a viewpoint's foreground.
           groundDetailAtlasUrl: GROUND_DETAIL_ATLAS_URL,
           placeLabelsUrl: PLACE_LABELS_URL,
+          urbanAreasUrl: URBAN_AREAS_URL,
           ...(opts.ionToken ? { ionToken: opts.ionToken } : {}),
           onError: (message, error) => {
             console.warn('[renderer]', message, error);

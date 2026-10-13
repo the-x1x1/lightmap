@@ -334,7 +334,7 @@ describe('confidence and source mode', () => {
         realReference: false,
       });
     expect(note(envCoarse).notes.environment).toMatch(
-      /; ground painted by rule \(no land-cover data\)$/,
+      /; ground painted by rule, towns from Natural Earth urban areas \(no land-cover data\)$/,
     );
     const wc = note({ ...envCoarse, landCover: 'worldcover' });
     expect(wc.notes.environment).toMatch(/; ground painted from ESA WorldCover land cover$/);

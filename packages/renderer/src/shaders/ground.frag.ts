@@ -479,6 +479,25 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         ground *= 1.0 + mW * (0.26 * w2 * n2 + 0.2 * w1 * n1 + 0.14 * w0 * n0);
     }
 
+    // Built-up ground close enough to read: city blocks on a ~48 m grid (the mottling's own
+    // ground-fixed cells along the place's east and north), each a tone of its own — roofs,
+    // lots, pavement — with darker streets between, fading in as the blocks grow past a few
+    // pixels. A pattern of a city, not its streets: the grid does not follow the real ones.
+    float townW = known * built * (1.0 - snowy) * smoothstep(4.0, 12.0, pxPerM * 48.0);
+    if (townW > 0.0)
+    {
+        vec2 bq = enu.xy / 48.0 + u_mottleFrac2.xy;
+        vec2 bf = fract(bq);
+        vec2 bi = floor(bq) + u_mottleCell2.xy;
+        float tone = lmHashI(vec3(bi, 3.0));
+        vec3 block = mix(vec3(0.42, 0.41, 0.40), vec3(0.66, 0.60, 0.52), tone);
+        block = mix(block, vec3(0.30, 0.40, 0.24), step(0.86, lmHashI(vec3(bi, 7.0))));  // a park
+        float edge = min(min(bf.x, 1.0 - bf.x), min(bf.y, 1.0 - bf.y));
+        float street = 1.0 - smoothstep(0.04, 0.09, edge);
+        vec3 city = mix(block, vec3(0.30, 0.30, 0.31), street);
+        ground = mix(ground, city, townW * 0.85);
+    }
+
     // Micro-relief: the grain read as small bumps, lit by the scene's own Sun direction, so rock
     // and scree show texture that turns with the light through the day. A shading of the albedo
     // only (the mesh, its normals and the shadows are untouched), strongest on bare ground, gone

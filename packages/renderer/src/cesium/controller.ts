@@ -440,7 +440,8 @@ export class SceneController {
    * (0.05°) — the map reaches 12 km, so a pan inside it keeps the same read.
    */
   private async refreshLandCover(scene: SceneState): Promise<void> {
-    if (this.lastLandCover === null || this.lastLandCover.includes('"kind":"none"')) return;
+    // With no source the host still paints the bundled urban areas (if it has them).
+    if (this.lastLandCover === null) return;
     const key = `${(Math.round(scene.location.point.latitude * 20) / 20).toFixed(2)},${(Math.round(scene.location.point.longitude * 20) / 20).toFixed(2)}`;
     if (key === this.landCoverKey) return;
     this.landCoverKey = key;

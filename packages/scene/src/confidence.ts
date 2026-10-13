@@ -53,7 +53,7 @@ export function deriveConfidence(input: ConfidenceInput): ConfidenceState {
         ? '; ground painted from ESA WorldCover land cover'
         : input.environment.landCover === 'copernicus'
           ? '; ground painted from Copernicus land cover'
-          : '; ground painted by rule (no land-cover data)';
+          : '; ground painted by rule, towns from Natural Earth urban areas (no land-cover data)';
   const envNote =
     (environment === 'HIGH'
       ? 'Real terrain with detailed imagery and OSM buildings where mapped'

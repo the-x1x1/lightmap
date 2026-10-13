@@ -38,7 +38,14 @@ import {
   GROUND_MATERIAL_TYPE,
   GROUND_UNIFORM_DEFAULTS,
 } from '../shaders/ground.frag.ts';
-import { coverMapFromPixels, coverMosaicFor, tileUrl } from '../land-cover.ts';
+import { coverMapFromPixels, coverMosaicFor, packCover, tileUrl } from '../land-cover.ts';
+import {
+  decodeUrbanCell,
+  mosaicBox,
+  mosaicPixel,
+  urbanCellsFor,
+  type UrbanPolygon,
+} from '../urban-areas.ts';
 import { pickSurface } from '../pick.ts';
 import type { Vec3 } from '../sun-vector.ts';
 import type {
@@ -74,6 +81,11 @@ export interface CesiumHostOptions {
   groundDetailAtlasUrl?: string;
   /** URL of the bundled place labels (`place-labels.json`); absent, the globe carries no names. */
   placeLabelsUrl?: string;
+  /**
+   * Base URL of the bundled urban-area cells (`data/urban/`): with no land-cover source, the
+   * ground texture paints these as built-up ground. Absent, nothing is.
+   */
+  urbanAreasUrl?: string;
   onError?: (message: string, error: unknown) => void;
 }
 
@@ -115,6 +127,9 @@ export class CesiumSceneHost implements SceneHost {
   private coverCanvas: HTMLCanvasElement | null = null;
   private coverLoadSeq = 0;
   private readonly detailAtlasUrl: string | undefined;
+  private readonly urbanAreasUrl: string | undefined;
+  private urbanIndex: Promise<Set<string> | null> | null = null;
+  private readonly urbanCells = new Map<string, Promise<UrbanPolygon[]>>();
   private readonly enuScratch: {
     east: Cesium.Cartesian3;
     north: Cesium.Cartesian3;
@@ -177,6 +192,7 @@ export class CesiumSceneHost implements SceneHost {
     this.onError = options.onError;
     this.ionToken = options.ionToken;
     this.detailAtlasUrl = options.groundDetailAtlasUrl;
+    this.urbanAreasUrl = options.urbanAreasUrl?.replace(/\/$/, '');
     this.eyeUpScratch = new C.Cartesian3();
     this.enuScratch = {
       east: new C.Cartesian3(),
@@ -948,6 +964,84 @@ export class CesiumSceneHost implements SceneHost {
     if (token) this.C.Ion.defaultAccessToken = token;
   }
 
+  /**
+   * With no land-cover source: the bundled urban areas around the pin, filled into a cover map
+   * as built-up ground (everything else stays unknown, so the procedural rules hold there).
+   */
+  private async loadUrbanAround(p: GeoPoint): Promise<LandCoverReading | null> {
+    const base = this.urbanAreasUrl;
+    if (!base || this.destroyed) return null;
+    const seq = ++this.coverLoadSeq;
+    this.urbanIndex ??= fetch(`${base}/index.json`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: unknown) =>
+        j && typeof j === 'object' && Array.isArray((j as { cells?: unknown }).cells)
+          ? new Set(
+              (j as { cells: unknown[] }).cells.filter((c): c is string => typeof c === 'string'),
+            )
+          : null,
+      )
+      .catch(() => null);
+    const index = await this.urbanIndex;
+    if (!index) {
+      this.urbanIndex = null; // try again next time
+      return null;
+    }
+    const mosaic = coverMosaicFor(p, 12);
+    const keys = urbanCellsFor(mosaicBox(mosaic)).filter((k) => index.has(k));
+    const polys: UrbanPolygon[] = [];
+    for (const key of keys) {
+      let cell = this.urbanCells.get(key);
+      if (!cell) {
+        cell = fetch(`${base}/${key}.json`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((j: unknown) => decodeUrbanCell(j, key))
+          .catch(() => []);
+        this.urbanCells.set(key, cell);
+      }
+      polys.push(...(await cell));
+    }
+    if (this.destroyed || seq !== this.coverLoadSeq) return null;
+    const TILE = 256;
+    const width = (mosaic.x1 - mosaic.x0 + 1) * TILE;
+    const height = (mosaic.y1 - mosaic.y0 + 1) * TILE;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return null;
+    const [r, g, b] = packCover('built');
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
+    for (const poly of polys) {
+      ctx.beginPath();
+      for (const ring of poly) {
+        ring.forEach(([lon, lat], i) => {
+          const [x, y] = mosaicPixel(mosaic, width, height, lon, lat);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.closePath();
+      }
+      ctx.fill('evenodd');
+    }
+    // The share of the map that is built up, for the reading (alpha marks known texels).
+    const data = ctx.getImageData(0, 0, width, height).data;
+    let built = 0;
+    for (let i = 3; i < data.length; i += 4) if ((data[i] ?? 0) >= 128) built++;
+    const share = built / (width * height);
+    if (this.destroyed || seq !== this.coverLoadSeq) return null;
+    this.coverCanvas = share > 0 ? canvas : null;
+    this.coverBounds =
+      share > 0 ? [mosaic.westRad, mosaic.eastRad, mosaic.northMerc, mosaic.southMerc] : null;
+    this.applyCoverMap();
+    const rounded = Math.round(share * 1000) / 1000;
+    return {
+      known: rounded,
+      shares: rounded > 0 ? { built: rounded } : {},
+      metresPerPixel: mosaic.metresPerPixel,
+    };
+  }
+
   setLandCover(d: LandCoverDescriptor): void {
     if (JSON.stringify(d) === JSON.stringify(this.landCover)) return;
     this.landCover = d;
@@ -1168,6 +1262,7 @@ export class CesiumSceneHost implements SceneHost {
   async loadLandCoverAround(p: GeoPoint): Promise<LandCoverReading | null> {
     const d = this.landCover;
     const url = d.url;
+    if (d.kind === 'none') return this.loadUrbanAround(p);
     if (d.kind !== 'xyz' || !url || this.destroyed) return null;
     const seq = ++this.coverLoadSeq;
     const mosaic = coverMosaicFor(p, d.maxZoom ?? 12);
