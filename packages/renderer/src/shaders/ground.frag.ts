@@ -534,7 +534,9 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // the shore reads as an irregular line rather than a staircase of blurred squares.
     float m = materialInput.waterMask;
     if (m > 0.02 && m < 0.98)
-        m = smoothstep(0.3, 0.7, m + 0.45 * (lmNoiseI(enu / 12.0 + u_mottleFrac1, u_mottleCell1) - 0.5));
+        m = smoothstep(0.3, 0.7, m
+            + 0.5 * (lmNoiseI(enu / 48.0 + u_mottleFrac2, u_mottleCell2) - 0.5)
+            + 0.3 * (lmNoiseI(enu / 12.0 + u_mottleFrac1, u_mottleCell1) - 0.5));
     float water = m * (1.0 - smoothstep(0.008, 0.025, slope));
     // On water the paint is a deep sea colour (a little mottled, greyer toward the horizon)
     // over most of Cesium's own water shading — whose wave highlight, under HDR, turned every
