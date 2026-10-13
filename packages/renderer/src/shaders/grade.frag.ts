@@ -184,8 +184,14 @@ void main() {
     float storedDepth = texture(depthTexture, v_textureCoordinates).r;
     vec4 eyePos = czm_windowToEyeCoordinates(v_textureCoordinates * czm_viewport.zw, storedDepth);
     float distM = length(eyePos.xyz / eyePos.w);
-    float visibilityM = 4000.0 * pow(20.0, 1.0 - clamp(u_haze, 0.0, 1.0)) / (1.0 + 2.0 * u_horizonHaze);
-    float dist = 1.0 - exp(-3.0 * distM / visibilityM);
+    // Haze lives near the ground: along a path that climbs out of it (a camera looking down
+    // from above) the optical depth is that of an exponential layer with a 1 km scale height,
+    // not of the whole distance at ground density.
+    float visibilityM = 4000.0 * pow(20.0, 1.0 - clamp(u_haze, 0.0, 1.0))
+        / (1.0 + 2.0 * max(0.0, u_horizonHaze - u_haze));
+    float dh = -dot(rayEC, u_eyeUpEC) * distM;   // how far the path descends, metres
+    float layer = abs(dh) < 1.0 ? 1.0 : 1000.0 * (1.0 - exp(-abs(dh) / 1000.0)) / abs(dh);
+    float dist = 1.0 - exp(-3.0 * distM * layer / visibilityM);
     vec3 hazeCol = mix(vec3(0.72, 0.78, 0.86), vec3(0.6, 0.62, 0.66), u_cloudOpacity);
     hazeCol = mix(hazeCol, hazeCol * u_tint, 0.5 * (1.0 - u_cloudOpacity));
     hazeCol = mix(hazeCol, vec3(0.05, 0.06, 0.1), u_nightFactor);
