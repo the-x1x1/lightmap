@@ -627,7 +627,9 @@ export class CesiumSceneHost implements SceneHost {
     g['u_sunVisible'] = u.u_sunVisible;
     // PostProcessStage copies uniform values on assignment; write them through.
     const target = this.grade.uniforms as Record<string, unknown>;
-    for (const key of Object.keys(g)) target[key] = g[key];
+    // Function uniforms (evaluated per frame) become read-only properties once the stage holds
+    // them; only the values are written through.
+    for (const key of Object.keys(g)) if (typeof g[key] !== 'function') target[key] = g[key];
   }
 
   setCamera(c: HostCamera): void {
