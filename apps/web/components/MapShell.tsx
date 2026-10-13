@@ -283,7 +283,8 @@ export function MapShell() {
               aria-hidden
               className="inline-block h-3 w-3 rounded-full bg-[var(--lm-sun)] shadow-[0_0_12px_var(--lm-sun)]"
             />
-            {brand.name}
+            {/* On a phone the mark alone, so the search box has room for its prompt. */}
+            <span className="hidden sm:inline">{brand.name}</span>
           </a>
           <div className="pointer-events-auto flex-1 max-w-xl">
             {/* With no pin yet the search box carries the invitation; nothing sits over the globe. */}
@@ -291,7 +292,7 @@ export function MapShell() {
               placeholder={
                 location
                   ? undefined
-                  : 'Where will you shoot? Search a place, paste coordinates, or tap the globe'
+                  : 'Where will you shoot? Search, paste coordinates or tap the globe'
               }
             />
           </div>
