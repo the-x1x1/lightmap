@@ -22,6 +22,7 @@ import { createDetailTexture, createNoiseTexture, type DetailTileCesium } from '
 import { NOISE_TEXTURE_SIZE, makeNoiseTexture } from '../noise-texture.ts';
 import { FrameRateSampler } from '../frame-sampler.ts';
 import { geoidCellKey, geoidHeightM } from '../geoid.ts';
+import { GLOBE_MASK_SAMPLE_LINE, patchGlobeFragmentSource } from '../water-mask.ts';
 import { clearOrbitPitch, orbitSightLine, steeperPitches } from '../camera-math.ts';
 import {
   countryDistanceBandM,
@@ -260,6 +261,25 @@ export class CesiumSceneHost implements SceneHost {
     globe.tileCacheSize = 1000;
     globe.preloadSiblings = true;
     globe.preloadAncestors = true;
+    // The terrain's water mask, read through a small blur so its magnified texels draw a
+    // coastline rather than a staircase (`water-mask.ts`): a patch to the surface shader set's
+    // GlobeFS source, before any of its programs is built.
+    {
+      const set = (
+        globe as unknown as {
+          _surface?: {
+            tileProvider?: {
+              _surfaceShaderSet?: { baseFragmentShaderSource?: { sources?: string[] } };
+            };
+          };
+        }
+      )._surface?.tileProvider?._surfaceShaderSet?.baseFragmentShaderSource;
+      const sources = set?.sources;
+      const i = sources?.findIndex((src) => src.includes(GLOBE_MASK_SAMPLE_LINE)) ?? -1;
+      const patched = sources && i >= 0 ? patchGlobeFragmentSource(sources[i]!) : null;
+      if (sources && patched) sources[i] = patched;
+      else options.onError?.('Water mask smoothing unavailable (Cesium shader changed)', null);
+    }
     globe.baseColor = new C.Color(0.16, 0.18, 0.2, 1);
     scene.backgroundColor = new C.Color(0.02, 0.03, 0.05, 1);
     scene.atmosphere.dynamicLighting = C.DynamicAtmosphereLightingType.SCENE_LIGHT;
