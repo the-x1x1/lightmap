@@ -26,6 +26,7 @@ import {
 } from '../ground-texture.ts';
 import { lightingFromScene, type LightingParameters } from '../lighting.ts';
 import { enuTowardSun, enuToEcef } from '../sun-vector.ts';
+import { seaProbePoints, seaSurfaceFromSamples } from '../geoid.ts';
 import type {
   HostCamera,
   HostGlobeShading,
@@ -474,7 +475,19 @@ export class SceneController {
     const orthometric = scene.location.point.elevationM ?? scene.environment.groundElevationM;
     const measured =
       h !== null && orthometric !== null && orthometric !== undefined ? h - orthometric : null;
-    const seaLevel = geoid ?? measured ?? 0;
+    // With the geoid, the sea as the terrain itself has it nearby (the coast rule works within
+    // a metre or so of it, finer than the geoid's own accuracy).
+    let seaLevel = measured ?? 0;
+    if (geoid !== null) {
+      const probe = await this.host
+        .sampleGroundHeights(
+          seaProbePoints(scene.location.point.latitude, scene.location.point.longitude),
+          13,
+        )
+        .catch(() => null);
+      if (this.groundHeightKey !== key || this.host.isDestroyed()) return;
+      seaLevel = probe ? seaSurfaceFromSamples(geoid, probe) : geoid;
+    }
     // Rounded to decimetres: the coast rule works within a metre or two of sea level.
     const seaLevelRounded = Math.round(Math.max(-120, Math.min(120, seaLevel)) * 10) / 10;
     const known = geoid !== null || measured !== null;

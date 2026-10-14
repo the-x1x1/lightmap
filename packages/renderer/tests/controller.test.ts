@@ -175,6 +175,9 @@ describe('SceneController', () => {
   it('takes sea level from the geoid when the place has no known height above sea level', async () => {
     const { host, calls } = fakeHost();
     host.sampleSeaLevel = async () => 14.86;
+    // The terrain's own sea nearby sits 0.8 m above the geoid; the rest is land.
+    host.sampleGroundHeights = async (pts: readonly unknown[]) =>
+      pts.map((_, i) => (i % 4 === 0 ? 15.66 : 30));
     const c = new SceneController(host, {
       setTimeoutImpl: () => 0,
       clearTimeoutImpl: () => {},
@@ -187,7 +190,7 @@ describe('SceneController', () => {
     );
     await new Promise((r) => setTimeout(r, 0));
     const g = calls['setGroundTexture']!.at(-1)![0] as { seaLevelM: number; shore: number };
-    expect(g.seaLevelM).toBe(14.9);
+    expect(g.seaLevelM).toBe(15.7);
     expect(g.shore).toBe(1);
     c.destroy();
   });

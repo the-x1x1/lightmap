@@ -48,3 +48,46 @@ export function geoidHeightM(
   const bottom = at(r0 + 1, c0) * (1 - fx) + at(r0 + 1, c0 + 1) * fx;
   return top * (1 - fy) + bottom * fy;
 }
+
+/**
+ * Points on rings around a place (1.5 km and 5 km, 16 each) where the controller samples the
+ * terrain to find the sea's own surface near it.
+ */
+export function seaProbePoints(
+  lat: number,
+  lon: number,
+): Array<{ latitude: number; longitude: number }> {
+  const out: Array<{ latitude: number; longitude: number }> = [];
+  const mPerDegLat = 111_320;
+  const mPerDegLon = Math.max(1, 111_320 * Math.cos((lat * Math.PI) / 180));
+  for (const r of [1500, 5000])
+    for (let k = 0; k < 16; k++) {
+      const a = (k / 16) * 2 * Math.PI;
+      out.push({
+        latitude: Math.max(-89.9, Math.min(89.9, lat + (r * Math.cos(a)) / mPerDegLat)),
+        longitude: lon + (r * Math.sin(a)) / mPerDegLon,
+      });
+    }
+  return out;
+}
+
+/**
+ * The sea's surface near a place, in the terrain's own heights: the geoid, corrected by what
+ * the terrain shows where it is lowest nearby. The geoid is good to about a metre against real
+ * sea level and the terrain's sea surface differs again (Waikiki: +0.8 m), while the beach is
+ * only a metre or two above it — so the coast rule needs the sea as the terrain has it. Of the
+ * samples within a few metres of the geoid (the sea, or a low coastal plain), the second lowest
+ * (one stray pit ignored); the geoid alone when fewer than two qualify.
+ */
+export function seaSurfaceFromSamples(
+  geoidM: number,
+  heights: ReadonlyArray<number | null>,
+): number {
+  const near = heights
+    .filter((h): h is number => h !== null && Number.isFinite(h))
+    .map((h) => h - geoidM)
+    .filter((d) => d >= -4 && d <= 3)
+    .sort((a, b) => a - b);
+  if (near.length < 2) return geoidM;
+  return geoidM + Math.max(-3, Math.min(3, near[1]!));
+}

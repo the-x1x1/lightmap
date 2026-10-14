@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { geoidCellKey, geoidHeightM } from '../src/geoid.ts';
+import { geoidCellKey, geoidHeightM, seaProbePoints, seaSurfaceFromSamples } from '../src/geoid.ts';
 
 const cell = (key: string) => {
   const b = readFileSync(
@@ -43,5 +43,30 @@ describe('geoid', () => {
   it('refuses bytes of the wrong size or a point outside the cell', () => {
     expect(geoidHeightM(new ArrayBuffer(10), '0_0', 1, 1)).toBeNull();
     expect(geoidHeightM(cell('0_0'), '0_0', 45, 1)).toBeNull();
+  });
+});
+
+describe('sea surface near a place', () => {
+  it('probes two rings around the place', () => {
+    const pts = seaProbePoints(21.28, -157.83);
+    expect(pts).toHaveLength(32);
+    const d = (p: { latitude: number; longitude: number }) =>
+      Math.hypot(
+        (p.latitude - 21.28) * 111_320,
+        (p.longitude + 157.83) * 111_320 * Math.cos(0.3714),
+      );
+    expect(d(pts[0]!)).toBeCloseTo(1500, -1);
+    expect(d(pts[16]!)).toBeCloseTo(5000, -1);
+  });
+
+  it('takes the sea as the terrain has it near the geoid, ignoring land and one stray pit', () => {
+    // Waikiki: geoid 15.0, sea in the terrain +0.8, beach +2.3, the city +3 to +8.
+    expect(seaSurfaceFromSamples(15, [15.8, 15.8, 15.9, 17.3, 18.2, 23, null, 9.5])).toBeCloseTo(
+      15.8,
+      5,
+    );
+    // Inland: nothing near sea level, the geoid stands.
+    expect(seaSurfaceFromSamples(15, [120, 300, null])).toBe(15);
+    expect(seaSurfaceFromSamples(15, [15.8])).toBe(15);
   });
 });
