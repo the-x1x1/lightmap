@@ -15,3 +15,10 @@ apps/web/playwright-report/
 .DS_Store
 *.log
 .vercel
+
+# Desktop app build output
+apps/desktop/**/bin/
+apps/desktop/**/obj/
+apps/desktop/publish/
+apps/desktop/stage/
+apps/desktop/installer/Output/

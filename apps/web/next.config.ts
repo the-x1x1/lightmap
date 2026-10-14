@@ -55,7 +55,21 @@ const securityHeaders = [
   { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
 ];
 
+/**
+ * The Windows desktop app (apps/desktop) runs this server from Next's standalone output with its
+ * own node.exe: `LIGHTMAP_DESKTOP=1 pnpm --filter @lightmap/web build`. Tracing starts at the
+ * workspace root so the workspace's packages and hoisted dependencies are found. The ordinary
+ * build is unchanged.
+ */
+const desktop = process.env.LIGHTMAP_DESKTOP === '1';
+
 const nextConfig: NextConfig = {
+  ...(desktop
+    ? {
+        output: 'standalone' as const,
+        outputFileTracingRoot: fileURLToPath(new URL('../../', import.meta.url)),
+      }
+    : {}),
   reactStrictMode: true,
   poweredByHeader: false,
   transpilePackages: [

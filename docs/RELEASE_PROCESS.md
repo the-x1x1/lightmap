@@ -77,14 +77,17 @@ approval):
    or fewer than twelve frames, a warning when the frames carry no air temperature — a cache
    older than key v3); any `FAIL` stops the release, warnings (no billing, no database,
    bracketed legal placeholders) are printed;
-6. GitHub release with generated notes.
+6. the GitHub release is published by `desktop.yml`, not here: it builds the Windows installer
+   from the same tag, smoke-tests it built and installed, attaches `LightMap-Setup-X.Y.Z.exe` and
+   its `.sha256`, takes the notes from this version's `CHANGELOG.md` section, and only then marks
+   the release latest. Installed desktop copies pick it up from there by themselves (§5b).
 
 Order matters: migrate before deploy so the new code never meets an old schema; migrations must
 therefore be backward compatible with the previous release for the minutes both may run.
 
 Until a production host exists, steps 3 and 5 are skipped (the workflow checks whether the
 `DATABASE_URL` secret and `NEXT_PUBLIC_APP_URL` variable are set on the `production` environment
-and prints a notice instead), so tagging still produces a GitHub release from a fully gated build.
+and prints a notice instead); the GitHub release and its installer come from `desktop.yml` either way.
 Set both in _Settings → Environments → production_ when the host is ready.
 
 ### 5a. Running a release on one machine (no database)
@@ -104,6 +107,17 @@ corepack pnpm@10.28.0 --filter @lightmap/web start      # http://localhost:3000
 `AUTH_URL` and a sign-in method: accounts, projects and billing are off, the map and planning work.
 Without it a production server refuses every request (the strict pre-flight in §7 is the point of
 production mode). The root `.env` is read by `next.config.ts`; never set the flag on a public host.
+
+### 5b. The Windows app
+
+LightMap ships to Windows as an installer with silent updates (`apps/desktop/README.md`). Every
+push to `main` builds and smoke-tests it (`desktop.yml`) and keeps `LightMap-Setup-<version>.exe`
+as a workflow artifact, so a broken desktop build shows before anything is tagged. A `v*` tag
+publishes it. An installed copy checks the latest release at launch and every six hours, downloads
+and verifies the installer in the background, and installs it silently when the app closes.
+
+To roll the desktop app back, publish a new, higher version: installed copies only ever move
+forward, and deleting a release only stops copies that have not staged it yet.
 
 ## 6. Rollback
 

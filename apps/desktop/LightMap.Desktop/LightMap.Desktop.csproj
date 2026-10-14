@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The Windows desktop app: LightMap in its own window instead of a browser tab.
+
+       It is a shell, not a second UI. The Next.js server the web build already produces runs as
+       a child node.exe on loopback, and one WebView2 renders the same client every browser gets.
+       Nothing under apps/web or packages/ depends on this project, and pnpm never builds it: a
+       web developer needs no .NET SDK. .github/workflows/desktop.yml builds, smoke-tests and
+       publishes it; apps/desktop/README.md says how to build it by hand. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <!-- Lets a Linux or macOS host compile the Windows shell; running it needs Windows. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RootNamespace>LightMap.Desktop</RootNamespace>
+    <AssemblyName>LightMap</AssemblyName>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- WebView2's native loader cannot be loaded from inside a single-file bundle; without
+         self-extraction a published exe dies before any window exists. -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <!-- The updater compares versions; "+<commit>" on the informational version is noise to it. -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <!-- CI passes -p:Version=<the release's version>; a local build says 0.0.0 and never updates. -->
+    <Version>0.0.0</Version>
+    <Company>Formicaria</Company>
+    <Product>LightMap</Product>
+    <AssemblyTitle>LightMap</AssemblyTitle>
+    <ApplicationIcon>lightmap.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- ApplicationIcon brands the FILE; the window and taskbar read Form.Icon, loaded from here. -->
+    <EmbeddedResource Include="lightmap.ico" />
+    <EmbeddedResource Include="lightmap-logo.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2739.15" />
+  </ItemGroup>
+
+</Project>

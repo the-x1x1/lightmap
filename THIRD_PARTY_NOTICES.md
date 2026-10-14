@@ -18,6 +18,11 @@ see `docs/DATA_SOURCES_AND_LICENSING.md` for the data side and the review status
   under the Open Data Commons Open Database License (ODbL), derived from OpenStreetMap data
   © OpenStreetMap contributors.
 - **Tailwind CSS, Radix UI, TanStack Query, Zustand** — MIT.
+- **Windows desktop app (`apps/desktop`)** — ships three more things inside its installer: the
+  Node.js runtime (`node.exe`, MIT; its licence travels as `runtime\LICENSE`), the .NET runtime
+  (MIT, self-contained in `LightMap.exe`) and the Microsoft WebView2 SDK loader (Microsoft's
+  redistributable WebView2 SDK licence). The WebView2 Runtime itself is Microsoft Edge's and is
+  part of Windows, not of LightMap's installer.
 
 ## Algorithms
 

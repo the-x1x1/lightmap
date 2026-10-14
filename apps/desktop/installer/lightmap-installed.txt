@@ -1,0 +1,2 @@
+This file was written by the LightMap installer. Its presence tells LightMap that this folder is
+an installed copy, which may update itself. Deleting it turns automatic updates off.
