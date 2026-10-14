@@ -73,7 +73,7 @@ jobs:
         shell: pwsh
         run: |
           $p = Start-Process -FilePath apps/desktop/stage/LightMap.exe -ArgumentList '--selftest' -Wait -PassThru
-          Get-Content "$env:LOCALAPPDATA\LightMap\logs\selftest.log"
+          Get-Content "$env:LOCALAPPDATA\LightMap\logs\selftest.log" | ForEach-Object { if ($_ -match ' (FAIL|server!) ') { "::error::$_" } else { $_ } }
           if ($p.ExitCode -ne 0) { throw "selftest failed with $($p.ExitCode)" }
 
       - name: Build the installer
@@ -108,7 +108,7 @@ jobs:
           if (-not (Test-Path (Join-Path $app '.lightmap-installed'))) { throw 'the installed-copy marker is missing' }
           if (-not (Test-Path (Join-Path $app 'runtime\node.exe'))) { throw 'the runtime is missing' }
           $p = Start-Process -FilePath (Join-Path $app 'LightMap.exe') -ArgumentList '--selftest' -Wait -PassThru
-          Get-Content "$env:LOCALAPPDATA\LightMap\logs\selftest.log"
+          Get-Content "$env:LOCALAPPDATA\LightMap\logs\selftest.log" | ForEach-Object { if ($_ -match ' (FAIL|server!) ') { "::error::$_" } else { $_ } }
           if ($p.ExitCode -ne 0) { throw "installed selftest failed with $($p.ExitCode)" }
 
       - uses: actions/upload-artifact@v4

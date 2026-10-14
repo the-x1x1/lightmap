@@ -33,9 +33,14 @@ function arg(name, fallback) {
 }
 
 function fail(message) {
-  console.error(`stage: ${message}`);
+  // In GitHub Actions an ::error:: line becomes an annotation, readable without the log.
+  console.error(`${process.env.GITHUB_ACTIONS ? '::error::' : ''}stage: ${message}`);
   process.exit(1);
 }
+
+process.on('uncaughtException', (error) =>
+  fail(error instanceof Error ? error.message : String(error)),
+);
 
 /**
  * Copy a tree, following every link (fs.cpSync's `dereference` only follows the top one).
@@ -91,7 +96,8 @@ for (const dir of [server, serverWeb]) {
 
 // 2. geo-tz opens its boundary data by a computed path, which file tracing cannot see.
 const requireFromWeb = createRequire(join(web, 'package.json'));
-const geoTzSource = dirname(requireFromWeb.resolve('geo-tz/package.json'));
+// geo-tz's exports map does not export package.json; its main entry is dist/<file>.js.
+const geoTzSource = dirname(dirname(requireFromWeb.resolve('geo-tz')));
 const geoTzTarget = join(server, 'node_modules', 'geo-tz');
 if (!existsSync(geoTzTarget)) fail('geo-tz is not in the standalone node_modules');
 copyTree(join(geoTzSource, 'data'), join(geoTzTarget, 'data'));
