@@ -502,7 +502,9 @@ export function profilesRepo(db: Db) {
           set: {
             ...patch,
             updatedAt: now,
-            customizedAt: sql`coalesce(${profiles.customizedAt}, ${now})`,
+            // A raw Date inside sql`` reaches postgres-js unserialised and fails to bind
+            // ("argument must be of type string ... Received an instance of Date").
+            customizedAt: sql`coalesce(${profiles.customizedAt}, ${now.toISOString()}::timestamptz)`,
           },
         })
         .returning();
