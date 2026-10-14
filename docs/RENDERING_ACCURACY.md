@@ -156,6 +156,15 @@ glint from the scene light, so a low Sun over the sea glitters from the right di
 only — no swell or wave geometry, no wet-surface effect, no reflection of the sky's colour; the
 water mask is the provider's, not a tide model.
 
+**The coastline** is that mask read through a small blur and sharpened again (`water-mask.ts`):
+finer tiles reuse a coarse ancestor's mask magnified, and read directly its texels drew every
+coast as a staircase 50–500 m to a step. Smoothed, a straight coast stays where the mask had it
+and corners round off — a plausible line, not a surveyed one. With sea level known (the bundled
+EGM96 geoid, calibrated to the sea as the terrain has it near the pin), ground more than 4–6 m
+above the sea is land whatever the mask says, and the near-shore sea floor below sea level is
+water however it slopes. **Caveat:** near sea level the mask still decides — a beach park and
+the sea a metre apart, or a canal narrower than the terrain's spacing, are beyond the terrain.
+
 ### Ground texture
 
 The terrain is painted with a procedural surface (`shaders/ground.frag.ts`, a Cesium globe

@@ -289,8 +289,9 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float northness = nH.y / max(length(nH), 1e-4);
     float facing = slope > 0.05 ? northness * u_poleward * smoothstep(0.05, 0.4, slope) : 0.0;
     float dryness = clamp(u_aridity - 0.18 * facing, 0.0, 1.0);
-    vec3 turf  = mix(vec3(0.34, 0.43, 0.22), vec3(0.62, 0.55, 0.36), dryness);
-    vec3 scrub = mix(vec3(0.52, 0.46, 0.27), vec3(0.74, 0.64, 0.44), dryness);
+    // Dry ground runs to tan and ochre, not olive (the dry ends were too green under the light).
+    vec3 turf  = mix(vec3(0.34, 0.43, 0.22), vec3(0.66, 0.54, 0.36), dryness);
+    vec3 scrub = mix(vec3(0.52, 0.46, 0.27), vec3(0.77, 0.61, 0.42), dryness);
     // Rock warms toward sandstone with the region's aridity (the Colorado Plateau, the Sahara's
     // massifs, the outback): grey granite and limestone where it is green.
     vec3 rock  = mix(vec3(0.52, 0.49, 0.45), vec3(0.62, 0.42, 0.30), 0.8 * smoothstep(0.35, 0.85, u_aridity));
