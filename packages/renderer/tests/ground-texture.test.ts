@@ -268,7 +268,7 @@ describe('landHintFromColor', () => {
       seaLevelM: 47.4,
     })!;
     expect(g.brightness).toBe(0.45);
-    expect(g.seaLevelM).toBe(47);
+    expect(g.seaLevelM).toBe(47.4);
     // A sea level that was not measured paints no shore (D.C.'s geoid is 33 m under the
     // ellipsoid: read as 0, the whole flat city was sand).
     expect(g.shore).toBe(0);

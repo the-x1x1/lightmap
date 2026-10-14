@@ -200,7 +200,7 @@ export function groundTextureFor(
     aridity: Math.round(hint.aridity * 100) / 100,
     ice: Math.round(hint.ice * 100) / 100,
     brightness: Math.round(Math.max(0, Math.min(1, context.brightness)) * 100) / 100,
-    seaLevelM: Math.round(context.seaLevelM),
+    seaLevelM: Math.round(context.seaLevelM * 10) / 10,
     shore: context.seaLevelKnown ? 1 : 0,
     // Ultra/High (soft shadows) carry everything; Balanced drops the detail tiles, mottling and
     // relief; Battery and Minimal keep the base surface only.

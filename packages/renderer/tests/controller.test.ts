@@ -87,6 +87,7 @@ function fakeHost() {
     setCelestialBodies: rec('setCelestialBodies'),
     sunScreenPosition: () => [0.5, 0.6],
     sampleGroundHeight: async () => 42,
+    sampleSeaLevel: async () => null,
     sampleBasemapPixels: async () =>
       [
         [200, 180, 140],
@@ -169,6 +170,26 @@ describe('SceneController', () => {
     c.apply(scene({ render: { ...DEFAULT_RENDER_SETTINGS, groundTexture: false } }));
     expect(calls['setGroundTexture']).toHaveLength(5);
     expect(calls['setGroundTexture']![4]![0]).toBeNull();
+  });
+
+  it('takes sea level from the geoid when the place has no known height above sea level', async () => {
+    const { host, calls } = fakeHost();
+    host.sampleSeaLevel = async () => 14.86;
+    const c = new SceneController(host, {
+      setTimeoutImpl: () => 0,
+      clearTimeoutImpl: () => {},
+      aspect: () => 16 / 9,
+    });
+    c.apply(scene());
+    await c.setProviders(
+      { kind: 'quantized-mesh', url: 'https://t/layer.json', attribution: 'x' },
+      { kind: 'cesium-natural-earth', attribution: 'ne' },
+    );
+    await new Promise((r) => setTimeout(r, 0));
+    const g = calls['setGroundTexture']!.at(-1)![0] as { seaLevelM: number; shore: number };
+    expect(g.seaLevelM).toBe(14.9);
+    expect(g.shore).toBe(1);
+    c.destroy();
   });
 
   it('reads the basemap’s colour around a new pin and re-paints with the land hint', async () => {

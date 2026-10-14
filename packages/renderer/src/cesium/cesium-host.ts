@@ -21,6 +21,7 @@ import { GRADE_FRAGMENT_SHADER } from '../shaders/grade.frag.ts';
 import { createDetailTexture, createNoiseTexture, type DetailTileCesium } from './detail-tiles.ts';
 import { NOISE_TEXTURE_SIZE, makeNoiseTexture } from '../noise-texture.ts';
 import { FrameRateSampler } from '../frame-sampler.ts';
+import { geoidCellKey, geoidHeightM } from '../geoid.ts';
 import { clearOrbitPitch, orbitSightLine, steeperPitches } from '../camera-math.ts';
 import {
   countryDistanceBandM,
@@ -91,6 +92,8 @@ export interface CesiumHostOptions {
    * ground texture paints these as built-up ground. Absent, nothing is.
    */
   urbanAreasUrl?: string;
+  /** Base URL of the bundled geoid cells (`data/geoid/`): sea level for the shore and coast rules. */
+  geoidUrl?: string;
   onError?: (message: string, error: unknown) => void;
 }
 
@@ -135,6 +138,8 @@ export class CesiumSceneHost implements SceneHost {
   private coverLoadSeq = 0;
   private readonly detailAtlasUrl: string | undefined;
   private readonly urbanAreasUrl: string | undefined;
+  private readonly geoidUrl: string | undefined;
+  private readonly geoidCells = new Map<string, Promise<ArrayBuffer | null>>();
   private urbanIndex: Promise<Set<string> | null> | null = null;
   private readonly urbanCells = new Map<string, Promise<UrbanPolygon[]>>();
   private readonly enuScratch: {
@@ -211,6 +216,7 @@ export class CesiumSceneHost implements SceneHost {
     this.ionToken = options.ionToken;
     this.detailAtlasUrl = options.groundDetailAtlasUrl;
     this.urbanAreasUrl = options.urbanAreasUrl?.replace(/\/$/, '');
+    this.geoidUrl = options.geoidUrl?.replace(/\/$/, '');
     this.eyeUpScratch = new C.Cartesian3();
     this.enuScratch = {
       east: new C.Cartesian3(),
@@ -1582,6 +1588,27 @@ export class CesiumSceneHost implements SceneHost {
     } catch {
       return null;
     }
+  }
+
+  async sampleSeaLevel(p: GeoPoint): Promise<number | null> {
+    const base = this.geoidUrl;
+    if (!base || this.destroyed) return null;
+    await this.terrainReady;
+    if (this.scene.terrainProvider instanceof this.C.EllipsoidTerrainProvider) return null;
+    const key = geoidCellKey(p.latitude, p.longitude);
+    let cell = this.geoidCells.get(key);
+    if (!cell) {
+      cell = fetch(`${base}/${key}.bin`)
+        .then((r) => (r.ok ? r.arrayBuffer() : null))
+        .catch(() => null);
+      this.geoidCells.set(key, cell);
+    }
+    const bytes = await cell;
+    if (!bytes) {
+      this.geoidCells.delete(key); // try again next time
+      return null;
+    }
+    return geoidHeightM(bytes, key, p.latitude, p.longitude);
   }
 
   async sampleGroundHeight(p: GeoPoint): Promise<number | null> {

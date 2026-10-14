@@ -33,6 +33,7 @@
     "textures:ground": "node --experimental-strip-types scripts/gen-ground-detail.ts",
     "labels:places": "node --experimental-strip-types scripts/gen-place-labels.ts",
     "urban:areas": "node --experimental-strip-types scripts/gen-urban-areas.ts",
+    "geoid": "node --experimental-strip-types scripts/gen-geoid.ts",
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down"
   },

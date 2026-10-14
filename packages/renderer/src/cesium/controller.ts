@@ -462,16 +462,22 @@ export class SceneController {
     if (key === this.groundHeightKey) return;
     this.groundHeightKey = key;
     this.groundHeightSampled = false;
-    const h = await this.host.sampleGroundHeight(scene.location.point);
+    const [h, geoid] = await Promise.all([
+      this.host.sampleGroundHeight(scene.location.point),
+      this.host.sampleSeaLevel(scene.location.point).catch(() => null),
+    ]);
     if (this.groundHeightKey !== key || this.host.isDestroyed()) return;
     const next = h ?? scene.location.point.elevationM ?? scene.environment.groundElevationM ?? 0;
-    // The geoid here: the terrain's ellipsoidal height less the known height above sea level
-    // (the ground texture's shore and snow rules read sea level, not the ellipsoid).
+    // Sea level above the ellipsoid (the ground texture's shore, coast and snow rules read
+    // heights above sea level, not the ellipsoid): the bundled geoid where the terrain is real,
+    // else the terrain's height less the place's known height above sea level.
     const orthometric = scene.location.point.elevationM ?? scene.environment.groundElevationM;
-    const seaLevel =
-      h !== null && orthometric !== null && orthometric !== undefined ? h - orthometric : 0;
-    const seaLevelRounded = Math.round(Math.max(-120, Math.min(120, seaLevel)));
-    const known = h !== null && orthometric !== null && orthometric !== undefined;
+    const measured =
+      h !== null && orthometric !== null && orthometric !== undefined ? h - orthometric : null;
+    const seaLevel = geoid ?? measured ?? 0;
+    // Rounded to decimetres: the coast rule works within a metre or two of sea level.
+    const seaLevelRounded = Math.round(Math.max(-120, Math.min(120, seaLevel)) * 10) / 10;
+    const known = geoid !== null || measured !== null;
     const seaChanged = seaLevelRounded !== this.seaLevelM || known !== this.seaLevelKnown;
     if (seaChanged) {
       this.seaLevelM = seaLevelRounded;

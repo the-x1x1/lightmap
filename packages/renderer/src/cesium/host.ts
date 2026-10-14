@@ -212,6 +212,11 @@ export interface SceneHost {
   /** Ground height at a point once terrain is loaded; null when unknown. */
   sampleGroundHeight(p: GeoPoint): Promise<number | null>;
   /**
+   * Sea level's height above the ellipsoid at a point (the EGM96 geoid, from the bundled
+   * cells), in the terrain's own frame; null without real terrain or the bundled cells.
+   */
+  sampleSeaLevel(p: GeoPoint): Promise<number | null>;
+  /**
    * Terrain heights for many points at a fixed tile level (lower = coarser, cheaper; ~9 for far
    * rings, ~13 near the viewpoint). Null per point when unknown; all zeros on the ellipsoid.
    */

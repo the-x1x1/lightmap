@@ -27,6 +27,7 @@ export const GROUND_DETAIL_ATLAS_URL = '/textures/ground-detail.png';
 export const PLACE_LABELS_URL = '/data/place-labels.json';
 /** Bundled built-up areas (Natural Earth urban areas, `pnpm urban:areas`), painted with no land-cover source. */
 export const URBAN_AREAS_URL = '/data/urban';
+export const GEOID_URL = '/data/geoid';
 
 export interface RendererHandle {
   mode: '3D' | 'OVERLAY' | 'loading';
@@ -100,6 +101,7 @@ export function useRenderer(opts: UseRendererOptions): RendererHandle {
           groundDetailAtlasUrl: GROUND_DETAIL_ATLAS_URL,
           placeLabelsUrl: PLACE_LABELS_URL,
           urbanAreasUrl: URBAN_AREAS_URL,
+          geoidUrl: GEOID_URL,
           ...(opts.ionToken ? { ionToken: opts.ionToken } : {}),
           onError: (message, error) => {
             console.warn('[renderer]', message, error);

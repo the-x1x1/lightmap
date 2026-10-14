@@ -309,8 +309,14 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float rocky = smoothstep(0.52, 0.78, slope + 0.12 * (grain - 0.47));
     ground = mix(ground, bare, rocky);
 
-    // Flat ground within a few metres of sea level reads as shore.
-    float shoreline = u_shore * smoothstep(6.0, 2.0, height) * smoothstep(0.10, 0.02, slope);
+    // Flat ground within a few metres of sea level, next to the sea, reads as shore. The water
+    // mask is filtered, so it is above zero for about one of its texels inland of the water:
+    // without it, every low flat plain (a delta, a polder, a coastal city) turned to sand.
+    float maskNear = 0.0;
+#ifdef HAS_WATER_MASK
+    maskNear = smoothstep(0.0, 0.15, materialInput.waterMask);
+#endif
+    float shoreline = u_shore * maskNear * smoothstep(4.0, 1.5, height) * smoothstep(0.10, 0.02, slope);
     ground = mix(ground, shore * (0.9 + 0.2 * grain), shoreline);
 
     // Snow above the snowline: lower on poleward faces, patchy at its edge, thin on cliffs.
@@ -504,8 +510,14 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float m = materialInput.waterMask;
     float mJitter = smoothstep(0.3, 0.7, m + 0.5 * n64 + 0.3 * n16
         + 0.7 * smoothstep(2000.0, 20000.0, dist) * (lmNoiseTex(g.xy, ${f(P.coast)}, gdx, gdy).r - 0.47));
-    m = mix(m, mJitter, step(0.02, m) * step(m, 0.98));
-    float water = m * (1.0 - smoothstep(0.008, 0.025, slope));
+    // Where sea level is known (the bundled geoid), the terrain decides the edge instead: in
+    // the mask's ramp, water below about a metre above sea level (a little noise keeps it from
+    // reading as a contour line), and no water at all on ground well above it - the mask's
+    // coarse texels otherwise run the sea a block into a flat coastal city.
+    float edgeH = 1.0 - smoothstep(0.4, 1.6, height + 0.8 * n16);
+    m = mix(m, mix(mJitter, edgeH, u_shore), step(0.02, m) * step(m, 0.98));
+    float water = m * (1.0 - smoothstep(0.008, 0.025, slope))
+                * (1.0 - u_shore * smoothstep(2.5, 5.0, height));
     // On water the paint is a deep sea colour (a little mottled, greyer toward the horizon) over
     // most of Cesium's own water shading, leaving some for the Sun's glint and waves.
     if (water > 0.0)
