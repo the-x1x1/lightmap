@@ -356,9 +356,12 @@ test('sign in (dev), create a project, save the viewpoint, reload and reopen it'
   await expect(page.getByTestId('shot-list-locked')).toBeVisible();
   await expect(page.getByTestId('shot-list-copy')).toHaveCount(0);
   await expect(page.getByTestId('shot-list-pdf')).toHaveCount(0);
-  // So is the week ahead: named with its reason, never silently absent.
+  // So is the week ahead (on the plan tab): named with its reason, never silently absent.
+  await page.getByTestId('panel-tab-plan').click();
   await expect(page.getByTestId('week-ahead-locked')).toBeAttached();
   await expect(page.getByTestId('week-ahead')).toHaveCount(0);
+  await page.getByTestId('panel-tab-projects').click();
+  await expect(page.getByTestId('project-card')).toContainText('Kailua sunrise');
   // Notes and the shoot date are edited in place and survive a reload.
   await page.getByTestId('project-notes').locator(':scope > summary').click();
   await page.getByTestId('project-notes-text').fill('Park at the boat ramp; permit in the bag.');
@@ -579,9 +582,9 @@ test.describe('preferences', () => {
     await expect(weather).not.toContainText('m/s');
     await expect(weather).toContainText(/\d+ mi/);
     await expect(weather).toContainText('Humidity');
-    // The fixture's air for London in the afternoon: around 14 °C, in Fahrenheit here, with its
-    // dew point — far from freezing, so still no note.
-    await expect(weather).toContainText(/Air\s*5\d °F, dew point \d+ °F/);
+    // The place is still Kailua: 14:00 on a London watch is 03:00–04:00 there, the fixture's
+    // coolest hour (about 16.5 °C, 62 °F), with its dew point — far from freezing, so no note.
+    await expect(weather).toContainText(/Air\s*6\d °F, dew point \d+ °F/);
     await expect(page.getByTestId('field-notes')).toHaveCount(0);
 
     // Kept on this device: the choice is still there after a reload.
