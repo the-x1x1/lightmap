@@ -511,15 +511,19 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float mJitter = smoothstep(0.3, 0.7, m + 0.5 * n64 + 0.3 * n16
         + 0.7 * smoothstep(2000.0, 20000.0, dist) * (lmNoiseTex(g.xy, ${f(P.coast)}, gdx, gdy).r - 0.47));
     // Where sea level is known (the bundled geoid, set to the sea as the terrain has it nearby),
-    // the terrain decides the coast instead: near sea level, ground more than about a metre
-    // above the sea is land whatever the mask's coarse texels say (they otherwise run the sea a
-    // block into a flat coastal city), and in the mask's ramp below that is water (Waikiki: the
-    // beach is 1.5 m above the sea, the street behind it 2.4 m). Lakes and rivers well above sea
-    // level keep the mask and its jitter.
+    // ground well above it is land whatever the mask's coarse texels say (they otherwise run
+    // the sea up a coastal slope). Only well above: a canal or a river mouth narrower than the
+    // terrain's own spacing reads 2-4 m above the sea in the terrain (Waikiki's Ala Wai), and a
+    // beach park sits within a metre of it, so nearer sea level the mask still decides.
     float lowW = u_shore * (1.0 - smoothstep(8.0, 12.0, height));
-    float coastLand = smoothstep(0.6, 1.2, height + 0.3 * n16);
-    m = mix(m, mix(mJitter, 1.0 - coastLand, lowW), step(0.02, m) * step(m, 0.98));
-    float water = m * (1.0 - smoothstep(0.008, 0.025, slope)) * (1.0 - lowW * coastLand);
+    float coastLand = smoothstep(4.0, 6.0, height + 0.5 * n16);
+    m = mix(m, mJitter, step(0.02, m) * step(m, 0.98));
+    // The terrain carries the sea floor near the coast (and the banks of a canal), sloping
+    // below sea level: there the flatness test would paint land, so mask water below sea level
+    // is water however it slopes.
+    float below = lowW * step(0.02, materialInput.waterMask)
+                * (1.0 - smoothstep(0.2, 0.6, height + 0.3 * n16));
+    float water = max(m * (1.0 - smoothstep(0.008, 0.025, slope)), below) * (1.0 - lowW * coastLand);
     // On water the paint is a deep sea colour (a little mottled, greyer toward the horizon) over
     // most of Cesium's own water shading, leaving some for the Sun's glint and waves.
     if (water > 0.0)
