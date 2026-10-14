@@ -291,8 +291,10 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float dryness = clamp(u_aridity - 0.18 * facing, 0.0, 1.0);
     vec3 turf  = mix(vec3(0.34, 0.43, 0.22), vec3(0.62, 0.55, 0.36), dryness);
     vec3 scrub = mix(vec3(0.52, 0.46, 0.27), vec3(0.74, 0.64, 0.44), dryness);
-    vec3 rock  = vec3(0.52, 0.49, 0.45);
-    vec3 scree = vec3(0.40, 0.38, 0.34);
+    // Rock warms toward sandstone with the region's aridity (the Colorado Plateau, the Sahara's
+    // massifs, the outback): grey granite and limestone where it is green.
+    vec3 rock  = mix(vec3(0.52, 0.49, 0.45), vec3(0.62, 0.42, 0.30), 0.8 * smoothstep(0.35, 0.85, u_aridity));
+    vec3 scree = mix(vec3(0.40, 0.38, 0.34), vec3(0.52, 0.37, 0.27), 0.8 * smoothstep(0.35, 0.85, u_aridity));
     vec3 snow  = vec3(0.93, 0.95, 0.97);
     vec3 shore = vec3(0.74, 0.69, 0.55);
 
@@ -445,7 +447,9 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         vec3 roof = mix(vec3(0.40, 0.39, 0.38), vec3(0.60, 0.56, 0.50), lot);
         roof = mix(roof, vec3(0.74, 0.73, 0.71), step(0.9, kind));                       // pale roofs
         roof = mix(roof, vec3(0.20, 0.29, 0.15) * (0.85 + 1.2 * n16), step(kind, 0.16)); // trees
-        float lotW = smoothstep(3.0, 8.0, pxPerM * 12.0);
+        // Lots only once they are big enough to read as lots: a few pixels each, they were a
+        // field of coloured pixels.
+        float lotW = smoothstep(8.0, 20.0, pxPerM * 12.0);
         vec3 block = mix(vec3(0.50, 0.48, 0.45), roof, lotW);
         vec3 green = vec3(0.24, 0.34, 0.18) * (0.85 + n16);
         block = mix(block, green, park);
@@ -524,6 +528,8 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float below = lowW * step(0.02, materialInput.waterMask)
                 * (1.0 - smoothstep(0.2, 0.6, height + 0.3 * n16));
     float water = max(m * (1.0 - smoothstep(0.008, 0.025, slope)), below) * (1.0 - lowW * coastLand);
+    // A clean edge: half water, half city reads as a city under glass.
+    water = smoothstep(0.3, 0.7, water);
     // On water the paint is a deep sea colour (a little mottled, greyer toward the horizon) over
     // most of Cesium's own water shading, leaving some for the Sun's glint and waves.
     if (water > 0.0)

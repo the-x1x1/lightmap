@@ -256,6 +256,10 @@ export class CesiumSceneHost implements SceneHost {
     globe.showWaterEffect = true; // needs a terrain water mask (requested below); otherwise inert
     globe.depthTestAgainstTerrain = true;
     globe.shadows = C.ShadowMode.ENABLED;
+    // No tile skirts: the walls Cesium hangs under each tile's edges to hide cracks between
+    // detail levels cast their own shadows, which with a low Sun drew long black lines across
+    // the ground along tile edges (fjords, valleys, any slope). Cracks have not shown.
+    globe.showSkirts = false;
     // A larger tile cache and the ancestors kept loaded: zooming out and back in redraws from
     // tiles already in hand instead of dropping to coarse ones and re-fetching (the "pop").
     globe.tileCacheSize = 1000;
