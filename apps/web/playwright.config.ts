@@ -47,7 +47,9 @@ export default defineConfig({
       use: {
         ...devices['Pixel 7'],
         // The field view asks for the back camera: Chromium's fake device answers without a prompt.
-        permissions: ['camera'],
+        // Current Chromium also has DeviceOrientationEvent.requestPermission(), which it answers
+        // from the motion sensors' permissions; ungranted, "Point with phone" is told "denied".
+        permissions: ['camera', 'accelerometer', 'gyroscope', 'magnetometer'],
         launchOptions: {
           args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
         },
