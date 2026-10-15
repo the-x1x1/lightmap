@@ -15,6 +15,7 @@ import {
   civilDateString,
   formatWallTime,
   parseCivilDate,
+  refractionDeg,
   utcToLocalSelection,
   utcToWallClock,
   type CelestialBody,
@@ -128,9 +129,13 @@ export function LightFinder({
     if (mode === 'ridge' && !profile) setMode('frame');
   }, [mode, profile]);
   const target = useMemo(() => {
+    // A direction in the view is where a body *appears* (the view draws it with refraction);
+    // the solver works in geometric elevation, which is lower by about half a degree at the
+    // horizon - three to five minutes of a setting Sun.
     if (mode === 'pick' && finderTarget)
-      return { az: finderTarget.azimuthDeg, el: finderTarget.elevationDeg };
-    if (mode === 'pick' || mode === 'frame') return { az: camera.headingDeg, el: camera.pitchDeg };
+      return { az: finderTarget.azimuthDeg, el: geometricFromApparent(finderTarget.elevationDeg) };
+    if (mode === 'pick' || mode === 'frame')
+      return { az: camera.headingDeg, el: geometricFromApparent(camera.pitchDeg) };
     if (mode === 'current' && nowAz !== null && nowEl !== null) return { az: nowAz, el: nowEl };
     if (mode === 'ridge' && profile) {
       // Bearing is typed (defaults to the camera heading); the elevation is where the sun's upper
@@ -725,4 +730,11 @@ export function LightFinder({
       ) : null}
     </div>
   );
+}
+
+/** The geometric elevation whose refracted (apparent) elevation is `apparentDeg`. */
+function geometricFromApparent(apparentDeg: number): number {
+  let g = apparentDeg;
+  for (let i = 0; i < 6; i++) g = apparentDeg - refractionDeg(g);
+  return g;
 }
