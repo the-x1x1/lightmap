@@ -119,9 +119,11 @@ export function buildPlanningCard(
     {
       label: 'Sun',
       value:
-        s.elevationDegrees > -0.833
+        s.elevationDegrees >= 0.05
           ? `${s.elevationDegrees.toFixed(1)}° up · ${Math.round(s.azimuthDegrees)}° ${compassLabel(s.azimuthDegrees)}`
-          : `${Math.abs(s.elevationDegrees).toFixed(1)}° below horizon · ${Math.round(s.azimuthDegrees)}° ${compassLabel(s.azimuthDegrees)}`,
+          : s.elevationDegrees > -0.833
+            ? `on the horizon · ${Math.round(s.azimuthDegrees)}° ${compassLabel(s.azimuthDegrees)}`
+            : `${Math.abs(s.elevationDegrees).toFixed(1)}° below horizon · ${Math.round(s.azimuthDegrees)}° ${compassLabel(s.azimuthDegrees)}`,
     },
     {
       label: 'Light',

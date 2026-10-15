@@ -491,14 +491,7 @@ export function AstronomyDetails({
           />
         ) : null}
         <Row label="Phase" value={s.phase.replace('-', ' ')} />
-        <Row
-          label="Solar time"
-          value={`${Math.floor(s.solarTime).toString().padStart(2, '0')}:${Math.round(
-            (s.solarTime % 1) * 60,
-          )
-            .toString()
-            .padStart(2, '0')}`}
-        />
+        <Row label="Solar time" value={hoursMinutes(Math.round(s.solarTime * 60))} />
         <Row label="Colour temp." value={`${Math.round(scene.atmosphere.colorTemperatureK)} K`} />
         <Row
           label="Exposure (est.)"
@@ -515,10 +508,7 @@ export function AstronomyDetails({
           )}
           testId="sun-disc"
         />
-        <Row
-          label="Daylight"
-          value={`${Math.floor(scene.dayEvents.daylightMinutes / 60)} h ${Math.round(scene.dayEvents.daylightMinutes % 60)} min`}
-        />
+        <Row label="Daylight" value={durationText(Math.round(scene.dayEvents.daylightMinutes))} />
       </dl>
       {lightWindows ? (
         <p className="text-xs text-[var(--lm-text-muted)]" data-testid="light-windows">
@@ -578,4 +568,17 @@ function Row({ label, value, testId }: { label: string; value: string; testId?: 
       </dd>
     </div>
   );
+}
+
+/** "06:05" from whole minutes (rounded before splitting: 11.995 h is 12:00, not 11:60). */
+function hoursMinutes(totalMinutes: number): string {
+  const m = ((totalMinutes % 1440) + 1440) % 1440;
+  return `${Math.floor(m / 60)
+    .toString()
+    .padStart(2, '0')}:${(m % 60).toString().padStart(2, '0')}`;
+}
+
+/** "11 h 60 min" never: whole minutes first, then hours and minutes. */
+function durationText(totalMinutes: number): string {
+  return `${Math.floor(totalMinutes / 60)} h ${totalMinutes % 60} min`;
 }

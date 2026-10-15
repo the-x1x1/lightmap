@@ -231,9 +231,23 @@ describe('service worker — offline project cache', () => {
     await w.dispatch('/api/projects');
     await w.dispatch('/api/projects/p1');
     await w.dispatch('/api/account/entitlements');
-    expect(await w.dispatch('/api/viewpoints/v1', { method: 'DELETE' })).toBeNull();
+    const res = await w.dispatch('/api/viewpoints/v1', { method: 'DELETE' });
+    expect(res).not.toBeNull();
     const user = await w.caches.open(w.sw.USER);
     expect([...user.store.keys()]).toEqual([`${ORIGIN}/api/account/entitlements`]);
+  });
+
+  it('a write that fails offline keeps the cached projects to read', async () => {
+    const w = boot(network);
+    await w.dispatch('/api/projects');
+    await w.dispatch('/api/projects/p1');
+    online = false;
+    await expect(w.dispatch('/api/projects/p1', { method: 'PATCH' })).rejects.toThrow();
+    const user = await w.caches.open(w.sw.USER);
+    expect([...user.store.keys()].sort()).toEqual([
+      `${ORIGIN}/api/projects`,
+      `${ORIGIN}/api/projects/p1`,
+    ]);
   });
 
   it('with nothing cached, an offline request fails as it would without the worker', async () => {

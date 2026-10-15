@@ -254,7 +254,14 @@ self.addEventListener('fetch', (event) => {
     return; // the write itself goes to the network untouched
   }
   if (kind === 'invalidate-projects') {
-    event.waitUntil(invalidateProjects());
+    // Only a write that went through invalidates the offline copies: one that failed (offline in
+    // the field) must not wipe the projects the photographer still needs to read.
+    event.respondWith(
+      fetch(event.request).then(async (res) => {
+        if (res.ok) await invalidateProjects();
+        return res;
+      }),
+    );
     return;
   }
   if (kind === 'navigate') {

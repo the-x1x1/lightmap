@@ -85,7 +85,7 @@ export function shotBlock(
     `  When:    ${civil(at, tz)} ${formatWallTime(at, tz)} (${tz})`,
     `  Where:   ${v.latitude.toFixed(5)}, ${v.longitude.toFixed(5)}${v.elevationM !== null ? ` · ${formatHeight(v.elevationM, units)}` : ''}`,
     `  Camera:  ${Math.round(v.headingDeg)}° ${compassLabel(v.headingDeg)}, pitch ${Math.round(v.pitchDeg)}°${v.focalLengthEquivalentMm ? `, ${v.focalLengthEquivalentMm} mm` : `, ${Math.round(v.fieldOfViewDeg)}° field`}`,
-    `  Sun:     ${sun.elevationDeg > -0.833 ? `${Math.round(sun.elevationDeg)}° up, ${Math.round(sun.azimuthDeg)}° ${compassLabel(sun.azimuthDeg)}` : `${Math.round(Math.abs(sun.elevationDeg))}° below the horizon`}`,
+    `  Sun:     ${sun.elevationDeg >= 0.5 ? `${Math.round(sun.elevationDeg)}° up, ${Math.round(sun.azimuthDeg)}° ${compassLabel(sun.azimuthDeg)}` : sun.elevationDeg > -0.833 ? `on the horizon, ${Math.round(sun.azimuthDeg)}° ${compassLabel(sun.azimuthDeg)}` : `${Math.round(Math.abs(sun.elevationDeg))}° below the horizon`}`,
     `  Day:     sunrise ${ev.sunrise ? formatWallTime(ev.sunrise, tz) : '—'} · sunset ${ev.sunset ? formatWallTime(ev.sunset, tz) : '—'}`,
   ];
   const moon = moonPosition(at, v.latitude, v.longitude);
