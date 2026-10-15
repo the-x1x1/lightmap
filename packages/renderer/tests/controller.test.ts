@@ -246,6 +246,43 @@ describe('SceneController', () => {
     expect(overlay.visible).toBe(false);
   });
 
+  it('stands the viewpoint on a roof when the place is on a building, on the ground otherwise', async () => {
+    const { host, calls } = fakeHost();
+    host.sampleSurfaceHeights = async () => [42 + 30]; // a 30 m building at the pin
+    const c = new SceneController(host, {
+      setTimeoutImpl: (fn) => {
+        fn();
+        return 0;
+      },
+      clearTimeoutImpl: () => {},
+      aspect: () => 16 / 9,
+    });
+    const vp = scene({ camera: { ...defaultCamera(kailua.point, 45), mode: 'viewpoint' } });
+    c.apply(vp);
+    for (let i = 0; i < 4; i++) await new Promise((r) => setTimeout(r, 0));
+    const onRoof = calls['setCamera']!.at(-1)![0] as { heightM: number };
+    expect(onRoof.heightM).toBeCloseTo(72 + vp.camera.eyeHeightM, 5);
+    // A tree or a kerb a metre up is not a roof.
+    const { host: h2, calls: c2 } = fakeHost();
+    h2.sampleSurfaceHeights = async () => [43];
+    const ctl = new SceneController(h2, {
+      setTimeoutImpl: (fn) => {
+        fn();
+        return 0;
+      },
+      clearTimeoutImpl: () => {},
+      aspect: () => 16 / 9,
+    });
+    ctl.apply(vp);
+    for (let i = 0; i < 4; i++) await new Promise((r) => setTimeout(r, 0));
+    expect((c2['setCamera']!.at(-1)![0] as { heightM: number }).heightM).toBeCloseTo(
+      42 + vp.camera.eyeHeightM,
+      5,
+    );
+    c.destroy();
+    ctl.destroy();
+  });
+
   it('overlay carries the sun path, current sun and shadow azimuth in map mode', () => {
     const { host, calls } = fakeHost();
     const c = new SceneController(host, { setTimeoutImpl: () => 0, clearTimeoutImpl: () => {} });
