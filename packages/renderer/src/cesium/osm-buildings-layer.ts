@@ -344,6 +344,13 @@ export class OsmBuildingsLayer {
     return fp.some((b) => inRing(b.outer, lon, lat) && !b.holes.some((h) => inRing(h, lon, lat)));
   }
 
+  /** The mapped bridge deck under the point (near tiles, once read), or null. */
+  bridgeAt(lon: number, lat: number): BridgeLine | null {
+    const t = lonLatToTile(BUILDING_TILE_ZOOM, lon, lat);
+    const state = this.tiles.get(`${t.x}/${t.y}`);
+    return state ? bridgeAt(state.bridges, lon, lat) : null;
+  }
+
   /** How many buildings' primitives are on the globe (0 until the first tile is drawn). */
   get primitiveCount(): number {
     return this.owned.size;

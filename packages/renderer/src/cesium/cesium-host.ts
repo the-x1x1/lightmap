@@ -1989,8 +1989,8 @@ export class CesiumSceneHost implements SceneHost {
     const ends = [bridge.points[0], bridge.points[bridge.points.length - 1]]
       .filter((q): q is [number, number] => q !== undefined)
       .map(([longitude, latitude]) => ({ longitude, latitude }));
-    const heights = await this.sampleGroundHeights(ends, 15).catch(() => []);
-    const known = heights.filter((h): h is number => typeof h === 'number');
+    const heights: Array<number | null> = await this.sampleGroundHeights(ends, 15).catch(() => []);
+    const known = heights.filter((h): h is number => h !== null);
     return known.length > 0 ? Math.max(...known) : null;
   }
 
