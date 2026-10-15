@@ -149,8 +149,12 @@ export function dayMarkers(
 /** Gradient across the day: night → twilight → day → golden → night, from the event times. */
 export function dayGradient(ev: DayEvents): string {
   const total = (ev.dayEnd.getTime() - ev.dayStart.getTime()) / 60_000;
+  // An evening event can fall after midnight (this evening's dusk in a northern summer): it
+  // pins its colour to the day's edge.
   const pct = (d: Date | null) =>
-    d ? `${((minutesOf(d, ev.dayStart)! / total) * 100).toFixed(2)}%` : null;
+    d
+      ? `${Math.min(100, Math.max(0, (minutesOf(d, ev.dayStart)! / total) * 100)).toFixed(2)}%`
+      : null;
   if (ev.polar === 'midnight-sun') return 'linear-gradient(90deg, #6aa7e6, #8dbef0 50%, #6aa7e6)';
   if (ev.polar === 'polar-night')
     return ev.dawn

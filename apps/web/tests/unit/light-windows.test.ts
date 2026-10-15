@@ -17,7 +17,7 @@ describe('light windows', () => {
   it('names both golden hours and both blue hours with their lengths at Kailua', () => {
     const k = day(21.397, -157.727, 'Pacific/Honolulu', 2026, 5, 31);
     expect(describeLightWindows(k.ev, k.point, k.tz)).toBe(
-      'Golden hour 05:33–06:20 (47 min) · 18:37–19:24 (47 min); blue hour 05:23–05:33 (10 min) · 19:24–19:33 (10 min)',
+      'Golden hour 05:33–06:20 (47 min) · 18:37–19:24 (47 min); blue hour 05:24–05:33 (10 min) · 19:24–19:34 (10 min)',
     );
     // Edges are the day events' own crossings, not sample times.
     const w = lightWindows(k.ev, k.point);

@@ -1,10 +1,13 @@
 /**
  * Day events: rise, set, transit, twilight and the photographer's windows (golden hour, blue hour).
  *
- * Method: sample the Sun's geometric elevation across the local civil day (from local midnight
- * to the next local midnight, so the answer is "the events of this calendar date at this place",
- * which is what a photographer means), find sign changes against each threshold, and refine
- * each crossing by bisection to < 1 s. Transit is found the same way on the hour angle. This
+ * Method: sample the Sun's geometric elevation around the local civil day, find sign changes
+ * against each threshold, and refine each crossing by bisection to < 1 s. The events belong to
+ * this date's daylight, which is what a photographer means: a morning event is the last rising
+ * crossing before this date's solar noon and an evening event the first setting crossing after
+ * it, each within 18 h. So this evening's dusk is this evening's even when it falls after
+ * midnight (Edinburgh in August, Reykjavik in May), never the end of last night's twilight, and
+ * a window such as the evening golden hour always runs forwards. Transit is found the same way on the hour angle. This
  * is slower than the classical one-shot formula but it is correct at every latitude, needs no
  * special cases for polar day/night, and reports *why* an event is missing.
  *
@@ -110,14 +113,31 @@ function refineCrossing(
   return Math.round((a + b) / 2 / 1000) * 1000;
 }
 
-/** First crossing of `threshold` in the given direction: 'up' (elev rising through) or 'down'. */
+/**
+ * A crossing of `threshold` in the given direction: 'up' (elev rising through) or 'down'; the
+ * first one in `samples`, or the last with `last`.
+ */
 function findCrossing(
   samples: Sample[],
   threshold: number,
   direction: 'up' | 'down',
   lat: number,
   lon: number,
+  last = false,
 ): Date | null {
+  if (last) {
+    for (let i = samples.length - 1; i >= 1; i--) {
+      const a = samples[i - 1]!;
+      const b = samples[i]!;
+      const aBelow = a.elev < threshold;
+      const bBelow = b.elev < threshold;
+      if (direction === 'up' && aBelow && !bBelow)
+        return new Date(refineCrossing(a.t, b.t, threshold, lat, lon));
+      if (direction === 'down' && !aBelow && bBelow)
+        return new Date(refineCrossing(a.t, b.t, threshold, lat, lon));
+    }
+    return null;
+  }
   for (let i = 1; i < samples.length; i++) {
     const a = samples[i - 1]!;
     const b = samples[i]!;
@@ -173,21 +193,30 @@ export function computeDayEvents(input: DayEventInput): DayEvents {
   const maxElevationDeg = Math.max(...elevations);
   const minElevationDeg = Math.min(...elevations);
   const notes: string[] = [];
-
-  const sunrise = findCrossing(samples, THRESHOLDS.horizon, 'up', lat, lon);
-  const sunset = findCrossing(samples, THRESHOLDS.horizon, 'down', lat, lon);
-  const dawn = findCrossing(samples, THRESHOLDS.civil, 'up', lat, lon);
-  const civilDusk = findCrossing(samples, THRESHOLDS.civil, 'down', lat, lon);
-  const nauticalDawn = findCrossing(samples, THRESHOLDS.nautical, 'up', lat, lon);
-  const nauticalDusk = findCrossing(samples, THRESHOLDS.nautical, 'down', lat, lon);
-  const astronomicalDawn = findCrossing(samples, THRESHOLDS.astronomical, 'up', lat, lon);
-  const astronomicalDusk = findCrossing(samples, THRESHOLDS.astronomical, 'down', lat, lon);
-  const goldenHourMorningStart = findCrossing(samples, THRESHOLDS.goldenLow, 'up', lat, lon);
-  const goldenHourMorningEnd = findCrossing(samples, THRESHOLDS.goldenHigh, 'up', lat, lon);
-  const goldenHourEveningStart = findCrossing(samples, THRESHOLDS.goldenHigh, 'down', lat, lon);
-  const goldenHourEveningEnd = findCrossing(samples, THRESHOLDS.goldenLow, 'down', lat, lon);
   const solarNoon = findTransit(samples, 'upper', lat, lon);
   const solarMidnight = findTransit(samples, 'lower', lat, lon);
+
+  // The morning before this date's solar noon and the evening after it, 18 h each way.
+  const noonT = solarNoon?.getTime() ?? (start.getTime() + end.getTime()) / 2;
+  const reach = 18 * 3_600_000;
+  const wide = sampleDay(new Date(noonT - reach), new Date(noonT + reach), lat, lon);
+  const morning = wide.filter((s) => s.t <= noonT + STEP_MS);
+  const evening = wide.filter((s) => s.t >= noonT - STEP_MS);
+  const rising = (threshold: number) => findCrossing(morning, threshold, 'up', lat, lon, true);
+  const setting = (threshold: number) => findCrossing(evening, threshold, 'down', lat, lon);
+
+  const sunrise = rising(THRESHOLDS.horizon);
+  const sunset = setting(THRESHOLDS.horizon);
+  const dawn = rising(THRESHOLDS.civil);
+  const civilDusk = setting(THRESHOLDS.civil);
+  const nauticalDawn = rising(THRESHOLDS.nautical);
+  const nauticalDusk = setting(THRESHOLDS.nautical);
+  const astronomicalDawn = rising(THRESHOLDS.astronomical);
+  const astronomicalDusk = setting(THRESHOLDS.astronomical);
+  const goldenHourMorningStart = rising(THRESHOLDS.goldenLow);
+  const goldenHourMorningEnd = rising(THRESHOLDS.goldenHigh);
+  const goldenHourEveningStart = setting(THRESHOLDS.goldenHigh);
+  const goldenHourEveningEnd = setting(THRESHOLDS.goldenLow);
 
   let polar: PolarCondition = 'normal';
   if (minElevationDeg > THRESHOLDS.horizon && sunrise === null && sunset === null) {

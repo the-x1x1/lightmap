@@ -101,7 +101,7 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
   await expect(overlay.getByTestId('seasonal-sunrise-arc')).toBeAttached();
   await page.getByTestId('details-astronomy').locator(':scope > summary').click();
   await expect(page.getByTestId('light-windows')).toHaveText(
-    'Golden hour 05:33–06:20 (47 min) · 18:37–19:24 (47 min); blue hour 05:23–05:33 (10 min) · 19:24–19:33 (10 min)',
+    'Golden hour 05:33–06:20 (47 min) · 18:37–19:24 (47 min); blue hour 05:24–05:33 (10 min) · 19:24–19:34 (10 min)',
   );
   await expect(page.getByTestId('seasonal-envelope')).toContainText('Sunrise 64°–115°');
   await expect(page.getByTestId('seasonal-envelope')).toContainText('noon 45°–88°');

@@ -148,8 +148,15 @@ export function wallClockToUtc(civil: CivilTime, zone: string): Date {
   ) {
     return new Date(earlier);
   }
-  // Gap (spring forward): the wall time never occurs; `guess` then reads as target+gap, which is
-  // the documented "shift forward" behaviour. Nothing more to do.
+  // Gap (spring forward): the wall time never occurs. Shift it forward by the gap, as the
+  // module's policy says: read it with the offset in force before the change (half a day
+  // earlier, well clear of it), so 02:30 on New York's spring-forward night is 03:30 EDT and
+  // midnight on Santiago's is 01:00. Iterating alone lands east of UTC forwards but west of it
+  // backwards.
+  if (!wallMatches(guess, zone, target)) {
+    const before = zoneOffsetMinutes(new Date(target - 12 * 3_600_000), zone);
+    return new Date(target - before * 60_000);
+  }
   return new Date(guess);
 }
 
@@ -194,8 +201,8 @@ export function parseCivilDate(iso: string): { year: number; month: number; day:
   return { year, month, day };
 }
 
-/** "HH:MM" in `zone`. */
+/** "HH:MM" in `zone`, to the nearest minute (a sunset at 16:31:49 is 16:32, as almanacs print it). */
 export function formatWallTime(date: Date, zone: string): string {
-  const w = utcToWallClock(date, zone);
+  const w = utcToWallClock(new Date(date.getTime() + 30_000), zone);
   return `${w.hour.toString().padStart(2, '0')}:${w.minute.toString().padStart(2, '0')}`;
 }
