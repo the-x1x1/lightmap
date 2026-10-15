@@ -40,6 +40,35 @@ const MAX_LOAD_HEIGHT_M = 6000;
 const SLICE = 250;
 /** The building's base sits this far into the ground, so a slope never shows a gap under it. */
 const SINK_M = 2;
+/**
+ * The buildings' and trees' fragment shader: Cesium's per-instance colour appearance lights
+ * every face from the camera (a headlight), which would light a wall facing away from the Sun
+ * as brightly as one facing it. Here the Sun (the scene light) lights the faces that face it,
+ * and a sky term, stronger on faces that look up, lights the rest - both scaled by the light's
+ * own colour, so dusk and night dim buildings with the ground. Shadows come on top from the
+ * shadow map as before. ASCII only (some drivers reject anything else in shader source).
+ */
+export const LIT_INSTANCE_FS = `
+in vec3 v_positionEC;
+in vec3 v_normalEC;
+in vec4 v_color;
+
+void main()
+{
+    vec3 normalEC = normalize(v_normalEC);
+#ifdef FACE_FORWARD
+    normalEC = faceforward(normalEC, vec3(0.0, 0.0, 1.0), -normalEC);
+#endif
+    vec4 color = czm_gammaCorrect(v_color);
+    vec3 positionWC = (czm_inverseView * vec4(v_positionEC, 1.0)).xyz;
+    vec3 upEC = normalize((czm_view * vec4(normalize(positionWC), 0.0)).xyz);
+    float sun = max(dot(normalEC, czm_lightDirectionEC), 0.0);
+    float sky = 0.5 + 0.5 * dot(normalEC, upEC);
+    vec3 light = czm_lightColor * (0.55 * sun + 0.12 + 0.12 * sky);
+    out_FragColor = vec4(color.rgb * light, color.a);
+}
+`;
+
 /** Trees per primitive (their geometry is built in Cesium's workers). */
 const TREE_SLICE = 1500;
 
@@ -380,6 +409,7 @@ export class OsmBuildingsLayer {
         flat: false,
         translucent: false,
         closed: true,
+        fragmentShaderSource: LIT_INSTANCE_FS,
       }),
       shadows: C.ShadowMode.ENABLED,
       asynchronous: true,
@@ -431,6 +461,7 @@ export class OsmBuildingsLayer {
         flat: false,
         translucent: false,
         closed: true,
+        fragmentShaderSource: LIT_INSTANCE_FS,
       }),
       shadows: C.ShadowMode.ENABLED,
       asynchronous: false,
