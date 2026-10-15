@@ -1963,6 +1963,8 @@ export class CesiumSceneHost implements SceneHost {
       }
     }
     layer.update(lon, lat, heightAbove);
+    // Standing on the ground (the Viewpoint): no generic tree where the eye is.
+    if (above < 60) layer.hideTreesNear(scene.camera.positionWC);
   }
 
   /**

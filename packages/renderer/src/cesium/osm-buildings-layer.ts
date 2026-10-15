@@ -52,6 +52,8 @@ interface TileState {
   done: Promise<void>;
   /** Every building and the trees (near), or only the skyline's tall buildings (far). */
   near: boolean;
+  /** Each tree's primitive, instance ids (trunk, crown) and base, to hide the ones at the eye. */
+  trees: { prim: Cesium.Primitive; id: number; base: Cesium.Cartesian3 }[];
 }
 
 export class OsmBuildingsLayer {
@@ -65,6 +67,9 @@ export class OsmBuildingsLayer {
   private readonly tiles = new Map<string, TileState>();
   private readonly owned = new Set<unknown>();
   private readonly treePrims = new Set<Cesium.Primitive>();
+  private treeIds = 0;
+  /** Trees hidden because the eye stands in them: [primitive, id]. */
+  private hiddenTrees: [Cesium.Primitive, number][] = [];
   private lastFocus: { lon: number; lat: number } | null = null;
   private destroyed = false;
   private failures = 0;
@@ -132,6 +137,7 @@ export class OsmBuildingsLayer {
         cancelled: false,
         done: Promise.resolve(),
         near: full,
+        trees: [],
       };
       this.tiles.set(key, state);
       state.done = this.load(state);
@@ -145,6 +151,31 @@ export class OsmBuildingsLayer {
       const d = Math.hypot(state.x - centre.x, state.y - centre.y) * tileM;
       if (d > KEEP_RADIUS_M) this.drop(key, state);
     }
+  }
+
+  /**
+   * Hides the trees whose trunk stands within `radiusM` of the eye: the woods are a pattern, so
+   * one may grow exactly where you stand, and from inside a crown nothing else shows.
+   */
+  hideTreesNear(eye: Cesium.Cartesian3, radiusM = 9): void {
+    const C = this.C;
+    const show = (prim: Cesium.Primitive, id: number, on: boolean) => {
+      if (prim.isDestroyed() || !prim.ready) return false;
+      for (const part of ['t', 'c']) {
+        const a = prim.getGeometryInstanceAttributes(`${id}${part}`) as
+          { show?: unknown } | undefined;
+        if (a) a.show = C.ShowGeometryInstanceAttribute.toValue(on);
+      }
+      return true;
+    };
+    for (const [prim, id] of this.hiddenTrees) show(prim, id, true);
+    this.hiddenTrees = [];
+    const r2 = radiusM * radiusM;
+    for (const state of this.tiles.values())
+      for (const t of state.trees)
+        if (C.Cartesian3.distanceSquared(t.base, eye) < r2 && show(t.prim, t.id, false))
+          this.hiddenTrees.push([t.prim, t.id]);
+    this.scene.requestRender();
   }
 
   /**
@@ -237,11 +268,14 @@ export class OsmBuildingsLayer {
         if (state.cancelled || this.destroyed) return;
         for (let i = 0; i < trees.length; i += TREE_SLICE) {
           if (state.cancelled || this.destroyed) return;
-          this.adopt(
-            state,
-            this.treeSlice(trees.slice(i, i + TREE_SLICE), grounds.slice(i, i + TREE_SLICE)),
-            true,
+          const record: { id: number; base: Cesium.Cartesian3 }[] = [];
+          const prim = this.treeSlice(
+            trees.slice(i, i + TREE_SLICE),
+            grounds.slice(i, i + TREE_SLICE),
+            record,
           );
+          this.adopt(state, prim, true);
+          if (prim) for (const r of record) state.trees.push({ prim, ...r });
           await new Promise((r) => setTimeout(r, 0));
         }
       }
@@ -280,6 +314,7 @@ export class OsmBuildingsLayer {
   private treeSlice(
     trees: readonly TreeSpot[],
     grounds: readonly number[],
+    record: { id: number; base: Cesium.Cartesian3 }[],
   ): Cesium.Primitive | null {
     const C = this.C;
     const instances: Cesium.GeometryInstance[] = [];
@@ -287,9 +322,10 @@ export class OsmBuildingsLayer {
     const bark = C.ColorGeometryInstanceAttribute.fromColor(new C.Color(0.32, 0.25, 0.18, 1));
     trees.forEach((t, i) => {
       const ground = (grounds[i] ?? 0) - 0.3;
-      const enu = C.Transforms.eastNorthUpToFixedFrame(
-        C.Cartesian3.fromDegrees(t.lon, t.lat, ground),
-      );
+      const base = C.Cartesian3.fromDegrees(t.lon, t.lat, ground);
+      const enu = C.Transforms.eastNorthUpToFixedFrame(base);
+      const id = ++this.treeIds;
+      record.push({ id, base });
       const at = (up: number) =>
         C.Matrix4.multiplyByTranslation(enu, new C.Cartesian3(0, 0, up), new C.Matrix4());
       const crownH = t.conifer ? t.heightM * 0.8 : t.heightM * 0.6;
@@ -304,7 +340,8 @@ export class OsmBuildingsLayer {
             vertexFormat,
           }),
           modelMatrix: at(trunkH / 2),
-          attributes: { color: bark },
+          id: `${id}t`,
+          attributes: { color: bark, show: new C.ShowGeometryInstanceAttribute(true) },
         }),
       );
       const g = 0.27 + 0.12 * t.tone;
@@ -331,7 +368,8 @@ export class OsmBuildingsLayer {
                 vertexFormat,
               }),
           modelMatrix: at(crownBase + crownH / 2),
-          attributes: { color: leaf },
+          id: `${id}c`,
+          attributes: { color: leaf, show: new C.ShowGeometryInstanceAttribute(true) },
         }),
       );
     });
@@ -345,6 +383,7 @@ export class OsmBuildingsLayer {
       }),
       shadows: C.ShadowMode.ENABLED,
       asynchronous: true,
+      // Kept so single trees can be hidden (`hideTreesNear`) by their attributes.
       releaseGeometryInstances: true,
       allowPicking: true,
     });
