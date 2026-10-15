@@ -2,6 +2,22 @@
 
 All notable changes. Versions follow semver; `pnpm release <version>` prepends entries from commits.
 
+## Unreleased
+
+- **LightMap for Mac** (Apple Silicon, macOS 12+): a disk image, its own window with the Mac menus,
+  and the same self-installing updates as Windows; built, installed, updated and crash-tested in
+  CI (6dbb837, 485606e)
+- **The seasons on the ground**: broad-leaf trees turn yellow, orange and red in autumn and stand
+  bare in winter, grass goes dormant, by latitude, height and a maritime rule for the west coasts;
+  the tropics stay green (94258dd, 485606e)
+- **Free saves three projects**; the fourth is Pro, and archived projects count (1a76a4c)
+- **Desktop accounts**: the apps sign in to the hosted LightMap through the browser and see the same
+  account, plan and projects, once the hosted service is deployed (b6d3713, 485606e)
+- Smoother walking into a city: buildings and trees load one slice per frame, and the street map is
+  drawn in a few strokes (858470c, b622b48)
+- The weather scenario and lens chips wrap instead of being cut off (227d79e); E2E tests the
+  controls without the 3D scene (5d7d74b)
+
 ## v0.3.0 — 2026-10-15
 
 - **LightMap for Windows**: an installer (per user, no administrator prompt), its own window, and
