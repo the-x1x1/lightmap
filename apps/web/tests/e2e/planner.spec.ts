@@ -484,7 +484,12 @@ test('mobile: "Point with phone" follows synthetic orientation readings and stop
       },
       [alpha, beta] as const,
     );
-  await fire(90, 90);
+  // The browser answers the motion-sensor permission asynchronously and the app listens only
+  // once it has: a real phone keeps sending readings, so the test does too.
+  for (let i = 0; i < 8; i++) {
+    await fire(90, 90);
+    await page.waitForTimeout(100);
+  }
   await expect(
     page.getByTestId('compass-toggle'),
     await compassDiagnostics(page, consoleErrors),

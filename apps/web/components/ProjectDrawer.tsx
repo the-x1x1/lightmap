@@ -38,6 +38,9 @@ import { EmptyState } from './states/EmptyState';
 import { Paywall } from './Paywall';
 import { SignInPrompt } from './AccountMenu';
 
+/** The project last opened in the drawer, for this page's life. */
+let lastSelectedProjectId: string | null = null;
+
 export function ProjectDrawer({
   scene,
   captureThumbnail,
@@ -47,7 +50,12 @@ export function ProjectDrawer({
 }) {
   const account = useAccount();
   const projects = useProjects(account.signedIn);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // The open project survives a trip to another tab (the drawer unmounts with its tab).
+  const [selectedId, setSelectedIdState] = useState<string | null>(() => lastSelectedProjectId);
+  const setSelectedId = (id: string | null) => {
+    lastSelectedProjectId = id;
+    setSelectedIdState(id);
+  };
   /** Viewpoint order: as saved (the server's creation order) or by the planned instant. */
   const [order, setOrder] = useState<'saved' | 'time'>('saved');
   const project = useProject(selectedId);
