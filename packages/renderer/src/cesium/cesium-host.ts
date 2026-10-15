@@ -20,6 +20,7 @@ import type {
 } from '@lightmap/geospatial';
 import { GRADE_FRAGMENT_SHADER } from '../shaders/grade.frag.ts';
 import { OsmBuildingsLayer } from './osm-buildings-layer.ts';
+import { coverShapesFromTile } from '../vector-cover.ts';
 import { createDetailTexture, createNoiseTexture, type DetailTileCesium } from './detail-tiles.ts';
 import { NOISE_TEXTURE_SIZE, makeNoiseTexture } from '../noise-texture.ts';
 import { FrameRateSampler } from '../frame-sampler.ts';
@@ -999,43 +1000,63 @@ export class CesiumSceneHost implements SceneHost {
 
   /**
    * With no land-cover source: the bundled urban areas around the pin, filled into a cover map
-   * as built-up ground (everything else stays unknown, so the procedural rules hold there).
+   * as built-up ground, and — where the OpenStreetMap vector tiles answer — the mapped land use,
+   * land cover and water painted over them (parks, woods, fields, sand, water; everything else
+   * stays unknown, so the procedural rules hold there).
    */
   private async loadUrbanAround(p: GeoPoint): Promise<LandCoverReading | null> {
-    const base = this.urbanAreasUrl;
-    if (!base || this.destroyed) return null;
+    if (this.destroyed) return null;
     const seq = ++this.coverLoadSeq;
-    this.urbanIndex ??= fetch(`${base}/index.json`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j: unknown) =>
-        j && typeof j === 'object' && Array.isArray((j as { cells?: unknown }).cells)
-          ? new Set(
-              (j as { cells: unknown[] }).cells.filter((c): c is string => typeof c === 'string'),
-            )
-          : null,
-      )
-      .catch(() => null);
-    const index = await this.urbanIndex;
-    if (!index) {
-      this.urbanIndex = null; // try again next time
-      return null;
-    }
     const mosaic = coverMosaicFor(p, 12);
-    const keys = urbanCellsFor(mosaicBox(mosaic)).filter((k) => index.has(k));
     const polys: UrbanPolygon[] = [];
-    for (const key of keys) {
-      let cell = this.urbanCells.get(key);
-      if (!cell) {
-        cell = fetch(`${base}/${key}.json`)
-          .then((r) => (r.ok ? r.json() : null))
-          .then((j: unknown) => decodeUrbanCell(j, key))
-          .catch(() => []);
-        this.urbanCells.set(key, cell);
+    const base = this.urbanAreasUrl;
+    if (base) {
+      this.urbanIndex ??= fetch(`${base}/index.json`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j: unknown) =>
+          j && typeof j === 'object' && Array.isArray((j as { cells?: unknown }).cells)
+            ? new Set(
+                (j as { cells: unknown[] }).cells.filter((c): c is string => typeof c === 'string'),
+              )
+            : null,
+        )
+        .catch(() => null);
+      const index = await this.urbanIndex;
+      if (!index) this.urbanIndex = null; // try again next time
+      const keys = index ? urbanCellsFor(mosaicBox(mosaic)).filter((k) => index.has(k)) : [];
+      for (const key of keys) {
+        let cell = this.urbanCells.get(key);
+        if (!cell) {
+          cell = fetch(`${base}/${key}.json`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((j: unknown) => decodeUrbanCell(j, key))
+            .catch(() => []);
+          this.urbanCells.set(key, cell);
+        }
+        polys.push(...(await cell));
       }
-      polys.push(...(await cell));
+    }
+    // OpenStreetMap's own cover, from the same vector tiles as the buildings.
+    const shapes: { cls: Parameters<typeof packCover>[0]; rings: [number, number][][] }[] = [];
+    const template = this.osmBuildings ? await this.osmBuildings.tileTemplate() : null;
+    if (template) {
+      const jobs: Promise<void>[] = [];
+      for (let y = mosaic.y0; y <= mosaic.y1; y++)
+        for (let x = mosaic.x0; x <= mosaic.x1; x++)
+          jobs.push(
+            fetch(tileUrl(template, mosaic.zoom, x, y))
+              .then(async (r) => (r.ok ? new Uint8Array(await r.arrayBuffer()) : null))
+              .then((data) => {
+                if (data) shapes.push(...coverShapesFromTile(data, mosaic.zoom, x, y));
+              })
+              .catch(() => undefined),
+          );
+      await Promise.all(jobs);
     }
     if (this.destroyed || seq !== this.coverLoadSeq) return null;
-    const TILE = 256;
+    if (polys.length === 0 && shapes.length === 0) return null;
+    // Finer texels when OpenStreetMap's polygons are drawn (a park or a block is ~100 m).
+    const TILE = shapes.length > 0 ? 512 : 256;
     const width = (mosaic.x1 - mosaic.x0 + 1) * TILE;
     const height = (mosaic.y1 - mosaic.y0 + 1) * TILE;
     const canvas = document.createElement('canvas');
@@ -1043,11 +1064,14 @@ export class CesiumSceneHost implements SceneHost {
     canvas.height = height;
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return null;
-    const [r, g, b] = packCover('built');
-    ctx.fillStyle = `rgb(${r},${g},${b})`;
-    for (const poly of polys) {
+    const fill = (
+      rings: readonly (readonly [number, number])[][],
+      cls: Parameters<typeof packCover>[0],
+    ) => {
+      const [r, g, b] = packCover(cls);
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
       ctx.beginPath();
-      for (const ring of poly) {
+      for (const ring of rings) {
         ring.forEach(([lon, lat], i) => {
           const [x, y] = mosaicPixel(mosaic, width, height, lon, lat);
           if (i === 0) ctx.moveTo(x, y);
@@ -1056,22 +1080,34 @@ export class CesiumSceneHost implements SceneHost {
         ctx.closePath();
       }
       ctx.fill('evenodd');
-    }
-    // The share of the map that is built up, for the reading (alpha marks known texels).
+    };
+    for (const poly of polys) fill(poly, 'built');
+    for (const s of shapes) fill(s.rings, s.cls);
+    // Shares of the map by what it holds (alpha marks known texels).
     const data = ctx.getImageData(0, 0, width, height).data;
+    let known = 0;
     let built = 0;
-    for (let i = 3; i < data.length; i += 4) if ((data[i] ?? 0) >= 128) built++;
-    const share = built / (width * height);
+    let trees = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      if ((data[i + 3] ?? 0) < 128) continue;
+      known++;
+      if ((data[i + 1] ?? 0) >= 128) built++;
+      else if ((data[i] ?? 0) >= 200) trees++;
+    }
+    const total = width * height;
     if (this.destroyed || seq !== this.coverLoadSeq) return null;
-    this.coverCanvas = share > 0 ? canvas : null;
+    this.coverCanvas = known > 0 ? canvas : null;
     this.coverBounds =
-      share > 0 ? [mosaic.westRad, mosaic.eastRad, mosaic.northMerc, mosaic.southMerc] : null;
+      known > 0 ? [mosaic.westRad, mosaic.eastRad, mosaic.northMerc, mosaic.southMerc] : null;
     this.applyCoverMap();
-    const rounded = Math.round(share * 1000) / 1000;
+    const r3 = (v: number, of: number) => Math.round((v / of) * 1000) / 1000;
+    const shares: Record<string, number> = {};
+    if (built > 0) shares['built'] = r3(built, known);
+    if (trees > 0) shares['tree'] = r3(trees, known);
     return {
-      known: rounded,
-      shares: rounded > 0 ? { built: rounded } : {},
-      metresPerPixel: mosaic.metresPerPixel,
+      known: r3(known, total),
+      shares,
+      metresPerPixel: (mosaic.metresPerPixel * 256) / TILE,
     };
   }
 

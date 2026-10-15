@@ -143,6 +143,11 @@ export class OsmBuildingsLayer {
     this.scene.requestRender();
   }
 
+  /** The vector tiles' XYZ template, once the TileJSON has answered (null if it cannot). */
+  tileTemplate(): Promise<string | null> {
+    return this.resolveTemplate();
+  }
+
   private async resolveTemplate(): Promise<string | null> {
     if (this.template) return this.template;
     this.templateJob ??= (async () => {
