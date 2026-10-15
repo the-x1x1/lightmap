@@ -92,6 +92,12 @@ export class SceneController {
   private groundHeightSampled = false;
   private lastDayKey: string | null = null;
   private groundHeightM = 0;
+  /**
+   * Where the Viewpoint's eye stands when the place is on a building: its roof (a pin dropped by
+   * a geocoder or a click lands on footprints all the time, and an eye inside a building sees a
+   * wall). Null on open ground.
+   */
+  private eyeBaseM: number | null = null;
   private groundHeightKey: string | null = null;
   private orbit: OrbitView = defaultOrbit();
   private lastScene: SceneState | null = null;
@@ -310,7 +316,7 @@ export class SceneController {
       hostCam = {
         kind: 'viewpoint',
         eye: cam.eye,
-        heightM: ground + cam.eyeHeightM,
+        heightM: (this.eyeBaseM ?? ground) + cam.eyeHeightM,
         headingDeg: cam.headingDeg,
         pitchDeg: cam.pitchDeg,
         fovDeg: cesiumFovDeg(cam.fovDeg, this.aspect()),
@@ -501,6 +507,18 @@ export class SceneController {
     this.groundHeightSampled = h !== null;
     // The camera, the overlay and the ground texture's snow all read the height: one apply.
     if (this.lastScene && (groundChanged || seaChanged || h !== null)) this.apply(this.lastScene);
+    void this.refreshEyeBase(scene, key, next);
+  }
+
+  /** Stands the eye on a roof when the place is on a building (the mapped buildings' height there). */
+  private async refreshEyeBase(scene: SceneState, key: string, ground: number): Promise<void> {
+    const before = this.eyeBaseM;
+    this.eyeBaseM = null;
+    const surface = await this.host.sampleSurfaceHeights([scene.location.point]).catch(() => null);
+    if (this.groundHeightKey !== key || this.host.isDestroyed()) return;
+    const top = surface?.[0];
+    if (typeof top === 'number' && top > ground + 2.5 && top < ground + 800) this.eyeBaseM = top;
+    if (this.eyeBaseM !== before && this.lastScene) this.apply(this.lastScene);
   }
 
   get groundHeight(): number {

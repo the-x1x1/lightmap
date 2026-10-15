@@ -56,6 +56,7 @@ export class OsmBuildingsLayer {
   private templateJob: Promise<string | null> | null = null;
   private readonly tiles = new Map<string, TileState>();
   private readonly owned = new Set<unknown>();
+  private readonly treePrims = new Set<Cesium.Primitive>();
   private lastFocus: { lon: number; lat: number } | null = null;
   private destroyed = false;
   private failures = 0;
@@ -77,6 +78,14 @@ export class OsmBuildingsLayer {
   /** Whether a picked primitive is one of these buildings. */
   owns(primitive: unknown): boolean {
     return this.owned.has(primitive);
+  }
+
+  /**
+   * The trees' primitives: left out of height sampling (the horizon and a pin on a roof),
+   * because the trees are a pattern of a wood, not mapped trees.
+   */
+  treePrimitives(): Cesium.Primitive[] {
+    return [...this.treePrims];
   }
 
   /** How many buildings' primitives are on the globe (0 until the first tile is drawn). */
@@ -136,6 +145,7 @@ export class OsmBuildingsLayer {
     state.cancelled = true;
     for (const p of state.primitives) {
       this.owned.delete(p);
+      this.treePrims.delete(p);
       this.collection.remove(p); // destroys it
     }
     state.primitives = [];
@@ -211,6 +221,7 @@ export class OsmBuildingsLayer {
           this.adopt(
             state,
             this.treeSlice(trees.slice(i, i + TREE_SLICE), grounds.slice(i, i + TREE_SLICE)),
+            true,
           );
           await new Promise((r) => setTimeout(r, 0));
         }
@@ -221,8 +232,9 @@ export class OsmBuildingsLayer {
     }
   }
 
-  private adopt(state: TileState, primitive: Cesium.Primitive | null): void {
+  private adopt(state: TileState, primitive: Cesium.Primitive | null, tree = false): void {
     if (!primitive) return;
+    if (tree) this.treePrims.add(primitive);
     state.primitives.push(primitive);
     this.owned.add(primitive);
     this.collection.add(primitive);
@@ -375,6 +387,7 @@ export class OsmBuildingsLayer {
     for (const s of this.tiles.values()) s.cancelled = true;
     this.tiles.clear();
     this.owned.clear();
+    this.treePrims.clear();
     this.scene.primitives.remove(this.collection); // destroys it and its primitives
   }
 }

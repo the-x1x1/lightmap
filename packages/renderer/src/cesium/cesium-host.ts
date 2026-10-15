@@ -334,6 +334,15 @@ export class CesiumSceneHost implements SceneHost {
     // (Sun above −0.833° and enough direct light), never by an aesthetic fade.
     sm.fadingEnabled = false;
     sm.normalOffset = true;
+    // Buildings and trees are flat-walled primitives: with Cesium's default primitive bias their
+    // walls shadow themselves in stripes (acne). A larger normal offset and depth bias clear it
+    // without lifting shadows visibly off the ground (Cesium keeps these settings internal).
+    const bias = (sm as unknown as { _primitiveBias?: Record<string, number | boolean> })
+      ._primitiveBias;
+    if (bias) {
+      bias['normalOffsetScale'] = 2;
+      bias['depthBias'] = 0.0002;
+    }
 
     const ssc = scene.screenSpaceCameraController;
     ssc.enableCollisionDetection = true;
@@ -1852,6 +1861,9 @@ export class CesiumSceneHost implements SceneHost {
       await this.osmBuildings.loadAround(first.longitude, first.latitude).catch(() => undefined);
     }
     const anyBuildings = this.buildings !== null || (this.osmBuildings?.primitiveCount ?? 0) > 0;
+    // The trees are a pattern of the mapped woods, not mapped trees: no horizon or roof is
+    // read from them.
+    const exclude: object[] = this.osmBuildings?.treePrimitives() ?? [];
     if (this.destroyed || !anyBuildings || !this.scene.sampleHeightSupported) return null;
     const out: Array<number | null> = new Array<number | null>(points.length).fill(null);
     // Cesium loads the tiles each query needs at their finest level (the 3D Tiles for every
@@ -1868,7 +1880,7 @@ export class CesiumSceneHost implements SceneHost {
           try {
             const cartos = slice.map((p) => C.Cartographic.fromDegrees(p.longitude, p.latitude));
             // A 2 m-wide pick volume, so a thin wall or a roof edge under the probe is hit.
-            const res = await this.scene.sampleHeightMostDetailed(cartos, [], 2);
+            const res = await this.scene.sampleHeightMostDetailed(cartos, exclude, 2);
             res.forEach((c, j) => {
               out[i + j] = c && Number.isFinite(c.height) ? c.height : null;
             });
