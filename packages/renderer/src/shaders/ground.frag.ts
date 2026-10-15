@@ -609,6 +609,29 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     if (water > 0.0)
     {
         vec3 sea = mix(vec3(0.05, 0.17, 0.25), vec3(0.08, 0.24, 0.30), patches);
+        // Shallows: water with land close around it (OpenStreetMap's water near the viewer,
+        // read 65 and 180 m out in eight directions) is shallow, its bottom showing - turquoise
+        // over the clear sand of the tropics and subtropics, a muted green elsewhere (V&V: all
+        // of Kailua Bay one deep grey-green). No bathymetry: the terrain is flat at sea level.
+        if (roadsKnown > 0.5 && osmWater > 0.5)
+        {
+            float land = 0.0;
+            float weight = 0.0;
+            for (int i = 0; i < 8; i++)
+            {
+                float a = float(i) * 0.7853982;
+                vec2 dir = vec2(cos(a), sin(a));
+                vec4 n1 = texture(u_roadMap, roadUv + dir * 0.022);
+                vec4 n2 = texture(u_roadMap, roadUv + dir * 0.06);
+                land += step(0.5, n1.a) * (1.0 - smoothstep(0.35, 0.65, n1.b));
+                land += 0.6 * step(0.5, n2.a) * (1.0 - smoothstep(0.35, 0.65, n2.b));
+                weight += step(0.5, n1.a) + 0.6 * step(0.5, n2.a);
+            }
+            float shallow = weight > 0.0 ? smoothstep(0.02, 0.4, land / weight) : 0.0;
+            float tropical = 1.0 - smoothstep(0.42, 0.56, abs(u_upWC.z));
+            vec3 shoal = mix(vec3(0.10, 0.26, 0.24), vec3(0.12, 0.50, 0.53), tropical);
+            sea = mix(sea, shoal * (0.9 + 0.2 * patches), shallow);
+        }
         sea = mix(sea, vec3(0.10, 0.17, 0.24), smoothstep(2000.0, 40000.0, dist));
         material.diffuse = mix(material.diffuse, sea * u_brightness, water);
         // Water seen at a grazing angle is a mirror (Fresnel): toward the horizon the paint
