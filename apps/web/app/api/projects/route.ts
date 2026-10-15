@@ -42,10 +42,12 @@ export async function POST(req: Request) {
     const ctx = await requireUser();
     const db = requireDb();
     const repo = projectsRepo(db);
-    const decision = can(ctx.entitlements, 'saved_projects', {
+    // A quick answer for the common refusal, before reading the body; the decision that counts
+    // is made again with the insert, under the user's lock.
+    const early = can(ctx.entitlements, 'saved_projects', {
       projectCount: await repo.count(ctx.user.id),
     });
-    if (!decision.allowed) throw forbidByEntitlement(decision);
+    if (!early.allowed) throw forbidByEntitlement(early);
     const body = await readJson(req, (b) => {
       const o = v.obj(b);
       return {
@@ -60,7 +62,10 @@ export async function POST(req: Request) {
           v.isoDate(o['shootDate'], 'shootDate', { optional: true, nullable: true }) ?? null,
       };
     });
-    const project = await repo.create(ctx.user.id, body);
+    const { project, decision } = await repo.createChecked(ctx.user.id, body, (projectCount) =>
+      can(ctx.entitlements, 'saved_projects', { projectCount }),
+    );
+    if (!project) throw forbidByEntitlement(decision);
     await auditRepo(db).record('project.created', ctx.user.id, { projectId: project.id });
     return json({ project: projectDto(project) }, { status: 201 });
   } catch (e) {

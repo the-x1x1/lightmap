@@ -331,4 +331,20 @@ run('repositories (integration)', () => {
     expect(await projects.count(bob)).toBe(before + 1);
     await projects.remove(bob, p.id);
   });
+  it('createChecked holds the limit when requests race', async () => {
+    const projects = projectsRepo(h.db);
+    const carol = ulid();
+    await h.db.insert(schema.users).values({ id: carol, email: `carol-${carol}@test.local` });
+    try {
+      const results = await Promise.all(
+        Array.from({ length: 6 }, (_, i) =>
+          projects.createChecked(carol, { name: `Race ${i}` }, (n) => ({ allowed: n < 3 })),
+        ),
+      );
+      expect(results.filter((r) => r.project !== null)).toHaveLength(3);
+      expect(await projects.count(carol)).toBe(3);
+    } finally {
+      await usersRepo(h.db).erase(carol);
+    }
+  });
 });

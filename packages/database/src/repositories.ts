@@ -156,6 +156,37 @@ export function projectsRepo(db: Db) {
       const [p] = await db.insert(projects).values(row).returning();
       return p!;
     },
+    /**
+     * Creates a project when the plan allows one more: `decide` gets the saved count (archived
+     * included) and answers, under a per-user lock held to the insert, so two requests at once
+     * cannot both pass a limit of three and save a fourth.
+     */
+    async createChecked<D extends { allowed: boolean }>(
+      userId: string,
+      input: ProjectInput,
+      decide: (savedCount: number) => D,
+    ): Promise<{ project: Project | null; decision: D }> {
+      return db.transaction(async (tx) => {
+        await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${'projects:' + userId}))`);
+        const [r] = await tx
+          .select({ n: count() })
+          .from(projects)
+          .where(eq(projects.userId, userId));
+        const decision = decide(Number(r?.n ?? 0));
+        if (!decision.allowed) return { project: null, decision };
+        const [p] = await tx
+          .insert(projects)
+          .values({
+            id: ulid(),
+            userId,
+            name: input.name.trim(),
+            description: input.description ?? null,
+            shootDate: input.shootDate ?? null,
+          })
+          .returning();
+        return { project: p!, decision };
+      });
+    },
     async update(userId: string, id: string, patch: ProjectPatch): Promise<Project> {
       const [p] = await db
         .update(projects)
