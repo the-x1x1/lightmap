@@ -36,6 +36,10 @@ export function LocationSearch({
   // The label of the place just chosen: filling the box with it must not start another search
   // (and reopen the list over the map); typing anything else clears it.
   const chosen = useRef<string | null>(null);
+  // Enter pressed before the search answered: the first result is taken when it arrives (for
+  // this query only; typing on cancels it).
+  const enterPending = useRef<string | null>(null);
+  const chooseLater = useRef<((p: Place) => Promise<void>) | null>(null);
 
   // A place picked elsewhere — a tap on the globe, a reopened viewpoint — names itself in the box.
   useEffect(() => {
@@ -84,6 +88,11 @@ export function LocationSearch({
           setAttribution(r.provider.attribution);
           setOpen(true);
           setActive(r.results.length > 0 ? 0 : -1);
+          const first = r.results[0];
+          if (enterPending.current === q && first) {
+            enterPending.current = null;
+            void chooseLater.current?.(first);
+          }
         } catch (e) {
           if (ac.signal.aborted) return;
           setResults([]);
@@ -100,6 +109,10 @@ export function LocationSearch({
     }, 450);
     return () => clearTimeout(t);
   }, [query]);
+
+  useEffect(() => {
+    chooseLater.current = choose;
+  });
 
   async function choose(p: Place) {
     abort.current?.abort();
@@ -162,10 +175,28 @@ export function LocationSearch({
           <input
             type="search"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              enterPending.current = null;
+              setQuery(e.target.value);
+            }}
             onFocus={() => results.length > 0 && setOpen(true)}
             onBlur={() => setTimeout(() => setOpen(false), 120)}
             onKeyDown={(e) => {
+              if (e.key === 'Enter' && !(open && active >= 0 && results[active])) {
+                // Nothing to choose yet: coordinates go straight in; a name waits for its search.
+                const q = query.trim();
+                if (q.length < 2) return;
+                e.preventDefault();
+                const coords = parseCoordinates(q);
+                if (coords) {
+                  void choose({
+                    label: `Coordinates ${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`,
+                    point: coords,
+                    sourceId: 'coordinates',
+                  });
+                } else if (q !== chosen.current?.trim()) enterPending.current = q;
+                return;
+              }
               if (!open) return;
               if (e.key === 'ArrowDown') {
                 e.preventDefault();
