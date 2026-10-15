@@ -517,7 +517,12 @@ export class SceneController {
     const surface = await this.host.sampleSurfaceHeights([scene.location.point]).catch(() => null);
     if (this.groundHeightKey !== key || this.host.isDestroyed()) return;
     const top = surface?.[0];
-    if (typeof top === 'number' && top > ground + 2.5 && top < ground + 800) this.eyeBaseM = top;
+    // A surface over the terrain where the mapped footprints show no building is the globe's
+    // coarser tile seen by the pick (V&V: on the fins near Delicate Arch the eye stood 186 m
+    // up in the air), not a roof.
+    const mapped = this.host.hasBuildingAt?.(scene.location.point) ?? null;
+    if (typeof top === 'number' && top > ground + 2.5 && top < ground + 800 && mapped !== false)
+      this.eyeBaseM = top;
     if (this.eyeBaseM !== before && this.lastScene) this.apply(this.lastScene);
   }
 

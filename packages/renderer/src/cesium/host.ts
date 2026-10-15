@@ -233,6 +233,12 @@ export interface SceneHost {
    * terrain height there).
    */
   sampleSurfaceHeights(points: readonly GeoPoint[]): Promise<Array<number | null> | null>;
+  /**
+   * Whether a mapped building's footprint holds the point: false where the loaded footprints
+   * say none does (a surface above the terrain there is the coarse globe, not a roof), null
+   * when the host cannot tell (3D Tiles buildings, or the tile not read yet).
+   */
+  hasBuildingAt?(point: GeoPoint): boolean | null;
   requestRender(): void;
   stats(): HostStats;
   /** The ground under a canvas point (CSS px from its top left), or null for the sky. */

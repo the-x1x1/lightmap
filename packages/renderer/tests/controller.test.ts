@@ -283,6 +283,44 @@ describe('SceneController', () => {
     ctl.destroy();
   });
 
+  it('does not stand the eye on the coarse globe where the footprints show no building', async () => {
+    const opts = {
+      setTimeoutImpl: (fn: () => void) => {
+        fn();
+        return 0;
+      },
+      clearTimeoutImpl: () => {},
+      aspect: () => 16 / 9,
+    };
+    const vp = scene({ camera: { ...defaultCamera(kailua.point, 45), mode: 'viewpoint' } });
+    // V&V, Delicate Arch: the pick met the globe's coarse tile 186 m over the finest terrain.
+    const { host, calls } = fakeHost();
+    host.sampleSurfaceHeights = async () => [42 + 186];
+    host.hasBuildingAt = () => false;
+    const c = new SceneController(host, opts);
+    c.apply(vp);
+    for (let i = 0; i < 4; i++) await new Promise((r) => setTimeout(r, 0));
+    expect((calls['setCamera']!.at(-1)![0] as { heightM: number }).heightM).toBeCloseTo(
+      42 + vp.camera.eyeHeightM,
+      5,
+    );
+    // A mapped building there, or a host that cannot tell, keeps the roof.
+    for (const answer of [true, null]) {
+      const { host: h, calls: k } = fakeHost();
+      h.sampleSurfaceHeights = async () => [42 + 30];
+      h.hasBuildingAt = () => answer;
+      const ctl = new SceneController(h, opts);
+      ctl.apply(vp);
+      for (let i = 0; i < 4; i++) await new Promise((r) => setTimeout(r, 0));
+      expect((k['setCamera']!.at(-1)![0] as { heightM: number }).heightM).toBeCloseTo(
+        72 + vp.camera.eyeHeightM,
+        5,
+      );
+      ctl.destroy();
+    }
+    c.destroy();
+  });
+
   it('overlay carries the sun path, current sun and shadow azimuth in map mode', () => {
     const { host, calls } = fakeHost();
     const c = new SceneController(host, { setTimeoutImpl: () => 0, clearTimeoutImpl: () => {} });

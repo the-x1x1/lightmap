@@ -182,6 +182,19 @@ interface TileState {
   near: boolean;
   /** Each tree's primitive, instance ids (trunk, crown) and base, to hide the ones at the eye. */
   trees: { prim: Cesium.Primitive; id: number; base: Cesium.Cartesian3 }[];
+  /** The tile's building footprints once read (empty: none there); null until then. */
+  footprints: readonly BuildingFootprint[] | null;
+}
+
+/** Whether [lon, lat] is inside a ring (even-odd rule; the ring is not closed). */
+function inRing(ring: readonly (readonly [number, number])[], lon: number, lat: number): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i] as readonly [number, number];
+    const [xj, yj] = ring[j] as readonly [number, number];
+    if (yi > lat !== yj > lat && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
 }
 
 export class OsmBuildingsLayer {
@@ -317,6 +330,17 @@ export class OsmBuildingsLayer {
     return this.buildingAppearance;
   }
 
+  /**
+   * Whether a mapped building stands at the point: true or false once its tile has been read
+   * (near tiles hold every building, far ones only the tall), null while that is unknown.
+   */
+  hasBuildingAt(lon: number, lat: number): boolean | null {
+    const t = lonLatToTile(BUILDING_TILE_ZOOM, lon, lat);
+    const fp = this.tiles.get(`${t.x}/${t.y}`)?.footprints;
+    if (!fp) return null;
+    return fp.some((b) => inRing(b.outer, lon, lat) && !b.holes.some((h) => inRing(h, lon, lat)));
+  }
+
   /** How many buildings' primitives are on the globe (0 until the first tile is drawn). */
   get primitiveCount(): number {
     return this.owned.size;
@@ -354,6 +378,7 @@ export class OsmBuildingsLayer {
         done: Promise.resolve(),
         near: full,
         trees: [],
+        footprints: null,
       };
       this.tiles.set(key, state);
       state.done = this.load(state);
@@ -462,12 +487,16 @@ export class OsmBuildingsLayer {
         return;
       }
       const res = await fetch(tileUrl(template, BUILDING_TILE_ZOOM, state.x, state.y));
-      if (res.status === 404 || res.status === 204) return; // no data there (open sea)
+      if (res.status === 404 || res.status === 204) {
+        state.footprints = []; // no data there (open sea)
+        return;
+      }
       if (!res.ok) throw new Error(`building tile ${state.key}: HTTP ${res.status}`);
       const data = new Uint8Array(await res.arrayBuffer());
       if (state.cancelled || this.destroyed) return;
       const all = buildingsFromTile(data, BUILDING_TILE_ZOOM, state.x, state.y);
       const buildings = state.near ? all : all.filter((b) => b.heightM >= FAR_MIN_HEIGHT_M);
+      state.footprints = buildings;
       const [, tileLat] = tilePointToLonLat(BUILDING_TILE_ZOOM, state.x, state.y, 1, 0.5, 0.5);
       const trees = state.near
         ? treesFromTile(data, BUILDING_TILE_ZOOM, state.x, state.y, tileLat)

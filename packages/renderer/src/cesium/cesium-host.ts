@@ -229,6 +229,8 @@ export class CesiumSceneHost implements SceneHost {
   private lastCameraKey = '';
   private preRenderRemover: (() => void) | null = null;
   private preRenderGroundRemover: (() => void) | null = null;
+  /** A viewpoint's measured eye height (kept above the drawn globe until that catches up). */
+  private viewpointHeightM: number | null = null;
 
   constructor(C: CesiumModule, options: CesiumHostOptions) {
     this.C = C;
@@ -403,6 +405,7 @@ export class CesiumSceneHost implements SceneHost {
     if (this.detailAtlasUrl) this.loadDetailAtlas(this.detailAtlasUrl);
     if (options.placeLabelsUrl) void this.loadPlaceLabels(options.placeLabelsUrl);
     this.preRenderGroundRemover = scene.preRender.addEventListener(() => {
+      this.keepEyeAboveGlobe();
       const m = this.groundMaterial;
       if (!m) return;
       const cam = scene.camera.positionWC;
@@ -737,6 +740,30 @@ export class CesiumSceneHost implements SceneHost {
     for (const key of Object.keys(g)) if (typeof g[key] !== 'function') target[key] = g[key];
   }
 
+  /**
+   * A viewpoint is placed at the height the controller measured, which lags a move to a new
+   * place by the time the finest terrain takes to load: in between the eye could sit under the
+   * ground drawn (V&V: Moab, 1 250 m above the last place, ten seconds of terrain seen from
+   * below). Until then the eye stands on the globe as drawn.
+   */
+  private keepEyeAboveGlobe(): void {
+    const wanted = this.viewpointHeightM;
+    if (wanted === null) return;
+    const cam = this.scene.camera;
+    const carto = cam.positionCartographic;
+    const surface = (this.scene.globe as Cesium.Globe | undefined)?.getHeight(carto);
+    // Back down to the measured height once the drawn ground no longer covers it.
+    let target = wanted;
+    if (surface !== undefined && Number.isFinite(surface) && wanted < surface + 0.5)
+      target = surface + 1.7;
+    if (Math.abs(carto.height - target) < 0.05) return;
+    const C = this.C;
+    cam.setView({
+      destination: C.Cartesian3.fromRadians(carto.longitude, carto.latitude, target),
+      orientation: { heading: cam.heading, pitch: cam.pitch, roll: 0 },
+    });
+  }
+
   setCamera(c: HostCamera): void {
     const C = this.C;
     const cam = this.scene.camera;
@@ -747,6 +774,7 @@ export class CesiumSceneHost implements SceneHost {
     const pin = c.kind === 'viewpoint' ? c.eye : c.target;
     this.detailAnchorTarget = C.Cartesian3.fromDegrees(pin.longitude, pin.latitude, 0);
     this.setLabelsForCamera(c.kind);
+    this.viewpointHeightM = c.kind === 'viewpoint' ? c.heightM : null;
     if (c.kind === 'viewpoint') {
       ssc.enableInputs = false; // React layer handles drag-to-look via CameraState
       // A flight still under way (to the place's orbit view) would carry on over this view.
@@ -1934,6 +1962,11 @@ export class CesiumSceneHost implements SceneHost {
       }
     }
     return out;
+  }
+
+  hasBuildingAt(p: GeoPoint): boolean | null {
+    if (this.buildings !== null || !this.osmBuildings) return null;
+    return this.osmBuildings.hasBuildingAt(p.longitude, p.latitude);
   }
 
   async sampleSurfaceHeights(points: readonly GeoPoint[]): Promise<Array<number | null> | null> {
