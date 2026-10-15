@@ -29,6 +29,13 @@ export default defineConfig({
           env: {
             WEATHER_PROVIDER: 'fixture',
             GEOCODER_PROVIDER: 'fixture',
+            // The suite checks the planner's controls, not the 3D scene: no building and tree
+            // tiles from OpenFreeMap and no satellite imagery to fetch and draw on a CI machine's
+            // software renderer (they made every click wait and ran the job past its 30 minutes),
+            // and no dependence on those servers being up. The scene is covered by the renderer's
+            // own tests and the desktop self-tests.
+            BUILDINGS_PROVIDER: 'none',
+            IMAGERY_PROVIDER: 'natural-earth',
             AUTH_DEV_LOGIN: 'true',
             LIGHTMAP_SHOW_DEV_BANNER: 'true',
             NEXT_PUBLIC_APP_URL: 'http://localhost:3100',

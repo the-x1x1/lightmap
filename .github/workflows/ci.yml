@@ -75,6 +75,8 @@ jobs:
       NEXT_PUBLIC_APP_URL: http://localhost:3100
       WEATHER_PROVIDER: fixture
       GEOCODER_PROVIDER: fixture
+      BUILDINGS_PROVIDER: none
+      IMAGERY_PROVIDER: natural-earth
       AUTH_DEV_LOGIN: 'true'
       NEXT_TELEMETRY_DISABLED: 1
     steps:

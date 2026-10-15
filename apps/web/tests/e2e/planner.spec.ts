@@ -118,10 +118,11 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
   );
   // Apparent sizes: the Sun at 1.014 AU, the Moon near apogee (406 000 km, 5 % narrower than
   // average); the widest of the twelve full Moons ahead is the December one, the narrowest June's.
-  await expect(page.getByTestId('sun-disc')).toHaveText('0.53°');
+  // With the share of the frame it fills at the current lens (24 mm here: well under 1 %).
+  await expect(page.getByTestId('sun-disc')).toHaveText(/^0\.53° · 0\.\d % of frame$/);
   // Noon under a nearly overhead Sun: a daylight exposure estimate at f/8 ISO 100.
   await expect(page.getByTestId('exposure')).toHaveText(/^EV 1[1-6]\.\d · 1\/\d+ s f\/8 ISO 100$/);
-  await expect(page.getByTestId('moon-disc')).toHaveText('0.49°');
+  await expect(page.getByTestId('moon-disc')).toHaveText(/^0\.49° · 0\.\d % of frame$/);
   await expect(page.getByTestId('moon-distance')).toContainText('5 % narrower than average');
   await expect(page.getByTestId('full-moons')).toContainText(
     'widest 23 Dec (+8 %) · narrowest 29 Jun (−5 %)',
@@ -603,9 +604,10 @@ test.describe('preferences', () => {
     await expect(weather).not.toContainText('m/s');
     await expect(weather).toContainText(/\d+ mi/);
     await expect(weather).toContainText('Humidity');
-    // The place is still Kailua: 14:00 on a London watch is 03:00–04:00 there, the fixture's
-    // coolest hour (about 16.5 °C, 62 °F), with its dew point — far from freezing, so no note.
-    await expect(weather).toContainText(/Air\s*6\d °F, dew point \d+ °F/);
+    // Air and dew point in Fahrenheit. The fixture's temperature follows the hour and the
+    // season, so the figure is not pinned: the unit is what this checks. Far from freezing, so
+    // no field note.
+    await expect(weather).toContainText(/Air\s*\d+ °F, dew point \d+ °F/);
     await expect(page.getByTestId('field-notes')).toHaveCount(0);
 
     // Kept on this device: the choice is still there after a reload.
