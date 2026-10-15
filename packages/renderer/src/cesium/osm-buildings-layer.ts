@@ -137,8 +137,9 @@ const SHADOW_D_STEP = 0.05;
  * The trees' shader: the lit shader above with the leaf season (leaf-season.ts) on broad-leaf
  * crowns, which carry an alpha just under 1 as their mark (the trees are opaque, so alpha is
  * free). Each crown turns yellow, orange or red by its own tone, a little before or after its
- * neighbours; as the leaves go it fades to grey-brown twigs and thins to a screen-door, so a
- * bare crown reads as the see-through haze of branches it is (its shadow thins with it).
+ * neighbours; as the leaves go it fades to grey-brown twigs and thins to a screen-door, densest
+ * across the crown's middle and feathered at its edge, so a bare crown reads as the see-through
+ * haze of branches it is (its shadow thins with it).
  * Conifers and trunks are untouched.
  */
 export function treeFragmentShader(
@@ -156,9 +157,14 @@ export function treeFragmentShader(
         color.rgb = mix(color.rgb, czm_gammaCorrect(vec4(fall * (0.85 + 0.3 * fract(h * 5.3)), 1.0)).rgb, turn);
         float leaves = clamp(${leafOn.toFixed(3)} * 1.3 - 0.3 * fract(h * 3.3), 0.0, 1.0);
         if (leaves < 1.0) {
-            color.rgb = mix(czm_gammaCorrect(vec4(0.36, 0.32, 0.28, 1.0)).rgb, color.rgb, leaves);
-            float dither = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
-            if (dither > 0.35 + 0.65 * leaves) discard;
+            color.rgb = mix(czm_gammaCorrect(vec4(0.30, 0.26, 0.22, 1.0)).rgb, color.rgb, leaves);
+            // Twigs are densest where the line of sight crosses most of the crown (its middle)
+            // and thin out to a feathered edge; white-noise dither, which reads as twigs where
+            // a structured pattern read as netting (V&V: Boston Common in January).
+            float facing = abs(dot(normalize(v_normalEC), normalize(-v_positionEC)));
+            float keep = leaves + (1.0 - leaves) * (0.08 + 0.55 * facing * facing);
+            float dither = fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453);
+            if (dither > keep) discard;
         }
         color.a = 1.0;
     }`;
