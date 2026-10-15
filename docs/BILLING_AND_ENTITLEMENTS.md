@@ -28,9 +28,9 @@ Guiding rule (plan §15): no `if (plan === 'pro')` anywhere in the UI or API. Ev
 | Entitlements              | map_access, saved_projects, saved_viewpoints, moon_planning | all nine                 | all nine  |
 | `futureDateWindowDays`    | 14                                                          | unlimited                | unlimited |
 | `pastDateWindowDays`      | 7                                                           | unlimited                | unlimited |
-| `maxProjects`             | 1                                                           | unlimited                | unlimited |
+| `maxProjects`             | 3                                                           | unlimited                | unlimited |
 | `maxViewpointsPerProject` | 3                                                           | 200                      | 500       |
-| `maxViewpointsTotal`      | 3                                                           | 5,000                    | 50,000    |
+| `maxViewpointsTotal`      | 9                                                           | 5,000                    | 50,000    |
 | `maxPreviewQuality`       | 1                                                           | 3                        | 3         |
 
 Studio is a plan definition only: it has no Stripe price and no team features yet (plan §15 "later").
@@ -40,12 +40,13 @@ Studio is a plan definition only: it has no Stripe price and no team features ye
 - `future_date_planning` for a free user checks the date window: denied with
   "Free plans can plan up to 14 days ahead. This date is N days away." or "Free plans can look
   back 7 days."
-- `saved_projects` / `saved_viewpoints` compare the current counts passed in context (active
-  projects and the viewpoints inside them — an archived shoot is kept but uses no plan, takes
-  no new viewpoints until restored (`409 project_archived`), and restoring it runs the same
-  project and viewpoint checks as creating them, so archive → create → restore cannot grow
-  past the plan) against the
-  limits; the denial reason and `upgradeTo: 'pro'` feed the paywall.
+- `saved_projects` / `saved_viewpoints` compare the current counts passed in context against the
+  limits; the denial reason and `upgradeTo: 'pro'` feed the paywall. The project count is every
+  project the account has saved, archived ones included: Free saves three, and the fourth is
+  Pro. An archived shoot is kept out of the way, takes no new viewpoints until restored
+  (`409 project_archived`), and its viewpoints stop counting toward the viewpoint limits;
+  restoring it runs the viewpoint checks again, and the project check only for an account that
+  holds more projects than its plan allows (a Pro that lapsed to Free).
 - `high_quality_preview` allows any request at or below the plan's quality ceiling; above it, only
   plans holding the key.
 

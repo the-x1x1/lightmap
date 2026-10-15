@@ -400,7 +400,7 @@ test('sign in (dev), create a project, save the viewpoint, reload and reopen it'
   await expect(page.getByTestId('timeline-time')).toHaveText('09:00');
   await expect(page).toHaveURL(/^(?!.*viewpoint=)/);
 
-  // Archive keeps the project out of the way and frees the Free plan's one slot; restore brings
+  // Archive keeps the project out of the way (it still counts as one of Free's three); restore brings
   // it back selected.
   await page.getByTestId('panel-tab-projects').click();
   await page.getByTestId('project-card').click();
@@ -412,6 +412,22 @@ test('sign in (dev), create a project, save the viewpoint, reload and reopen it'
   await page.getByTestId('archived-project-restore').click();
   await expect(page.getByTestId('project-card')).toContainText('Kailua sunrise');
   await expect(page.getByTestId('viewpoint-card')).toContainText('Beach, 9am');
+
+  // Free saves three projects; the fourth is Pro, refused with the reason and the upgrade.
+  await expect(page.getByTestId('project-usage')).toHaveText('1 of 3 free projects saved');
+  for (const name of ['Lanikai', 'Makapuu']) {
+    await page.getByTestId('project-name').fill(name);
+    await page.getByTestId('project-create').click();
+    await expect(page.getByTestId('project-card').filter({ hasText: name })).toHaveCount(1);
+  }
+  await expect(page.getByTestId('project-usage')).toHaveText('3 of 3 free projects saved');
+  await expect(page.getByTestId('project-name')).toBeDisabled();
+  await expect(page.getByTestId('project-drawer')).toContainText('Free plans save 3 projects');
+  const fourth = await page.request.post('/api/projects', { data: { name: 'Fourth' } });
+  expect(fourth.status()).toBe(403);
+  expect(((await fourth.json()) as { error: { code: string } }).error.code).toBe(
+    'entitlement_saved_projects',
+  );
 
   // Preferences live in the profile once signed in: wipe the device copy and they come back
   // from the account (GET /api/account/profile) on the next load.

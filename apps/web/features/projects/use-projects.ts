@@ -7,7 +7,7 @@ import type { ProjectDetailDto, ProjectDto, ViewpointDto } from '@/lib/api-types
 export function useProjects(enabled: boolean) {
   return useQuery({
     queryKey: ['projects'],
-    queryFn: () => api.get<{ projects: ProjectDto[] }>('/api/projects'),
+    queryFn: () => api.get<{ projects: ProjectDto[]; savedCount?: number }>('/api/projects'),
     enabled,
     staleTime: 30_000,
   });

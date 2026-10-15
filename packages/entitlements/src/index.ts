@@ -53,16 +53,16 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
     limits: {
       futureDateWindowDays: 14,
       pastDateWindowDays: 7,
-      maxProjects: 1,
+      maxProjects: 3,
       maxViewpointsPerProject: 3,
-      maxViewpointsTotal: 3,
+      maxViewpointsTotal: 9,
       maxPreviewQuality: 1,
     },
     highlights: [
       'Explore the map anywhere',
       'Plan up to 14 days ahead',
       'Sun, twilight and basic moon data',
-      'One project with three saved viewpoints',
+      'Three saved projects, each with three viewpoints',
       'Standard preview',
     ],
   },
@@ -322,7 +322,7 @@ export function can(
         return {
           allowed: false,
           key,
-          reason: `Free plans include ${max} active project${max === 1 ? '' : 's'} — archive a finished shoot to free the slot, or upgrade.`,
+          reason: `Free plans save ${max} project${max === 1 ? '' : 's'}. Delete one to make room, or upgrade to Pro for unlimited projects.`,
           upgradeTo,
         };
       return { allowed: true, key };

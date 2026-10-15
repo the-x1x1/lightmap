@@ -94,11 +94,9 @@ export function projectsRepo(db: Db) {
         upcomingViewpointCount: upcoming ? Number(r.upcomingViewpointCount) : 0,
       }));
     },
+    /** Every project the user has saved, archived ones included: the plan's project limit. */
     async count(userId: string): Promise<number> {
-      const [r] = await db
-        .select({ n: count() })
-        .from(projects)
-        .where(and(eq(projects.userId, userId), isNull(projects.archivedAt)));
+      const [r] = await db.select({ n: count() }).from(projects).where(eq(projects.userId, userId));
       return Number(r?.n ?? 0);
     },
     async get(
@@ -163,7 +161,7 @@ export function projectsRepo(db: Db) {
           ...(patch.name !== undefined ? { name: patch.name.trim() } : {}),
           ...(patch.description !== undefined ? { description: patch.description } : {}),
           ...(patch.shootDate !== undefined ? { shootDate: patch.shootDate } : {}),
-          // Archiving keeps everything and frees the plan's project slot; restoring undoes it.
+          // Archiving keeps everything out of the way (it still counts as a saved project).
           ...(patch.archived !== undefined
             ? { archivedAt: patch.archived ? new Date() : null }
             : {}),
@@ -207,7 +205,7 @@ export function viewpointsRepo(db: Db) {
         .where(and(eq(viewpoints.projectId, projectId), eq(viewpoints.userId, userId)));
       return Number(r?.n ?? 0);
     },
-    /** Viewpoints in the user's active projects (an archived shoot does not use up the plan). */
+    /** Viewpoints in the user's active projects (an archived shoot's viewpoints stop counting). */
     async countTotal(userId: string): Promise<number> {
       const [r] = await db
         .select({ n: count() })

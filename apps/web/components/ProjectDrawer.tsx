@@ -86,9 +86,9 @@ export function ProjectDrawer({
       <SignInPrompt reason="Sign in to save viewpoints to a project and reopen them on any device." />
     );
 
-  const projectDecision = account.can('saved_projects', {
-    projectCount: projects.data?.projects.length ?? 0,
-  });
+  const savedCount = projects.data?.savedCount ?? projects.data?.projects.length ?? 0;
+  const projectLimit = account.snapshot?.limits.maxProjects ?? null;
+  const projectDecision = account.can('saved_projects', { projectCount: savedCount });
   const handle = (e: unknown) =>
     setError(
       e instanceof ApiRequestError
@@ -375,6 +375,11 @@ export function ProjectDrawer({
             Create
           </Button>
         </form>
+        {projectLimit !== null && projects.data ? (
+          <p className="mt-1 text-xs text-[var(--lm-text-muted)]" data-testid="project-usage">
+            {savedCount} of {projectLimit} free projects saved
+          </p>
+        ) : null}
         {!projectDecision.allowed ? (
           <Paywall compact reason={projectDecision.reason ?? ''} />
         ) : null}
@@ -406,7 +411,7 @@ export function ProjectDrawer({
               <Button
                 size="sm"
                 variant="ghost"
-                title="Keep the project and its viewpoints out of the way; it frees the plan's project slot"
+                title="Keep the project and its viewpoints out of the way (it still counts toward the plan's projects)"
                 disabled={m.update.isPending}
                 onClick={() => {
                   void m.update

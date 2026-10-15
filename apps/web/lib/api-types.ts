@@ -95,7 +95,7 @@ export interface ProjectDto {
   name: string;
   description: string | null;
   shootDate: string | null;
-  /** Set while the project is archived (kept, hidden from the active list, frees the plan's slot). */
+  /** Set while the project is archived (kept, hidden from the active list, still counted by the plan). */
   archivedAt: string | null;
   createdAt: string;
   updatedAt: string;

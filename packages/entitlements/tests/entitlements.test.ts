@@ -98,9 +98,20 @@ describe('can()', () => {
   });
   it('enforces save limits with counts', () => {
     expect(can(free, 'saved_projects', { projectCount: 0 }).allowed).toBe(true);
-    expect(can(free, 'saved_projects', { projectCount: 1 }).allowed).toBe(false);
+    // Three saved projects are free; the fourth is Pro.
+    expect(can(free, 'saved_projects', { projectCount: 2 }).allowed).toBe(true);
+    const fourth = can(free, 'saved_projects', { projectCount: 3 });
+    expect(fourth.allowed).toBe(false);
+    expect(fourth.upgradeTo).toBe('pro');
+    expect(fourth.reason).toContain('3 projects');
     expect(
       can(free, 'saved_viewpoints', { viewpointCountInProject: 3, viewpointCountTotal: 3 }).allowed,
+    ).toBe(false);
+    expect(
+      can(free, 'saved_viewpoints', { viewpointCountInProject: 2, viewpointCountTotal: 8 }).allowed,
+    ).toBe(true);
+    expect(
+      can(free, 'saved_viewpoints', { viewpointCountInProject: 0, viewpointCountTotal: 9 }).allowed,
     ).toBe(false);
     expect(can(pro, 'saved_projects', { projectCount: 999 }).allowed).toBe(true);
     expect(can(pro, 'saved_viewpoints', { viewpointCountInProject: 200 }).allowed).toBe(false);

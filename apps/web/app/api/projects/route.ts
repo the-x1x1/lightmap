@@ -16,12 +16,17 @@ export async function GET(req: Request) {
     // "Return later as the shoot approaches": count the viewpoints a forecast now covers.
     const now = new Date();
     const horizonHours = getServices().weather.getCapabilities().reliableHorizonHours;
-    const list = await projectsRepo(requireDb()).list(
-      ctx.user.id,
-      { from: now, to: new Date(now.getTime() + horizonHours * 3_600_000) },
-      { archived },
-    );
-    return json({ projects: list.map(projectDto) });
+    const repo = projectsRepo(requireDb());
+    const [list, savedCount] = await Promise.all([
+      repo.list(
+        ctx.user.id,
+        { from: now, to: new Date(now.getTime() + horizonHours * 3_600_000) },
+        { archived },
+      ),
+      repo.count(ctx.user.id),
+    ]);
+    // `savedCount` is what the plan's project limit counts: active and archived together.
+    return json({ projects: list.map(projectDto), savedCount });
   } catch (e) {
     return errorResponse(e);
   }

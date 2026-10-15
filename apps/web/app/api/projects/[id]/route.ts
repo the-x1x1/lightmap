@@ -60,17 +60,18 @@ export async function PATCH(req: Request, { params }: Params) {
       return out;
     });
     const db = requireDb();
-    // Restoring brings a project and its viewpoints back under the plan's limits: the same checks
-    // as creating them, so archive → create → restore cannot grow past the plan.
+    // Restoring brings a project's viewpoints back under the plan's limits. An archived project
+    // already counts toward the project limit, so restoring one is refused only when the account
+    // holds more projects than its plan allows (a Pro that lapsed to Free with ten, say).
     if (patch.archived === false) {
-      const [active, shelved, activeViewpoints] = await Promise.all([
+      const [saved, shelved, activeViewpoints] = await Promise.all([
         projectsRepo(db).count(ctx.user.id),
         projectsRepo(db).get(ctx.user.id, id),
         viewpointsRepo(db).countTotal(ctx.user.id),
       ]);
       if (shelved.archivedAt) {
         const projectDecision = can(ctx.entitlements, 'saved_projects', {
-          projectCount: active,
+          projectCount: saved - 1,
         });
         if (!projectDecision.allowed) throw forbidByEntitlement(projectDecision);
         const n = shelved.viewpoints.length;
