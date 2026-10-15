@@ -168,7 +168,6 @@ export class OsmBuildingsLayer {
   }
 
   private async load(state: TileState): Promise<void> {
-    const C = this.C;
     try {
       const template = await this.resolveTemplate();
       if (!template || state.cancelled || this.destroyed) {
