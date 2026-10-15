@@ -34,6 +34,8 @@ const SESSION_USER_KEY = '/__lightmap/session-user';
 /** API reads that belong to the signed-in user and are worth having in the field. */
 const USER_API = [
   /^\/api\/projects(\/[^/]+)?$/,
+  // A viewpoint link (`/?viewpoint=`) opened in the field reads this.
+  /^\/api\/viewpoints\/[^/]+$/,
   /^\/api\/auth\/session$/,
   /^\/api\/account\/entitlements$/,
   /^\/api\/scene\/capabilities$/,
@@ -101,7 +103,8 @@ async function clearUserData() {
 async function invalidateProjects() {
   const cache = await caches.open(USER);
   for (const req of await cache.keys())
-    if (/^\/api\/projects(\/|$)/.test(new URL(req.url).pathname)) await cache.delete(req);
+    if (/^\/api\/(projects|viewpoints)(\/|$)/.test(new URL(req.url).pathname))
+      await cache.delete(req);
 }
 
 /** Store a copy of a successful response (in the background, after the page has it). */
@@ -150,7 +153,18 @@ async function cacheFirst(event) {
   const { request } = event;
   const cache = await caches.open(STATIC);
   const hit = await cache.match(request);
-  if (hit) return hit;
+  if (hit) {
+    // Used again: move it to the young end, so trimming drops chunks no page asks for any more
+    // rather than the oldest ones still in use (the offline shell's own chunks among them).
+    const again = hit.clone();
+    event.waitUntil(
+      (async () => {
+        await cache.delete(request);
+        await cache.put(request, again);
+      })(),
+    );
+    return hit;
+  }
   const res = await fetch(request);
   if (res.ok) {
     const copy = res.clone();

@@ -390,6 +390,12 @@ export function MapShell() {
                 title="Sign in to open this viewpoint"
                 body="The link points at a saved viewpoint in an account. Sign in from the account tab and it opens."
               />
+            ) : viewpointLink.kind === 'unreachable' ? (
+              <ErrorState
+                live="status"
+                title="This viewpoint could not be loaded"
+                body="LightMap could not reach your account (offline?). Open the link again once you are connected."
+              />
             ) : viewpointLink.kind === 'missing' ? (
               <ErrorState
                 live="status"

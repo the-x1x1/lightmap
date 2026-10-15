@@ -8,7 +8,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/client/api';
+import { ApiRequestError, api } from '@/lib/client/api';
 import type { ViewpointDto } from '@/lib/api-types';
 import { usePlannerStore } from '@/features/planner/store';
 import { restoreInputFor, viewpointIdFromSearch } from './open-viewpoint.ts';
@@ -18,7 +18,9 @@ export type ViewpointLinkState =
   | { kind: 'sign-in' }
   | { kind: 'opening' }
   | { kind: 'opened'; label: string }
-  | { kind: 'missing' };
+  | { kind: 'missing' }
+  /** The request failed (offline, not cached yet): the link stays for when the connection is back. */
+  | { kind: 'unreachable' };
 
 function dropParam(): void {
   const url = new URL(window.location.href);
@@ -57,6 +59,10 @@ export function useViewpointLink(account: {
       dropParam();
       setDone({ kind: 'opened', label: q.data.viewpoint.label });
     } else if (q.isError) {
+      // Only a viewpoint the server says is gone (or not this account's) is missing; a failed
+      // request (offline, uncached) keeps the link for when the connection is back.
+      const status = q.error instanceof ApiRequestError ? q.error.status : 0;
+      if (status !== 404 && status !== 403) return;
       openedId.current = id;
       dropParam();
       setDone({ kind: 'missing' });
@@ -67,5 +73,6 @@ export function useViewpointLink(account: {
   if (done) return done;
   if (account.isLoading) return { kind: 'opening' };
   if (!account.signedIn) return { kind: 'sign-in' };
+  if (q.isError) return { kind: 'unreachable' };
   return { kind: 'opening' };
 }
