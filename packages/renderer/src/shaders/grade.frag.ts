@@ -191,6 +191,17 @@ void main() {
     float storedDepth = texture(depthTexture, v_textureCoordinates).r;
     vec4 eyePos = czm_windowToEyeCoordinates(v_textureCoordinates * czm_viewport.zw, storedDepth);
     float distM = length(eyePos.xyz / eyePos.w);
+    // Ground with no depth here is ground drawn in a farther frustum than the depth texture
+    // holds (the last ridges, 80 km out) or not drawn yet. Left unhazed, the farthest ridge
+    // stood black against a hazy range (V&V: Tromso at polar noon); it is at least as far as
+    // the ray's meeting with the sea-level sphere, so it takes that distance's haze.
+    bool noDepth = depth >= 1.0 - 1e-6;
+    if (noDepth) {
+      float eyeH = max(u_eyeHeightM, 0.0);
+      float b = (6371000.0 + eyeH) * dot(rayEC, u_eyeUpEC);
+      distM = -b - sqrt(max(b * b - (2.0 * 6371000.0 * eyeH + eyeH * eyeH), 0.0));
+      distM = max(distM, 20000.0);
+    }
     // Haze lives near the ground: along a path that climbs out of it (a camera looking down
     // from above) the optical depth is that of an exponential layer with a 1 km scale height,
     // not of the whole distance at ground density.
@@ -202,8 +213,7 @@ void main() {
     vec3 hazeCol = mix(vec3(0.72, 0.78, 0.86), vec3(0.6, 0.62, 0.66), u_cloudOpacity);
     hazeCol = mix(hazeCol, hazeCol * u_tint, 0.5 * (1.0 - u_cloudOpacity));
     hazeCol = mix(hazeCol, vec3(0.05, 0.06, 0.1), u_nightFactor);
-    // (Ground with no depth yet has no distance to haze by.)
-    if (depth < 1.0 - 1e-6) color = mix(color, hazeCol, clamp(dist * 0.85, 0.0, 0.85));
+    color = mix(color, hazeCol, clamp(dist * 0.85, 0.0, 0.85));
   }
 
   // Global grade.
