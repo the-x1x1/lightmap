@@ -145,7 +145,7 @@ export class OsmBuildingsLayer {
       const res = await fetch(this.source);
       if (!res.ok) throw new Error(`TileJSON ${res.status}`);
       const json = (await res.json()) as { tiles?: unknown };
-      const first = Array.isArray(json.tiles) ? json.tiles[0] : undefined;
+      const first: unknown = Array.isArray(json.tiles) ? (json.tiles as unknown[])[0] : undefined;
       if (typeof first !== 'string') throw new Error('TileJSON has no tile template');
       return first;
     })().catch((error: unknown) => {
