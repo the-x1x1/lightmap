@@ -41,9 +41,9 @@ export interface Env {
   GEOCODER_USER_AGENT: string;
   TERRAIN_PROVIDER: 'reearth' | 'cesium-ion' | 'ellipsoid';
   CESIUM_ION_TOKEN: string | undefined;
-  IMAGERY_PROVIDER: 'natural-earth' | 'cesium-ion' | 'xyz';
+  IMAGERY_PROVIDER: 'sentinel-2' | 'natural-earth' | 'cesium-ion' | 'xyz';
   /** 3D buildings in the preview: Cesium OSM Buildings through ion, or none. */
-  BUILDINGS_PROVIDER: 'none' | 'cesium-osm';
+  BUILDINGS_PROVIDER: 'openfreemap' | 'none' | 'cesium-osm';
   /** Land cover for the ground texture: none | xyz (a tile source in a known legend). */
   LANDCOVER_PROVIDER: 'none' | 'xyz';
   LANDCOVER_XYZ_URL: string | undefined;
@@ -182,15 +182,15 @@ export function parseEnv(raw: RawEnv): EnvResult {
     IMAGERY_PROVIDER: oneOf(
       raw,
       'IMAGERY_PROVIDER',
-      ['natural-earth', 'cesium-ion', 'xyz'] as const,
-      'natural-earth',
+      ['sentinel-2', 'natural-earth', 'cesium-ion', 'xyz'] as const,
+      'sentinel-2',
       issues,
     ),
     BUILDINGS_PROVIDER: oneOf(
       raw,
       'BUILDINGS_PROVIDER',
-      ['none', 'cesium-osm'] as const,
-      'none',
+      ['openfreemap', 'none', 'cesium-osm'] as const,
+      'openfreemap',
       issues,
     ),
     LANDCOVER_PROVIDER: oneOf(raw, 'LANDCOVER_PROVIDER', ['none', 'xyz'] as const, 'none', issues),

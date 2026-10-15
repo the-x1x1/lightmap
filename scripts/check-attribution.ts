@@ -9,7 +9,9 @@ import {
   CESIUM_ION_IMAGERY_META,
   CESIUM_ION_TERRAIN_META,
   NATURAL_EARTH_META,
+  OPENFREEMAP_BUILDINGS_META,
   REEARTH_TERRAIN_META,
+  SENTINEL2_CLOUDLESS_META,
 } from '../packages/geospatial/src/providers/map-sources.ts';
 import { OPEN_METEO_CAPABILITIES } from '../packages/weather/src/providers/open-meteo.ts';
 import { OPEN_METEO_CLIMATOLOGY_CAPABILITIES } from '../packages/weather/src/providers/open-meteo-climatology.ts';
@@ -21,6 +23,8 @@ const sources: Array<{ id: string; attribution: string }> = [
   CESIUM_ION_TERRAIN_META,
   NATURAL_EARTH_META,
   CESIUM_ION_IMAGERY_META,
+  SENTINEL2_CLOUDLESS_META,
+  OPENFREEMAP_BUILDINGS_META,
   { id: OPEN_METEO_CAPABILITIES.providerId, attribution: OPEN_METEO_CAPABILITIES.attribution },
   {
     id: OPEN_METEO_CLIMATOLOGY_CAPABILITIES.providerId,

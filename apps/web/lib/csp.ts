@@ -12,6 +12,9 @@ const FIXED_HOSTS = [
   'https://assets.ion.cesium.com',
   'https://*.virtualearth.net',
   'https://dev.virtualearth.net',
+  // The default imagery (Sentinel-2 cloudless 2016, EOX) and buildings (OpenFreeMap vector tiles).
+  'https://tiles.maps.eox.at',
+  'https://tiles.openfreemap.org',
 ];
 
 /** The operator-configured tile hosts the browser fetches from: imagery and land cover (`<img crossOrigin>`). */

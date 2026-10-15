@@ -131,10 +131,22 @@ describe('registry', () => {
     expect(pub.terrain.kind).toBe('cesium-ion');
     expect(JSON.stringify(pub)).not.toContain('secret-token');
     expect(pub.referenceImagery).toBe(false);
-    expect(activeAttributions(p).map((m) => m.id)).toContain('natural-earth-ii');
+    expect(activeAttributions(p).map((m) => m.id)).toContain('sentinel-2-cloudless-2016');
+    expect(pub.basemap).toMatchObject({ kind: 'xyz', maxZoom: 14 });
+    expect(pub.basemap.url).toContain('s2cloudless_3857'); // the 2016 layer: CC BY 4.0
+    const ne = createGeospatialProviders(parseEnv({ IMAGERY_PROVIDER: 'natural-earth' }).env);
+    expect(ne.basemap.meta.id).toBe('natural-earth-ii');
   });
-  it('buildings: none by default; Cesium OSM Buildings only with the ion token, attributed to OpenStreetMap', () => {
-    const none = createGeospatialProviders(parseEnv({}).env);
+  it('buildings: OpenStreetMap via OpenFreeMap by default; Cesium OSM Buildings with the ion token; none on request', () => {
+    const def = createGeospatialProviders(parseEnv({}).env);
+    expect(publicDescriptors(def).buildings).toMatchObject({
+      kind: 'vector-tiles',
+      url: 'https://tiles.openfreemap.org/planet',
+      providerId: 'openfreemap-buildings',
+    });
+    expect(publicDescriptors(def).buildings.attribution).toContain('OpenStreetMap');
+    expect(activeAttributions(def).map((m) => m.id)).toContain('openfreemap-buildings');
+    const none = createGeospatialProviders(parseEnv({ BUILDINGS_PROVIDER: 'none' }).env);
     expect(publicDescriptors(none).buildings).toEqual({
       kind: 'none',
       attribution: '',
@@ -149,8 +161,9 @@ describe('registry', () => {
     expect(pub.buildings.attribution).toContain('OpenStreetMap');
     expect(JSON.stringify(pub)).not.toContain('secret-token');
     expect(activeAttributions(withToken).map((m) => m.id)).toContain('cesium-osm-buildings');
+    // Without the token, the free OpenStreetMap buildings stand in.
     const noToken = createGeospatialProviders(parseEnv({ BUILDINGS_PROVIDER: 'cesium-osm' }).env);
-    expect(noToken.buildings.meta.id).toBe('no-buildings');
+    expect(noToken.buildings.meta.id).toBe('openfreemap-buildings');
   });
 
   it('land cover: none by default; an XYZ source only with its URL and attribution, in a known legend', () => {
@@ -208,7 +221,7 @@ describe('registry', () => {
     }).env;
     const p = createGeospatialProviders(env);
     expect(p.terrain.meta.id).toBe('ellipsoid');
-    expect(p.basemap.meta.id).toBe('natural-earth-ii');
+    expect(p.basemap.meta.id).toBe('sentinel-2-cloudless-2016');
     expect(p.geocoder.meta.isFixture).toBe(true);
   });
   it('reads heights from several response shapes', () => {

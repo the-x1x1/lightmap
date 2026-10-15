@@ -503,9 +503,14 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     material.diffuse = ground * u_brightness;
     // Rock and snow are what they are; open ground lets real imagery's own hue through. Over
     // the bundled coarse basemap the paint is all but opaque on land: that map's 500 m pixels
-    // put sea and lakes well onto the land near every coast.
+    // put sea and lakes well onto the land near every coast. Over real imagery (Sentinel-2's
+    // 10 m, or finer) the paint carries the near field, where imagery pixels are metres wide
+    // blurs, and gives way with distance, where the imagery shows the real fields, towns and
+    // shores better than any rule.
     float cover = max(rocky, max(snowy, max(alpine * 0.8, known * 0.9)));
-    float alpha = u_strength * mix(mix(0.75, 0.95, cover), 0.985, u_coarseBasemap);
+    float nearPaint = 1.0 - smoothstep(150.0, 900.0, dist);
+    float imageryAlpha = mix(mix(0.3, 0.55, cover), mix(0.75, 0.95, cover), nearPaint);
+    float alpha = u_strength * mix(imageryAlpha, 0.985, u_coarseBasemap);
 #ifdef HAS_WATER_MASK
     // Water, from the terrain's own mask - which arrives with coarse tiles and is upsampled for
     // finer ones, so its edge runs in 50-100 m stair steps. A water surface in the elevation

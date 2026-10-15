@@ -9,6 +9,8 @@ import {
   CesiumIonBasemap,
   CesiumIonTerrainProvider,
   CesiumOsmBuildings,
+  OpenFreeMapBuildings,
+  Sentinel2CloudlessBasemap,
   EllipsoidTerrainProvider,
   NaturalEarthBasemap,
   NoBuildings,
@@ -89,20 +91,25 @@ export function createGeospatialProviders(
               attribution: env.IMAGERY_XYZ_ATTRIBUTION,
               maxZoom: env.IMAGERY_XYZ_MAX_ZOOM,
             })
-          : new NaturalEarthBasemap();
+          : new Sentinel2CloudlessBasemap();
       break;
     case 'cesium-ion':
-      basemap = env.CESIUM_ION_TOKEN ? new CesiumIonBasemap() : new NaturalEarthBasemap();
+      basemap = env.CESIUM_ION_TOKEN ? new CesiumIonBasemap() : new Sentinel2CloudlessBasemap();
       break;
     case 'natural-earth':
       basemap = new NaturalEarthBasemap();
+      break;
+    case 'sentinel-2':
+      basemap = new Sentinel2CloudlessBasemap();
       break;
   }
 
   const buildings: BuildingsProvider =
     env.BUILDINGS_PROVIDER === 'cesium-osm' && env.CESIUM_ION_TOKEN
       ? new CesiumOsmBuildings()
-      : new NoBuildings();
+      : env.BUILDINGS_PROVIDER === 'cesium-osm' || env.BUILDINGS_PROVIDER === 'openfreemap'
+        ? new OpenFreeMapBuildings()
+        : new NoBuildings();
 
   const landCover: LandCoverProvider =
     env.LANDCOVER_PROVIDER === 'xyz' && env.LANDCOVER_XYZ_URL && env.LANDCOVER_XYZ_ATTRIBUTION

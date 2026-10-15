@@ -75,9 +75,14 @@ export interface BasemapDescriptor {
 
 /** 3D buildings for the terrain preview (plan Phase 4 "detailed buildings where licensed"). */
 export interface BuildingsDescriptor {
-  kind: 'none' | 'cesium-osm';
+  kind: 'none' | 'cesium-osm' | 'vector-tiles';
   /** For cesium-osm: the ion asset id (96188 = Cesium OSM Buildings). */
   assetId?: number;
+  /**
+   * For vector-tiles: a TileJSON URL (whose `tiles[0]` is the template) or an XYZ template
+   * itself, serving OpenMapTiles-schema tiles with a `building` layer.
+   */
+  url?: string;
   attribution: string;
 }
 

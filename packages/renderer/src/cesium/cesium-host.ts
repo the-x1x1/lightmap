@@ -1,5 +1,6 @@
 /**
- * CesiumSceneHost — the ONE file typed against `@cesium/engine` (ADR-0002).
+ * CesiumSceneHost — the renderer's Cesium side (ADR-0002), with its helpers beside it in
+ * `cesium/` (the free OpenStreetMap buildings are osm-buildings-layer.ts).
  *
  * Why `@cesium/engine` and not `cesium`: the meta-package re-exports `@cesium/widgets`, which
  * bundles Knockout, whose module-scope `eval` breaks a strict Content-Security-Policy. The engine
@@ -18,6 +19,7 @@ import type {
   TerrainDescriptor,
 } from '@lightmap/geospatial';
 import { GRADE_FRAGMENT_SHADER } from '../shaders/grade.frag.ts';
+import { OsmBuildingsLayer } from './osm-buildings-layer.ts';
 import { createDetailTexture, createNoiseTexture, type DetailTileCesium } from './detail-tiles.ts';
 import { NOISE_TEXTURE_SIZE, makeNoiseTexture } from '../noise-texture.ts';
 import { FrameRateSampler } from '../frame-sampler.ts';
@@ -130,6 +132,9 @@ export class CesiumSceneHost implements SceneHost {
   private readonly gradeUniforms: Record<string, unknown>;
   private groundMaterial: Cesium.Material | null = null;
   private buildings: Cesium.Cesium3DTileset | null = null;
+  /** The free OpenStreetMap buildings (vector tiles), loaded around the camera. */
+  private osmBuildings: OsmBuildingsLayer | null = null;
+  private osmBuildingsCheckAt = 0;
   private buildingsJob: Promise<void> | null = null;
   private groundTextureFailed = false;
   private landCover: LandCoverDescriptor = { kind: 'none', attribution: '' };
@@ -465,6 +470,7 @@ export class CesiumSceneHost implements SceneHost {
       const view = scene.camera.viewMatrix;
       const moving = !C.Matrix4.equalsEpsilon(view, this.lastView, 1e-9);
       C.Matrix4.clone(view, this.lastView);
+      this.updateOsmBuildings();
       const fps = this.frameSampler.frame(performance.now(), moving);
       if (fps !== null) {
         this.lastFps = fps;
@@ -1403,7 +1409,18 @@ export class CesiumSceneHost implements SceneHost {
         this.scene.primitives.remove(this.buildings); // destroys it
         this.buildings = null;
       }
+      this.osmBuildings?.destroy();
+      this.osmBuildings = null;
       if (b.kind === 'none') return;
+      if (b.kind === 'vector-tiles') {
+        if (!b.url) return;
+        this.osmBuildings = new OsmBuildingsLayer(C, this.scene, b.url, (m, e) =>
+          this.onError?.(m, e),
+        );
+        this.osmBuildingsCheckAt = 0;
+        this.scene.requestRender();
+        return;
+      }
       try {
         // Cesium OSM Buildings through ion: lit by the scene light like the terrain, casting and
         // receiving the same shadows, refined to the quality rung. A photographer's "when does
@@ -1689,7 +1706,14 @@ export class CesiumSceneHost implements SceneHost {
   async sampleSurfaceHeights(points: readonly GeoPoint[]): Promise<Array<number | null> | null> {
     const C = this.C;
     await this.buildingsJob;
-    if (this.destroyed || !this.buildings || !this.scene.sampleHeightSupported) return null;
+    const first = points[0];
+    if (this.osmBuildings && first) {
+      // The free buildings load around the camera as it moves; a horizon run at a new place
+      // waits for the ones around the pin, so its first profile already has them.
+      await this.osmBuildings.loadAround(first.longitude, first.latitude).catch(() => undefined);
+    }
+    const anyBuildings = this.buildings !== null || (this.osmBuildings?.primitiveCount ?? 0) > 0;
+    if (this.destroyed || !anyBuildings || !this.scene.sampleHeightSupported) return null;
     const out: Array<number | null> = new Array<number | null>(points.length).fill(null);
     // Cesium loads the tiles each query needs at their finest level (the 3D Tiles for every
     // ray; the globe only where its tiles are in view, so a point with no building usually
@@ -1755,6 +1779,102 @@ export class CesiumSceneHost implements SceneHost {
     };
   }
 
+  /**
+   * Keeps the OpenStreetMap buildings loaded around the focus: the ground at the centre of the
+   * view (where you look in the map), or under the camera when it stands near the ground (the
+   * Viewpoint). Checked twice a second at most.
+   */
+  private updateOsmBuildings(): void {
+    const layer = this.osmBuildings;
+    if (!layer) return;
+    const now = performance.now();
+    if (now < this.osmBuildingsCheckAt) return;
+    this.osmBuildingsCheckAt = now + 500;
+    const C = this.C;
+    const scene = this.scene;
+    const camCarto = scene.camera.positionCartographic;
+    const ground = scene.globe.getHeight(camCarto) ?? 0;
+    const above = camCarto.height - ground;
+    let lon = camCarto.longitude / DEG;
+    let lat = camCarto.latitude / DEG;
+    let heightAbove = above;
+    if (above > 300) {
+      const canvas = scene.canvas;
+      const ray = scene.camera.getPickRay(
+        new C.Cartesian2(canvas.clientWidth / 2, canvas.clientHeight / 2),
+      );
+      const hit = ray ? scene.globe.pick(ray, scene) : undefined;
+      if (hit) {
+        const c = C.Cartographic.fromCartesian(hit);
+        lon = c.longitude / DEG;
+        lat = c.latitude / DEG;
+        heightAbove = C.Cartesian3.distance(scene.camera.positionWC, hit);
+      }
+    }
+    layer.update(lon, lat, heightAbove);
+  }
+
+  /**
+   * The ground under a point of the canvas (CSS pixels from its top left): a building's footprint
+   * is put on the terrain, the sky gives null. The Viewpoint uses it to walk to where you click.
+   */
+  pickAt(x: number, y: number): (GeoPoint & { viaTerrain: boolean }) | null {
+    if (this.destroyed) return null;
+    return this.pickWindow({ x, y });
+  }
+
+  private pickWindow(position: {
+    x: number;
+    y: number;
+  }): (GeoPoint & { viaTerrain: boolean }) | null {
+    const C = this.C;
+    const scene = this.scene;
+    const hit = pickSurface(
+      {
+        // The globe's own ray pick needs no depth texture; the buildings' does.
+        pickPositionSupported: true,
+        pickPosition: (w) => {
+          const win = new C.Cartesian2(w.x, w.y);
+          // The ground under the cursor, not a roof and not the terrain behind a façade:
+          // with buildings on, the depth pick lands on the tileset where a building is
+          // under the cursor — keep that spot and put it on the terrain (the pin's height
+          // feeds the geoid and snow rules; the horizon treats a pin on a footprint as a
+          // roof). Without a building under the cursor the globe's ray pick is the ground.
+          if ((this.buildings || this.osmBuildings) && scene.pickPositionSupported) {
+            const picked: unknown = scene.pick(win);
+            const onBuilding =
+              picked instanceof C.Cesium3DTileFeature ||
+              (typeof picked === 'object' &&
+                picked !== null &&
+                ((picked as { primitive?: unknown }).primitive === this.buildings ||
+                  this.osmBuildings?.owns((picked as { primitive?: unknown }).primitive) === true));
+            if (onBuilding) {
+              const p = scene.pickPosition(win);
+              if (p) {
+                const carto = C.Cartographic.fromCartesian(p);
+                // The terrain's height there, once its tile is loaded; otherwise the
+                // façade point's own height is no ground, so the ray pick below decides.
+                const h = scene.globe.getHeight(carto);
+                if (h !== undefined)
+                  return C.Cartesian3.fromRadians(carto.longitude, carto.latitude, h);
+              }
+            }
+          }
+          const ray = scene.camera.getPickRay(win);
+          const onTerrain = ray ? scene.globe.pick(ray, scene) : undefined;
+          if (onTerrain) return onTerrain;
+          if (!scene.pickPositionSupported) return undefined;
+          const r = scene.pickPosition(win);
+          return r ?? undefined;
+        },
+        pickEllipsoid: (w) => scene.camera.pickEllipsoid(new C.Cartesian2(w.x, w.y)),
+        toCartographic: (c) => C.Cartographic.fromCartesian(new C.Cartesian3(c.x, c.y, c.z)),
+      },
+      position,
+    );
+    return hit ?? null;
+  }
+
   onPick(handler: (p: GeoPoint & { viaTerrain: boolean }) => void): () => void {
     const C = this.C;
     this.pickListeners.add(handler);
@@ -1762,49 +1882,7 @@ export class CesiumSceneHost implements SceneHost {
       this.pickHandler = new C.ScreenSpaceEventHandler(this.widget.canvas);
       this.pickHandler.setInputAction(
         (movement: Cesium.ScreenSpaceEventHandler.PositionedEvent) => {
-          const scene = this.scene;
-          const hit = pickSurface(
-            {
-              // The globe's own ray pick needs no depth texture; the buildings' does.
-              pickPositionSupported: true,
-              pickPosition: (w) => {
-                const win = new C.Cartesian2(w.x, w.y);
-                // The ground under the cursor, not a roof and not the terrain behind a façade:
-                // with buildings on, the depth pick lands on the tileset where a building is
-                // under the cursor — keep that spot and put it on the terrain (the pin's height
-                // feeds the geoid and snow rules; the horizon treats a pin on a footprint as a
-                // roof). Without a building under the cursor the globe's ray pick is the ground.
-                if (this.buildings && scene.pickPositionSupported) {
-                  const picked: unknown = scene.pick(win);
-                  const onBuilding =
-                    picked instanceof C.Cesium3DTileFeature ||
-                    (typeof picked === 'object' &&
-                      picked !== null &&
-                      (picked as { primitive?: unknown }).primitive === this.buildings);
-                  if (onBuilding) {
-                    const p = scene.pickPosition(win);
-                    if (p) {
-                      const carto = C.Cartographic.fromCartesian(p);
-                      // The terrain's height there, once its tile is loaded; otherwise the
-                      // façade point's own height is no ground, so the ray pick below decides.
-                      const h = scene.globe.getHeight(carto);
-                      if (h !== undefined)
-                        return C.Cartesian3.fromRadians(carto.longitude, carto.latitude, h);
-                    }
-                  }
-                }
-                const ray = scene.camera.getPickRay(win);
-                const onTerrain = ray ? scene.globe.pick(ray, scene) : undefined;
-                if (onTerrain) return onTerrain;
-                if (!scene.pickPositionSupported) return undefined;
-                const r = scene.pickPosition(win);
-                return r ?? undefined;
-              },
-              pickEllipsoid: (w) => scene.camera.pickEllipsoid(new C.Cartesian2(w.x, w.y)),
-              toCartographic: (c) => C.Cartographic.fromCartesian(new C.Cartesian3(c.x, c.y, c.z)),
-            },
-            movement.position,
-          );
+          const hit = this.pickWindow(movement.position);
           if (hit) for (const l of this.pickListeners) l(hit);
         },
         C.ScreenSpaceEventType.LEFT_CLICK,
@@ -1854,6 +1932,8 @@ export class CesiumSceneHost implements SceneHost {
     this.preRenderRemover?.();
     this.preRenderGroundRemover?.();
     this.buildings = null;
+    this.osmBuildings?.destroy();
+    this.osmBuildings = null;
     this.pickHandler?.destroy();
     this.groundMaterial?.destroy();
     this.groundMaterial = null;

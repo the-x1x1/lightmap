@@ -192,6 +192,41 @@ export class XyzBasemap implements MapTileProvider {
   }
 }
 
+/**
+ * Sentinel-2 cloudless 2016 by EOX: a cloud-free mosaic of the whole Earth at 10 m, served free
+ * as Web Mercator tiles. The 2016 edition is CC BY 4.0 (later editions are non-commercial, so
+ * this layer must stay the 2016 one). Roughly fifty times finer than Natural Earth II: fields,
+ * towns, beaches and forests show; single buildings do not.
+ */
+export const SENTINEL2_CLOUDLESS_META: ProviderMeta = {
+  id: 'sentinel-2-cloudless-2016',
+  name: 'Sentinel-2 cloudless 2016 (EOX)',
+  attribution:
+    'Sentinel-2 cloudless - https://s2maps.eu by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2016 & 2017)',
+  attributionUrl: 'https://s2maps.eu',
+  license: 'CC BY 4.0',
+  termsUrl: 'https://cloudless.eox.at/license-non-commercial',
+  review: 'approved',
+  isFixture: false,
+  cache: { allowed: true, maxAgeSeconds: 60 * 60 * 24 * 30 },
+};
+
+export const SENTINEL2_CLOUDLESS_URL =
+  'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/{y}/{x}.jpg';
+
+export class Sentinel2CloudlessBasemap implements MapTileProvider {
+  readonly meta = SENTINEL2_CLOUDLESS_META;
+  readonly detailLevel = 'regional' as const;
+  descriptor(): BasemapDescriptor {
+    return {
+      kind: 'xyz',
+      url: SENTINEL2_CLOUDLESS_URL,
+      maxZoom: 14,
+      attribution: this.meta.attribution,
+    };
+  }
+}
+
 export const CESIUM_ION_IMAGERY_META: ProviderMeta = {
   id: 'cesium-ion-imagery',
   name: 'Bing Maps Aerial via Cesium ion',
@@ -226,6 +261,36 @@ export class NoBuildings implements BuildingsProvider {
   readonly meta = NO_BUILDINGS_META;
   descriptor(): BuildingsDescriptor {
     return { kind: 'none', attribution: '' };
+  }
+}
+
+/**
+ * OpenStreetMap buildings from OpenFreeMap's OpenMapTiles vector tiles: free, no key, no request
+ * limit, commercial use allowed with attribution. Footprints with `render_height`, extruded on
+ * the terrain by the renderer around where you stand.
+ */
+export const OPENFREEMAP_BUILDINGS_META: ProviderMeta = {
+  id: 'openfreemap-buildings',
+  name: 'OpenStreetMap buildings (OpenFreeMap vector tiles)',
+  attribution: '© OpenStreetMap contributors · OpenFreeMap · OpenMapTiles',
+  attributionUrl: 'https://www.openstreetmap.org/copyright',
+  license: 'ODbL 1.0 (data); OpenFreeMap terms (tiles)',
+  termsUrl: 'https://openfreemap.org',
+  review: 'approved',
+  isFixture: false,
+  cache: { allowed: true, maxAgeSeconds: 60 * 60 * 24 * 7 },
+};
+
+export const OPENFREEMAP_TILEJSON_URL = 'https://tiles.openfreemap.org/planet';
+
+export class OpenFreeMapBuildings implements BuildingsProvider {
+  readonly meta = OPENFREEMAP_BUILDINGS_META;
+  descriptor(): BuildingsDescriptor {
+    return {
+      kind: 'vector-tiles',
+      url: OPENFREEMAP_TILEJSON_URL,
+      attribution: this.meta.attribution,
+    };
   }
 }
 

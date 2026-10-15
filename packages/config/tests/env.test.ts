@@ -76,7 +76,8 @@ describe('parseEnv', () => {
     expect(keys).toContain('IMAGERY_XYZ_ATTRIBUTION');
     const b = parseEnv({ BUILDINGS_PROVIDER: 'cesium-osm' });
     expect(b.issues.map((i) => i.key)).toContain('CESIUM_ION_TOKEN');
-    expect(parseEnv({}).env.BUILDINGS_PROVIDER).toBe('none');
+    expect(parseEnv({}).env.BUILDINGS_PROVIDER).toBe('openfreemap');
+    expect(parseEnv({}).env.IMAGERY_PROVIDER).toBe('sentinel-2');
     expect(parseEnv({}).env.LANDCOVER_PROVIDER).toBe('none');
     expect(parseEnv({}).env.LANDCOVER_PALETTE).toBe('worldcover');
     expect(parseEnv({}).env.LANDCOVER_XYZ_MAX_ZOOM).toBe(12);
@@ -100,8 +101,10 @@ describe('parseEnv', () => {
   });
 
   it('reports fixture mode when any live provider is missing', () => {
-    const caps = envCapabilities(parseEnv({}).env);
+    const caps = envCapabilities(parseEnv({ IMAGERY_PROVIDER: 'natural-earth' }).env);
     expect(caps.fixtureMode).toBe(true); // natural-earth imagery is coarse ⇒ limited mode
+    // The default imagery (Sentinel-2 cloudless, 10 m) is real imagery, not the coarse fallback.
+    expect(envCapabilities(parseEnv({}).env).detailedImagery).toBe(true);
     expect(caps.referenceImagery).toBe(false);
     const live = envCapabilities(
       parseEnv({
