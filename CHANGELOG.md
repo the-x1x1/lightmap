@@ -7,6 +7,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 - **Winter snow in the lowlands**: where a snowpack lasts the winter (Montreal, Moscow, Helsinki,
   Tromsø, Hokkaido) the ground and the far imagery go white through its heart; places whose snow
   comes and goes stay bare, and the forecast's snow depth still decides inside its horizon (3efd2c2)
+- Shallow water near the shore shows its bottom: turquoise in the tropics, a muted green further
+  from the equator (d36476c)
 - Roofs take a roofing grey instead of their walls' colour (001f302)
 - **The Earth's shadow and the Belt of Venus** in a clear sky opposite a low Sun (6c59b70)
 - Bare winter crowns read as twigs, densest across the crown and feathered at the edge, not as
