@@ -67,7 +67,7 @@ export function useViewpointLink(account: {
       dropParam();
       setDone({ kind: 'missing' });
     }
-  }, [id, q.data, q.isError, restore, setPanel]);
+  }, [id, q.data, q.isError, q.error, restore, setPanel]);
 
   if (!id) return { kind: 'none' };
   if (done) return done;
