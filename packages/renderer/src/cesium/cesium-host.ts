@@ -143,6 +143,9 @@ export class CesiumSceneHost implements SceneHost {
   private roadCanvas: HTMLCanvasElement | null = null;
   private roadBounds: [number, number, number, number] | null = null;
   private roadLoadSeq = 0;
+  /** Where the street map is centred, and the vector tiles' template it was drawn from. */
+  private roadCentre: { lon: number; lat: number } | null = null;
+  private roadTemplate: string | null = null;
   private buildingsJob: Promise<void> | null = null;
   private groundTextureFailed = false;
   private landCover: LandCoverDescriptor = { kind: 'none', attribution: '' };
@@ -1194,6 +1197,8 @@ export class CesiumSceneHost implements SceneHost {
    */
   private async loadStreetsAround(p: GeoPoint, template: string): Promise<void> {
     const seq = ++this.roadLoadSeq;
+    this.roadTemplate = template;
+    this.roadCentre = { lon: p.longitude, lat: p.latitude };
     const HALF_M = 1500;
     const SIZE = 2048;
     const R = 6378137;
@@ -1996,6 +2001,13 @@ export class CesiumSceneHost implements SceneHost {
       }
     }
     layer.update(lon, lat, heightAbove);
+    // The street map follows you: redrawn around the focus once it is 700 m from its centre.
+    if (this.roadTemplate && this.roadCentre && heightAbove < 3000) {
+      const dx = (lon - this.roadCentre.lon) * 111_320 * Math.cos(lat * DEG);
+      const dy = (lat - this.roadCentre.lat) * 111_320;
+      if (Math.hypot(dx, dy) > 700)
+        void this.loadStreetsAround({ latitude: lat, longitude: lon }, this.roadTemplate);
+    }
     // Standing on the ground (the Viewpoint): no generic tree where the eye is.
     if (above < 60) layer.hideTreesNear(scene.camera.positionWC);
   }
