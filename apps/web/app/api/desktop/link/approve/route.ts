@@ -12,7 +12,8 @@ export async function POST(req: Request) {
     const ctx = await requireBrowserUser();
     checkBurst(`desktop-approve:${clientKey(req, ctx.user.id)}`, 10);
     const { code } = await readJson(req, (b) => {
-      const c = normaliseLinkCode(String((b as Record<string, unknown> | null)?.['code'] ?? ''));
+      const raw = (b as Record<string, unknown> | null)?.['code'];
+      const c = normaliseLinkCode(typeof raw === 'string' ? raw : '');
       if (!c) throw new Error('code is not a sign-in code');
       return { code: c };
     });
