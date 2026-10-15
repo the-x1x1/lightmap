@@ -56,11 +56,15 @@ in map view, so a ridge's shadow crosses a valley. **Claim:** direction and leng
 visible softening under cloud. **Verified:** the smoke harness renders a 20 m tower at Sun
 elevation ≈ 11° and measures the frame — the ground along the shadow line is < 70 % as bright as
 the Sun side and the point just beyond `h / tan(el)` is fully lit (`shadow-tower` scene).
-**Caveat:** buildings only where `BUILDINGS_PROVIDER=cesium-osm` is configured (OpenStreetMap
-heights, which are often estimates or missing; they cast and receive the terrain's shadows and
-are lit by the same light); no trees anywhere; the terrain horizon and the ridge markers take
-the mapped buildings in only within 2.5 km of the pin and only with that provider on (see
-"Terrain horizon"); shadow map resolution is
+**Caveat:** buildings are OpenStreetMap's (by default from OpenFreeMap's vector tiles, loaded
+within about 2 km of where you stand or look, or Cesium OSM Buildings with an ion token): heights
+are often estimated or missing (a building without one is drawn 6 m tall), roofs are flat and
+facade colours are a pattern unless mapped; they cast and receive the terrain's shadows and are
+lit by the same light. Trees are a pattern: OpenStreetMap's woods filled and its parks scattered
+with generic trees, not the trees that stand there, so their shadows show the light's direction
+and length but not a real tree's; street trees and single mapped trees are not drawn. The
+terrain horizon and the ridge markers take the mapped buildings in within 2.5 km of the pin and
+never the trees (see "Terrain horizon"); shadow map resolution is
 finite (1024–4096) and softens with reach; terrain self-shadowing at grazing angles shows some
 shadow-map artefacts.
 
@@ -71,7 +75,7 @@ The land horizon around the viewpoint is sampled from the same DEM the preview r
 with Earth curvature and standard refraction (`@lightmap/scene` `horizon.ts`). The Sun counts as
 visible when its refracted upper limb clears the profile at its bearing. **Claim:** whether the
 Sun is behind the ridge now, and the day's first/last light over the terrain to within a few
-minutes for ridges the DEM resolves. With `BUILDINGS_PROVIDER=cesium-osm` the mapped buildings
+minutes for ridges the DEM resolves. With buildings on (the default) the mapped buildings
 within 2.5 km of the pin join the profile (`SceneHost.sampleSurfaceHeights`: a roof where a
 mapped building stands, from the loaded tiles at their finest detail, taken where it stands
 higher than the terrain; sampled alongside the terrain, not after it), so "when does the sun
@@ -79,8 +83,8 @@ clear that block" is answered for a city viewpoint; the caveat then says the bui
 OpenStreetMap has them (heights often estimated or missing) and names both reaches. A pin that
 falls on a footprint (geocoders land on building centroids) stands the viewer on that roof —
 its own building would otherwise wall every bearing — and the caveat says to move the pin to
-the street for the view from the ground. **Caveat:** trees and cloud on the ridge are not in any model, and buildings only
-where configured and mapped; a ridgeline can fall between the 3° bearings or the ring distances; DEM resolution
+the street for the view from the ground. **Caveat:** trees (the drawn ones are a pattern, left out of the profile) and cloud on the
+ridge are not in any model, and buildings only where mapped; a ridgeline can fall between the 3° bearings or the ring distances; DEM resolution
 (≈30 m) rounds sharp crests; the eye-height dip uses the sampled ground height at the pin.
 Terrain beyond the sampled reach (40 km) is unknown, not flat — the caveat says so. Verified:
 synthetic-ridge and edge-of-day unit tests (`packages/scene/tests/horizon.test.ts`); on the
@@ -288,10 +292,14 @@ in `tools/renderer-smoke` (`cirrus-sunset` vs `stratus-sunset` at 19:18, Sun −
 ### Geometry
 
 Terrain mesh from the configured `TerrainProvider` (Re:Earth/Mapterhorn or Cesium World Terrain)
-and imagery from the `MapTileProvider`. With the default bundled Natural Earth II the ground texture
-is coarse and the label drops to Estimated Preview. **Claim:** ridgelines and horizon shape relative
-to the Sun. **Caveat:** DEM resolution (≈30 m globally, better in some regions); buildings only
-with `BUILDINGS_PROVIDER=cesium-osm` (see Shadows), and then as OSM has them.
+and imagery from the `MapTileProvider`: by default Sentinel-2 cloudless 2016 (10 m, a cloud-free
+mosaic of 2016–2017, so newer construction is missing and seasons are mixed); with the bundled
+Natural Earth II the ground texture is coarse and the label drops to Estimated Preview. Near the
+viewer the ground is painted from OpenStreetMap: its land use and land cover (built-up, parks,
+woods, fields, sand, water) and, within 1.5 km, its streets to their usual width by class.
+**Claim:** ridgelines and horizon shape relative to the Sun; where streets, parks and buildings
+are. **Caveat:** DEM resolution (≈30 m globally, better in some regions); buildings, streets and
+land cover as OpenStreetMap has them (see Shadows); street widths are by class, not measured.
 
 ### The map view at night
 

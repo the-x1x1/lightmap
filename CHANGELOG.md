@@ -2,6 +2,23 @@
 
 All notable changes. Versions follow semver; `pnpm release <version>` prepends entries from commits.
 
+## Unreleased
+
+- **LightMap for Windows**: an installer (per user, no administrator prompt), its own window, and
+  updates that download in the background, are checked against their SHA-256 and install
+  silently when LightMap closes ("Restart now" does it at once); `apps/desktop`, built, smoke-tested
+  installed and published by `desktop.yml` (d53fd3a, 713b1ed)
+- **Viewpoint first**: a place opens standing there; click the ground to walk, W A S D to step
+  (f8182b0); on a building the eye stands on its roof (6b31391)
+- **Buildings everywhere, no key**: OpenStreetMap buildings from OpenFreeMap vector tiles, extruded
+  on the terrain, lit, casting shadows, in the horizon; facade colours (69f4f90, cd8cc7c)
+- **Trees** in OpenStreetMap's woods and parks, casting shadows (ad5bcca)
+- **The ground knows the map**: land use and land cover painted from OpenStreetMap (162c92d) and the
+  streets near you drawn to their width (aaec568)
+- **Imagery**: Sentinel-2 cloudless 2016 (10 m, CC BY 4.0) replaces Natural Earth II as the default
+- Saving a preference with a database attached no longer fails (ce1ebb6); the project drawer keeps
+  the open project across tabs (e15f223); E2E expectations corrected
+
 ## v0.2.3 — 2026-10-13
 
 - Dry ground toward tan and ochre; RENDERING_ACCURACY documents the coastline (5a60265)
