@@ -116,6 +116,27 @@ void main() {
     float domeLum = dot(dome, vec3(0.2126, 0.7152, 0.0722));
     float keep = smoothstep(0.12, 0.5, domeLum);
     dome = mix(dome * mix(1.0, 0.06, twilight), dome, keep);
+    // Opposite a low Sun: the single-scattering dome leaves the eastern sky at sunset (the
+    // western at sunrise) a dull dark teal, where a photographer finds the Earth's shadow, a
+    // blue-grey band rising from the horizon as the Sun sinks, under the pink Belt of Venus,
+    // and the whole twilight sky lit a little by light scattered more than once (V&V: Erg
+    // Chebbi at sunset, looking east). From the Sun about 4 deg up to about 7 deg down, in a
+    // clear sky, strongest straight opposite the Sun.
+    {
+      vec3 up = u_eyeUpEC;
+      vec3 sunH = czm_sunDirectionEC - dot(czm_sunDirectionEC, up) * up;
+      vec3 rayH = rayEC - dot(rayEC, up) * up;
+      float anti = clamp(-dot(normalize(rayH + 1e-6), normalize(sunH + 1e-6)), 0.0, 1.0);
+      anti = anti * anti;
+      float window = smoothstep(-7.0, -1.0, u_sunElevation) * (1.0 - smoothstep(1.5, 4.5, u_sunElevation));
+      float clear = 1.0 - u_cloudOpacity;
+      float elevDeg = degrees(asin(clamp(dot(rayEC, up), -1.0, 1.0)));
+      float shadowTop = 0.5 + max(0.0, -u_sunElevation);
+      float earthShadow = 1.0 - smoothstep(shadowTop - 1.0, shadowTop + 2.0, elevDeg);
+      float belt = smoothstep(shadowTop, shadowTop + 3.0, elevDeg) * (1.0 - smoothstep(shadowTop + 6.0, shadowTop + 20.0, elevDeg));
+      dome += window * clear * (anti * (belt * vec3(0.38, 0.25, 0.29) + earthShadow * vec3(0.10, 0.13, 0.19))
+          + vec3(0.04, 0.06, 0.10));
+    }
     vec3 sky = dome;
     // Clouds share the scene's sky-luminance dimming (overcast decks are darker than fair ones).
     float deckLum = mix(1.0, u_skyLuminance, 0.6);
