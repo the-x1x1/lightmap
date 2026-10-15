@@ -17,6 +17,17 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   drawn in a few strokes (858470c, b622b48)
 - The weather scenario and lens chips wrap instead of being cut off (227d79e); E2E tests the
   controls without the 3D scene (5d7d74b)
+- **Times you can trust at every latitude** (V&V): tonight's dusk is tonight's even after midnight,
+  and evening golden hours run forwards in a northern summer; daylight is counted in full near the
+  midnight sun; times round to the nearest minute as almanacs print them; DST gaps shift forward
+  west of UTC too (3e0a73a). Stepping the date across a DST change keeps the clock, and a 25-hour
+  day is all reachable (9ec8dfb). A far place never borrows the last place's zone, and a late
+  lookup cannot move the pin back (552b814). The light finder removes refraction from a direction
+  picked in the view (b40ab34); the week ahead lists polar golden light (this release)
+- "Point with phone" keeps following a phone held still (edf7e77); "11:60", "-1° up" fixed;
+  offline, a failed edit keeps the projects, a viewpoint link waits for the connection, and the
+  chunks in use stay cached (a62d693, 68d4e2b); the 3-project limit holds under concurrent
+  requests (a84ee7f)
 
 ## v0.3.0 — 2026-10-15
 
