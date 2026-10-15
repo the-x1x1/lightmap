@@ -7,6 +7,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 - **Winter snow in the lowlands**: where a snowpack lasts the winter (Montreal, Moscow, Helsinki,
   Tromsø, Hokkaido) the ground and the far imagery go white through its heart; places whose snow
   comes and goes stay bare, and the forecast's snow depth still decides inside its horizon (3efd2c2)
+- Far ridges standing above the horizon are drawn as ground in the haze, not as a black band of
+  'sky'; the glow over a Sun just under the horizon is warm, not clipped white (dd37462, d7e0708)
 - Trees' undersides and walls in shade keep their sky light instead of going black under the
   shadow map (9699126)
 - A shower passing through a sunny sky is no longer drawn as a storm (6b7d057)
