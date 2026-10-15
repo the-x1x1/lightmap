@@ -206,6 +206,13 @@ interface TileState {
   bridges: readonly BridgeLine[];
 }
 
+/** The ground at a footprint, metres above the ellipsoid. */
+interface FootprintGround {
+  centre: number;
+  low: number;
+  high: number;
+}
+
 /** Whether [lon, lat] is inside a ring (even-odd rule; the ring is not closed). */
 function inRing(ring: readonly (readonly [number, number])[], lon: number, lat: number): boolean {
   let inside = false;
@@ -533,8 +540,9 @@ export class OsmBuildingsLayer {
         : [];
 
       if (buildings.length > 0) {
-        // The ground under each building, from the terrain's finest tiles.
-        const grounds = await this.groundHeights(buildings.map((b) => b.centre));
+        // The ground under each building, from the terrain's finest tiles: at its centre and,
+        // on a slope, the lowest and highest of up to six of its corners.
+        const grounds = await this.footprintGrounds(buildings);
         if (state.cancelled || this.destroyed) return;
         let i = 0;
         while (i < buildings.length) {
@@ -578,6 +586,34 @@ export class OsmBuildingsLayer {
     this.owned.add(primitive);
     this.collection.add(primitive);
     this.scene.requestRender();
+  }
+
+  /** The ground at each footprint: its centre, and the lowest and highest of its corners. */
+  private async footprintGrounds(
+    buildings: readonly BuildingFootprint[],
+  ): Promise<FootprintGround[]> {
+    const points: (readonly [number, number])[] = [];
+    const spans: [number, number][] = [];
+    for (const b of buildings) {
+      const start = points.length;
+      points.push(b.centre);
+      const ring = b.outer;
+      const step = Math.max(1, Math.ceil(ring.length / 6));
+      for (let k = 0; k < ring.length; k += step) points.push(ring[k] as [number, number]);
+      spans.push([start, points.length]);
+    }
+    const h = await this.groundHeights(points);
+    return spans.map(([a, z]) => {
+      const centre = h[a] ?? 0;
+      let low = centre;
+      let high = centre;
+      for (let k = a + 1; k < z; k++) {
+        const v = h[k] ?? centre;
+        low = Math.min(low, v);
+        high = Math.max(high, v);
+      }
+      return { centre, low, high };
+    });
   }
 
   /** The terrain's height at points, from its finest tiles (0 where it cannot say). */
@@ -677,7 +713,7 @@ export class OsmBuildingsLayer {
    */
   private buildSlice(
     buildings: readonly BuildingFootprint[],
-    grounds: readonly number[],
+    grounds: readonly FootprintGround[],
     from: number,
   ): { primitive: Cesium.Primitive | null; next: number } {
     const C = this.C;
@@ -689,7 +725,8 @@ export class OsmBuildingsLayer {
       if (i > from && performance.now() - started > SLICE_BUDGET_MS) break;
       const b = buildings[i] as BuildingFootprint;
       try {
-        const ground = grounds[i] ?? 0;
+        const gr = grounds[i] ?? { centre: 0, low: 0, high: 0 };
+        const ground = gr.centre;
         const hierarchy = new C.PolygonHierarchy(
           C.Cartesian3.fromDegreesArray(b.outer.flat()),
           b.holes.map((h) => new C.PolygonHierarchy(C.Cartesian3.fromDegreesArray(h.flat()))),
@@ -697,8 +734,15 @@ export class OsmBuildingsLayer {
         const geometry = C.PolygonGeometry.createGeometry(
           new C.PolygonGeometry({
             polygonHierarchy: hierarchy,
-            height: ground + (b.minHeightM > 0 ? b.minHeightM : -SINK_M),
-            extrudedHeight: ground + b.heightM,
+            // On a slope the walls start under the lowest corner, and the roof stands clear of
+            // the highest (V&V: Kyoto's Higashiyama, where the hillside came up through roofs
+            // in a saw-tooth of terrain triangles). A part lifted off the ground keeps its own
+            // heights from the centre.
+            height: b.minHeightM > 0 ? ground + b.minHeightM : gr.low - SINK_M,
+            extrudedHeight:
+              b.minHeightM > 0
+                ? ground + b.heightM
+                : Math.max(ground + b.heightM, gr.high + Math.min(b.heightM, 2.5)),
             vertexFormat,
           }),
         );
