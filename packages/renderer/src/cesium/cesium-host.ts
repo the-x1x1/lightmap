@@ -2000,7 +2000,12 @@ export class CesiumSceneHost implements SceneHost {
             // A 2 m-wide pick volume, so a thin wall or a roof edge under the probe is hit.
             const res = await this.scene.sampleHeightMostDetailed(cartos, exclude, 2);
             res.forEach((c, j) => {
-              out[i + j] = c && Number.isFinite(c.height) ? c.height : null;
+              // Where the footprints show no building the pick met the globe, whose tiles in
+              // view can be coarser than the terrain's finest and stand far above it in steep
+              // country (V&V: 186 m near Delicate Arch): the caller keeps its terrain there.
+              const p = slice[j];
+              const none = p !== undefined && this.hasBuildingAt(p) === false;
+              out[i + j] = c && Number.isFinite(c.height) && !none ? c.height : null;
             });
           } catch {
             // leave nulls
