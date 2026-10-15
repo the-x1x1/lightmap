@@ -1,7 +1,8 @@
 'use client';
 /**
  * WorldMap: the Cesium globe (Quality 1+) with the Quality-0 overlay always available on top.
- * Click/tap sets the pin; in viewpoint mode drag rotates the camera (heading/pitch).
+ * Click/tap sets the pin. In viewpoint mode a drag looks around (heading/pitch) and a click
+ * (a press that does not move) walks the viewpoint to the ground under it, keeping the heading.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { directionFromFrame, frameCoordinates } from '@lightmap/scene';
@@ -10,7 +11,7 @@ import { useApplyScene, useRenderer } from '@/features/map/use-renderer';
 import { api } from '@/lib/client/api';
 import type { CapabilitiesResponse, ReverseResponse } from '@/lib/api-types';
 import type { SceneState } from '@lightmap/scene';
-import type { GeoPoint } from '@lightmap/geospatial';
+import { destinationPoint, type GeoPoint } from '@lightmap/geospatial';
 import type { HostStats, RendererCapabilities } from '@lightmap/renderer';
 import { SunDirectionOverlay } from './SunDirectionOverlay';
 import { SkyBackdrop } from './SkyBackdrop';
@@ -84,9 +85,8 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
   } | null>(null);
   setQualityFromGovernor.current = setQuality;
 
-  const onPick = useCallback(
+  const moveTo = useCallback(
     async (p: GeoPoint & { viaTerrain: boolean }) => {
-      if (usePlannerStore.getState().camera.mode === 'viewpoint') return; // dragging to look, not picking
       setResolving(true);
       const provisional = {
         point: {
@@ -124,6 +124,16 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
       }
     },
     [setLocation],
+  );
+  // The globe's own click. While looking from a viewpoint, clicks are the pointer handlers' below
+  // (a drag looks, a click walks), so the globe's click is ignored there.
+  const onPick = useCallback(
+    (p: GeoPoint & { viaTerrain: boolean }) => {
+      const s = usePlannerStore.getState();
+      if (s.camera.mode === 'viewpoint' && s.location) return;
+      void moveTo(p);
+    },
+    [moveTo],
   );
 
   const renderer = useRenderer({
@@ -193,8 +203,10 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
     /** Pixels the pointer may wander before a press stops being a tap (fingers wobble more). */
     slop: number;
   } | null>(null);
+  // Looking from a viewpoint needs a place to stand; before one is picked the globe takes clicks.
+  const looking = camera.mode === 'viewpoint' && location !== null;
   const onPointerDown = (e: React.PointerEvent) => {
-    if (camera.mode !== 'viewpoint') return;
+    if (!looking) return;
     drag.current = {
       x: e.clientX,
       y: e.clientY,
@@ -236,18 +248,67 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
     if (drag.current?.id !== e.pointerId) return;
     const wasClick = !drag.current.moved;
     drag.current = null;
-    if (wasClick && finderPicking && camera.mode === 'viewpoint') pickInFrame(e);
+    if (!wasClick || !looking) return;
+    if (finderPicking) {
+      pickInFrame(e);
+      return;
+    }
+    // A click on the ground walks there: the eye moves, the heading stays.
+    const el = container.current;
+    if (!el || !host?.pickAt) return;
+    const rect = el.getBoundingClientRect();
+    const hit = host.pickAt(e.clientX - rect.left, e.clientY - rect.top);
+    if (hit) void moveTo(hit);
   };
   const onPointerCancel = (e: React.PointerEvent) => {
     if (drag.current?.id === e.pointerId) drag.current = null; // a cancelled gesture never picks
   };
   const onWheel = (e: React.WheelEvent) => {
-    if (camera.mode !== 'viewpoint') return;
+    if (!looking) return;
     const store = usePlannerStore.getState();
     store.setFov(store.camera.fovDeg * (e.deltaY > 0 ? 1.08 : 0.92));
   };
+  // W A S D walk from the viewpoint (2 m a step, 20 m with Shift): the eye moves at once and the
+  // place (name, zone, height) is looked up when the steps stop.
+  const walkTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (walkTimer.current) clearTimeout(walkTimer.current);
+    },
+    [],
+  );
+  const walk = (forwardM: number, rightM: number) => {
+    const s = usePlannerStore.getState();
+    const loc = s.location;
+    if (!loc) return;
+    let p: GeoPoint = loc.point;
+    if (forwardM !== 0) p = destinationPoint(p, s.camera.headingDeg, forwardM);
+    if (rightM !== 0) p = destinationPoint(p, s.camera.headingDeg + 90, rightM);
+    const point = { latitude: p.latitude, longitude: p.longitude };
+    setLocation(
+      {
+        ...loc,
+        point,
+        label: `${point.latitude.toFixed(4)}, ${point.longitude.toFixed(4)}`,
+        source: 'map-click',
+      },
+      { keepCamera: true },
+    );
+    if (walkTimer.current) clearTimeout(walkTimer.current);
+    walkTimer.current = setTimeout(() => void moveTo({ ...point, viaTerrain: true }), 600);
+  };
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (camera.mode !== 'viewpoint') return;
+    if (!looking) return;
+    const stride = e.shiftKey ? 20 : 2;
+    const k = e.key.toLowerCase();
+    if (k === 'w' || k === 's' || k === 'a' || k === 'd') {
+      if (k === 'w') walk(stride, 0);
+      else if (k === 's') walk(-stride, 0);
+      else if (k === 'a') walk(0, -stride);
+      else walk(0, stride);
+      e.preventDefault();
+      return;
+    }
     const step = e.shiftKey ? 15 : 3;
     if (e.key === 'ArrowLeft') rotateCamera(-step, 0);
     else if (e.key === 'ArrowRight') rotateCamera(step, 0);
@@ -272,17 +333,15 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
         ref={container}
         className={cx(
           'absolute inset-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--lm-sun)]',
-          camera.mode === 'viewpoint'
-            ? 'cursor-grab active:cursor-grabbing touch-none'
-            : 'cursor-crosshair',
+          looking ? 'cursor-grab active:cursor-grabbing touch-none' : 'cursor-crosshair',
           overlayMode && 'hidden',
         )}
         // `application` only where we really handle keys (viewpoint look-around); in map mode
         // screen readers keep their browse keys and are told to use search instead.
-        role={camera.mode === 'viewpoint' ? 'application' : 'img'}
+        role={looking ? 'application' : 'img'}
         aria-label={
-          camera.mode === 'viewpoint'
-            ? 'Viewpoint. Drag or use arrow keys to look around; Shift for larger steps.'
+          looking
+            ? 'Viewpoint. Drag or use arrow keys to look around (Shift for larger steps); click the ground to walk there, or W A S D to step.'
             : 'World map. Click or tap to place the pin, or use the search box.'
         }
         tabIndex={0}

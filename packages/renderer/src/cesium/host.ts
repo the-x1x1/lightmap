@@ -231,6 +231,8 @@ export interface SceneHost {
   sampleSurfaceHeights(points: readonly GeoPoint[]): Promise<Array<number | null> | null>;
   requestRender(): void;
   stats(): HostStats;
+  /** The ground under a canvas point (CSS px from its top left), or null for the sky. */
+  pickAt?(x: number, y: number): (GeoPoint & { viaTerrain: boolean }) | null;
   /** Subscribe to clicks/taps on the ground. */
   onPick(handler: (p: GeoPoint & { viaTerrain: boolean }) => void): () => void;
   /** Subscribe to per-second frame samples. */

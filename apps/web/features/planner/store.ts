@@ -163,7 +163,9 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
   minutes: initialToday.minutes,
   scenario: 'clear',
   forceScenario: false,
-  camera: defaultCamera({ latitude: 0, longitude: 0 }),
+  // A place opens in the Viewpoint: standing there, looking the way the light goes. The globe
+  // still takes the first click (WorldMap looks from a viewpoint only once there is a place).
+  camera: { ...defaultCamera({ latitude: 0, longitude: 0 }), mode: 'viewpoint' },
   panel: 'plan',
   sheetOpen: true,
   sensorWidthMm: 36,
