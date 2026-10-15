@@ -8,9 +8,12 @@
 import { create } from 'zustand';
 import {
   computeDayEvents,
+  localDayBounds,
   localSelectionToUtc,
   parseCivilDate,
   utcToLocalSelection,
+  utcToWallClock,
+  wallClockToUtc,
 } from '@lightmap/astronomy';
 import {
   defaultCamera,
@@ -132,6 +135,14 @@ export interface PlannerActions {
 
 export type PlannerStore = PlannerState & PlannerActions;
 
+/** Minutes in the civil day `date` at `zone`: 1 440, or 1 380 / 1 500 across a DST change. */
+export function dayLengthMinutes(date: string, zone: string): number {
+  const civil = parseCivilDate(date);
+  if (!civil) return 1440;
+  const { start, end } = localDayBounds(civil, zone);
+  return Math.round((end.getTime() - start.getTime()) / 60_000);
+}
+
 function todayIn(timeZone: string): { date: string; minutes: number } {
   return utcToLocalSelection(new Date(), timeZone);
 }
@@ -205,10 +216,27 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
     set({ horizonProfile: profile });
   },
   setDate(date) {
-    if (parseCivilDate(date)) set({ date });
+    const next = parseCivilDate(date);
+    if (!next) return;
+    const st = get();
+    const prev = parseCivilDate(st.date);
+    if (!prev) {
+      set({ date });
+      return;
+    }
+    // Keep the wall-clock time, not the minutes elapsed since midnight: across a DST change the
+    // two differ by an hour (20:00 would become 21:00, and 23:30 the next day's 00:30).
+    const tz = effectiveTimeZone(st);
+    const wall = utcToWallClock(localSelectionToUtc(prev, st.minutes, tz), tz);
+    const at = wallClockToUtc({ ...next, hour: wall.hour, minute: wall.minute, second: 0 }, tz);
+    const start = localDayBounds(next, tz).start;
+    const minutes = Math.round((at.getTime() - start.getTime()) / 60_000);
+    set({ date, minutes: Math.max(0, Math.min(dayLengthMinutes(date, tz) - 1, minutes)) });
   },
   setMinutes(minutes) {
-    set({ minutes: Math.max(0, Math.min(1439, Math.round(minutes))) });
+    const st = get();
+    const last = dayLengthMinutes(st.date, effectiveTimeZone(st)) - 1;
+    set({ minutes: Math.max(0, Math.min(last, Math.round(minutes))) });
   },
   setNow(timeZone) {
     set(todayIn(timeZone ?? effectiveTimeZone(get())));
@@ -230,8 +258,8 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
     });
     const at =
       ev.astronomicalDusk ?? (ev.sunset ? new Date(ev.sunset.getTime() + 3_600_000) : null);
-    const minutes = at ? Math.round((at.getTime() - ev.dayStart.getTime()) / 60_000) : 21 * 60;
-    set({ date: today.date, minutes: Math.max(0, Math.min(1439, minutes)) });
+    // Tonight's dusk can fall after midnight (a northern summer): the date follows it.
+    set(at ? utcToLocalSelection(at, tz) : { date: today.date, minutes: 21 * 60 });
   },
   setScenario(id, force) {
     set({ scenario: id, forceScenario: force ?? get().forceScenario });

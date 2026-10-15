@@ -304,9 +304,11 @@ export function Timeline({
           className="lm-range relative"
           style={{ ['--lm-range-track' as string]: 'transparent' }}
           min={0}
-          max={Math.min(total - 1, 1439)}
+          // A fall-back day has 1 500 minutes and a spring-forward day 1 380: the slider spans
+          // the day it shows.
+          max={total - 1}
           step={1}
-          value={Math.min(minutes, 1439)}
+          value={Math.min(minutes, total - 1)}
           onChange={(e) => setMinutes(Number(e.target.value))}
           // While the thumb is held the playing clock waits, so a drag lands where the finger stops.
           onPointerDown={() => play.hold(true)}

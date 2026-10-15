@@ -37,6 +37,23 @@ describe('planner store', () => {
     s.setFocalLength(50);
     expect(usePlannerStore.getState().camera.fovDeg).toBeCloseTo(39.6, 1);
   });
+  it('steps the date across a DST change keeping the wall-clock time, and spans the whole day', () => {
+    const s = usePlannerStore.getState();
+    s.setLocation({ ...kailua, timeZone: 'America/New_York', label: 'New York' });
+    s.setDate('2026-03-07');
+    s.setMinutes(20 * 60);
+    s.setDate('2026-03-08'); // spring forward: 20:00 EDT is 19 h into a 23 h day
+    expect(selectedUtc(usePlannerStore.getState())?.toISOString()).toBe('2026-03-09T00:00:00.000Z');
+    s.setDate('2026-03-07');
+    s.setMinutes(23 * 60 + 30);
+    s.setDate('2026-03-08'); // 23:30 stays on the 8th, not the 9th's 00:30
+    expect(selectedUtc(usePlannerStore.getState())?.toISOString()).toBe('2026-03-09T03:30:00.000Z');
+    // Fall back: a 25 h day's last minutes are reachable.
+    s.setDate('2026-11-01');
+    s.setMinutes(5000);
+    expect(usePlannerStore.getState().minutes).toBe(1499);
+    s.setLocation(kailua);
+  });
   it('finder picking forces the viewpoint camera and the target is cleared on a new place', () => {
     const s = usePlannerStore.getState();
     s.setCameraMode('map');
