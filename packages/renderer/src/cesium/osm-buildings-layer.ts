@@ -38,6 +38,27 @@ const KEEP_RADIUS_M = 8000;
 const MAX_LOAD_HEIGHT_M = 6000;
 /** Footprints turned into geometry per slice (one slice per ~frame). */
 const SLICE = 250;
+/**
+ * Main-thread time one building slice may take, ms: Cesium triangulates footprints on the main
+ * thread here (one bad footprint must not lose its neighbours), so a slice stops when its budget
+ * is spent and the rest waits for the next frame.
+ */
+const SLICE_BUDGET_MS = 6;
+
+/** The next frame (or, in a page that draws no frames, 50 ms). */
+function nextFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    let done = false;
+    const go = () => {
+      if (!done) {
+        done = true;
+        resolve();
+      }
+    };
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(go);
+    setTimeout(go, 50);
+  });
+}
 /** The building's base sits this far into the ground, so a slope never shows a gap under it. */
 const SINK_M = 2;
 /**
@@ -142,6 +163,11 @@ export class OsmBuildingsLayer {
   /** The leaf season the trees are drawn in, and its shader (shared by every tree primitive). */
   private season = { leafOn: 1, autumn: 0 };
   private treeAppearance: Cesium.PerInstanceColorAppearance | null = null;
+  /**
+   * One slice of building or tree work per frame across every tile: tiles load side by side,
+   * and their slices queued in the same frame made the walk into a dense city stutter.
+   */
+  private gate: Promise<void> = Promise.resolve();
   private destroyed = false;
   private failures = 0;
 
@@ -333,6 +359,13 @@ export class OsmBuildingsLayer {
     return this.template;
   }
 
+  /** Waits for this tile's turn: the frame after the previous slice of any tile. */
+  private nextSlot(): Promise<void> {
+    const turn = this.gate.then(nextFrame);
+    this.gate = turn;
+    return turn;
+  }
+
   private report(error: unknown): void {
     // One notice, not one per tile.
     if (this.failures++ === 0) this.onError('Buildings could not be loaded here', error);
@@ -361,14 +394,13 @@ export class OsmBuildingsLayer {
         // The ground under each building, from the terrain's finest tiles.
         const grounds = await this.groundHeights(buildings.map((b) => b.centre));
         if (state.cancelled || this.destroyed) return;
-        for (let i = 0; i < buildings.length; i += SLICE) {
+        let i = 0;
+        while (i < buildings.length) {
+          await this.nextSlot();
           if (state.cancelled || this.destroyed) return;
-          this.adopt(
-            state,
-            this.buildSlice(buildings.slice(i, i + SLICE), grounds.slice(i, i + SLICE)),
-          );
-          // Let a frame through between slices.
-          await new Promise((r) => setTimeout(r, 0));
+          const slice = this.buildSlice(buildings, grounds, i);
+          this.adopt(state, slice.primitive);
+          i = slice.next;
         }
       }
 
@@ -376,6 +408,7 @@ export class OsmBuildingsLayer {
         const grounds = await this.groundHeights(trees.map((t) => [t.lon, t.lat]));
         if (state.cancelled || this.destroyed) return;
         for (let i = 0; i < trees.length; i += TREE_SLICE) {
+          await this.nextSlot();
           if (state.cancelled || this.destroyed) return;
           const record: { id: number; base: Cesium.Cartesian3 }[] = [];
           const prim = this.treeSlice(
@@ -385,7 +418,6 @@ export class OsmBuildingsLayer {
           );
           this.adopt(state, prim, true);
           if (prim) for (const r of record) state.trees.push({ prim, ...r });
-          await new Promise((r) => setTimeout(r, 0));
         }
       }
     } catch (error) {
@@ -497,14 +529,23 @@ export class OsmBuildingsLayer {
     });
   }
 
+  /**
+   * Buildings from `from` on, up to SLICE of them or SLICE_BUDGET_MS of work, as one primitive;
+   * `next` is where the following slice starts.
+   */
   private buildSlice(
     buildings: readonly BuildingFootprint[],
     grounds: readonly number[],
-  ): Cesium.Primitive | null {
+    from: number,
+  ): { primitive: Cesium.Primitive | null; next: number } {
     const C = this.C;
     const instances: Cesium.GeometryInstance[] = [];
     const vertexFormat = C.PerInstanceColorAppearance.VERTEX_FORMAT;
-    buildings.forEach((b, i) => {
+    const started = performance.now();
+    let i = from;
+    for (; i < buildings.length && i < from + SLICE; i++) {
+      if (i > from && performance.now() - started > SLICE_BUDGET_MS) break;
+      const b = buildings[i] as BuildingFootprint;
       try {
         const ground = grounds[i] ?? 0;
         const hierarchy = new C.PolygonHierarchy(
@@ -519,7 +560,7 @@ export class OsmBuildingsLayer {
             vertexFormat,
           }),
         );
-        if (!geometry) return;
+        if (!geometry) continue;
         instances.push(
           new C.GeometryInstance({
             geometry,
@@ -531,9 +572,9 @@ export class OsmBuildingsLayer {
       } catch {
         // A footprint Cesium cannot triangulate is left out.
       }
-    });
-    if (instances.length === 0) return null;
-    return new C.Primitive({
+    }
+    if (instances.length === 0) return { primitive: null, next: i };
+    const primitive = new C.Primitive({
       geometryInstances: instances,
       appearance: new C.PerInstanceColorAppearance({
         flat: false,
@@ -546,6 +587,7 @@ export class OsmBuildingsLayer {
       releaseGeometryInstances: true,
       allowPicking: true,
     });
+    return { primitive, next: i };
   }
 
   destroy(): void {
