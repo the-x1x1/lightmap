@@ -205,6 +205,23 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
   } | null>(null);
   // Looking from a viewpoint needs a place to stand; before one is picked the globe takes clicks.
   const looking = camera.mode === 'viewpoint' && location !== null;
+  // A one-line hint on how to move, until the first walk (remembered on this device).
+  const [walkHint, setWalkHint] = useState(() => {
+    try {
+      return localStorage.getItem('lightmap:walk-hint-seen') !== '1';
+    } catch {
+      return true;
+    }
+  });
+  const walked = () => {
+    if (!walkHint) return;
+    setWalkHint(false);
+    try {
+      localStorage.setItem('lightmap:walk-hint-seen', '1');
+    } catch {
+      // the hint shows again next time
+    }
+  };
   const onPointerDown = (e: React.PointerEvent) => {
     if (!looking) return;
     drag.current = {
@@ -258,7 +275,10 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
     if (!el || !host?.pickAt) return;
     const rect = el.getBoundingClientRect();
     const hit = host.pickAt(e.clientX - rect.left, e.clientY - rect.top);
-    if (hit) void moveTo(hit);
+    if (hit) {
+      walked();
+      void moveTo(hit);
+    }
   };
   const onPointerCancel = (e: React.PointerEvent) => {
     if (drag.current?.id === e.pointerId) drag.current = null; // a cancelled gesture never picks
@@ -302,6 +322,7 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
     const stride = e.shiftKey ? 20 : 2;
     const k = e.key.toLowerCase();
     if (k === 'w' || k === 's' || k === 'a' || k === 'd') {
+      walked();
       if (k === 'w') walk(stride, 0);
       else if (k === 's') walk(-stride, 0);
       else if (k === 'a') walk(0, -stride);
@@ -371,6 +392,14 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
           data-testid="finder-pick-hint"
         >
           Click where the sun (or moon) should be in this view.
+        </p>
+      ) : null}
+      {looking && walkHint && !finderPicking && !overlayMode ? (
+        <p
+          className="pointer-events-none absolute bottom-24 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/65 px-3 py-1.5 text-xs text-[var(--lm-text)] lg:bottom-8"
+          data-testid="walk-hint"
+        >
+          Drag to look · click the ground to walk there · W A S D to step
         </p>
       ) : null}
       {showLevelGuide && camera.mode === 'viewpoint' && !overlayMode && location ? (
