@@ -20,7 +20,8 @@ export async function GET(req: Request) {
     const point = { latitude: lat, longitude: lng };
     const cache = s.db ? cacheRepo(s.db.db) : null;
     const cacheKey = gridKey(point, 0.01);
-    const cached = cache ? await cache.get<ReverseResponse>('reverse', cacheKey) : null;
+    // v2: zones from geo-tz's comprehensive dataset (Europe/Oslo, not Europe/Berlin).
+    const cached = cache ? await cache.get<ReverseResponse>('reverse-v2', cacheKey) : null;
     if (cached) return json(cached);
 
     const [timeZone, place, elevationM] = await Promise.all([
@@ -35,7 +36,7 @@ export async function GET(req: Request) {
       elevationM,
       provider: { id: meta.id, isFixture: meta.isFixture, attribution: meta.attribution },
     };
-    if (cache) await cache.set('reverse', cacheKey, body, 60 * 60 * 24 * 30);
+    if (cache) await cache.set('reverse-v2', cacheKey, body, 60 * 60 * 24 * 30);
     return json(body);
   } catch (e) {
     return errorResponse(e);

@@ -24,20 +24,35 @@ export class GeoTzTimezoneProvider implements TimezoneProvider {
     isFixture: false,
     cache: { allowed: true, maxAgeSeconds: 60 * 60 * 24 * 365 },
   };
-  private mod: Promise<{ find: (lat: number, lon: number) => string[] }> | null = null;
+  private all: Promise<Finder | null> | null = null;
+  private merged: Promise<Finder | null> | null = null;
 
   async lookup(point: GeoPoint): Promise<string | null> {
-    try {
-      this.mod ??= (
-        import('geo-tz/dist/find-all') as Promise<{ find: (lat: number, lon: number) => string[] }>
-      ).catch(() => import('geo-tz') as Promise<{ find: (lat: number, lon: number) => string[] }>);
-      const { find } = await this.mod;
-      const zones = find(point.latitude, point.longitude);
-      const z = zones[0];
-      if (z && !z.startsWith('Etc/')) return z;
-      return etcZoneForLongitude(point.longitude);
-    } catch {
-      return etcZoneForLongitude(point.longitude);
+    this.all ??= (import('geo-tz/dist/find-all') as Promise<Finder>).catch(() => null);
+    this.merged ??= (import('geo-tz') as Promise<Finder>).catch(() => null);
+    // The comprehensive dataset first; a zone this runtime's ICU does not know (the newest
+    // splits) falls back to the merged dataset's name for the same clocks.
+    for (const job of [this.all, this.merged]) {
+      try {
+        const finder = await job;
+        const z = finder?.find(point.latitude, point.longitude)[0];
+        if (z && !z.startsWith('Etc/') && isKnownZone(z)) return z;
+        if (z?.startsWith('Etc/')) break; // open sea: the nautical zone below
+      } catch {
+        /* the next dataset */
+      }
     }
+    return etcZoneForLongitude(point.longitude);
+  }
+}
+
+type Finder = { find: (lat: number, lon: number) => string[] };
+
+function isKnownZone(zone: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en', { timeZone: zone });
+    return true;
+  } catch {
+    return false;
   }
 }
