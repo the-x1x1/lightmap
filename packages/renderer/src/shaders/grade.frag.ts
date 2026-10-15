@@ -100,6 +100,13 @@ void main() {
     float glowKeep = smoothstep(0.35, 0.8, dot(dome, vec3(0.2126, 0.7152, 0.0722)));
     dome = mix(dome, dome * vec3(0.75, 0.9, 1.45) * 1.5 + vec3(0.0, 0.015, 0.06), blueHour * 0.85 * (1.0 - 0.75 * glowKeep));
     dome = mix(dome, dome * vec3(1.12, 0.93, 0.78), blueHour * glowKeep * 0.7);
+    // With the Sun just under the horizon the glow over it is yellow to orange, never white: the
+    // dome there comes in clipped to white (single scattering, boosted for twilight), so the
+    // whitest of it takes the glow's colour back. Gone by -9 deg; above the horizon the white
+    // around the Sun is its glare and stays.
+    float underSun = (1.0 - smoothstep(-1.0, 0.5, u_sunElevation)) * smoothstep(-9.0, -5.0, u_sunElevation);
+    float whiteness = smoothstep(0.7, 0.95, min(dome.r, min(dome.g, dome.b)));
+    dome = mix(dome, dome * vec3(1.0, 0.8, 0.52), whiteness * underSun * 0.85);
     // Darken the atmospheric glow but keep bright point sources (stars, moon) readable.
     float domeLum = dot(dome, vec3(0.2126, 0.7152, 0.0722));
     float keep = smoothstep(0.12, 0.5, domeLum);
