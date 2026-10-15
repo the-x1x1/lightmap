@@ -2,7 +2,7 @@
 
 All notable changes. Versions follow semver; `pnpm release <version>` prepends entries from commits.
 
-## Unreleased
+## v0.3.1 — 2026-10-15
 
 - **LightMap for Mac** (Apple Silicon, macOS 12+): a disk image, its own window with the Mac menus,
   and the same self-installing updates as Windows; built, installed, updated and crash-tested in
