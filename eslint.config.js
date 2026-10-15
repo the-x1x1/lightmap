@@ -17,6 +17,7 @@ export default tseslint.config(
       'apps/web/next-env.d.ts',
       'apps/desktop/stage/**',
       'apps/desktop/publish/**',
+      'apps/desktop/mac/out/**',
       'apps/desktop/**/bin/**',
       'apps/desktop/**/obj/**',
     ],

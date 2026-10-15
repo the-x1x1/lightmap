@@ -22,3 +22,4 @@ apps/desktop/**/obj/
 apps/desktop/publish/
 apps/desktop/stage/
 apps/desktop/installer/Output/
+apps/desktop/mac/out/

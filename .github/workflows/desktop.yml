@@ -1,9 +1,10 @@
 name: Desktop
 
-# LightMap for Windows (apps/desktop). Every push to main builds the installer, smoke-tests the
-# built app and the installed one, and keeps the installer as a workflow artifact. A v* tag does
-# the same and then publishes the GitHub release with LightMap-Setup-<version>.exe and its
-# .sha256: that release is what installed copies find and install by themselves.
+# LightMap for Windows and Mac (apps/desktop). Every push to main builds both apps, smoke-tests
+# the built app and the installed one, and keeps the downloads as workflow artifacts. A v* tag
+# does the same and then publishes the GitHub release with LightMap-Setup-<version>.exe, the Mac
+# disk image and update zip, and a .sha256 for each: that release is what installed copies find
+# and install by themselves. It becomes "latest" only once both platforms' files are on it.
 
 on:
   push:
@@ -21,7 +22,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 45
     permissions:
-      contents: write # publish the release (tags only)
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -119,24 +120,156 @@ jobs:
             ${{ steps.installer.outputs.exe }}.sha256
           retention-days: 14
 
-      # The installer goes up first and the release becomes "latest" last, so an installed copy
-      # never sees a latest release without its installer.
-      - name: Publish the release
-        if: startsWith(github.ref, 'refs/tags/v')
-        shell: bash
+  mac:
+    name: Mac app · build · smoke · update
+    runs-on: macos-latest # Apple Silicon
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Version
+        id: version
+        run: |
+          v=$(node -p "require('./package.json').version")
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "v$v" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match package.json version $v"; exit 1
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+      # Hoisted node_modules: the bundle carries real files, not pnpm's links. Native packages
+      # (sharp) come in for macOS on Apple Silicon because they are installed here.
+      - name: Install
+        run: pnpm install --frozen-lockfile --config.node-linker=hoisted
+
+      - name: Build the web app (standalone server)
+        run: pnpm --filter @lightmap/web build
+        env:
+          LIGHTMAP_DESKTOP: '1'
+          NEXT_TELEMETRY_DISABLED: '1'
+
+      - name: Build LightMap.app, the update zip and the disk image
+        run: bash apps/desktop/mac/build-app.sh "${{ steps.version.outputs.version }}"
+
+      - name: Smoke-test the built app
+        run: |
+          set -o pipefail
+          apps/desktop/mac/out/LightMap.app/Contents/MacOS/LightMap --selftest \
+            | sed -E 's/^(.* (FAIL|server!) .*)$/::error::\1/'
+
+      - name: Install from the disk image and smoke-test the installed copy
+        run: |
+          set -o pipefail
+          v='${{ steps.version.outputs.version }}'
+          mnt="$RUNNER_TEMP/lightmap-dmg"
+          hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "apps/desktop/mac/out/LightMap-$v-mac-arm64.dmg"
+          test -L "$mnt/Applications" || { echo "::error::the disk image has no Applications shortcut"; exit 1; }
+          rm -rf /Applications/LightMap.app
+          ditto "$mnt/LightMap.app" /Applications/LightMap.app
+          hdiutil detach "$mnt"
+          codesign --verify --verbose=2 /Applications/LightMap.app
+          /Applications/LightMap.app/Contents/MacOS/LightMap --selftest \
+            | sed -E 's/^(.* (FAIL|server!) .*)$/::error::\1/'
+
+      # The real update path, end to end: a staged update to a higher version is found at launch,
+      # handed to the swap script, the new bundle replaces the installed one, and it reopens.
+      # Then a force-quit proves the server does not outlive the app.
+      - name: Self-update and crash cleanup
+        run: |
+          v='${{ steps.version.outputs.version }}'
+          next="$v.1"
+          work="$RUNNER_TEMP/next"
+          mkdir -p "$work"
+          ditto /Applications/LightMap.app "$work/LightMap.app"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $next" -c "Set :CFBundleVersion $next" "$work/LightMap.app/Contents/Info.plist"
+          codesign --force --sign - --timestamp=none "$work/LightMap.app"
+          updates="$HOME/Library/Application Support/LightMap/updates"
+          mkdir -p "$updates"
+          ditto -c -k --keepParent "$work/LightMap.app" "$updates/LightMap-$next-mac-arm64.zip"
+          printf '{"version":"%s","zip":"%s"}' "$next" "$updates/LightMap-$next-mac-arm64.zip" > "$updates/staged.json"
+          open /Applications/LightMap.app
+          for i in $(seq 1 120); do
+            got=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" /Applications/LightMap.app/Contents/Info.plist 2>/dev/null || true)
+            [ "$got" = "$next" ] && break
+            sleep 1
+          done
+          cat "$HOME/Library/Logs/LightMap/update.log" || true
+          if [ "$got" != "$next" ]; then
+            echo "::error::the staged update was not installed (version is $got, wanted $next)"
+            cat "$HOME/Library/Logs/LightMap/desktop.log" || true
+            exit 1
+          fi
+          test ! -e "$updates/staged.json" || { echo "::error::staged.json was left behind"; exit 1; }
+          # The reopened app starts its server; wait for it, then force-quit the app.
+          for i in $(seq 1 90); do
+            curl -fs http://127.0.0.1:47615/api/health > /dev/null && break
+            sleep 1
+          done
+          curl -fs http://127.0.0.1:47615/api/health || { echo "::error::the updated app's server did not answer"; cat "$HOME/Library/Logs/LightMap/desktop.log"; exit 1; }
+          echo
+          pkill -9 -x LightMap
+          for i in $(seq 1 15); do
+            pgrep -f 'LightMap.app/Contents/Resources/runtime/node' > /dev/null || break
+            sleep 1
+          done
+          if pgrep -fl 'LightMap.app/Contents/Resources/runtime/node'; then
+            echo "::error::the server outlived a force-quit app"; exit 1
+          fi
+          echo "updated to $next, reopened, and the server ended with the app"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LightMap-mac-${{ steps.version.outputs.version }}
+          path: |
+            apps/desktop/mac/out/*.dmg
+            apps/desktop/mac/out/*.dmg.sha256
+            apps/desktop/mac/out/*.zip
+            apps/desktop/mac/out/*.zip.sha256
+          retention-days: 14
+
+  # Both platforms' files go up first and the release becomes "latest" last, so an installed copy
+  # never sees a latest release without its update.
+  publish:
+    name: Publish the release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, mac]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
-          V: ${{ steps.version.outputs.version }}
-          EXE: ${{ steps.installer.outputs.exe }}
         run: |
+          V="${TAG#v}"
+          ls -la dist
           awk -v h="## v$V" 'index($0, h) == 1 { on = 1; next } on && /^## / { exit } on' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
           if [ ! -s "$RUNNER_TEMP/notes.md" ]; then echo "LightMap $V" > "$RUNNER_TEMP/notes.md"; fi
-          printf '\n**Windows:** download `LightMap-Setup-%s.exe` and run it. Installed copies update themselves.\n' "$V" >> "$RUNNER_TEMP/notes.md"
+          cat >> "$RUNNER_TEMP/notes.md" <<EOF
+
+          **Windows:** download \`LightMap-Setup-$V.exe\` and run it.
+
+          **Mac (Apple Silicon):** download \`LightMap-$V-mac-arm64.dmg\`, open it and drag LightMap into Applications. The first time, macOS says it cannot check LightMap: open **System Settings › Privacy & Security** and choose **Open Anyway** (LightMap is not yet signed with an Apple Developer ID).
+
+          Installed copies on both update themselves.
+          EOF
           if ! gh release view "$TAG" > /dev/null 2>&1; then
             gh release create "$TAG" --draft --verify-tag --title "LightMap $V" --notes-file "$RUNNER_TEMP/notes.md"
           else
             gh release edit "$TAG" --notes-file "$RUNNER_TEMP/notes.md"
           fi
-          gh release upload "$TAG" "$EXE" "$EXE.sha256" --clobber
+          gh release upload "$TAG" dist/* --clobber
           gh release edit "$TAG" --draft=false --latest

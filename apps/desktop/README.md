@@ -1,4 +1,4 @@
-# LightMap for Windows
+# LightMap for Windows and Mac
 
 LightMap as a Windows app: an installer, a Start-menu entry, its own window, and updates that
 install themselves. It is the same LightMap the web build serves, run on the PC:
@@ -78,3 +78,50 @@ $node = (Get-Command node).Source; node apps/desktop/scripts/stage.mjs --node $n
 
 `apps/desktop` has no `package.json` on purpose: it is not a pnpm workspace package, and pnpm,
 turbo and the web build never touch it.
+
+# LightMap for Mac
+
+The same app for macOS 12 or later on Apple Silicon (`mac/`): a disk image to drag into
+Applications, its own window, and updates that install themselves.
+
+- **LightMap.app** (`mac/Sources/*.swift`, AppKit + WebKit, no Xcode project) opens a window at
+  once, starts the server, and shows the app when it answers. It has the Mac menus a person
+  expects (Edit for copy and paste, View → Reload, Help → Show Logs), shows the page's dialogs,
+  and saves downloads (the planning card, the shot list) to Downloads.
+- **The server** is the same standalone build run by a bundled `node`
+  (`Contents/Resources/runtime`), on `http://127.0.0.1:47615`. macOS has no job objects, so
+  `runtime/parent-watch.cjs` ends the server within two seconds of the app going away, a crash or
+  a Force Quit included.
+
+| What                                     | Where                                                 |
+| ---------------------------------------- | ----------------------------------------------------- |
+| The program                              | `/Applications/LightMap.app`                          |
+| Saved places and settings (WebKit store) | `~/Library/WebKit/us.lightmap.desktop`                |
+| Logs (`desktop.log`, `update.log`)       | `~/Library/Logs/LightMap`                             |
+| Staged updates                           | `~/Library/Application Support/LightMap/updates`      |
+| Optional server settings                 | `~/Library/Application Support/LightMap/lightmap.env` |
+
+**Updates.** Twenty seconds after launch, and every six hours, the app asks for the latest
+release. If it is newer and carries `LightMap-<version>-mac-arm64.zip` and its `.sha256`, the zip
+is downloaded and kept only if its SHA-256 matches; a bar says it is ready. When LightMap quits, a
+small script waits for it to be gone, unpacks the zip and swaps the new bundle in (the old one is
+kept until the new one is in place); **Restart now** does it at once. Only a copy in an
+Applications folder this user can write updates itself: one run straight from the disk image or
+from Downloads (which macOS runs from a randomised read-only path) does not.
+
+**Signing.** The app is signed ad hoc, not with an Apple Developer ID, and it is not notarized.
+The first time, macOS says it cannot check LightMap; **System Settings › Privacy & Security →
+Open Anyway** opens it, once. Updates do not ask again (the app downloads them itself, so they
+carry no quarantine flag). A Developer ID ($99 a year) and notarization would remove that step.
+
+**Built by** the `mac` job of `.github/workflows/desktop.yml` on `macos-latest`: the hoisted
+install and the standalone web build, then `mac/build-app.sh <version>` (stages the server with
+`scripts/stage.mjs --target mac`, compiles the shell with `swiftc`, writes the icon and
+Info.plist, signs, and makes the zip and the disk image), `--selftest` on the built app, an
+install from the disk image with `--selftest` again, and a real self-update: a staged update to a
+higher version is installed at launch and the app reopens as that version, then a Force Quit
+proves the server ends with it. On a tag, a `publish` job puts the Windows and Mac files on the
+release and only then marks it latest.
+
+Intel Macs are not built yet (GitHub's Intel runners are being retired); `build-app.sh` builds
+for whichever processor it runs on, so an Intel build is one more job when wanted.

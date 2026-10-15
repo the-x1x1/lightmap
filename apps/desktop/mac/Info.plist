@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key>
+  <string>LightMap</string>
+  <key>CFBundleDisplayName</key>
+  <string>LightMap</string>
+  <key>CFBundleIdentifier</key>
+  <string>us.lightmap.desktop</string>
+  <key>CFBundleExecutable</key>
+  <string>LightMap</string>
+  <key>CFBundleIconFile</key>
+  <string>AppIcon</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>__VERSION__</string>
+  <key>CFBundleVersion</key>
+  <string>__VERSION__</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>12.0</string>
+  <key>LSApplicationCategoryType</key>
+  <string>public.app-category.photography</string>
+  <key>NSHighResolutionCapable</key>
+  <true/>
+  <key>NSSupportsAutomaticGraphicsSwitching</key>
+  <true/>
+  <key>NSHumanReadableCopyright</key>
+  <string>LightMap</string>
+  <key>NSLocationUsageDescription</key>
+  <string>LightMap uses your location only when you ask it to plan from where you are.</string>
+  <key>NSLocationWhenInUseUsageDescription</key>
+  <string>LightMap uses your location only when you ask it to plan from where you are.</string>
+  <!-- The app talks to its own server on 127.0.0.1 over plain HTTP. -->
+  <key>NSAppTransportSecurity</key>
+  <dict>
+    <key>NSAllowsLocalNetworking</key>
+    <true/>
+  </dict>
+</dict>
+</plist>

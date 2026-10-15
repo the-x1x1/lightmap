@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Assemble the folder the Windows installer packs (apps/desktop/stage by default):
+ * Assemble the folder the Windows installer packs (apps/desktop/stage by default), or, with
+ * `--target mac`, the Resources folder of LightMap.app (apps/desktop/mac/build-app.sh):
  *
  *   LightMap.exe (+ the shell's other published files)   the desktop shell
  *   runtime/node.exe, runtime/LICENSE                       the Node runtime that runs the server
@@ -15,7 +16,15 @@
  * Symlinks are copied as the files they point to: an installer cannot carry links, and pnpm's
  * workspace links would otherwise point outside the package.
  */
-import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
+import {
+  chmodSync,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  rmSync,
+  statSync,
+} from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -65,8 +74,13 @@ function copyTree(src, dst) {
   }
 }
 
+const targetIndex = process.argv.indexOf('--target');
+const target = targetIndex >= 0 ? process.argv[targetIndex + 1] : 'windows';
+if (target !== 'windows' && target !== 'mac') fail(`unknown --target ${target}`);
+const mac = target === 'mac';
 const nodeExe = arg('node');
-const shellDir = arg('shell');
+// The Mac shell is compiled into the bundle by build-app.sh; only Windows copies one in here.
+const shellDir = mac ? null : arg('shell');
 const out = arg('out', join(repo, 'apps', 'desktop', 'stage'));
 
 const standalone = join(web, '.next', 'standalone');
@@ -75,7 +89,7 @@ if (!existsSync(join(standalone, 'apps', 'web', 'server.js')))
     `${standalone}\\apps\\web\\server.js is missing: build the web app with LIGHTMAP_DESKTOP=1 first`,
   );
 if (!existsSync(nodeExe)) fail(`no node runtime at ${nodeExe}`);
-if (!existsSync(join(shellDir, 'LightMap.exe'))) fail(`no LightMap.exe in ${shellDir}`);
+if (shellDir && !existsSync(join(shellDir, 'LightMap.exe'))) fail(`no LightMap.exe in ${shellDir}`);
 
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
@@ -109,12 +123,14 @@ if (!existsSync(join(serverWeb, 'public', 'cesium', 'VERSION')))
 // 4. The runtime.
 const runtime = join(out, 'runtime');
 mkdirSync(runtime, { recursive: true });
-copyFileSync(nodeExe, join(runtime, 'node.exe'));
+const runtimeNode = join(runtime, mac ? 'node' : 'node.exe');
+copyFileSync(nodeExe, runtimeNode);
+if (mac) chmodSync(runtimeNode, 0o755);
 const nodeLicense = join(dirname(nodeExe), 'LICENSE');
 if (existsSync(nodeLicense)) copyFileSync(nodeLicense, join(runtime, 'LICENSE'));
 
-// 5. The shell.
-copyTree(shellDir, out);
+// 5. The shell (Windows).
+if (shellDir) copyTree(shellDir, out);
 
 // 6. Say what went in.
 let files = 0;
