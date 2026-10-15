@@ -65,7 +65,13 @@ void main()
     float sun = max(dot(normalEC, czm_lightDirectionEC), 0.0);
     float sky = 0.5 + 0.5 * dot(normalEC, upEC);
     vec3 light = czm_lightColor * (0.55 * sun + 0.16 + 0.14 * sky);
-    out_FragColor = vec4(color.rgb * light, color.a);
+    vec3 lit = color.rgb * light;
+    // Aerial perspective: a far skyline takes the haze's colour as distant terrain does (the
+    // globe gets Cesium's fog; these primitives do not), from 1.5 km out.
+    float dist = length(v_positionEC);
+    float haze = clamp((dist - 1500.0) / 14000.0, 0.0, 0.55);
+    vec3 hazeColor = czm_lightColor * vec3(0.36, 0.40, 0.46);
+    out_FragColor = vec4(mix(lit, hazeColor, haze), color.a);
 }
 `;
 
