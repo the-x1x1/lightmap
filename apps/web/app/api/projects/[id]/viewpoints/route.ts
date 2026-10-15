@@ -5,12 +5,15 @@ import { HttpError, errorResponse, forbidByEntitlement, json, readJson } from '@
 import { requireDb, requireUser } from '@/lib/server/session';
 import { viewpointDto } from '@/lib/server/dto';
 import { parseViewpoint } from '@/lib/server/viewpoint-input';
+import { forwardToAccountOrigin } from '@/lib/server/account-proxy';
 
 export const dynamic = 'force-dynamic';
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(req: Request, { params }: Params) {
+  const forwarded = await forwardToAccountOrigin(req);
+  if (forwarded) return forwarded;
   try {
     const ctx = await requireUser();
     const db = requireDb();

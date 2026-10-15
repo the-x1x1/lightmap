@@ -21,6 +21,8 @@ import type { Db } from './client.ts';
 import { ulid } from './ids.ts';
 import {
   auditEvents,
+  deviceLinks,
+  deviceTokens,
   previewSnapshots,
   profiles,
   projects,
@@ -616,6 +618,126 @@ export function auditRepo(db: Db) {
       metadata: Record<string, unknown> = {},
     ): Promise<void> {
       await db.insert(auditEvents).values({ id: ulid(), action, userId, metadata });
+    },
+  };
+}
+
+/**
+ * Desktop sign-in (migration 0006). A link is created unauthenticated by an app, approved by its
+ * signed-in owner on the website, and consumed once by the app's poll, which mints the device
+ * token. Hashes only: the caller hashes the poll secret and the token (sha-256) before they get
+ * here. Every token read is by its hash; every list or revoke by a user is scoped to that user.
+ */
+export function devicesRepo(db: Db) {
+  return {
+    async createLink(v: {
+      code: string;
+      pollHash: string;
+      deviceName: string;
+      expiresAt: Date;
+    }): Promise<void> {
+      await db.insert(deviceLinks).values({ id: ulid(), ...v });
+    },
+    async linkByCode(code: string) {
+      const [l] = await db.select().from(deviceLinks).where(eq(deviceLinks.code, code)).limit(1);
+      return l ?? null;
+    },
+    /** Approves an unexpired, unapproved link for the user; false when it cannot be. */
+    async approve(code: string, userId: string, now = new Date()): Promise<boolean> {
+      const rows = await db
+        .update(deviceLinks)
+        .set({ userId, approvedAt: now })
+        .where(
+          and(
+            eq(deviceLinks.code, code),
+            isNull(deviceLinks.approvedAt),
+            sql`${deviceLinks.expiresAt} > ${now.toISOString()}::timestamptz`,
+          ),
+        )
+        .returning({ id: deviceLinks.id });
+      return rows.length > 0;
+    },
+    /**
+     * The app's poll: 'pending' until approved, then the token is minted once (its hash stored
+     * under the approving user) and the link is spent; 'gone' for an unknown, expired or spent
+     * link.
+     */
+    async consume(
+      pollHash: string,
+      tokenHash: string,
+      now = new Date(),
+    ): Promise<
+      | { state: 'pending' }
+      | { state: 'gone' }
+      | { state: 'linked'; userId: string; tokenId: string; deviceName: string }
+    > {
+      return db.transaction(async (tx) => {
+        const [l] = await tx
+          .select()
+          .from(deviceLinks)
+          .where(eq(deviceLinks.pollHash, pollHash))
+          .for('update')
+          .limit(1);
+        if (!l || l.consumedAt || l.expiresAt.getTime() <= now.getTime()) return { state: 'gone' };
+        if (!l.approvedAt || !l.userId) return { state: 'pending' };
+        const tokenId = ulid();
+        await tx.insert(deviceTokens).values({
+          id: tokenId,
+          userId: l.userId,
+          tokenHash,
+          deviceName: l.deviceName,
+        });
+        await tx.update(deviceLinks).set({ consumedAt: now }).where(eq(deviceLinks.id, l.id));
+        return { state: 'linked', userId: l.userId, tokenId, deviceName: l.deviceName };
+      });
+    },
+    /** The user a live token belongs to (and notes its use, at most hourly). */
+    async userForToken(tokenHash: string, now = new Date()) {
+      const [t] = await db
+        .select()
+        .from(deviceTokens)
+        .where(and(eq(deviceTokens.tokenHash, tokenHash), isNull(deviceTokens.revokedAt)))
+        .limit(1);
+      if (!t) return null;
+      if (!t.lastUsedAt || now.getTime() - t.lastUsedAt.getTime() > 3_600_000)
+        await db.update(deviceTokens).set({ lastUsedAt: now }).where(eq(deviceTokens.id, t.id));
+      return { userId: t.userId, tokenId: t.id, deviceName: t.deviceName };
+    },
+    async list(userId: string) {
+      return db
+        .select({
+          id: deviceTokens.id,
+          deviceName: deviceTokens.deviceName,
+          createdAt: deviceTokens.createdAt,
+          lastUsedAt: deviceTokens.lastUsedAt,
+        })
+        .from(deviceTokens)
+        .where(and(eq(deviceTokens.userId, userId), isNull(deviceTokens.revokedAt)))
+        .orderBy(desc(deviceTokens.createdAt));
+    },
+    async revoke(userId: string, tokenId: string, now = new Date()): Promise<boolean> {
+      const rows = await db
+        .update(deviceTokens)
+        .set({ revokedAt: now })
+        .where(
+          and(
+            eq(deviceTokens.id, tokenId),
+            eq(deviceTokens.userId, userId),
+            isNull(deviceTokens.revokedAt),
+          ),
+        )
+        .returning({ id: deviceTokens.id });
+      return rows.length > 0;
+    },
+    async revokeAll(userId: string, now = new Date()): Promise<void> {
+      await db
+        .update(deviceTokens)
+        .set({ revokedAt: now })
+        .where(and(eq(deviceTokens.userId, userId), isNull(deviceTokens.revokedAt)));
+    },
+    /** Spent and expired links, for the retention job. */
+    async purgeLinks(before: Date): Promise<void> {
+      await db.delete(deviceLinks).where(lt(deviceLinks.expiresAt, before));
     },
   };
 }

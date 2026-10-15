@@ -10,12 +10,15 @@ import {
 } from '@/lib/server/http';
 import { requireDb, requireUser } from '@/lib/server/session';
 import { projectDto, viewpointDto } from '@/lib/server/dto';
+import { forwardToAccountOrigin } from '@/lib/server/account-proxy';
 
 export const dynamic = 'force-dynamic';
 
 type Params = { params: Promise<{ id: string }> };
 
-export async function GET(_req: Request, { params }: Params) {
+export async function GET(req: Request, { params }: Params) {
+  const forwarded = await forwardToAccountOrigin(req);
+  if (forwarded) return forwarded;
   try {
     const ctx = await requireUser();
     const { id } = await params;
@@ -32,6 +35,8 @@ export async function GET(_req: Request, { params }: Params) {
 }
 
 export async function PATCH(req: Request, { params }: Params) {
+  const forwarded = await forwardToAccountOrigin(req);
+  if (forwarded) return forwarded;
   try {
     const ctx = await requireUser();
     const { id } = await params;
@@ -101,6 +106,8 @@ export async function PATCH(req: Request, { params }: Params) {
 }
 
 export async function DELETE(req: Request, { params }: Params) {
+  const forwarded = await forwardToAccountOrigin(req);
+  if (forwarded) return forwarded;
   try {
     requireSameOrigin(req);
     const ctx = await requireUser();

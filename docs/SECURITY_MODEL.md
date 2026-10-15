@@ -82,6 +82,33 @@ Other headers: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
 - Production must configure at least one real sign-in method (`EMAIL_SERVER` or Google), enforced
   by env validation.
 
+### Desktop sign-in
+
+The Windows and Mac apps run the server on 127.0.0.1 with no database. With
+`LIGHTMAP_ACCOUNT_ORIGIN` set (the hosted LightMap), they sign in to it through the browser, much
+as a TV signs in to a streaming service:
+
+1. The app's server asks the hosted server for a link (`POST /api/desktop/link`): it gets a
+   short code (`ABCD-EFGH`, an alphabet without look-alike characters) and a page to open, and
+   keeps a 32-byte poll secret. The link lapses after ten minutes.
+2. The person signs in on the website as usual and approves the code on `/link` (same-origin
+   only, like every mutation). The page names the device and asks them to check that the app
+   shows the same code, so a link someone else started cannot be approved by mistake.
+3. The app's next poll (`POST /api/desktop/link/poll`) trades the secret for a device token
+   (`lmd_` + 32 random bytes), once; the link is spent with it.
+4. The app's server forwards account, project, viewpoint and billing requests to the hosted
+   server with `Authorization: Bearer lmd_…` (`lib/server/account-proxy.ts`), without the page's
+   cookies or Origin. `requestContext()` accepts the token when there is no browser session.
+
+Only sha-256 hashes of the poll secret and the token are stored (`device_links`,
+`device_tokens`, migration 0006); the token itself lives in the app's data folder
+(`account.json`, readable by its user only) and never reaches the page. A token ends when the app
+signs out (`DELETE /api/desktop/token`), when its owner revokes it (`DELETE /api/account/devices`),
+when deletion of the account is requested, and with the account. A request that a revoked token
+answers 401 makes the app forget it. The local server answers only requests addressed to its own
+host (a site that rebinds a name to 127.0.0.1 cannot read through it) and only same-origin
+changes. Link creation is unauthenticated and grants nothing until approved; creating, polling and approving links have burst limits of their own (§8).
+
 ## 5. Billing integrity
 
 - Every webhook body is verified with the Stripe SDK against `STRIPE_WEBHOOK_SECRET` before it is

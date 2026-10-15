@@ -26,7 +26,7 @@ internal sealed class ServerProcess : IDisposable
     /// <summary>Set by LightMap itself; lightmap.env cannot override these.</summary>
     private static readonly HashSet<string> Reserved = new(StringComparer.OrdinalIgnoreCase)
     {
-        "PORT", "HOSTNAME", "NEXT_PUBLIC_APP_URL",
+        "PORT", "HOSTNAME", "NEXT_PUBLIC_APP_URL", "LIGHTMAP_DATA_DIR",
     };
 
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(3) };
@@ -72,6 +72,9 @@ internal sealed class ServerProcess : IDisposable
         info.Environment["LIGHTMAP_STANDALONE"] = "true";
         info.Environment["LIGHTMAP_DESKTOP"] = "1";
         info.Environment["NEXT_TELEMETRY_DISABLED"] = "1";
+        // Accounts live on the hosted LightMap (docs/SECURITY_MODEL.md "Desktop sign-in"); a
+        // lightmap.env line can point elsewhere. Empty until the hosted service is deployed.
+        if (App.AccountOrigin.Length > 0) info.Environment["LIGHTMAP_ACCOUNT_ORIGIN"] = App.AccountOrigin;
         foreach (var (key, value) in ReadEnvFile())
         {
             if (Reserved.Contains(key)) continue;
@@ -80,6 +83,8 @@ internal sealed class ServerProcess : IDisposable
         info.Environment["PORT"] = port.ToString();
         info.Environment["HOSTNAME"] = "127.0.0.1";
         info.Environment["NEXT_PUBLIC_APP_URL"] = BaseUrl;
+        // Where the server keeps this device's sign-in (account.json).
+        info.Environment["LIGHTMAP_DATA_DIR"] = App.DataHome;
 
         _node = new Process { StartInfo = info, EnableRaisingEvents = true };
         _node.OutputDataReceived += (_, e) => { if (e.Data is not null) DesktopLog.Write("server: " + e.Data); };

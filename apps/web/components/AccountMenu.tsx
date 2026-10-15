@@ -1,7 +1,9 @@
 'use client';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { signIn, signOut } from 'next-auth/react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ApiRequestError, api } from '@/lib/client/api';
 import { useAccount, useDeleteAccount } from '@/features/account/use-account';
 import { clearLocalPreferences } from '@/features/account/use-preferences';
 import { useCapabilities } from '@/features/planner/use-scene';
@@ -14,6 +16,8 @@ import { Preferences } from './Preferences';
 
 export function AccountMenu() {
   const account = useAccount();
+  const caps = useCapabilities();
+  const queryClient = useQueryClient();
   const setPanel = usePlannerStore((s) => s.setPanel);
   const initial = account.user?.email?.[0]?.toUpperCase() ?? '?';
   // Subscribed here, in the always-mounted menu button: the dropdown's content only exists while open.
@@ -77,7 +81,12 @@ export function AccountMenu() {
               <Item
                 onSelect={() => {
                   clearLocalPreferences();
-                  void signOut({ callbackUrl: '/' });
+                  if (caps.data?.desktopAccounts)
+                    // A desktop app signs out its device token; the page itself has no session.
+                    void api
+                      .delete('/api/desktop/signin')
+                      .finally(() => void queryClient.invalidateQueries());
+                  else void signOut({ callbackUrl: '/' });
                 }}
               >
                 Sign out
@@ -124,6 +133,97 @@ function Item({ children, onSelect }: { children: React.ReactNode; onSelect: () 
   );
 }
 
+interface DesktopSignInStatus {
+  signedIn: boolean;
+  expired?: boolean;
+  waiting?: { code: string; verifyUrl: string };
+}
+
+/**
+ * A desktop app signs in through the browser: the hosted LightMap's page opens with a code, the
+ * person checks the code matches and approves it there (signing in first if they need to), and
+ * this panel notices within a few seconds.
+ */
+function DesktopSignIn({ reason }: { reason?: string | undefined }) {
+  const queryClient = useQueryClient();
+  const [waiting, setWaiting] = useState<{ code: string; verifyUrl: string } | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const status = useQuery({
+    queryKey: ['desktop-signin', waiting?.code],
+    queryFn: () => api.get<DesktopSignInStatus>('/api/desktop/signin'),
+    enabled: waiting !== null,
+    refetchInterval: 3000,
+  });
+  useEffect(() => {
+    const d = status.data;
+    if (!d) return;
+    if (d.signedIn) {
+      setWaiting(null);
+      void queryClient.invalidateQueries();
+    } else if (d.expired) {
+      setWaiting(null);
+      setFailure('That sign-in expired before it was approved. Start it again.');
+    }
+  }, [status.data, queryClient]);
+  const start = async () => {
+    setBusy(true);
+    setFailure(null);
+    try {
+      const link = await api.post<{ code: string; verifyUrl: string }>('/api/desktop/signin', {});
+      setWaiting(link);
+      window.open(link.verifyUrl, '_blank', 'noopener');
+    } catch (e) {
+      setFailure(
+        e instanceof ApiRequestError ? e.message : 'The sign-in could not start. Try again.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="space-y-3" data-testid="sign-in">
+      {reason ? <p className="text-sm text-[var(--lm-text-muted)]">{reason}</p> : null}
+      {failure ? (
+        <p className="text-sm text-[color:#ffb3b3]" role="alert">
+          {failure}
+        </p>
+      ) : null}
+      {waiting ? (
+        <div className="space-y-2" role="status" data-testid="desktop-signin-waiting">
+          <p className="text-sm">
+            Finish in your browser: check that the page shows{' '}
+            <span className="font-mono font-semibold tracking-wider">{waiting.code}</span>, then
+            approve it. This panel updates by itself.
+          </p>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => window.open(waiting.verifyUrl, '_blank', 'noopener')}
+            >
+              Open the page again
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setWaiting(null)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Button
+          variant="primary"
+          className="w-full"
+          disabled={busy}
+          onClick={() => void start()}
+          data-testid="desktop-signin"
+        >
+          {busy ? 'Starting…' : 'Sign in with your browser'}
+        </Button>
+      )}
+    </div>
+  );
+}
+
 export function SignInPrompt({ reason }: { reason?: string }) {
   const caps = useCapabilities();
   const methods = caps.data?.authMethods;
@@ -137,6 +237,7 @@ export function SignInPrompt({ reason }: { reason?: string }) {
         Checking sign-in options…
       </p>
     );
+  if (caps.data?.desktopAccounts) return <DesktopSignIn reason={reason} />;
   if (!methods || (!methods.email && !methods.google && !methods.devLogin)) {
     return (
       <p className="text-sm text-[var(--lm-text-muted)]">
@@ -207,7 +308,10 @@ export function SignInPrompt({ reason }: { reason?: string }) {
           onSubmit={(e) => {
             e.preventDefault();
             setBusy('dev');
-            void signIn('dev-login', { email, callbackUrl: window.location.pathname });
+            void signIn('dev-login', {
+              email,
+              callbackUrl: window.location.pathname + window.location.search,
+            });
           }}
         >
           <input

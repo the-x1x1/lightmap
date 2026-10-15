@@ -4,13 +4,16 @@ import { checkBurst } from '@/lib/server/rate-limit';
 import { requireDb, requireUser } from '@/lib/server/session';
 import { parsePreferencesPatch } from '@/lib/preferences';
 import type { ProfileResponse } from '@/lib/api-types';
+import { forwardToAccountOrigin } from '@/lib/server/account-proxy';
 
 export const dynamic = 'force-dynamic';
 
 const NO_STORE = { headers: { 'Cache-Control': 'private, no-store' } };
 
 /** The signed-in user's preferences (plan §17). Defaults when nothing has been changed yet. */
-export async function GET() {
+export async function GET(req: Request) {
+  const forwarded = await forwardToAccountOrigin(req);
+  if (forwarded) return forwarded;
   try {
     const ctx = await requireUser();
     const body: ProfileResponse = await profilesRepo(requireDb()).get(ctx.user.id);
@@ -22,6 +25,8 @@ export async function GET() {
 
 /** Change any subset of the preferences; answers with the whole, updated set. */
 export async function PATCH(req: Request) {
+  const forwarded = await forwardToAccountOrigin(req);
+  if (forwarded) return forwarded;
   try {
     const ctx = await requireUser();
     checkBurst(`profile:u:${ctx.user.id}`, 30);

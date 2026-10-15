@@ -6,6 +6,9 @@ import Foundation
 enum Paths {
     /// The GitHub repository whose latest release the app updates from.
     static let releaseRepo = "the-x1x1/lightmap"
+    /// The hosted LightMap the app signs in to for accounts, projects and Pro (an https origin).
+    /// Empty until that service is deployed: the app then runs without accounts, as before.
+    static let accountOrigin = ""
 
     static var appBundle: URL { Bundle.main.bundleURL }
     static var resources: URL { Bundle.main.resourceURL ?? appBundle.appendingPathComponent("Contents/Resources") }

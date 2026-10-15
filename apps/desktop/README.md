@@ -6,8 +6,12 @@ install themselves. It is the same LightMap the web build serves, run on the PC:
 - **LightMap.exe** (`LightMap.Desktop/`, .NET 10 WinForms + WebView2) opens a window at once,
   starts the server, and shows the app when the server answers.
 - **The server** is Next's standalone output of `apps/web`, run by a bundled `node.exe` on
-  `http://127.0.0.1:47615`, loopback only, with `LIGHTMAP_STANDALONE=true` (no database, no
-  accounts; the map and planning work). It runs in a Windows job object, so it never outlives the
+  `http://127.0.0.1:47615`, loopback only, with `LIGHTMAP_STANDALONE=true` (no database; the map
+  and planning work). Accounts, saved projects and Pro are the hosted LightMap's: with
+  `App.AccountOrigin` (Windows) or `Paths.accountOrigin` (Mac) set to it, **Sign in with your
+  browser** links the app to the account and the server forwards account requests there with the
+  device's token (docs/SECURITY_MODEL.md "Desktop sign-in"). Until the hosted service is
+  deployed the origin is empty and the app runs without accounts, as before. It runs in a Windows job object, so it never outlives the
   window.
 - **The installer** (`installer/lightmap-setup.iss`, Inno Setup 6) installs for the current user
   under `%LOCALAPPDATA%\Programs\LightMap`, with no administrator prompt.

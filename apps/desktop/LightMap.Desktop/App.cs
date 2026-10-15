@@ -38,6 +38,12 @@ internal static class App
     /// saved places and settings), staged updates and the optional lightmap.env. It is outside the
     /// program folder, so installing, updating and uninstalling never touch it.
     /// </summary>
+    /// <summary>
+    /// The hosted LightMap the app signs in to for accounts, projects and Pro (an https origin).
+    /// Empty until that service is deployed: the app then runs without accounts, as before.
+    /// </summary>
+    public static readonly string AccountOrigin = "";
+
     public static string DataHome =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LightMap");
 

@@ -4,10 +4,13 @@ import { errorResponse, forbidByEntitlement, json, readJson, v } from '@/lib/ser
 import { requireDb, requireUser } from '@/lib/server/session';
 import { getServices } from '@/lib/server/services';
 import { projectDto } from '@/lib/server/dto';
+import { forwardToAccountOrigin } from '@/lib/server/account-proxy';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
+  const forwarded = await forwardToAccountOrigin(req);
+  if (forwarded) return forwarded;
   try {
     const ctx = await requireUser();
     // `?archived=1` lists the archived projects instead of the active ones.
@@ -33,6 +36,8 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const forwarded = await forwardToAccountOrigin(req);
+  if (forwarded) return forwarded;
   try {
     const ctx = await requireUser();
     const db = requireDb();

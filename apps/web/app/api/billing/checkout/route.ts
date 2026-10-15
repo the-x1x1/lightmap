@@ -2,11 +2,14 @@ import { subscriptionsRepo } from '@lightmap/database';
 import { HttpError, errorResponse, json, readJson, v } from '@/lib/server/http';
 import { getServices } from '@/lib/server/services';
 import { requireDb, requireUser } from '@/lib/server/session';
+import { forwardToAccountOrigin } from '@/lib/server/account-proxy';
 
 export const dynamic = 'force-dynamic';
 
 /** Start a Stripe Checkout session for Pro. Price ids come from env; the client picks an interval only. */
 export async function POST(req: Request) {
+  const forwarded = await forwardToAccountOrigin(req);
+  if (forwarded) return forwarded;
   try {
     const s = getServices();
     const ctx = await requireUser();

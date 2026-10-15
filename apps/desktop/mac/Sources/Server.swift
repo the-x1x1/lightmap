@@ -11,7 +11,7 @@ final class Server {
     static let preferredPort = 47615
     private static let portAttempts = 10
     /// Set by LightMap itself; lightmap.env cannot override these.
-    private static let reserved: Set<String> = ["PORT", "HOSTNAME", "NEXT_PUBLIC_APP_URL", "LIGHTMAP_PARENT_PID"]
+    private static let reserved: Set<String> = ["PORT", "HOSTNAME", "NEXT_PUBLIC_APP_URL", "LIGHTMAP_PARENT_PID", "LIGHTMAP_DATA_DIR"]
 
     private var process: Process?
     private var stopping = false
@@ -55,6 +55,9 @@ final class Server {
         env["LIGHTMAP_STANDALONE"] = "true"
         env["LIGHTMAP_DESKTOP"] = "1"
         env["NEXT_TELEMETRY_DISABLED"] = "1"
+        // Accounts live on the hosted LightMap (docs/SECURITY_MODEL.md "Desktop sign-in"); a
+        // lightmap.env line can point elsewhere. Empty until the hosted service is deployed.
+        if !Paths.accountOrigin.isEmpty { env["LIGHTMAP_ACCOUNT_ORIGIN"] = Paths.accountOrigin }
         for (key, value) in Server.readEnvFile() where !Server.reserved.contains(key.uppercased()) {
             env[key] = value
         }
@@ -62,6 +65,8 @@ final class Server {
         env["HOSTNAME"] = "127.0.0.1"
         env["NEXT_PUBLIC_APP_URL"] = baseURL
         env["LIGHTMAP_PARENT_PID"] = String(getpid())
+        // Where the server keeps this device's sign-in (account.json).
+        env["LIGHTMAP_DATA_DIR"] = Paths.dataHome.path
         p.environment = env
 
         let out = Pipe()

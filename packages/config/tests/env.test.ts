@@ -11,6 +11,17 @@ describe('parseEnv', () => {
     expect(r.env.ANALYTICS_SINK).toBe('log');
   });
 
+  it('takes an https account origin for the desktop apps and refuses anything else', () => {
+    expect(parseEnv({}).env.LIGHTMAP_ACCOUNT_ORIGIN).toBeUndefined();
+    const ok = parseEnv({ LIGHTMAP_ACCOUNT_ORIGIN: 'https://lightmap.example/some/path' });
+    expect(ok.env.LIGHTMAP_ACCOUNT_ORIGIN).toBe('https://lightmap.example');
+    expect(
+      parseEnv({ LIGHTMAP_ACCOUNT_ORIGIN: 'http://localhost:3000' }).env.LIGHTMAP_ACCOUNT_ORIGIN,
+    ).toBe('http://localhost:3000');
+    expect(parseEnv({ LIGHTMAP_ACCOUNT_ORIGIN: 'http://lightmap.example' }).ok).toBe(false);
+    expect(parseEnv({ LIGHTMAP_ACCOUNT_ORIGIN: 'not a url' }).ok).toBe(false);
+  });
+
   it('analytics are off in production unless switched on', () => {
     const prod = {
       NODE_ENV: 'production',

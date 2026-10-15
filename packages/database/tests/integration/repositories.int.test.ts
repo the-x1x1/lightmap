@@ -10,6 +10,7 @@ import {
   NotFoundError,
   PROFILE_DEFAULTS,
   cacheRepo,
+  devicesRepo,
   profilesRepo,
   projectsRepo,
   retentionRepo,
@@ -141,14 +142,14 @@ run('repositories (integration)', () => {
     const full = await projects.get(alice, p.id);
     expect(full.viewpoints).toHaveLength(1);
     expect(full.viewpoints[0]!.id).toBe(v2.id);
-    // Archiving keeps the project and its viewpoints, hides it from the active list and the
-    // count (the plan's project slot is freed), lists it under archived, and is reversible;
-    // bob can neither archive nor restore it.
+    // Archiving keeps the project and its viewpoints, hides it from the active list (it still
+    // counts as a saved project), lists it under archived, and is reversible; bob can neither
+    // archive nor restore it.
     const before = await projects.count(alice);
     const archived = await projects.update(alice, p.id, { archived: true });
     expect(archived.archivedAt).not.toBeNull();
     expect((await projects.list(alice)).some((x) => x.id === p.id)).toBe(false);
-    expect(await projects.count(alice)).toBe(before - 1);
+    expect(await projects.count(alice)).toBe(before);
     const shelf = await projects.list(alice, undefined, { archived: true });
     expect(shelf.find((x) => x.id === p.id)?.viewpointCount).toBe(1);
     expect((await projects.get(alice, p.id)).viewpoints).toHaveLength(1);
@@ -281,5 +282,53 @@ run('repositories (integration)', () => {
       new Date(Date.now() + 15 * 86_400_000),
     );
     expect(later.map((u) => u.id)).toContain(bob);
+  });
+  it('desktop sign-in: a link is approved once, consumed once, and its token is owner-scoped', async () => {
+    const devices = devicesRepo(h.db);
+    const code = `T${ulid().slice(-7)}`;
+    const pollHash = `poll-${ulid()}`;
+    const tokenHash = `token-${ulid()}`;
+    await devices.createLink({
+      code,
+      pollHash,
+      deviceName: 'Studio Mac',
+      expiresAt: new Date(Date.now() + 600_000),
+    });
+    expect(await devices.consume(pollHash, tokenHash)).toEqual({ state: 'pending' });
+    expect(await devices.approve(code, alice)).toBe(true);
+    expect(await devices.approve(code, bob)).toBe(false); // already approved
+    const linked = await devices.consume(pollHash, tokenHash);
+    expect(linked).toMatchObject({ state: 'linked', userId: alice, deviceName: 'Studio Mac' });
+    expect(await devices.consume(pollHash, `token-${ulid()}`)).toEqual({ state: 'gone' }); // spent
+    expect(await devices.userForToken(tokenHash)).toMatchObject({ userId: alice });
+    expect((await devices.list(alice)).map((d) => d.deviceName)).toContain('Studio Mac');
+    expect(await devices.list(bob)).toEqual([]);
+    const tokenId = linked.state === 'linked' ? linked.tokenId : '';
+    expect(await devices.revoke(bob, tokenId)).toBe(false);
+    expect(await devices.revoke(alice, tokenId)).toBe(true);
+    expect(await devices.userForToken(tokenHash)).toBeNull();
+  });
+
+  it('desktop sign-in: an expired link cannot be approved or consumed', async () => {
+    const devices = devicesRepo(h.db);
+    const code = `E${ulid().slice(-7)}`;
+    const pollHash = `poll-${ulid()}`;
+    await devices.createLink({
+      code,
+      pollHash,
+      deviceName: 'Old laptop',
+      expiresAt: new Date(Date.now() - 1000),
+    });
+    expect(await devices.approve(code, alice)).toBe(false);
+    expect(await devices.consume(pollHash, `token-${ulid()}`)).toEqual({ state: 'gone' });
+  });
+
+  it('the project count includes archived projects (the Free plan saves three)', async () => {
+    const projects = projectsRepo(h.db);
+    const before = await projects.count(bob);
+    const p = await projects.create(bob, { name: 'Archived shoot' });
+    await projects.update(bob, p.id, { archived: true });
+    expect(await projects.count(bob)).toBe(before + 1);
+    await projects.remove(bob, p.id);
   });
 });

@@ -22,10 +22,14 @@ export async function GET() {
       s.geo.geocoder.meta.isFixture,
     devBanner: s.env.LIGHTMAP_SHOW_DEV_BANNER,
     flags: { ...s.flags },
-    billingConfigured: s.billing.configured,
+    // A desktop app's billing is the hosted server's: it answers for itself when asked.
+    billingConfigured: s.billing.configured || s.env.LIGHTMAP_ACCOUNT_ORIGIN !== undefined,
     analytics: s.env.ANALYTICS_SINK !== 'none',
     ...(usesIon && s.env.CESIUM_ION_TOKEN ? { ionToken: s.env.CESIUM_ION_TOKEN } : {}),
     authMethods: s.db ? s.authMethods : { email: false, google: false, devLogin: false },
+    ...(s.env.LIGHTMAP_ACCOUNT_ORIGIN
+      ? { desktopAccounts: { origin: s.env.LIGHTMAP_ACCOUNT_ORIGIN } }
+      : {}),
   };
   return json(body, { headers: { 'Cache-Control': 'private, max-age=300' } });
 }

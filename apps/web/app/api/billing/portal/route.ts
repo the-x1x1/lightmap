@@ -2,10 +2,13 @@ import { subscriptionsRepo } from '@lightmap/database';
 import { HttpError, errorResponse, json, requireSameOrigin } from '@/lib/server/http';
 import { getServices } from '@/lib/server/services';
 import { requireDb, requireUser } from '@/lib/server/session';
+import { forwardToAccountOrigin } from '@/lib/server/account-proxy';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
+  const forwarded = await forwardToAccountOrigin(req);
+  if (forwarded) return forwarded;
   try {
     requireSameOrigin(req);
     const s = getServices();

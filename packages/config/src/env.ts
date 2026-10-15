@@ -30,6 +30,14 @@ export interface Env {
    * stays off, map exploration works. Never set it on a public deployment.
    */
   LIGHTMAP_STANDALONE: boolean;
+  /**
+   * The hosted LightMap a desktop app signs in to (`https://…`, origin only): with it set, this
+   * server forwards account, project, viewpoint and billing requests there with the device's
+   * token (apps/web/lib/server/account-proxy.ts). Unset: accounts are this server's own.
+   */
+  LIGHTMAP_ACCOUNT_ORIGIN: string | undefined;
+  /** Where a desktop app keeps its sign-in (the shell's data folder); the desktop shell sets it. */
+  LIGHTMAP_DATA_DIR: string | undefined;
   STRIPE_SECRET_KEY: string | undefined;
   STRIPE_WEBHOOK_SECRET: string | undefined;
   STRIPE_PRICE_PRO_MONTHLY: string | undefined;
@@ -111,6 +119,25 @@ function oneOf<T extends string>(
   return fallback;
 }
 
+/** An https origin (or http on this machine, for testing); anything else is refused. */
+function accountOrigin(raw: RawEnv, issues: EnvIssue[]): string | undefined {
+  const v = str(raw, 'LIGHTMAP_ACCOUNT_ORIGIN');
+  if (v === undefined) return undefined;
+  try {
+    const u = new URL(v);
+    const local = u.hostname === 'localhost' || u.hostname === '127.0.0.1';
+    if (u.protocol === 'https:' || (u.protocol === 'http:' && local)) return u.origin;
+  } catch {
+    /* reported below */
+  }
+  issues.push({
+    key: 'LIGHTMAP_ACCOUNT_ORIGIN',
+    severity: 'error',
+    message: 'must be an https origin, such as https://lightmap.example',
+  });
+  return undefined;
+}
+
 function url(raw: RawEnv, key: string, fallback: string, issues: EnvIssue[]): string {
   const v = str(raw, key) ?? fallback;
   try {
@@ -150,6 +177,8 @@ export function parseEnv(raw: RawEnv): EnvResult {
     AUTH_GOOGLE_SECRET: str(raw, 'AUTH_GOOGLE_SECRET'),
     AUTH_DEV_LOGIN: bool(raw, 'AUTH_DEV_LOGIN', false),
     LIGHTMAP_STANDALONE: bool(raw, 'LIGHTMAP_STANDALONE', false),
+    LIGHTMAP_ACCOUNT_ORIGIN: accountOrigin(raw, issues),
+    LIGHTMAP_DATA_DIR: str(raw, 'LIGHTMAP_DATA_DIR'),
     STRIPE_SECRET_KEY: str(raw, 'STRIPE_SECRET_KEY'),
     STRIPE_WEBHOOK_SECRET: str(raw, 'STRIPE_WEBHOOK_SECRET'),
     STRIPE_PRICE_PRO_MONTHLY: str(raw, 'STRIPE_PRICE_PRO_MONTHLY'),

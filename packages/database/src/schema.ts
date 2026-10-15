@@ -243,6 +243,47 @@ export const auditEvents = pgTable(
   ],
 );
 
+/** A desktop app's sign-in in progress (migration 0006): a code to approve, a secret to poll with. */
+export const deviceLinks = pgTable(
+  'device_links',
+  {
+    id: text('id').primaryKey(),
+    code: text('code').notNull(),
+    pollHash: text('poll_hash').notNull(),
+    deviceName: text('device_name').notNull(),
+    userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+    consumedAt: timestamp('consumed_at', { withTimezone: true }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('device_links_code_idx').on(t.code),
+    uniqueIndex('device_links_poll_idx').on(t.pollHash),
+    index('device_links_expires_idx').on(t.expiresAt),
+  ],
+);
+
+/** A signed-in desktop app (migration 0006): the hash of its bearer token. */
+export const deviceTokens = pgTable(
+  'device_tokens',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash').notNull(),
+    deviceName: text('device_name').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex('device_tokens_hash_idx').on(t.tokenHash),
+    index('device_tokens_user_idx').on(t.userId),
+  ],
+);
+
 /** Request budgeting (plan §19): per-user, per-day counters by resource. */
 export const usageCounters = pgTable(
   'usage_counters',

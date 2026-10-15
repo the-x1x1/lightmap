@@ -21,6 +21,11 @@ export interface CapabilitiesResponse {
   /** Cesium ion tokens are public by design (scope them to the production domain in the ion dashboard); sent only when an ion provider is active. */
   ionToken?: string;
   authMethods: { email: boolean; google: boolean; devLogin: boolean };
+  /**
+   * A desktop app whose accounts live on the hosted LightMap: sign-in goes through the browser
+   * (`/api/desktop/signin`), and account requests are forwarded there.
+   */
+  desktopAccounts?: { origin: string };
 }
 
 export interface WeatherResponse {

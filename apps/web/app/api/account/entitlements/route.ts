@@ -1,11 +1,14 @@
 import { errorResponse, json } from '@/lib/server/http';
 import { requestContext } from '@/lib/server/session';
 import type { EntitlementsResponse } from '@/lib/api-types';
+import { forwardToAccountOrigin } from '@/lib/server/account-proxy';
 
 export const dynamic = 'force-dynamic';
 
 /** The client's only source of plan truth: a server-derived snapshot (plan §15 "never trust a client-supplied tier"). */
-export async function GET() {
+export async function GET(req: Request) {
+  const forwarded = await forwardToAccountOrigin(req);
+  if (forwarded) return forwarded;
   try {
     const ctx = await requestContext();
     const body: EntitlementsResponse = {
