@@ -182,7 +182,12 @@ scree and alpine ground above a treeline (900 m under the climatic snowline, fix
 the year), snow above a snowline that follows the latitude
 (≈ 5 200 m at the equator, ≈ 3 000 m at 45°, ≈ 1 700 m at 60°) and the season (lower through
 winter by a share that grows with latitude: the Alps snowy from ≈ 1 500 m in February, bare to
-≈ 3 000 m in August; the tropics barely move) and lies lower on poleward faces — and, inside the forecast horizon, the forecast's own word:
+≈ 3 000 m in August; the tropics barely move) and lies lower on poleward faces; where a
+lowland snowpack lasts the winter (a rule of thumb by region, `snow-season.ts`: Montreal, Moscow,
+Helsinki, Tromsø and Hokkaido white through the heart of their winter, the far imagery whitened
+with them; places whose snow comes and goes — Boston, Berlin, London — and the maritime west
+coasts left bare) the line is drawn down under the ground by the share covered — and, inside the
+forecast horizon, the forecast's own word:
 when the frame has snow lying at the model's grid point (≥ 1 cm) the snowline drops to just
 under the pin's height, and when it has the ground bare it rises to just over it — and a strip of
 shore where flat ground meets sea level (`ground-texture.ts`, tested). The inputs are the

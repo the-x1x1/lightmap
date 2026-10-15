@@ -6,6 +6,7 @@
  */
 import { SNOW_ON_GROUND_M, type SceneState } from '@lightmap/scene';
 import { leafSeason } from './leaf-season.ts';
+import { lowlandSnowCover } from './snow-season.ts';
 
 export interface GroundTextureParams {
   /** Height above the ellipsoid from which snow lies, metres. */
@@ -38,6 +39,24 @@ export interface GroundTextureParams {
   autumn: number;
   /** How green open grass is, 0 winter-dormant – 1 growing. */
   grassGreen: number;
+  /** Lying snow in the lowlands around the place, 0–1 (`lowlandSnowCover`): the far imagery whitens with it. */
+  snowCover: number;
+}
+
+/**
+ * The snowline with the lowland snowpack on it: where snow lies through the winter
+ * (`lowlandSnowCover`), the mountain rule's line is drawn down toward just under the ground at
+ * the pin, by the share of the ground covered, so the plain reads white in the heart of the
+ * season and patchy at its ends.
+ */
+export function snowlineWithLowlandSnow(
+  mountainM: number,
+  cover: number,
+  groundHeightM: number | null | undefined,
+): number {
+  if (cover <= 0) return mountainM;
+  const under = Math.min(mountainM, (groundHeightM ?? 0) - 250);
+  return mountainM + (under - mountainM) * Math.min(1, cover);
 }
 
 /**
@@ -193,14 +212,22 @@ export function groundTextureFor(
 ): GroundTextureParams | null {
   if (scene.render.groundTexture === false) return null;
   const lat = scene.location.point.latitude;
+  const day = dayOfYearUtc(scene.utc);
+  const snowCover = lowlandSnowCover(
+    lat,
+    scene.location.point.longitude,
+    day,
+    context.groundHeightM ?? 0,
+  );
   return {
     snowlineM: Math.round(
       snowlineWithForecast(
-        snowlineM(lat, dayOfYearUtc(scene.utc)),
+        snowlineWithLowlandSnow(snowlineM(lat, day), snowCover, context.groundHeightM),
         scene.atmosphere.frame?.snowDepth,
         context.groundHeightM,
       ),
     ),
+    snowCover,
     treelineM: Math.round(Math.max(0, permanentSnowlineM(lat) - 900)),
     poleward: polewardWeight(lat),
     strength: 1,

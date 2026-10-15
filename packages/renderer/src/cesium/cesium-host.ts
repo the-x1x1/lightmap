@@ -140,6 +140,10 @@ export class CesiumSceneHost implements SceneHost {
   private osmBuildings: OsmBuildingsLayer | null = null;
   /** The leaf season of the last ground texture, for trees loaded after it. */
   private leaf = { leafOn: 1, autumn: 0, grassGreen: 1 };
+  /** Lying snow around the place, 0-1 (the ground texture's `snowCover`), for the far imagery. */
+  private snowCover = 0;
+  /** The chart's dimming (`setGlobeShading`): 1 by day, lower for the unlit night chart. */
+  private basemapBrightness = 1;
   private osmBuildingsCheckAt = 0;
   private osmLean = false;
   /** The street map near the place (`u_roadMap`) and its bounds. */
@@ -543,11 +547,8 @@ export class CesiumSceneHost implements SceneHost {
     globe.enableLighting = shading.lit;
     // Every imagery layer dims together, so a provider basemap and the Natural Earth fallback
     // underneath it read as one chart.
-    const layers = this.widget.imageryLayers;
-    for (let i = 0; i < layers.length; i++) {
-      const layer = layers.get(i);
-      layer.brightness = shading.basemapBrightness;
-    }
+    this.basemapBrightness = shading.basemapBrightness;
+    this.applyImagerySeason();
   }
 
   setGroundTexture(g: HostGroundTexture | null): void {
@@ -630,6 +631,7 @@ export class CesiumSceneHost implements SceneHost {
     u['u_wet'] = g.wet;
     u['u_cloudTime'] = this.lastGradeTime;
     this.leaf = { leafOn: g.leafOn ?? 1, autumn: g.autumn ?? 0, grassGreen: g.grassGreen ?? 1 };
+    this.snowCover = g.snowCover ?? 0;
     u['u_leafOn'] = this.leaf.leafOn;
     u['u_autumn'] = this.leaf.autumn;
     u['u_grassGreen'] = this.leaf.grassGreen;
@@ -648,13 +650,18 @@ export class CesiumSceneHost implements SceneHost {
     const { leafOn, autumn, grassGreen } = this.leaf;
     const turned = autumn * leafOn;
     const winter = Math.max(1 - leafOn, 1 - grassGreen);
+    // Under a lasting snowpack the far fields and clearings are white: the summer composite is
+    // lifted and drained toward it (woods stay darker, as they do over snow).
+    const snow = this.snowCover;
     const layers = this.widget.imageryLayers;
     for (let i = 0; i < layers.length; i++) {
       const layer = layers.get(i);
       // czm_hue rotates the YIQ angle: green sits near -118 deg and yellow near -44, so a
       // positive turn warms greens toward yellow and orange.
       layer.hue = 0.22 * turned;
-      layer.saturation = 1 + 0.12 * turned - 0.4 * winter;
+      layer.saturation = (1 + 0.12 * turned - 0.4 * winter) * (1 - 0.6 * snow);
+      layer.brightness = this.basemapBrightness * (1 + 0.45 * snow);
+      layer.gamma = 1 + 0.35 * snow;
     }
   }
 

@@ -161,6 +161,8 @@ export interface HostGroundTexture {
   leafOn?: number;
   autumn?: number;
   grassGreen?: number;
+  /** Lying snow in the lowlands, 0-1 (snow-season.ts); none when left out. */
+  snowCover?: number;
 }
 
 export interface HostQuality {

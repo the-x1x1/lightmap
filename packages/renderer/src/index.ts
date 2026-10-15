@@ -31,6 +31,7 @@ export {
 export * from './ground-texture.ts';
 export * from './land-cover.ts';
 export * from './leaf-season.ts';
+export * from './snow-season.ts';
 export * from './cesium/detail-tiles.ts';
 export * from './place-labels.ts';
 export * from './urban-areas.ts';
