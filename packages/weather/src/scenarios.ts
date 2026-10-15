@@ -141,7 +141,35 @@ export function isScenarioId(v: unknown): v is WeatherScenarioId {
   return typeof v === 'string' && SCENARIOS.some((s) => s.id === v);
 }
 
-/** Nearest named scenario for a cloud-cover percentage and precipitation, used to label forecasts. */
+/**
+ * Rain in a forecast frame: `steady` when it rains in earnest (1 mm an hour or more, a moderate
+ * or heavy rain code, a thunderstorm), `showers` for any other sign of rain (light rain or
+ * drizzle, a likely chance of it).
+ */
+export function rainInFrame(opts: {
+  precipitationAmount?: number | null;
+  precipitationProbability?: number | null;
+  weatherCode?: number | null;
+}): 'steady' | 'showers' | null {
+  const amount = opts.precipitationAmount ?? 0;
+  const code = opts.weatherCode ?? null;
+  if (
+    amount >= 1 ||
+    (code !== null && [63, 65, 66, 67, 81, 82].includes(code)) ||
+    (code ?? 0) >= 95
+  )
+    return 'steady';
+  if (amount >= 0.5 || (opts.precipitationProbability ?? 0) >= 60 || (code ?? 0) >= 51)
+    return 'showers';
+  return null;
+}
+
+/**
+ * Nearest named scenario for a cloud-cover percentage and precipitation, used to label forecasts.
+ * Steady rain is the storm whatever the cover says; showers make it only under a mostly covered
+ * sky. A trade-wind shower passing through a sunny sky (Hawaii, 30 % cloud, drizzle likely) is
+ * the sky's own scenario, with wet ground.
+ */
 export function scenarioForConditions(
   cloudCoverPercent: number,
   opts: {
@@ -150,11 +178,8 @@ export function scenarioForConditions(
     weatherCode?: number | null;
   } = {},
 ): WeatherScenarioId {
-  const rain =
-    (opts.precipitationAmount ?? 0) >= 0.5 ||
-    (opts.precipitationProbability ?? 0) >= 60 ||
-    (opts.weatherCode !== null && opts.weatherCode !== undefined && opts.weatherCode >= 61);
-  if (rain) return 'storm';
+  const rain = rainInFrame(opts);
+  if (rain === 'steady' || (rain === 'showers' && cloudCoverPercent >= 60)) return 'storm';
   if (cloudCoverPercent < 12) return 'clear';
   if (cloudCoverPercent < 40) return 'mostly-clear';
   if (cloudCoverPercent < 80) return 'partly-cloudy';
@@ -267,6 +292,10 @@ export function parametersForForecast(frame: {
     }
   }
   const rainy = scenarioForConditions(frame.cloudCoverTotal, frame) === 'storm';
+  if (!rainy && rainInFrame(frame) === 'showers') {
+    // Showers through a broken sky: the ground is wet where they pass; the light is the sky's.
+    out.precipitation = 0.15;
+  }
   if (rainy) {
     const storm = scenarioById('storm').parameters;
     const w = clamp01(

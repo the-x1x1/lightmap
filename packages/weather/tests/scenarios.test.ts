@@ -8,6 +8,7 @@ import {
   kelvinToRgb,
   parametersForForecast,
   scenarioById,
+  rainInFrame,
   scenarioForConditions,
   warmthFromKelvin,
 } from '../src/scenarios.ts';
@@ -68,6 +69,22 @@ describe('scenarios are deterministic and visibly distinct', () => {
       } as { precipitationAmount: number }),
     ).toBe('storm');
     expect(scenarioForConditions(40, { weatherCode: 95 })).toBe('storm');
+  });
+
+  it('keeps a trade-wind shower in its own sky (V&V: Kailua, 32 % cloud, drizzle likely)', () => {
+    const shower = { precipitationAmount: 0.9, precipitationProbability: 100, weatherCode: 53 };
+    expect(rainInFrame(shower)).toBe('showers');
+    expect(scenarioForConditions(32, shower)).toBe('mostly-clear');
+    expect(scenarioForConditions(85, shower)).toBe('storm');
+    expect(scenarioForConditions(32, { weatherCode: 63 })).toBe('storm');
+    expect(
+      rainInFrame({ precipitationAmount: 0, precipitationProbability: 10, weatherCode: 2 }),
+    ).toBe(null);
+    const p = parametersForForecast({ cloudCoverTotal: 32, ...shower });
+    const sunny = parametersForForecast({ cloudCoverTotal: 32 });
+    expect(p.sunTransmittance).toBe(sunny.sunTransmittance);
+    expect(p.precipitation).toBeGreaterThan(0);
+    expect(p.precipitation).toBeLessThan(0.3);
   });
 
   it('forecast parameters interpolate between anchors and respond to low cloud, fog and rain', () => {
