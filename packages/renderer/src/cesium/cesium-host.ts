@@ -19,7 +19,7 @@ import type {
   TerrainDescriptor,
 } from '@lightmap/geospatial';
 import { GRADE_FRAGMENT_SHADER } from '../shaders/grade.frag.ts';
-import { OsmBuildingsLayer } from './osm-buildings-layer.ts';
+import { OsmBuildingsLayer, PRIMITIVE_NORMAL_SHADING_SMOOTH } from './osm-buildings-layer.ts';
 import { coverShapesFromTile, streetLinesFromTile } from '../vector-cover.ts';
 import { lonLatToTile, tilePointToLonLat } from '../vector-tile.ts';
 import { createDetailTexture, createNoiseTexture, type DetailTileCesium } from './detail-tiles.ts';
@@ -348,6 +348,8 @@ export class CesiumSceneHost implements SceneHost {
     if (bias) {
       bias['normalOffsetScale'] = 2;
       bias['depthBias'] = 0.0002;
+      // The buildings' shader divides out this fade on faces turned from the Sun.
+      bias['normalShadingSmooth'] = PRIMITIVE_NORMAL_SHADING_SMOOTH;
     }
 
     const ssc = scene.screenSpaceCameraController;
@@ -661,6 +663,7 @@ export class CesiumSceneHost implements SceneHost {
     if (sm.softShadows !== s.softShadows) sm.softShadows = s.softShadows;
     if (Math.abs(sm.maximumDistance - s.maximumDistance) > 1)
       sm.maximumDistance = s.maximumDistance;
+    this.osmBuildings?.setShadowMap(sm.enabled, sm.darkness, sm.maximumDistance);
   }
 
   setAtmosphere(a: HostAtmosphere): void {
@@ -1644,6 +1647,8 @@ export class CesiumSceneHost implements SceneHost {
         );
         this.osmBuildings.setLean(this.osmLean);
         this.osmBuildings.setSeason(this.leaf.leafOn, this.leaf.autumn);
+        const sm = this.scene.shadowMap;
+        this.osmBuildings.setShadowMap(sm.enabled, sm.darkness, sm.maximumDistance);
         this.osmBuildingsCheckAt = 0;
         this.scene.requestRender();
         return;

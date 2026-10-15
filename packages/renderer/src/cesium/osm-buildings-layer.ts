@@ -62,14 +62,33 @@ function nextFrame(): Promise<void> {
 /** The building's base sits this far into the ground, so a slope never shows a gap under it. */
 const SINK_M = 2;
 /**
+ * The n.l over which Cesium's shadow map fades a primitive's face into shadow by its normal
+ * (`normalShadingSmooth` of its primitive bias); the host sets the same value.
+ */
+export const PRIMITIVE_NORMAL_SHADING_SMOOTH = 0.05;
+
+/**
  * The buildings' and trees' fragment shader: Cesium's per-instance colour appearance lights
  * every face from the camera (a headlight), which would light a wall facing away from the Sun
  * as brightly as one facing it. Here the Sun (the scene light) lights the faces that face it,
- * and a sky term, stronger on faces that look up, lights the rest - both scaled by the light's
- * own colour, so dusk and night dim buildings with the ground. Shadows come on top from the
- * shadow map as before. ASCII only (some drivers reject anything else in shader source).
+ * a sky term, stronger on faces that look up, lights the rest, and light bounced off the sunlit
+ * ground reaches the faces that look down (a crown's underside, an overhang) - all scaled by
+ * the light's own colour, so dusk and night dim buildings with the ground.
+ *
+ * Shadows come on top from Cesium's shadow map, which multiplies the whole colour by its
+ * darkness wherever the Sun is hidden - including every face turned away from the Sun, which
+ * Cesium shades as in shadow by its normal. Those faces already carry only sky and bounce
+ * light here, so the two together made them near black (a tree's underside at noon). The
+ * shader divides out the factor Cesium will apply to an unoccluded face (`shadowD` is the
+ * shadow map's darkness, 1 with shadows off; Cesium leaves fragments past `shadowMaxM`
+ * alone), so a face turned away from the Sun shows its sky light, and a face the Sun would
+ * light but something hides still darkens as the ground's shadows do.
+ * ASCII only (some drivers reject anything else in shader source).
  */
-export const LIT_INSTANCE_FS = `
+export function litInstanceShader(shadowD = 1, shadowMaxM = 0): string {
+  const d = Math.max(0.05, Math.min(1, shadowD)).toFixed(3);
+  const maxM = Math.max(0, shadowMaxM).toFixed(1);
+  return `
 in vec3 v_positionEC;
 in vec3 v_normalEC;
 in vec4 v_color;
@@ -77,6 +96,7 @@ in vec4 v_color;
 void main()
 {
     vec3 normalEC = normalize(v_normalEC);
+    vec3 shadeNormalEC = normalEC;
 #ifdef FACE_FORWARD
     normalEC = faceforward(normalEC, vec3(0.0, 0.0, 1.0), -normalEC);
 #endif
@@ -85,16 +105,32 @@ void main()
     vec3 upEC = normalize((czm_view * vec4(normalize(positionWC), 0.0)).xyz);
     float sun = max(dot(normalEC, czm_lightDirectionEC), 0.0);
     float sky = 0.5 + 0.5 * dot(normalEC, upEC);
-    vec3 light = czm_lightColor * (0.55 * sun + 0.16 + 0.14 * sky);
+    float sunUp = clamp(dot(upEC, czm_lightDirectionEC), 0.0, 1.0);
+    float bounce = 0.12 * (1.0 - sky) * sunUp;
+    vec3 light = czm_lightColor * (0.55 * sun + 0.16 + 0.14 * sky + bounce);
     vec3 lit = color.rgb * light;
     // Aerial perspective: a far skyline takes the haze's colour as distant terrain does (the
     // globe gets Cesium's fog; these primitives do not), from 1.5 km out.
     float dist = length(v_positionEC);
     float haze = clamp((dist - 1500.0) / 14000.0, 0.0, 0.55);
     vec3 hazeColor = czm_lightColor * vec3(0.36, 0.40, 0.46);
-    out_FragColor = vec4(mix(lit, hazeColor, haze), color.a);
+    vec3 outRgb = mix(lit, hazeColor, haze);
+    // Cesium's factor for an unoccluded fragment: its normal shading over the first
+    // PRIMITIVE_NORMAL_SHADING_SMOOTH of n.l, floored at the darkness; none beyond the shadow
+    // distance.
+    float cesiumSun = max(dot(shadeNormalEC, czm_lightDirectionEC), 0.0);
+    float expected = max(clamp(cesiumSun / ${PRIMITIVE_NORMAL_SHADING_SMOOTH.toFixed(3)}, 0.0, 1.0), ${d});
+    if (-v_positionEC.z < ${maxM}) outRgb /= expected;
+    out_FragColor = vec4(outRgb, color.a);
 }
 `;
+}
+
+/** The lit shader without shadow compensation (shadows off). */
+export const LIT_INSTANCE_FS = litInstanceShader();
+
+/** The shadow map's darkness in steps of this, so a new shader is compiled a few times a day. */
+const SHADOW_D_STEP = 0.05;
 
 /**
  * The trees' shader: the lit shader above with the leaf season (leaf-season.ts) on broad-leaf
@@ -104,7 +140,12 @@ void main()
  * bare crown reads as the see-through haze of branches it is (its shadow thins with it).
  * Conifers and trunks are untouched.
  */
-export function treeFragmentShader(leafOn: number, autumn: number): string {
+export function treeFragmentShader(
+  leafOn: number,
+  autumn: number,
+  shadowD = 1,
+  shadowMaxM = 0,
+): string {
   const season = `
     if (v_color.a < 0.995) {
         float tone = clamp((v_color.g - 0.27) / 0.12, 0.0, 1.0);
@@ -121,7 +162,7 @@ export function treeFragmentShader(leafOn: number, autumn: number): string {
         color.a = 1.0;
     }`;
   const anchor = '    vec4 color = czm_gammaCorrect(v_color);';
-  return LIT_INSTANCE_FS.replace(anchor, anchor + season);
+  return litInstanceShader(shadowD, shadowMaxM).replace(anchor, anchor + season);
 }
 
 /** Broad-leaf crowns' alpha: the mark `treeFragmentShader` looks for. */
@@ -163,6 +204,10 @@ export class OsmBuildingsLayer {
   /** The leaf season the trees are drawn in, and its shader (shared by every tree primitive). */
   private season = { leafOn: 1, autumn: 0 };
   private treeAppearance: Cesium.PerInstanceColorAppearance | null = null;
+  /** The shadow map the shaders compensate for (`litInstanceShader`), and the buildings' shader. */
+  private shadow = { d: 1, maxM: 0 };
+  private buildingAppearance: Cesium.PerInstanceColorAppearance | null = null;
+  private readonly buildingPrims = new Set<Cesium.Primitive>();
   /**
    * One slice of building or tree work per frame across every tile: tiles load side by side,
    * and their slices queued in the same frame made the walk into a dense city stutter.
@@ -226,14 +271,50 @@ export class OsmBuildingsLayer {
     this.scene.requestRender();
   }
 
+  /**
+   * The shadow map's darkness (1 with shadows off) and distance, which the buildings' and trees'
+   * shader divides out on faces turned from the Sun (`litInstanceShader`). Quantised, so the
+   * shaders are swapped (never rebuilt geometry) a few times over a sunset.
+   */
+  setShadowMap(enabled: boolean, darkness: number, maximumDistanceM: number): void {
+    const d = enabled
+      ? Math.max(SHADOW_D_STEP, Math.round(darkness / SHADOW_D_STEP) * SHADOW_D_STEP)
+      : 1;
+    const maxM = enabled && d < 1 ? Math.round(maximumDistanceM) : 0;
+    if (d === this.shadow.d && maxM === this.shadow.maxM) return;
+    this.shadow = { d, maxM };
+    this.treeAppearance = null;
+    this.buildingAppearance = null;
+    const trees = this.appearanceForTrees();
+    for (const p of this.treePrims) p.appearance = trees;
+    const buildings = this.appearanceForBuildings();
+    for (const p of this.buildingPrims) p.appearance = buildings;
+    this.scene.requestRender();
+  }
+
   private appearanceForTrees(): Cesium.PerInstanceColorAppearance {
     this.treeAppearance ??= new this.C.PerInstanceColorAppearance({
       flat: false,
       translucent: false,
       closed: true,
-      fragmentShaderSource: treeFragmentShader(this.season.leafOn, this.season.autumn),
+      fragmentShaderSource: treeFragmentShader(
+        this.season.leafOn,
+        this.season.autumn,
+        this.shadow.d,
+        this.shadow.maxM,
+      ),
     });
     return this.treeAppearance;
+  }
+
+  private appearanceForBuildings(): Cesium.PerInstanceColorAppearance {
+    this.buildingAppearance ??= new this.C.PerInstanceColorAppearance({
+      flat: false,
+      translucent: false,
+      closed: true,
+      fragmentShaderSource: litInstanceShader(this.shadow.d, this.shadow.maxM),
+    });
+    return this.buildingAppearance;
   }
 
   /** How many buildings' primitives are on the globe (0 until the first tile is drawn). */
@@ -298,7 +379,8 @@ export class OsmBuildingsLayer {
       if (prim.isDestroyed() || !prim.ready) return false;
       for (const part of ['t', 'c']) {
         const a = prim.getGeometryInstanceAttributes(`${id}${part}`) as
-          { show?: unknown } | undefined;
+          | { show?: unknown }
+          | undefined;
         if (a) a.show = C.ShowGeometryInstanceAttribute.toValue(on);
       }
       return true;
@@ -328,6 +410,7 @@ export class OsmBuildingsLayer {
     for (const p of state.primitives) {
       this.owned.delete(p);
       this.treePrims.delete(p);
+      this.buildingPrims.delete(p);
       this.collection.remove(p); // destroys it
     }
     state.primitives = [];
@@ -431,7 +514,7 @@ export class OsmBuildingsLayer {
     if (tree) {
       this.treePrims.add(primitive);
       primitive.show = !this.lean;
-    }
+    } else this.buildingPrims.add(primitive);
     state.primitives.push(primitive);
     this.owned.add(primitive);
     this.collection.add(primitive);
@@ -576,12 +659,7 @@ export class OsmBuildingsLayer {
     if (instances.length === 0) return { primitive: null, next: i };
     const primitive = new C.Primitive({
       geometryInstances: instances,
-      appearance: new C.PerInstanceColorAppearance({
-        flat: false,
-        translucent: false,
-        closed: true,
-        fragmentShaderSource: LIT_INSTANCE_FS,
-      }),
+      appearance: this.appearanceForBuildings(),
       shadows: C.ShadowMode.ENABLED,
       asynchronous: false,
       releaseGeometryInstances: true,
@@ -597,6 +675,7 @@ export class OsmBuildingsLayer {
     this.tiles.clear();
     this.owned.clear();
     this.treePrims.clear();
+    this.buildingPrims.clear();
     this.scene.primitives.remove(this.collection); // destroys it and its primitives
   }
 }
