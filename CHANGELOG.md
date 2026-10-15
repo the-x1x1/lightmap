@@ -7,6 +7,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 - **Winter snow in the lowlands**: where a snowpack lasts the winter (Montreal, Moscow, Helsinki,
   Tromsø, Hokkaido) the ground and the far imagery go white through its heart; places whose snow
   comes and goes stay bare, and the forecast's snow depth still decides inside its horizon (3efd2c2)
+- **The Earth's shadow and the Belt of Venus** in a clear sky opposite a low Sun (6c59b70)
+- Bare winter crowns read as twigs, densest across the crown and feathered at the edge, not as
+  netting (d86d2ee); autumn on the northeastern US seaboard comes two weeks later, so Central Park
+  is in full colour in early November (7824d25)
 - Far ridges standing above the horizon are drawn as ground in the haze, not as a black band of
   'sky'; the glow over a Sun just under the horizon is warm, not clipped white (dd37462, d7e0708)
 - Trees' undersides and walls in shade keep their sky light instead of going black under the
