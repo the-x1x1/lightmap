@@ -157,6 +157,10 @@ export interface HostGroundTexture {
   cloudShadow: number;
   wet: number;
   detail: 0 | 1 | 2;
+  /** The leaf season (leaf-season.ts); summer when left out. */
+  leafOn?: number;
+  autumn?: number;
+  grassGreen?: number;
 }
 
 export interface HostQuality {

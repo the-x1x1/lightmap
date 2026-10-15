@@ -52,6 +52,12 @@ export const GROUND_UNIFORM_DEFAULTS = {
   u_cloudTime: 0,
   /** How wet the ground is, 0–1 (the scenario's precipitation): wet ground is darker and duller. */
   u_wet: 0,
+  /** Broad-leaf canopy in leaf, 0 bare – 1 full (`leafSeason`). */
+  u_leafOn: 1,
+  /** How far the broad leaves have turned, 0 green – 1 full autumn colour. */
+  u_autumn: 0,
+  /** How green open grass is, 0 winter-dormant – 1 growing. */
+  u_grassGreen: 1,
   /**
    * Detail level from the quality rung: 0 base surface, 1 adds cloud shadows, 2 adds relief and
    * the detail tiles. Continuous: the host eases it between rungs over half a second, so a
@@ -158,6 +164,9 @@ uniform float u_cloudShadow;
 uniform float u_cloudTime;
 uniform float u_detail;
 uniform float u_wet;
+uniform float u_leafOn;
+uniform float u_autumn;
+uniform float u_grassGreen;
 uniform float u_coverOn;
 uniform vec4 u_coverBounds;
 uniform sampler2D u_coverMap;
@@ -180,6 +189,18 @@ uniform vec3 u_detailOffset;
 uniform vec3 u_detailOffset1;
 uniform vec3 u_townCell;
 uniform vec3 u_townFrac;
+
+// The season on a broad-leaf canopy (leaf-season.ts): its summer colour turns to yellow, orange
+// or red in autumn (by the crown's own value) and gives way to bare grey-brown twigs in winter.
+// About a third of crowns are evergreen and keep their colour all year.
+vec3 lmSeasonCanopy(vec3 summer, float crownValue)
+{
+    float h = fract(crownValue * 13.7);
+    vec3 fall = h < 0.38 ? vec3(0.56, 0.44, 0.09) : (h < 0.72 ? vec3(0.60, 0.28, 0.07) : vec3(0.44, 0.11, 0.06));
+    vec3 c = mix(summer, fall * (0.85 + 0.3 * fract(h * 5.3)), u_autumn);
+    c = mix(vec3(0.34, 0.30, 0.26), c, u_leafOn);
+    return mix(c, summer, step(0.66, fract(crownValue * 3.1)));
+}
 
 // Hash without axis correlation (Hoskins' hash13): one value per cell.
 float lmHash(vec3 p)
@@ -308,6 +329,11 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     vec3 scree = mix(vec3(0.40, 0.38, 0.34), vec3(0.52, 0.37, 0.27), 0.8 * smoothstep(0.35, 0.85, u_aridity));
     vec3 snow  = vec3(0.93, 0.95, 0.97);
     vec3 shore = vec3(0.74, 0.69, 0.55);
+    // Winter-dormant grass (leaf-season.ts): olive-tan, toward straw where the region is dry.
+    vec3 dormant = mix(vec3(0.53, 0.49, 0.33), vec3(0.70, 0.60, 0.42), dryness);
+    float dormancy = 1.0 - u_grassGreen;
+    turf = mix(turf, dormant, dormancy);
+    scrub = mix(scrub, dormant * 0.95, 0.7 * dormancy);
 
     // Open ground: turf and scrub in patches, grained.
     vec3 ground = mix(turf, scrub, smoothstep(0.32, 0.62, patches - 0.08 * facing));
@@ -363,7 +389,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
             float iceC = smoothstep(0.86, 0.95, cv.b);
             float open = known * (1.0 - snowy) * (1.0 - rocky * 0.7);
             float crowns = lmNoiseTex(g.xy, ${f(P.crowns)}, gdx, gdy).b;
-            vec3 forest = mix(vec3(0.13, 0.25, 0.10), vec3(0.27, 0.38, 0.17), crowns) * (0.9 + 0.2 * grain);
+            vec3 forest = lmSeasonCanopy(mix(vec3(0.13, 0.25, 0.10), vec3(0.27, 0.38, 0.17), crowns), crowns) * (0.9 + 0.2 * grain);
             float fieldTone = lmHash(floor(positionWC / 260.0) + 7.0);
             vec3 field = mix(vec3(0.50, 0.52, 0.28), vec3(0.72, 0.64, 0.40), fieldTone) * (0.9 + 0.2 * grain);
             vec3 town = vec3(0.50, 0.48, 0.45) * (0.9 + 0.15 * grain);
@@ -471,12 +497,12 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         float kind = fract(lot * 7.31);
         vec3 roof = mix(vec3(0.40, 0.39, 0.38), vec3(0.60, 0.56, 0.50), lot);
         roof = mix(roof, vec3(0.74, 0.73, 0.71), step(0.9, kind));                       // pale roofs
-        roof = mix(roof, vec3(0.20, 0.29, 0.15) * (0.85 + 1.2 * n16), step(kind, 0.16)); // trees
+        roof = mix(roof, lmSeasonCanopy(vec3(0.20, 0.29, 0.15), lot) * (0.85 + 1.2 * n16), step(kind, 0.16)); // trees
         // Lots only once they are big enough to read as lots: a few pixels each, they were a
         // field of coloured pixels.
         float lotW = smoothstep(8.0, 20.0, pxPerM * 12.0);
         vec3 block = mix(vec3(0.50, 0.48, 0.45), roof, lotW);
-        vec3 green = vec3(0.24, 0.34, 0.18) * (0.85 + n16);
+        vec3 green = mix(vec3(0.24, 0.34, 0.18), dormant * 0.85, dormancy) * (0.85 + n16);
         block = mix(block, green, park);
         vec3 city = mix(block, vec3(0.31, 0.31, 0.32), street);
         ground = mix(ground, city, townW * 0.8 * (1.0 - roadsKnown));

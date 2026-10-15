@@ -5,6 +5,7 @@
  * rules are a texture's, not a snow model's (`RENDERING_ACCURACY.md`).
  */
 import { SNOW_ON_GROUND_M, type SceneState } from '@lightmap/scene';
+import { leafSeason } from './leaf-season.ts';
 
 export interface GroundTextureParams {
   /** Height above the ellipsoid from which snow lies, metres. */
@@ -31,6 +32,12 @@ export interface GroundTextureParams {
   wet: number;
   /** What the quality rung affords: 0 the base surface, 1 with cloud shadows, 2 with relief and the near grain. */
   detail: 0 | 1 | 2;
+  /** Broad-leaf canopy in leaf, 0 bare – 1 full (`leafSeason`). */
+  leafOn: number;
+  /** How far broad leaves have turned, 0 green – 1 full autumn colour. */
+  autumn: number;
+  /** How green open grass is, 0 winter-dormant – 1 growing. */
+  grassGreen: number;
 }
 
 /**
@@ -215,6 +222,12 @@ export function groundTextureFor(
         : scene.render.shadowMapSize >= 2048
           ? 1
           : 0,
+    ...leafSeason(
+      lat,
+      dayOfYearUtc(scene.utc),
+      context.groundHeightM ?? 0,
+      scene.location.point.longitude,
+    ),
     cloudShadow: cloudShadowStrength(
       scene.atmosphere.parameters.cloudLayers,
       scene.atmosphere.parameters.sunTransmittance,

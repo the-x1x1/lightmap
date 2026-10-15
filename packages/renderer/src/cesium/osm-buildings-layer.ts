@@ -75,6 +75,37 @@ void main()
 }
 `;
 
+/**
+ * The trees' shader: the lit shader above with the leaf season (leaf-season.ts) on broad-leaf
+ * crowns, which carry an alpha just under 1 as their mark (the trees are opaque, so alpha is
+ * free). Each crown turns yellow, orange or red by its own tone, a little before or after its
+ * neighbours; as the leaves go it fades to grey-brown twigs and thins to a screen-door, so a
+ * bare crown reads as the see-through haze of branches it is (its shadow thins with it).
+ * Conifers and trunks are untouched.
+ */
+export function treeFragmentShader(leafOn: number, autumn: number): string {
+  const season = `
+    if (v_color.a < 0.995) {
+        float tone = clamp((v_color.g - 0.27) / 0.12, 0.0, 1.0);
+        float h = fract(tone * 17.3 + v_color.r * 31.0);
+        vec3 fall = h < 0.38 ? vec3(0.56, 0.44, 0.09) : (h < 0.72 ? vec3(0.60, 0.28, 0.07) : vec3(0.44, 0.11, 0.06));
+        float turn = clamp(${autumn.toFixed(3)} * 1.35 - 0.35 * fract(h * 7.7), 0.0, 1.0);
+        color.rgb = mix(color.rgb, czm_gammaCorrect(vec4(fall * (0.85 + 0.3 * fract(h * 5.3)), 1.0)).rgb, turn);
+        float leaves = clamp(${leafOn.toFixed(3)} * 1.3 - 0.3 * fract(h * 3.3), 0.0, 1.0);
+        if (leaves < 1.0) {
+            color.rgb = mix(czm_gammaCorrect(vec4(0.36, 0.32, 0.28, 1.0)).rgb, color.rgb, leaves);
+            float dither = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+            if (dither > 0.35 + 0.65 * leaves) discard;
+        }
+        color.a = 1.0;
+    }`;
+  const anchor = '    vec4 color = czm_gammaCorrect(v_color);';
+  return LIT_INSTANCE_FS.replace(anchor, anchor + season);
+}
+
+/** Broad-leaf crowns' alpha: the mark `treeFragmentShader` looks for. */
+const BROADLEAF_ALPHA = 0.99;
+
 /** Trees per primitive (their geometry is built in Cesium's workers). */
 const TREE_SLICE = 1500;
 
@@ -108,6 +139,9 @@ export class OsmBuildingsLayer {
   private lastFocus: { lon: number; lat: number } | null = null;
   /** On the cheapest quality rungs: no trees drawn and no skyline ring. */
   private lean = false;
+  /** The leaf season the trees are drawn in, and its shader (shared by every tree primitive). */
+  private season = { leafOn: 1, autumn: 0 };
+  private treeAppearance: Cesium.PerInstanceColorAppearance | null = null;
   private destroyed = false;
   private failures = 0;
 
@@ -149,6 +183,31 @@ export class OsmBuildingsLayer {
     if (lean) for (const [key, state] of this.tiles) if (!state.near) this.drop(key, state);
     this.lastFocus = null; // the next update reconsiders the rings
     this.scene.requestRender();
+  }
+
+  /**
+   * The leaf season (leaf-season.ts) for the broad-leaf trees. A new date swaps the trees'
+   * shader; no tree is rebuilt.
+   */
+  setSeason(leafOn: number, autumn: number): void {
+    const q = (x: number) => Math.round(Math.max(0, Math.min(1, x)) * 50) / 50;
+    const next = { leafOn: q(leafOn), autumn: q(autumn) };
+    if (next.leafOn === this.season.leafOn && next.autumn === this.season.autumn) return;
+    this.season = next;
+    this.treeAppearance = null;
+    const appearance = this.appearanceForTrees();
+    for (const p of this.treePrims) p.appearance = appearance;
+    this.scene.requestRender();
+  }
+
+  private appearanceForTrees(): Cesium.PerInstanceColorAppearance {
+    this.treeAppearance ??= new this.C.PerInstanceColorAppearance({
+      flat: false,
+      translucent: false,
+      closed: true,
+      fragmentShaderSource: treeFragmentShader(this.season.leafOn, this.season.autumn),
+    });
+    return this.treeAppearance;
   }
 
   /** How many buildings' primitives are on the globe (0 until the first tile is drawn). */
@@ -401,7 +460,7 @@ export class OsmBuildingsLayer {
       const leaf = C.ColorGeometryInstanceAttribute.fromColor(
         t.conifer
           ? new C.Color(0.12 + 0.05 * t.tone, g - 0.05, 0.13, 1)
-          : new C.Color(0.2 + 0.08 * t.tone, g, 0.12 + 0.03 * t.tone, 1),
+          : new C.Color(0.2 + 0.08 * t.tone, g, 0.12 + 0.03 * t.tone, BROADLEAF_ALPHA),
       );
       const crownBase = t.heightM - crownH;
       instances.push(
@@ -429,12 +488,7 @@ export class OsmBuildingsLayer {
     if (instances.length === 0) return null;
     return new C.Primitive({
       geometryInstances: instances,
-      appearance: new C.PerInstanceColorAppearance({
-        flat: false,
-        translucent: false,
-        closed: true,
-        fragmentShaderSource: LIT_INSTANCE_FS,
-      }),
+      appearance: this.appearanceForTrees(),
       shadows: C.ShadowMode.ENABLED,
       asynchronous: true,
       // Kept so single trees can be hidden (`hideTreesNear`) by their attributes.

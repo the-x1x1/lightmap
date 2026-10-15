@@ -262,6 +262,33 @@ about a forest's species or a field's crop, and without a source it does not kno
 from a field, a glacier from a snowfield, farmland, roads or a city; the snowline is a rule
 of thumb, not a snow model; the preview source label does not rise because of it.
 
+### The leaf season
+
+Trees and grass follow the date (`packages/renderer/src/leaf-season.ts`): how far broad-leaf
+trees are in leaf, how far their leaves have turned, and how green open grass is, from the
+latitude, the day of the year, the height and a regional rule for maritime climates.
+
+- **Timing.** In continental climates leaf-out falls about early April at 35° and early May at
+  45°, and peak colour about late October at 40°, early October at 45° and late September at
+  60° (the classic phenology records); spring comes later and autumn earlier with height (about a
+  month per 1 200–1 500 m). The west coasts in the westerlies (Europe west of about 15° E, the
+  Pacific coast of North America, New Zealand, southern Chile) are about three weeks earlier in
+  spring and later in autumn, and their grass stays greener through winter; southern Japan's
+  maples turn about three weeks late. The seasons flip across the equator, and inside about 25°
+  the trees keep their leaves.
+- **The 3D trees.** Broad-leaf crowns turn yellow, orange or red, each a little before or after
+  its neighbours, and as the leaves fall they fade to grey-brown twigs and thin to see-through
+  (their shadows thin with them). Conifers stay green.
+- **The painted ground.** Woods turn the same way, with about a third of their crowns evergreen;
+  winter-dormant grass is olive-tan (straw where the region is dry); a town's trees and parks
+  follow.
+- **The far imagery** is a summer composite; its hue warms a little at peak colour and it loses
+  some saturation in winter. It is a tint, not seasonal imagery.
+
+A model of a typical year, not this year's: an early spring or a late frost moves a real place by
+a week or two, and a single valley can differ from its region. Peak-colour reports for the place
+are the check before a foliage shoot.
+
 ### Weather scenarios
 
 Deterministic parameter sets (`SCENARIOS`) or continuous parameters derived from a forecast frame.

@@ -138,6 +138,8 @@ export class CesiumSceneHost implements SceneHost {
   private buildings: Cesium.Cesium3DTileset | null = null;
   /** The free OpenStreetMap buildings (vector tiles), loaded around the camera. */
   private osmBuildings: OsmBuildingsLayer | null = null;
+  /** The leaf season of the last ground texture, for trees loaded after it. */
+  private leaf = { leafOn: 1, autumn: 0, grassGreen: 1 };
   private osmBuildingsCheckAt = 0;
   private osmLean = false;
   /** The street map near the place (`u_roadMap`) and its bounds. */
@@ -622,7 +624,31 @@ export class CesiumSceneHost implements SceneHost {
     this.detailTarget = g.detail;
     u['u_wet'] = g.wet;
     u['u_cloudTime'] = this.lastGradeTime;
+    this.leaf = { leafOn: g.leafOn ?? 1, autumn: g.autumn ?? 0, grassGreen: g.grassGreen ?? 1 };
+    u['u_leafOn'] = this.leaf.leafOn;
+    u['u_autumn'] = this.leaf.autumn;
+    u['u_grassGreen'] = this.leaf.grassGreen;
+    this.osmBuildings?.setSeason(this.leaf.leafOn, this.leaf.autumn);
+    this.applyImagerySeason();
     this.scene.requestRender();
+  }
+
+  /**
+   * The imagery is a summer composite (Sentinel-2 cloudless): beyond the painted ground it would
+   * stay green through autumn and winter. Turned leaves warm its hue a little; bare trees and
+   * dormant grass take some of its saturation. Gentle, because it moves the whole picture (water
+   * and towns too), and the painted ground near the viewer carries the season in full.
+   */
+  private applyImagerySeason(): void {
+    const { leafOn, autumn, grassGreen } = this.leaf;
+    const turned = autumn * leafOn;
+    const winter = Math.max(1 - leafOn, 1 - grassGreen);
+    const layers = this.widget.imageryLayers;
+    for (let i = 0; i < layers.length; i++) {
+      const layer = layers.get(i);
+      layer.hue = -0.22 * turned;
+      layer.saturation = 1 + 0.12 * turned - 0.4 * winter;
+    }
   }
 
   setShadows(s: HostShadows): void {
@@ -1608,6 +1634,7 @@ export class CesiumSceneHost implements SceneHost {
           this.onError?.(m, e),
         );
         this.osmBuildings.setLean(this.osmLean);
+        this.osmBuildings.setSeason(this.leaf.leafOn, this.leaf.autumn);
         this.osmBuildingsCheckAt = 0;
         this.scene.requestRender();
         return;
@@ -1738,6 +1765,7 @@ export class CesiumSceneHost implements SceneHost {
         this.baseLayer = layer;
       }
       this.setCoarseBasemap(!provider);
+      this.applyImagerySeason();
     } catch (error) {
       this.setCoarseBasemap(true);
       this.onError?.('Imagery unavailable — showing Natural Earth II', error);
