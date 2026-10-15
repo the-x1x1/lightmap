@@ -170,3 +170,78 @@ export function streetLinesFromTile(
   }
   return out;
 }
+
+/** A bridge's deck as the map draws it: its line and how wide it is, metres. */
+export interface BridgeLine {
+  widthM: number;
+  points: [number, number][];
+}
+
+/**
+ * The bridges of a vector tile (`transportation` lines with `brunnel` = bridge): roads, paths
+ * and railways, at their usual width (a railway as a 6 m deck). Where a viewpoint stands on one
+ * the eye belongs on its deck, not on the water or the valley under it.
+ */
+export function bridgeLinesFromTile(
+  data: Uint8Array,
+  z: number,
+  x: number,
+  y: number,
+): BridgeLine[] {
+  const layer = readVectorTile(data, ['transportation'])['transportation'];
+  if (!layer) return [];
+  const e = layer.extent;
+  const out: BridgeLine[] = [];
+  for (const f of layer.features) {
+    if (f.type !== 2 || f.properties['brunnel'] !== 'bridge') continue;
+    const cls = f.properties['class'];
+    if (typeof cls !== 'string') continue;
+    const sub = f.properties['subclass'];
+    const widthM =
+      ROAD_WIDTH_M[cls] ??
+      PATH_WIDTH_M[String(sub)] ??
+      PATH_WIDTH_M[cls] ??
+      (cls === 'rail' || cls === 'transit' ? 6 : 3);
+    for (const line of f.geometry) {
+      const points: [number, number][] = [];
+      for (let i = 0; i + 1 < line.length; i += 2)
+        points.push(tilePointToLonLat(z, x, y, e, line[i] as number, line[i + 1] as number));
+      if (points.length >= 2) out.push({ widthM, points });
+    }
+  }
+  return out;
+}
+
+/**
+ * The bridge under a point - within half its width and two metres of its line - or null. A
+ * small-area metric approximation (metres from degrees at the point's latitude).
+ */
+export function bridgeAt(
+  bridges: readonly BridgeLine[],
+  lon: number,
+  lat: number,
+): BridgeLine | null {
+  const kx = 111_320 * Math.cos((lat * Math.PI) / 180);
+  const ky = 110_540;
+  let best: BridgeLine | null = null;
+  let bestGap = Infinity;
+  for (const b of bridges) {
+    for (let i = 0; i + 1 < b.points.length; i++) {
+      const [ax, ay] = b.points[i] as [number, number];
+      const [bx, by] = b.points[i + 1] as [number, number];
+      const ux = (bx - ax) * kx;
+      const uy = (by - ay) * ky;
+      const px = (lon - ax) * kx;
+      const py = (lat - ay) * ky;
+      const len2 = ux * ux + uy * uy;
+      const t = len2 > 0 ? Math.max(0, Math.min(1, (px * ux + py * uy) / len2)) : 0;
+      const d = Math.hypot(px - t * ux, py - t * uy);
+      const gap = d - (b.widthM / 2 + 2);
+      if (gap <= 0 && gap < bestGap) {
+        best = b;
+        bestGap = gap;
+      }
+    }
+  }
+  return best;
+}

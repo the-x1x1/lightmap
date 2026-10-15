@@ -1973,7 +1973,25 @@ export class CesiumSceneHost implements SceneHost {
 
   hasBuildingAt(p: GeoPoint): boolean | null {
     if (this.buildings !== null || !this.osmBuildings) return null;
+    if (this.osmBuildings.bridgeAt(p.longitude, p.latitude)) return true;
     return this.osmBuildings.hasBuildingAt(p.longitude, p.latitude);
+  }
+
+  /**
+   * The height of the bridge deck under a point, metres above the ellipsoid, or null when no
+   * mapped bridge is there. The deck is not modelled; it is taken as level with the higher of
+   * its line's two ends, where it meets the banks (V&V: on Waterloo Bridge the eye stood at the
+   * Thames' level, under the embankments).
+   */
+  private async bridgeDeckAt(p: GeoPoint): Promise<number | null> {
+    const bridge = this.osmBuildings?.bridgeAt(p.longitude, p.latitude) ?? null;
+    if (!bridge) return null;
+    const ends = [bridge.points[0], bridge.points[bridge.points.length - 1]]
+      .filter((q): q is [number, number] => q !== undefined)
+      .map(([longitude, latitude]) => ({ longitude, latitude }));
+    const heights = await this.sampleGroundHeights(ends, 15).catch(() => []);
+    const known = heights.filter((h): h is number => typeof h === 'number');
+    return known.length > 0 ? Math.max(...known) : null;
   }
 
   async sampleSurfaceHeights(points: readonly GeoPoint[]): Promise<Array<number | null> | null> {
@@ -2020,7 +2038,12 @@ export class CesiumSceneHost implements SceneHost {
         })(),
       );
     }
+    const deckJob = first ? this.bridgeDeckAt(first) : Promise.resolve(null);
     await Promise.all(jobs);
+    // The pin on a bridge: its deck is the surface there (the eye stands on it, the horizon is
+    // read from it).
+    const deck = await deckJob;
+    if (deck !== null && points.length > 0) out[0] = Math.max(out[0] ?? -Infinity, deck);
     if (this.destroyed) return null;
     return out;
   }

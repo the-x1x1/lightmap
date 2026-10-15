@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { coverShapesFromTile, streetLinesFromTile } from '../src/vector-cover.ts';
+import {
+  bridgeAt,
+  bridgeLinesFromTile,
+  coverShapesFromTile,
+  streetLinesFromTile,
+} from '../src/vector-cover.ts';
 
 // Minimal MVT encoding (see osm-buildings.test.ts for the full helper).
 const varint = (n: number): number[] => {
@@ -79,25 +84,25 @@ describe('OpenStreetMap land cover', () => {
   });
 });
 
-describe('OpenStreetMap streets', () => {
-  const lineTile = (props: [string, string][]) => {
-    const keys = props.map(([k]) => k);
-    const tags = props.flatMap((_, i) => [i, i]);
-    const line = [(1 << 3) | 1, zz(0), zz(0), (1 << 3) | 2, zz(400), zz(0)];
-    return new Uint8Array(
-      bytes(3, [
-        ...key(15, 0),
-        2,
-        ...str(1, 'transportation'),
-        ...bytes(2, [...packed(2, tags), ...key(3, 0), 2, ...packed(4, line)]),
-        ...keys.flatMap((k) => str(3, k)),
-        ...props.flatMap(([, v]) => bytes(4, str(1, v))),
-        ...key(5, 0),
-        ...varint(4096),
-      ]),
-    );
-  };
+const lineTile = (props: [string, string][]) => {
+  const keys = props.map(([k]) => k);
+  const tags = props.flatMap((_, i) => [i, i]);
+  const line = [(1 << 3) | 1, zz(0), zz(0), (1 << 3) | 2, zz(400), zz(0)];
+  return new Uint8Array(
+    bytes(3, [
+      ...key(15, 0),
+      2,
+      ...str(1, 'transportation'),
+      ...bytes(2, [...packed(2, tags), ...key(3, 0), 2, ...packed(4, line)]),
+      ...keys.flatMap((k) => str(3, k)),
+      ...props.flatMap(([, v]) => bytes(4, str(1, v))),
+      ...key(5, 0),
+      ...varint(4096),
+    ]),
+  );
+};
 
+describe('OpenStreetMap streets', () => {
   it('reads roads to their width by class, paths as paving, and skips bridges', () => {
     const primary = streetLinesFromTile(lineTile([['class', 'primary']]), 14, 0, 0);
     expect(primary).toHaveLength(1);
@@ -135,5 +140,48 @@ describe('OpenStreetMap streets', () => {
       ),
     ).toEqual([]);
     expect(streetLinesFromTile(lineTile([['class', 'rail']]), 14, 0, 0)).toEqual([]);
+  });
+});
+
+describe('bridges (V&V: Waterloo Bridge stood the eye at the river)', () => {
+  it('reads bridge decks at their width, and nothing else', () => {
+    const deck = bridgeLinesFromTile(
+      lineTile([
+        ['class', 'primary'],
+        ['brunnel', 'bridge'],
+      ]),
+      14,
+      0,
+      0,
+    );
+    expect(deck).toHaveLength(1);
+    expect(deck[0]!.widthM).toBe(14);
+    expect(bridgeLinesFromTile(lineTile([['class', 'primary']]), 14, 0, 0)).toEqual([]);
+    const rail = bridgeLinesFromTile(
+      lineTile([
+        ['class', 'rail'],
+        ['brunnel', 'bridge'],
+      ]),
+      14,
+      0,
+      0,
+    );
+    expect(rail[0]!.widthM).toBe(6);
+  });
+
+  it('finds the bridge under a point within half its width and two metres', () => {
+    // Waterloo Bridge, roughly: an 11 m deck from the Strand to the South Bank.
+    const b = {
+      widthM: 11,
+      points: [
+        [-0.11905, 51.51003],
+        [-0.11465, 51.50597],
+      ] as [number, number][],
+    };
+    expect(bridgeAt([b], -0.11685, 51.508)).toBe(b);
+    // 30 m off the line: the river, not the bridge.
+    expect(
+      bridgeAt([b], -0.11685 + 30 / (111_320 * Math.cos((51.508 * Math.PI) / 180)), 51.508),
+    ).toBe(null);
   });
 });

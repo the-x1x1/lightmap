@@ -21,6 +21,7 @@ import {
   type TreeSpot,
 } from '../osm-buildings.ts';
 import { lonLatToTile, tilePointToLonLat } from '../vector-tile.ts';
+import { bridgeAt, bridgeLinesFromTile, type BridgeLine } from '../vector-cover.ts';
 
 type CesiumModule = typeof Cesium;
 
@@ -184,6 +185,8 @@ interface TileState {
   trees: { prim: Cesium.Primitive; id: number; base: Cesium.Cartesian3 }[];
   /** The tile's building footprints once read (empty: none there); null until then. */
   footprints: readonly BuildingFootprint[] | null;
+  /** The tile's bridge decks (near tiles only), once read. */
+  bridges: readonly BridgeLine[];
 }
 
 /** Whether [lon, lat] is inside a ring (even-odd rule; the ring is not closed). */
@@ -379,6 +382,7 @@ export class OsmBuildingsLayer {
         near: full,
         trees: [],
         footprints: null,
+        bridges: [],
       };
       this.tiles.set(key, state);
       state.done = this.load(state);
@@ -497,6 +501,8 @@ export class OsmBuildingsLayer {
       const all = buildingsFromTile(data, BUILDING_TILE_ZOOM, state.x, state.y);
       const buildings = state.near ? all : all.filter((b) => b.heightM >= FAR_MIN_HEIGHT_M);
       state.footprints = buildings;
+      if (state.near)
+        state.bridges = bridgeLinesFromTile(data, BUILDING_TILE_ZOOM, state.x, state.y);
       const [, tileLat] = tilePointToLonLat(BUILDING_TILE_ZOOM, state.x, state.y, 1, 0.5, 0.5);
       const trees = state.near
         ? treesFromTile(data, BUILDING_TILE_ZOOM, state.x, state.y, tileLat)
