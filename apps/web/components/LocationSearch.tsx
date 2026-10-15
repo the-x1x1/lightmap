@@ -10,6 +10,7 @@ import { usePlannerStore } from '@/features/planner/store';
 import { api, ApiRequestError } from '@/lib/client/api';
 import type { LocationSearchResponse, ReverseResponse } from '@/lib/api-types';
 import { Button, cx } from '@lightmap/ui';
+import { provisionalTimeZone, samePoint } from '@/features/planner/provisional-zone';
 
 export function LocationSearch({
   className,
@@ -106,10 +107,9 @@ export function LocationSearch({
     setOpen(false);
     chosen.current = p.label;
     setQuery(p.label);
-    const deviceZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     setLocation({
       point: p.point,
-      timeZone: usePlannerStore.getState().location?.timeZone ?? deviceZone,
+      timeZone: provisionalTimeZone(p.point, usePlannerStore.getState().location),
       label: p.label,
       source: p.sourceId === 'coordinates' ? 'coordinates' : 'search',
     });
@@ -117,6 +117,8 @@ export function LocationSearch({
       const r = await api.get<ReverseResponse>(
         `/api/location/reverse?lat=${p.point.latitude.toFixed(5)}&lng=${p.point.longitude.toFixed(5)}`,
       );
+      // A later choice has moved on: this answer is for a place no longer chosen.
+      if (!samePoint(usePlannerStore.getState().location?.point, p.point)) return;
       setLocation({
         point: { ...p.point, ...(r.elevationM !== null ? { elevationM: r.elevationM } : {}) },
         timeZone: r.timeZone,
@@ -124,7 +126,7 @@ export function LocationSearch({
         source: p.sourceId === 'coordinates' ? 'coordinates' : 'search',
       });
     } catch {
-      /* time zone stays the device's; the badge shows which zone applies */
+      /* the provisional zone stays (nearby: the last place's; far: the longitude's); the badge shows it */
     }
   }
 

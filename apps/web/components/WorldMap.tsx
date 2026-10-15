@@ -18,6 +18,7 @@ import { SkyBackdrop } from './SkyBackdrop';
 import { LevelGuide } from './LevelGuide';
 import { EmptyState } from './states/EmptyState';
 import { cx } from '@lightmap/ui';
+import { provisionalTimeZone, samePoint } from '@/features/planner/provisional-zone';
 
 export interface RendererInfo {
   mode: '3D' | 'OVERLAY' | 'loading';
@@ -94,9 +95,7 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
           longitude: p.longitude,
           ...(p.elevationM !== undefined ? { elevationM: p.elevationM } : {}),
         },
-        timeZone:
-          usePlannerStore.getState().location?.timeZone ??
-          Intl.DateTimeFormat().resolvedOptions().timeZone,
+        timeZone: provisionalTimeZone(p, usePlannerStore.getState().location),
         label: `${p.latitude.toFixed(4)}, ${p.longitude.toFixed(4)}`,
         source: 'map-click' as const,
       };
@@ -105,6 +104,8 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
         const r = await api.get<ReverseResponse>(
           `/api/location/reverse?lat=${p.latitude.toFixed(5)}&lng=${p.longitude.toFixed(5)}`,
         );
+        // A later click or step has moved on: this answer is for a place no longer chosen.
+        if (!samePoint(usePlannerStore.getState().location?.point, provisional.point)) return;
         setLocation(
           {
             point: {
