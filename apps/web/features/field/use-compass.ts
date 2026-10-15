@@ -39,7 +39,7 @@ export function compassSupported(): boolean {
 /** Share of the new reading per update: steady enough to read, quick enough to follow a pan. */
 const SMOOTHING = 0.35;
 const MIN_INTERVAL_MS = 80;
-/** Say "no compass" when no usable reading arrives in this long (listening continues). */
+/** Say "no compass" when no usable reading arrives in this long after starting (listening continues). */
 const SILENCE_MS = 2500;
 
 const listeners = new Set<() => void>();
@@ -104,7 +104,10 @@ function onReading(e: Event): void {
     webkitCompassHeading: o.webkitCompassHeading ?? null,
   });
   if (!pointing) return;
-  armSilence();
+  // The first usable reading answers "is there a compass?" for good: a phone held still may send
+  // nothing for a while, and that is still following, with the last heading held.
+  if (silence) clearTimeout(silence);
+  silence = null;
   const now = performance.now();
   const prev = last;
   if (prev && now - prev.t < MIN_INTERVAL_MS) return;
