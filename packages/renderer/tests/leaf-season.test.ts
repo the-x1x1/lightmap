@@ -100,4 +100,12 @@ describe('leaf season', () => {
       expect(Math.abs(dec31.autumn - jan1.autumn)).toBeLessThan(0.05);
     }
   });
+
+  it('keeps Central Park in leaf and turned in early November (V&V)', () => {
+    const cp = leafSeason(40.78, doy(11, 3), 40, -73.97);
+    expect(cp.leafOn).toBeGreaterThan(0.85);
+    expect(cp.autumn).toBeGreaterThan(0.8);
+    // Inland at the same latitude (central Pennsylvania) is further on.
+    expect(leafSeason(40.78, doy(11, 3), 40, -77.9).leafOn).toBeLessThan(cp.leafOn);
+  });
 });

@@ -11,7 +11,8 @@
  * height. The west coasts of the continents in the westerlies (Europe west of about 15° E, the
  * Pacific coast of North America, New Zealand, southern Chile) are maritime: about three weeks
  * earlier in spring, later in autumn, and grass that stays greener through winter. Southern
- * Japan's maples turn about three weeks later than its latitude says. The transitions are spread
+ * Japan's maples turn about three weeks later than its latitude says, the northeastern US
+ * seaboard's trees about two. The transitions are spread
  * over weeks so a place's own year falls inside them. The seasons flip across the equator, and
  * inside about 25° the trees keep their leaves.
  */
@@ -58,6 +59,11 @@ export function seasonalClimate(
     maritime = 1; // southern Chile
   }
   if (lat > 30 && lat < 40 && lon > 129 && lon < 142) lateAutumnDays = 22; // Honshu, Kyushu, Shikoku
+  // The northeastern seaboard (Washington to Boston): the ocean and the cities hold autumn back
+  // about two weeks against inland places of the same latitude - Central Park peaks in early to
+  // mid November, Boston's Common in late October (V&V: the rule had Central Park half bare on
+  // 3 November).
+  if (lat > 37 && lat < 43 && lon > -77.5 && lon < -69.5) lateAutumnDays = 14;
   return { maritime, lateAutumnDays };
 }
 
