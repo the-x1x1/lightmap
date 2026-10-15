@@ -64,7 +64,7 @@ void main()
     vec3 upEC = normalize((czm_view * vec4(normalize(positionWC), 0.0)).xyz);
     float sun = max(dot(normalEC, czm_lightDirectionEC), 0.0);
     float sky = 0.5 + 0.5 * dot(normalEC, upEC);
-    vec3 light = czm_lightColor * (0.55 * sun + 0.12 + 0.12 * sky);
+    vec3 light = czm_lightColor * (0.55 * sun + 0.16 + 0.14 * sky);
     out_FragColor = vec4(color.rgb * light, color.a);
 }
 `;
