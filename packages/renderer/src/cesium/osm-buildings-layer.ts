@@ -24,10 +24,16 @@ import { lonLatToTile, tilePointToLonLat } from '../vector-tile.ts';
 
 type CesiumModule = typeof Cesium;
 
-/** Tiles reaching within this distance of the focus are loaded. */
+/** Tiles reaching within this distance of the focus are loaded in full (every building, trees). */
 const LOAD_RADIUS_M = 1800;
+/**
+ * Out to this distance only the tall buildings are loaded: the skyline across a bay or seen
+ * from a hill, which is what a photographer frames from afar.
+ */
+const FAR_RADIUS_M = 6000;
+const FAR_MIN_HEIGHT_M = 20;
 /** Tiles whose centre is further than this from the focus are dropped. */
-const KEEP_RADIUS_M = 4500;
+const KEEP_RADIUS_M = 8000;
 /** Beyond this camera height above the focus, nothing new is loaded (buildings would be specks). */
 const MAX_LOAD_HEIGHT_M = 6000;
 /** Footprints turned into geometry per slice (one slice per ~frame). */
@@ -44,6 +50,8 @@ interface TileState {
   primitives: Cesium.Primitive[];
   cancelled: boolean;
   done: Promise<void>;
+  /** Every building and the trees (near), or only the skyline's tall buildings (far). */
+  near: boolean;
 }
 
 export class OsmBuildingsLayer {
@@ -106,22 +114,30 @@ export class OsmBuildingsLayer {
       if (Math.hypot(dx, dy) < 150) return;
     }
     this.lastFocus = { lon, lat };
-    const wanted = buildingTilesAround(lon, lat, LOAD_RADIUS_M);
-    for (const t of wanted) {
+    const near = buildingTilesAround(lon, lat, LOAD_RADIUS_M);
+    const nearKeys = new Set(near.map((t) => `${t.x}/${t.y}`));
+    const far = buildingTilesAround(lon, lat, FAR_RADIUS_M).filter(
+      (t) => !nearKeys.has(`${t.x}/${t.y}`),
+    );
+    const want = (t: { x: number; y: number }, full: boolean) => {
       const key = `${t.x}/${t.y}`;
-      if (!this.tiles.has(key)) {
-        const state: TileState = {
-          key,
-          x: t.x,
-          y: t.y,
-          primitives: [],
-          cancelled: false,
-          done: Promise.resolve(),
-        };
-        this.tiles.set(key, state);
-        state.done = this.load(state);
-      }
-    }
+      const have = this.tiles.get(key);
+      if (have && (have.near || !full)) return;
+      if (have) this.drop(key, have); // a skyline tile come near: load it in full
+      const state: TileState = {
+        key,
+        x: t.x,
+        y: t.y,
+        primitives: [],
+        cancelled: false,
+        done: Promise.resolve(),
+        near: full,
+      };
+      this.tiles.set(key, state);
+      state.done = this.load(state);
+    };
+    for (const t of near) want(t, true);
+    for (const t of far) want(t, false);
     // Drop tiles left far behind.
     const centre = lonLatToTile(BUILDING_TILE_ZOOM, lon, lat);
     const tileM = (40_075_016 * Math.cos((lat * Math.PI) / 180)) / 2 ** BUILDING_TILE_ZOOM;
@@ -194,9 +210,12 @@ export class OsmBuildingsLayer {
       if (!res.ok) throw new Error(`building tile ${state.key}: HTTP ${res.status}`);
       const data = new Uint8Array(await res.arrayBuffer());
       if (state.cancelled || this.destroyed) return;
-      const buildings = buildingsFromTile(data, BUILDING_TILE_ZOOM, state.x, state.y);
+      const all = buildingsFromTile(data, BUILDING_TILE_ZOOM, state.x, state.y);
+      const buildings = state.near ? all : all.filter((b) => b.heightM >= FAR_MIN_HEIGHT_M);
       const [, tileLat] = tilePointToLonLat(BUILDING_TILE_ZOOM, state.x, state.y, 1, 0.5, 0.5);
-      const trees = treesFromTile(data, BUILDING_TILE_ZOOM, state.x, state.y, tileLat);
+      const trees = state.near
+        ? treesFromTile(data, BUILDING_TILE_ZOOM, state.x, state.y, tileLat)
+        : [];
 
       if (buildings.length > 0) {
         // The ground under each building, from the terrain's finest tiles.
