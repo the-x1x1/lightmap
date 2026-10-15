@@ -132,3 +132,17 @@ describe('week ahead', () => {
     expect(lines).toHaveLength(9);
   });
 });
+
+describe('week ahead near the poles', () => {
+  it('lists the low winter Sun’s golden light, which never crosses +6°', () => {
+    const rows = weekAheadRows(
+      { latitude: 69.65, longitude: 18.96 },
+      'Europe/Oslo',
+      { year: 2026, month: 12, day: 2 },
+      new Map(),
+    );
+    // Early December in Tromsø: the Sun rises a little, so golden light but no +6° crossing.
+    const withLight = rows.filter((r) => r.morning || r.evening);
+    expect(withLight.length).toBeGreaterThan(0);
+  });
+});

@@ -21,6 +21,7 @@ import {
   type WindowOutlook,
   type WindowVerdict,
 } from '@lightmap/weather';
+import { lightWindows } from './light-windows.ts';
 
 export const WEEK_AHEAD_DAYS = 7;
 
@@ -94,8 +95,7 @@ export function weekAheadRows(
       date,
       weekday: new Date(Date.UTC(civil.year, civil.month - 1, civil.day)).getUTCDay(),
       dayEvents: ev,
-      morning: window(ev.goldenHourMorningStart, ev.goldenHourMorningEnd),
-      evening: window(ev.goldenHourEveningStart, ev.goldenHourEveningEnd),
+      ...goldenCells(ev, place, window),
       moon: {
         illuminatedFraction: midnight.illuminatedFraction,
         upAtMidnight: midnight.topocentricElevationDeg > 0,
@@ -107,6 +107,29 @@ export function weekAheadRows(
       })(),
     };
   });
+}
+
+/**
+ * The morning and evening golden-hour cells. Where the Sun never crosses one of the edges (the
+ * low winter Sun near the poles, the midnight Sun's night-long glow) the crossings are missing,
+ * so the day's sampled golden windows stand in: a window before solar noon is the morning's,
+ * after it the evening's.
+ */
+function goldenCells<W>(
+  ev: DayEvents,
+  place: { latitude: number; longitude: number },
+  window: (start: Date | null, end: Date | null) => W | null,
+): { morning: W | null; evening: W | null } {
+  let morning = window(ev.goldenHourMorningStart, ev.goldenHourMorningEnd);
+  let evening = window(ev.goldenHourEveningStart, ev.goldenHourEveningEnd);
+  if (morning && evening) return { morning, evening };
+  const noon = ev.solarNoon?.getTime() ?? (ev.dayStart.getTime() + ev.dayEnd.getTime()) / 2;
+  for (const w of lightWindows(ev, place).golden) {
+    const mid = (w.start.getTime() + w.end.getTime()) / 2;
+    if (mid < noon) morning ??= window(w.start, w.end);
+    else evening ??= window(w.start, w.end);
+  }
+  return { morning, evening };
 }
 
 /** The verdict in a word or two for a seven-row list. */
