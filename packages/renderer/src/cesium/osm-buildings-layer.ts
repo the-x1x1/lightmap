@@ -358,7 +358,7 @@ export class OsmBuildingsLayer {
           new C.GeometryInstance({
             geometry,
             attributes: {
-              color: C.ColorGeometryInstanceAttribute.fromColor(buildingColour(C, b.colour)),
+              color: C.ColorGeometryInstanceAttribute.fromColor(buildingColour(C, b)),
             },
           }),
         );
@@ -392,15 +392,44 @@ export class OsmBuildingsLayer {
   }
 }
 
-/** OSM's own colour when mapped (tempered toward stone so it reads under any light), else stone. */
-function buildingColour(C: CesiumModule, css: string | null): Cesium.Color {
-  const stone = new C.Color(0.8, 0.78, 0.74, 1);
-  if (!css) return stone;
+/**
+ * Facade colours for buildings OpenStreetMap gives none: plaster, concrete, sandstone, brick,
+ * with glass-and-steel greys for towers. Picked per building from its position, so a street of
+ * houses is not one colour and the same building keeps its colour.
+ */
+const LOW_RISE: [number, number, number][] = [
+  [0.86, 0.84, 0.8], // white plaster
+  [0.78, 0.76, 0.72], // concrete
+  [0.8, 0.72, 0.6], // sandstone
+  [0.72, 0.66, 0.58], // warm render
+  [0.62, 0.42, 0.34], // brick
+  [0.7, 0.7, 0.68], // grey render
+];
+const HIGH_RISE: [number, number, number][] = [
+  [0.62, 0.68, 0.74], // blue glass
+  [0.74, 0.76, 0.78], // steel and glass
+  [0.82, 0.8, 0.76], // concrete tower
+  [0.56, 0.6, 0.62], // dark glass
+];
+
+function facadeColour(C: CesiumModule, b: BuildingFootprint): Cesium.Color {
+  const h = Math.abs(Math.sin(b.centre[0] * 12.9898 + b.centre[1] * 78.233) * 43758.5453) % 1;
+  const set = b.heightM > 35 ? HIGH_RISE : LOW_RISE;
+  const [r, g, bl] = set[Math.floor(h * set.length) % set.length] ?? [0.8, 0.78, 0.74];
+  // A little per-building shade so neighbours of one material still differ.
+  const shade = 0.92 + 0.12 * ((h * 7.31) % 1);
+  return new C.Color(r * shade, g * shade, bl * shade, 1);
+}
+
+/** OSM's own colour when mapped (tempered toward the facade so it reads under any light), else a facade colour. */
+function buildingColour(C: CesiumModule, b: BuildingFootprint): Cesium.Color {
+  const facade = facadeColour(C, b);
+  if (!b.colour) return facade;
   try {
-    const c = C.Color.fromCssColorString(css);
-    if (!c) return stone;
-    return C.Color.lerp(stone, c, 0.6, new C.Color());
+    const c = C.Color.fromCssColorString(b.colour);
+    if (!c) return facade;
+    return C.Color.lerp(facade, c, 0.6, new C.Color());
   } catch {
-    return stone;
+    return facade;
   }
 }
