@@ -279,6 +279,11 @@ internal sealed class ShellForm : Form
                 await _web.EnsureCoreWebView2Async();
                 ConfigureWebView(_web.CoreWebView2);
             }
+            // This launch's secret, for the server's account routes (ServerProcess.Secret).
+            var cookies = _web.CoreWebView2.CookieManager;
+            var cookie = cookies.CreateCookie("lm_desktop", _server.Secret, "127.0.0.1", "/");
+            cookie.IsHttpOnly = true;
+            cookies.AddOrUpdateCookie(cookie);
             _web.CoreWebView2.Navigate(url);
             _web.BringToFront();
             _loading.Visible = false;

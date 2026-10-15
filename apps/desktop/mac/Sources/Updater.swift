@@ -232,7 +232,9 @@ final class Updater {
       rm -rf "$app.old"
       if mv "$app" "$app.old"; then
         if mv "$work/LightMap.app" "$app"; then
-          rm -rf "$app.old"; ok=1
+          ok=1
+          rm -f "$staged"
+          rm -rf "$app.old"
         else
           mv "$app.old" "$app"
         fi

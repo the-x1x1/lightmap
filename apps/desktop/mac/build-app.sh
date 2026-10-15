@@ -42,7 +42,7 @@ cp "$here/parent-watch.cjs" "$app/Contents/Resources/runtime/parent-watch.cjs"
 swiftc -O -swift-version 5 -target "$triple" \
   -o "$app/Contents/MacOS/LightMap" \
   "$here"/Sources/*.swift \
-  -framework AppKit -framework WebKit -framework CryptoKit 2>&1 | annotate
+  -framework AppKit -framework WebKit -framework CryptoKit -framework Security 2>&1 | annotate
 
 # 3. Info.plist and the icon.
 sed "s/__VERSION__/$version/g" "$here/Info.plist" > "$app/Contents/Info.plist"

@@ -1,6 +1,6 @@
 import { auditRepo, devicesRepo } from '@lightmap/database';
 import { HttpError, errorResponse, json, requireSameOrigin } from '@/lib/server/http';
-import { requireDb, requireUser } from '@/lib/server/session';
+import { requireBrowserUser, requireDb, requireUser } from '@/lib/server/session';
 import { forwardToAccountOrigin } from '@/lib/server/account-proxy';
 
 export const dynamic = 'force-dynamic';
@@ -34,7 +34,7 @@ export async function DELETE(req: Request) {
   if (forwarded) return forwarded;
   try {
     requireSameOrigin(req);
-    const ctx = await requireUser();
+    const ctx = await requireBrowserUser();
     const id = new URL(req.url).searchParams.get('id') ?? '';
     const db = requireDb();
     if (!(await devicesRepo(db).revoke(ctx.user.id, id)))

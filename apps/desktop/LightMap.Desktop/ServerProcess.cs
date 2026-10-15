@@ -26,7 +26,7 @@ internal sealed class ServerProcess : IDisposable
     /// <summary>Set by LightMap itself; lightmap.env cannot override these.</summary>
     private static readonly HashSet<string> Reserved = new(StringComparer.OrdinalIgnoreCase)
     {
-        "PORT", "HOSTNAME", "NEXT_PUBLIC_APP_URL", "LIGHTMAP_DATA_DIR",
+        "PORT", "HOSTNAME", "NEXT_PUBLIC_APP_URL", "LIGHTMAP_DATA_DIR", "LIGHTMAP_DESKTOP_SECRET",
     };
 
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(3) };
@@ -36,6 +36,12 @@ internal sealed class ServerProcess : IDisposable
     private bool _stopping;
 
     public string BaseUrl { get; private set; } = "";
+
+    /// <summary>
+    /// This launch's secret: the server takes account requests only with it, as a cookie the
+    /// window sets, so no other program on the PC can use the account through 127.0.0.1.
+    /// </summary>
+    public string Secret { get; } = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
 
     /// <summary>Raised (on a worker thread) when the server stops without being asked to.</summary>
     public event Action<int>? Exited;
@@ -85,6 +91,7 @@ internal sealed class ServerProcess : IDisposable
         info.Environment["NEXT_PUBLIC_APP_URL"] = BaseUrl;
         // Where the server keeps this device's sign-in (account.json).
         info.Environment["LIGHTMAP_DATA_DIR"] = App.DataHome;
+        info.Environment["LIGHTMAP_DESKTOP_SECRET"] = Secret;
 
         _node = new Process { StartInfo = info, EnableRaisingEvents = true };
         _node.OutputDataReceived += (_, e) => { if (e.Data is not null) DesktopLog.Write("server: " + e.Data); };

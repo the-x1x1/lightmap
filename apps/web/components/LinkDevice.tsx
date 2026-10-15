@@ -81,9 +81,9 @@ export function LinkDevice({ code }: { code: string }) {
   return (
     <div className="space-y-4" data-testid="link-device">
       <p className="text-sm">
-        The LightMap app on <strong>{info.data.deviceName}</strong> wants to sign in as{' '}
-        <strong>{account.user?.email}</strong>. It will see and change your projects and use your
-        plan.
+        A LightMap app on a computer named <strong>{info.data.deviceName}</strong> wants to sign in
+        as <strong>{account.user?.email}</strong>. It will see and change your projects and use your
+        plan. If you did not just choose Sign in with your browser in the app, do not approve it.
       </p>
       <p className="text-sm">
         Approve only if the app shows this code:{' '}

@@ -82,6 +82,17 @@ export async function requireUser(): Promise<RequestContext & { user: RequestUse
   return ctx as RequestContext & { user: RequestUser };
 }
 
+/**
+ * A person signed in with a browser session. A desktop app's token is not enough here: it must
+ * not approve new devices or sign others out, or a leaked token could outlive its own revocation.
+ */
+export async function requireBrowserUser(): Promise<RequestContext & { user: RequestUser }> {
+  const session = await auth();
+  if (!session?.user?.id)
+    throw new HttpError(401, 'unauthenticated', 'Sign in on the website to do this.');
+  return requireUser();
+}
+
 export function requireDb() {
   const { db } = getServices();
   if (!db)

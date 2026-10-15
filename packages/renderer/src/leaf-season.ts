@@ -98,11 +98,16 @@ export function leafSeason(
   const d = latitudeDeg < 0 ? (((dayOfYear + 182.6) % 365.25) + 365.25) % 365.25 : dayOfYear;
   const up = leafOutDay(lat, heightM, climate.maritime);
   const peak = peakColourDay(lat, heightM, climate.maritime, climate.lateAutumnDays);
-  const leafOn = smooth(up - 14, up + 14, d) * (1 - smooth(peak + 2, peak + 26, d));
+  // The year counted from two months before leaf-out, so an autumn that runs past 31 December
+  // (a late one, in the warm south of the seasonal belt) carries on into January instead of
+  // jumping back at New Year.
+  const start = up - 60;
+  const t = ((((d - start) % 365.25) + 365.25) % 365.25) + start;
+  const leafOn = smooth(up - 14, up + 14, t) * (1 - smooth(peak + 2, peak + 26, t));
   // The leaves turn over the month before the peak; once they are down it no longer matters.
-  const autumn = smooth(peak - 32, peak - 3, d) * (d > up + 20 ? 1 : 0);
+  const autumn = smooth(peak - 32, peak - 3, t) * (t > up + 20 ? 1 : 0);
   // Grass greens a little before the trees leaf out and browns a little after they drop.
-  const grass = smooth(up - 34, up - 6, d) * (1 - smooth(peak + 12, peak + 46, d));
+  const grass = smooth(up - 34, up - 6, t) * (1 - smooth(peak + 12, peak + 46, t));
   return {
     leafOn: round2(1 - seasonal * (1 - leafOn)),
     autumn: round2(seasonal * autumn),

@@ -1,4 +1,5 @@
 import Foundation
+import Security
 
 /// The LightMap server (Next.js standalone output) run by the bundled `node`, on loopback only.
 ///
@@ -11,10 +12,23 @@ final class Server {
     static let preferredPort = 47615
     private static let portAttempts = 10
     /// Set by LightMap itself; lightmap.env cannot override these.
-    private static let reserved: Set<String> = ["PORT", "HOSTNAME", "NEXT_PUBLIC_APP_URL", "LIGHTMAP_PARENT_PID", "LIGHTMAP_DATA_DIR"]
+    private static let reserved: Set<String> = [
+        "PORT", "HOSTNAME", "NEXT_PUBLIC_APP_URL", "LIGHTMAP_PARENT_PID", "LIGHTMAP_DATA_DIR", "LIGHTMAP_DESKTOP_SECRET",
+    ]
 
     private var process: Process?
     private var stopping = false
+    /** Set once the server has answered: a death before that is `start`'s error, not a crash. */
+    private var ready = false
+    /**
+     * This launch's secret: the server takes account requests only with it (as a cookie the
+     * window sets), so no other program on the Mac can use the account through 127.0.0.1.
+     */
+    let secret: String = {
+        var bytes = [UInt8](repeating: 0, count: 32)
+        _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        return bytes.map { String(format: "%02x", $0) }.joined()
+    }()
     private(set) var baseURL = ""
 
     /// Called on the main queue when the server stops without being asked to.
@@ -65,6 +79,7 @@ final class Server {
         env["HOSTNAME"] = "127.0.0.1"
         env["NEXT_PUBLIC_APP_URL"] = baseURL
         env["LIGHTMAP_PARENT_PID"] = String(getpid())
+        env["LIGHTMAP_DESKTOP_SECRET"] = secret
         // Where the server keeps this device's sign-in (account.json).
         env["LIGHTMAP_DATA_DIR"] = Paths.dataHome.path
         p.environment = env
@@ -77,7 +92,7 @@ final class Server {
         Server.forward(err, prefix: "server! ")
         p.terminationHandler = { [weak self] proc in
             Log.write("server exited (code \(proc.terminationStatus))")
-            guard let self = self, !self.stopping else { return }
+            guard let self = self, !self.stopping, self.ready else { return }
             DispatchQueue.main.async { self.onUnexpectedExit?(proc.terminationStatus) }
         }
         try p.run()
@@ -86,7 +101,10 @@ final class Server {
 
         let deadline = Date().addingTimeInterval(90)
         while Date() < deadline {
-            if Server.isLightMapServing(baseURL) { return baseURL }
+            if Server.isLightMapServing(baseURL) {
+                ready = true
+                return baseURL
+            }
             if !p.isRunning {
                 throw AppError("The LightMap server stopped while starting (code \(p.terminationStatus)).\n\n\(Log.tail())")
             }
@@ -161,6 +179,10 @@ final class Server {
         let fd = socket(AF_INET, SOCK_STREAM, 0)
         if fd < 0 { return false }
         defer { close(fd) }
+        // As node itself binds: a port whose last connections sit in TIME_WAIT (the app was
+        // quit or restarted a moment ago) is free; a real listener still refuses the bind.
+        var one: Int32 = 1
+        setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &one, socklen_t(MemoryLayout<Int32>.size))
         var addr = sockaddr_in()
         addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
         addr.sin_family = sa_family_t(AF_INET)

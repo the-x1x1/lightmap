@@ -1,6 +1,6 @@
 import { auditRepo, devicesRepo } from '@lightmap/database';
 import { HttpError, errorResponse, json, readJson } from '@/lib/server/http';
-import { requireDb, requireUser } from '@/lib/server/session';
+import { requireBrowserUser, requireDb } from '@/lib/server/session';
 import { checkBurst, clientKey } from '@/lib/server/rate-limit';
 import { normaliseLinkCode } from '@/lib/server/device-auth';
 
@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 /** The signed-in person approves a desktop app's code (same-origin only, as every mutation). */
 export async function POST(req: Request) {
   try {
-    const ctx = await requireUser();
+    const ctx = await requireBrowserUser();
     checkBurst(`desktop-approve:${clientKey(req, ctx.user.id)}`, 10);
     const { code } = await readJson(req, (b) => {
       const c = normaliseLinkCode(String((b as Record<string, unknown> | null)?.['code'] ?? ''));

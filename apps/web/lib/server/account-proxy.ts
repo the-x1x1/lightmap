@@ -1,5 +1,6 @@
 import 'server-only';
 import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { timingSafeEqual } from 'node:crypto';
 import { join } from 'node:path';
 import { NextResponse } from 'next/server';
 import { HttpError, errorResponse, requireSameOrigin } from './http.ts';
@@ -66,12 +67,36 @@ export async function clearSignIn(): Promise<void> {
   if (file) await rm(file, { force: true }).catch(() => undefined);
 }
 
-/** Refuses a request that did not address this server by its own host (DNS rebinding). */
+/**
+ * Refuses a request that did not come from the app's own window: it must address this server by
+ * its own host (a site that rebinds a name to 127.0.0.1 cannot) and carry the cookie the desktop
+ * shell set in its web view with this launch's secret (LIGHTMAP_DESKTOP_SECRET). Without the
+ * secret, any program on the computer, or another user of it, could use the account through
+ * 127.0.0.1.
+ */
 export function requireOwnHost(req: Request): void {
   const own = new URL(getServices().env.NEXT_PUBLIC_APP_URL).host;
   const host = req.headers.get('host');
   if (host && host !== own)
     throw new HttpError(403, 'wrong_host', 'This app answers only at its own address.');
+  const secret = process.env['LIGHTMAP_DESKTOP_SECRET'];
+  if (!secret || !cookieMatches(req.headers.get('cookie'), DESKTOP_COOKIE, secret))
+    throw new HttpError(403, 'not_the_app', 'Account requests are taken only from the app window.');
+}
+
+/** The cookie the desktop shells set in their web view (apps/desktop). */
+export const DESKTOP_COOKIE = 'lm_desktop';
+
+function cookieMatches(header: string | null, name: string, expected: string): boolean {
+  if (!header) return false;
+  for (const part of header.split(';')) {
+    const eq = part.indexOf('=');
+    if (eq < 0 || part.slice(0, eq).trim() !== name) continue;
+    const a = Buffer.from(part.slice(eq + 1).trim());
+    const b = Buffer.from(expected);
+    if (a.length === b.length && timingSafeEqual(a, b)) return true;
+  }
+  return false;
 }
 
 /** A request to the hosted server from this one: JSON, the device token, nothing of the page's. */
@@ -144,7 +169,12 @@ export async function forwardToAccountOrigin(req: Request): Promise<Response | n
     const out = new Headers({ 'cache-control': 'private, no-store' });
     const resType = res.headers.get('content-type');
     if (resType) out.set('content-type', resType);
-    return new NextResponse(await res.arrayBuffer(), { status: res.status, headers: out });
+    // A 204 (a delete) or 304 carries no body, and a Response given one throws.
+    const noBody = [101, 204, 205, 304].includes(res.status) || req.method === 'HEAD';
+    return new NextResponse(noBody ? null : await res.arrayBuffer(), {
+      status: res.status,
+      headers: out,
+    });
   } catch (e) {
     return errorResponse(e);
   }

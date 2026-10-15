@@ -23,6 +23,14 @@ const ROUTES = [
   '/api/auth/providers',
   '/api/auth/csrf',
   '/api/projects',
+  // The desktop sign-in: compiled before the test opens /link, so a first compile under it
+  // does not reload the page mid-approval.
+  '/link?code=ABCD-EFGH',
+  '/api/desktop/link',
+  '/api/desktop/link/poll',
+  '/api/desktop/link/approve',
+  '/api/desktop/token',
+  '/api/account/devices',
 ];
 
 export default async function warmup(config: FullConfig): Promise<void> {

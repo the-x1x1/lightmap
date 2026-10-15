@@ -205,6 +205,8 @@ jobs:
             cat "$HOME/Library/Logs/LightMap/desktop.log" || true
             exit 1
           fi
+          # The script clears the staged update once the new bundle is in place.
+          for i in $(seq 1 30); do [ -e "$updates/staged.json" ] || break; sleep 1; done
           test ! -e "$updates/staged.json" || { echo "::error::staged.json was left behind"; exit 1; }
           # The reopened app starts its server; wait for it, then force-quit the app.
           for i in $(seq 1 90); do

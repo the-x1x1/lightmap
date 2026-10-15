@@ -84,4 +84,20 @@ describe('leaf season', () => {
     expect(leafSeason(kyoto.lat, doy(11, 20), 0, kyoto.lon).leafOn).toBeGreaterThan(0.7);
     expect(leafSeason(kyoto.lat, doy(10, 10), 0, kyoto.lon).autumn).toBeLessThan(0.3);
   });
+
+  it('runs smoothly through New Year, a late autumn included', () => {
+    for (const [lat, lon] of [
+      [35.01, 135.77], // Kyoto: maples late into December
+      [38.7, -9.14], // Lisbon
+      [29.5, -95], // the warm edge of the seasonal belt
+      [-36.85, 174.76], // Auckland (its New Year is midsummer)
+      [44.3, -72.6], // Vermont
+    ] as const) {
+      const dec31 = leafSeason(lat, 365, 0, lon);
+      const jan1 = leafSeason(lat, 1, 0, lon);
+      expect(Math.abs(dec31.leafOn - jan1.leafOn)).toBeLessThan(0.05);
+      expect(Math.abs(dec31.grassGreen - jan1.grassGreen)).toBeLessThan(0.05);
+      expect(Math.abs(dec31.autumn - jan1.autumn)).toBeLessThan(0.05);
+    }
+  });
 });

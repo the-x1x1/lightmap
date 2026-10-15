@@ -50,7 +50,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
                 }
                 DispatchQueue.main.async {
                     self.baseURL = URL(string: url)
-                    self.webView.load(URLRequest(url: URL(string: url)!))
+                    // This launch's secret, for the server's account routes (Server.secret).
+                    let cookie = HTTPCookie(properties: [
+                        .name: "lm_desktop",
+                        .value: self.server.secret,
+                        .domain: "127.0.0.1",
+                        .path: "/",
+                        HTTPCookiePropertyKey("HttpOnly"): "TRUE",
+                    ])
+                    let load = { self.webView.load(URLRequest(url: URL(string: url)!)) }
+                    if let cookie = cookie {
+                        self.webView.configuration.websiteDataStore.httpCookieStore.setCookie(cookie) { load() }
+                    } else {
+                        load()
+                    }
                 }
             } catch {
                 DispatchQueue.main.async { self.fatal(error.localizedDescription) }
@@ -102,7 +115,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
 
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .default() // persistent: saved places and settings survive
-        config.preferences.javaScriptCanOpenWindowsAutomatically = false
+        // The browser sign-in opens its page after a request returns, past the click: allowed,
+        // because every new window goes to the default browser (createWebViewWith returns nil).
+        config.preferences.javaScriptCanOpenWindowsAutomatically = true
         config.applicationNameForUserAgent = "LightMap-mac/\(Paths.version)"
         webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = self
@@ -174,12 +189,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
     }
 
     @objc private func restartToUpdate() {
-        server.stop()
+        // The swap script waits for this process to end, so it can start before the server stops;
+        // if it cannot start, the app carries on as it was.
         if updater.applyOnQuit(relaunch: true) {
+            server.stop()
             // The swap script reopens LightMap; this run must end without staging it twice.
             exit(0)
         }
         hideUpdateBar()
+        let alert = NSAlert()
+        alert.messageText = "The update could not be installed now"
+        alert.informativeText = "LightMap keeps running as it is and tries again later.\n\n\(Log.tail(4))"
+        alert.runModal()
     }
 
     // MARK: menus

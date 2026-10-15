@@ -6,6 +6,7 @@ import { createDb } from '../packages/database/src/client.ts';
 import {
   auditRepo,
   cacheRepo,
+  devicesRepo,
   retentionRepo,
   usersRepo,
 } from '../packages/database/src/repositories.ts';
@@ -32,6 +33,8 @@ try {
     console.log(`erased user ${u.id}`);
   }
   const purged = dryRun ? 0 : await cacheRepo(handle.db).purgeExpired();
+  // Desktop sign-in links lapse after ten minutes; a day later they are only clutter.
+  if (!dryRun) await devicesRepo(handle.db).purgeLinks(new Date(Date.now() - 86_400_000));
   console.log(
     `retention: ${due.length} account(s) due, ${purged} cache rows purged${dryRun ? ' (dry run)' : ''}`,
   );

@@ -105,9 +105,12 @@ Only sha-256 hashes of the poll secret and the token are stored (`device_links`,
 (`account.json`, readable by its user only) and never reaches the page. A token ends when the app
 signs out (`DELETE /api/desktop/token`), when its owner revokes it (`DELETE /api/account/devices`),
 when deletion of the account is requested, and with the account. A request that a revoked token
-answers 401 makes the app forget it. The local server answers only requests addressed to its own
-host (a site that rebinds a name to 127.0.0.1 cannot read through it) and only same-origin
-changes. Link creation is unauthenticated and grants nothing until approved; creating, polling and approving links have burst limits of their own (§8).
+answers 401 makes the app forget it. The local server takes account requests only from the app's own window: addressed to its own host
+(a site that rebinds a name to 127.0.0.1 cannot read through it), carrying the cookie the shell
+set in its web view with a secret made for this launch (`LIGHTMAP_DESKTOP_SECRET`, so no other
+program on the computer can use the account through 127.0.0.1), and same-origin for changes.
+Approving a link, and signing a device out from the account, take a browser session: a device
+token cannot mint more tokens or outlast its own revocation. Link creation is unauthenticated and grants nothing until approved; creating, polling and approving links have burst limits of their own (§8).
 
 ## 5. Billing integrity
 

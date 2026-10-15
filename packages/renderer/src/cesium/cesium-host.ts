@@ -646,7 +646,9 @@ export class CesiumSceneHost implements SceneHost {
     const layers = this.widget.imageryLayers;
     for (let i = 0; i < layers.length; i++) {
       const layer = layers.get(i);
-      layer.hue = -0.22 * turned;
+      // czm_hue rotates the YIQ angle: green sits near -118 deg and yellow near -44, so a
+      // positive turn warms greens toward yellow and orange.
+      layer.hue = 0.22 * turned;
       layer.saturation = 1 + 0.12 * turned - 0.4 * winter;
     }
   }

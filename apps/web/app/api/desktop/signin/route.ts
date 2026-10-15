@@ -57,35 +57,52 @@ export async function POST(req: Request) {
   }
 }
 
+interface SignInStatus {
+  signedIn: boolean;
+  expired?: boolean;
+  waiting?: { code: string; verifyUrl: string };
+}
+
+/**
+ * One poll of the hosted server at a time: the page's 3-second check and a refresh can overlap,
+ * and the second poll of an approved link is a 410 that would read as "expired" after success.
+ */
+let inFlight: Promise<SignInStatus> | null = null;
+
+async function pollOnce(): Promise<SignInStatus> {
+  if (await readSignIn()) return { signedIn: true };
+  const link = pending;
+  if (!link) return { signedIn: false };
+  if (link.expiresAt <= Date.now()) {
+    pending = null;
+    return { signedIn: false, expired: true };
+  }
+  const res = await callAccountOrigin('/api/desktop/link/poll', {
+    method: 'POST',
+    body: { pollSecret: link.pollSecret },
+  });
+  if (res.status === 200) {
+    const body = (await res.json()) as { token?: string };
+    if (body.token) {
+      await saveSignIn(body.token);
+      if (pending === link) pending = null;
+      return { signedIn: true };
+    }
+  }
+  if (res.status === 410) {
+    if (pending === link) pending = null;
+    return { signedIn: false, expired: true };
+  }
+  return { signedIn: false, waiting: { code: link.code, verifyUrl: link.verifyUrl } };
+}
+
 export async function GET(req: Request) {
   try {
     requireDesktop(req);
-    if (await readSignIn()) return json({ signedIn: true });
-    if (!pending) return json({ signedIn: false });
-    if (pending.expiresAt <= Date.now()) {
-      pending = null;
-      return json({ signedIn: false, expired: true });
-    }
-    const res = await callAccountOrigin('/api/desktop/link/poll', {
-      method: 'POST',
-      body: { pollSecret: pending.pollSecret },
+    inFlight ??= pollOnce().finally(() => {
+      inFlight = null;
     });
-    if (res.status === 200) {
-      const body = (await res.json()) as { token?: string };
-      if (body.token) {
-        await saveSignIn(body.token);
-        pending = null;
-        return json({ signedIn: true });
-      }
-    }
-    if (res.status === 410) {
-      pending = null;
-      return json({ signedIn: false, expired: true });
-    }
-    return json(
-      { signedIn: false, waiting: { code: pending.code, verifyUrl: pending.verifyUrl } },
-      { headers: { 'Cache-Control': 'no-store' } },
-    );
+    return json(await inFlight, { headers: { 'Cache-Control': 'no-store' } });
   } catch (e) {
     return errorResponse(e);
   }

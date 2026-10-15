@@ -2,7 +2,7 @@ import { devicesRepo } from '@lightmap/database';
 import { HttpError, errorResponse, json, readJson } from '@/lib/server/http';
 import { getServices } from '@/lib/server/services';
 import { checkBurst, clientKey } from '@/lib/server/rate-limit';
-import { requireDb, requireUser } from '@/lib/server/session';
+import { requireBrowserUser, requireDb } from '@/lib/server/session';
 import {
   LINK_TTL_MS,
   POLL_INTERVAL_S,
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
 /** The link page asks what it is approving: the device's name and whether it can still be. */
 export async function GET(req: Request) {
   try {
-    await requireUser();
+    await requireBrowserUser();
     const code = normaliseLinkCode(new URL(req.url).searchParams.get('code') ?? '');
     if (!code) throw new HttpError(400, 'bad_code', 'That code does not look right.');
     const link = await devicesRepo(requireDb()).linkByCode(code);
