@@ -14,8 +14,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 - A shower passing through a sunny sky is no longer drawn as a storm (6b7d057)
 - The viewpoint never sits under the terrain after a move, and is no longer stood on the coarse
   globe as if on a roof in steep country, nor is the horizon raised by it (344d49a, 40022f7)
+- A viewpoint on a bridge stands on its deck, level with where it meets the banks (8ab4bab)
 - Places keep their own time zone's name: Oslo, Stockholm and Copenhagen read Europe/Oslo,
-  Europe/Stockholm and Europe/Copenhagen, not Europe/Berlin (5853ae5)
+  Europe/Stockholm and Europe/Copenhagen, not Europe/Berlin, and Reykjavik Atlantic/Reykjavik, not
+  Africa/Abidjan (5853ae5, 2be2f3e)
 - Enter in the place search takes pasted coordinates at once and a name's first result when it
   arrives (7c42ea6)
 
