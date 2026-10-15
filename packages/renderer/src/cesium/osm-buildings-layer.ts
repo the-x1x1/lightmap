@@ -106,6 +106,8 @@ export class OsmBuildingsLayer {
   /** Trees hidden because the eye stands in them: [primitive, id]. */
   private hiddenTrees: [Cesium.Primitive, number][] = [];
   private lastFocus: { lon: number; lat: number } | null = null;
+  /** On the cheapest quality rungs: no trees drawn and no skyline ring. */
+  private lean = false;
   private destroyed = false;
   private failures = 0;
 
@@ -136,6 +138,19 @@ export class OsmBuildingsLayer {
     return [...this.treePrims];
   }
 
+  /**
+   * The quality rung's say: lean (Battery and Minimal) hides the trees and skips the skyline
+   * ring, which a slow machine pays for most; the buildings near you stay.
+   */
+  setLean(lean: boolean): void {
+    if (lean === this.lean) return;
+    this.lean = lean;
+    for (const p of this.treePrims) p.show = !lean;
+    if (lean) for (const [key, state] of this.tiles) if (!state.near) this.drop(key, state);
+    this.lastFocus = null; // the next update reconsiders the rings
+    this.scene.requestRender();
+  }
+
   /** How many buildings' primitives are on the globe (0 until the first tile is drawn). */
   get primitiveCount(): number {
     return this.owned.size;
@@ -156,7 +171,7 @@ export class OsmBuildingsLayer {
     this.lastFocus = { lon, lat };
     const near = buildingTilesAround(lon, lat, LOAD_RADIUS_M);
     const nearKeys = new Set(near.map((t) => `${t.x}/${t.y}`));
-    const far = buildingTilesAround(lon, lat, FAR_RADIUS_M).filter(
+    const far = buildingTilesAround(lon, lat, this.lean ? LOAD_RADIUS_M : FAR_RADIUS_M).filter(
       (t) => !nearKeys.has(`${t.x}/${t.y}`),
     );
     const want = (t: { x: number; y: number }, full: boolean) => {
@@ -322,7 +337,10 @@ export class OsmBuildingsLayer {
 
   private adopt(state: TileState, primitive: Cesium.Primitive | null, tree = false): void {
     if (!primitive) return;
-    if (tree) this.treePrims.add(primitive);
+    if (tree) {
+      this.treePrims.add(primitive);
+      primitive.show = !this.lean;
+    }
     state.primitives.push(primitive);
     this.owned.add(primitive);
     this.collection.add(primitive);

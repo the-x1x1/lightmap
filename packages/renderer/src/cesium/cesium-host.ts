@@ -139,6 +139,7 @@ export class CesiumSceneHost implements SceneHost {
   /** The free OpenStreetMap buildings (vector tiles), loaded around the camera. */
   private osmBuildings: OsmBuildingsLayer | null = null;
   private osmBuildingsCheckAt = 0;
+  private osmLean = false;
   /** The street map near the place (`u_roadMap`) and its bounds. */
   private roadCanvas: HTMLCanvasElement | null = null;
   private roadBounds: [number, number, number, number] | null = null;
@@ -1011,6 +1012,9 @@ export class CesiumSceneHost implements SceneHost {
     // Buildings follow the same rung: their tiles are refined to the same screen-space error.
     if (this.buildings)
       this.buildings.maximumScreenSpaceError = Math.max(8, q.terrainScreenSpaceError * 6);
+    // The free buildings: on the Battery and Minimal rungs, no trees and no skyline ring.
+    this.osmBuildings?.setLean(q.terrainScreenSpaceError >= 4);
+    this.osmLean = q.terrainScreenSpaceError >= 4;
     const dpr = typeof devicePixelRatio === 'number' && devicePixelRatio > 0 ? devicePixelRatio : 1;
     this.widget.resolutionScale = Math.min(q.resolutionScale, 2 / dpr);
   }
@@ -1603,6 +1607,7 @@ export class CesiumSceneHost implements SceneHost {
         this.osmBuildings = new OsmBuildingsLayer(C, this.scene, b.url, (m, e) =>
           this.onError?.(m, e),
         );
+        this.osmBuildings.setLean(this.osmLean);
         this.osmBuildingsCheckAt = 0;
         this.scene.requestRender();
         return;
