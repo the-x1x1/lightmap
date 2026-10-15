@@ -2,6 +2,21 @@
 
 All notable changes. Versions follow semver; `pnpm release <version>` prepends entries from commits.
 
+## Unreleased
+
+- **Winter snow in the lowlands**: where a snowpack lasts the winter (Montreal, Moscow, Helsinki,
+  Tromsø, Hokkaido) the ground and the far imagery go white through its heart; places whose snow
+  comes and goes stay bare, and the forecast's snow depth still decides inside its horizon (3efd2c2)
+- Trees' undersides and walls in shade keep their sky light instead of going black under the
+  shadow map (9699126)
+- A shower passing through a sunny sky is no longer drawn as a storm (6b7d057)
+- The viewpoint never sits under the terrain after a move, and is no longer stood on the coarse
+  globe as if on a roof in steep country, nor is the horizon raised by it (344d49a, 40022f7)
+- Places keep their own time zone's name: Oslo, Stockholm and Copenhagen read Europe/Oslo,
+  Europe/Stockholm and Europe/Copenhagen, not Europe/Berlin (5853ae5)
+- Enter in the place search takes pasted coordinates at once and a name's first result when it
+  arrives (7c42ea6)
+
 ## v0.3.1 — 2026-10-15
 
 - **LightMap for Mac** (Apple Silicon, macOS 12+): a disk image, its own window with the Mac menus,
