@@ -4,6 +4,7 @@ import {
   buildingsFromTile,
   DEFAULT_BUILDING_HEIGHT_M,
   tileUrl,
+  treesFromTile,
 } from '../src/osm-buildings.ts';
 import {
   classifyRings,
@@ -174,5 +175,58 @@ describe('OSM buildings from a tile', () => {
 
   it('fills a tile template', () => {
     expect(tileUrl('https://t/p/{z}/{x}/{y}.pbf', 14, 1, 2)).toBe('https://t/p/14/1/2.pbf');
+  });
+});
+
+describe('trees from land cover', () => {
+  const landcover = (cls: string, sub: string, ring: [number, number][]) =>
+    tile(
+      [{ rings: [ring], tags: [0, 0, 1, 1] }],
+      ['class', 'subclass'],
+      [str(1, cls), str(1, sub)],
+      'landcover',
+    );
+
+  it('fills a wood densely, scatters a park, and ignores farmland', () => {
+    const z = 14;
+    const lat = 21.3;
+    const wood = treesFromTile(landcover('wood', 'wood', square(0, 0, 1024)), z, 4093, 7277, lat);
+    const park = treesFromTile(landcover('grass', 'park', square(0, 0, 1024)), z, 4093, 7277, lat);
+    const farm = treesFromTile(
+      landcover('farmland', 'farmland', square(0, 0, 1024)),
+      z,
+      4093,
+      7277,
+      lat,
+    );
+    // A quarter tile at z14 near 21° N is ~570 m square: ~2700 trees at 11 m, ~360 at 30 m.
+    expect(wood.length).toBeGreaterThan(2000);
+    expect(wood.length).toBeLessThan(3500);
+    expect(park.length).toBeGreaterThan(250);
+    expect(park.length).toBeLessThan(500);
+    expect(farm).toEqual([]);
+    for (const t of wood.slice(0, 50)) {
+      expect(t.heightM).toBeGreaterThanOrEqual(9);
+      expect(t.heightM).toBeLessThanOrEqual(18);
+      expect(lonLatToTile(z, t.lon, t.lat)).toEqual({ x: 4093, y: 7277 });
+    }
+  });
+
+  it('grows the same trees every time and none in a hole', () => {
+    const outer = square(0, 0, 2048);
+    const hole = square(512, 512, 1024).reverse();
+    const t = tile(
+      [{ rings: [outer, hole], tags: [0, 0, 1, 1] }],
+      ['class', 'subclass'],
+      [str(1, 'wood'), str(1, 'forest')],
+      'landcover',
+    );
+    const a = treesFromTile(t, 14, 10, 10, 45);
+    const b = treesFromTile(t, 14, 10, 10, 45);
+    expect(a).toEqual(b);
+    const [hx0, hy1] = tilePointToLonLat(14, 10, 10, 4096, 560, 1480);
+    const [hx1, hy0] = tilePointToLonLat(14, 10, 10, 4096, 1480, 560);
+    expect(a.some((p) => p.lon > hx0 && p.lon < hx1 && p.lat > hy1 && p.lat < hy0)).toBe(false);
+    expect(a.some((p) => p.conifer)).toBe(true);
   });
 });

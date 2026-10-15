@@ -96,6 +96,131 @@ export function buildingsFromTile(
   return out;
 }
 
+export interface TreeSpot {
+  lon: number;
+  lat: number;
+  /** Crown top above the ground, metres. */
+  heightM: number;
+  /** Crown radius, metres. */
+  radiusM: number;
+  /** 0..1, for the crown's shade. */
+  tone: number;
+  /** Needle-leaf (a cone) rather than broad-leaf (a round crown). */
+  conifer: boolean;
+}
+
+/** OpenMapTiles `landcover` subclasses that are parkland: a scattering of trees, not a forest. */
+const PARK_SUBCLASSES = new Set([
+  'park',
+  'garden',
+  'village_green',
+  'recreation_ground',
+  'cemetery',
+  'grave_yard',
+]);
+
+/** Metres between trees in a wood (a jittered grid) and in a park. */
+export const WOOD_SPACING_M = 11;
+export const PARK_SPACING_M = 30;
+/** At most this many trees per tile; a forested tile is thinned evenly to fit. */
+export const MAX_TREES_PER_TILE = 6000;
+
+function hash2(a: number, b: number, seed: number): number {
+  let h =
+    (Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263) + Math.imul(seed, 2147483647)) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+
+function inRing(ring: readonly number[], x: number, y: number): boolean {
+  let inside = false;
+  const n = ring.length / 2;
+  for (let i = 0, j = n - 1; i < n; j = i++) {
+    const xi = ring[2 * i] as number;
+    const yi = ring[2 * i + 1] as number;
+    const xj = ring[2 * j] as number;
+    const yj = ring[2 * j + 1] as number;
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+/**
+ * Trees in a tile's `landcover`: woods and forests filled on a jittered grid, parks and gardens
+ * scattered. Deterministic (the same tile always grows the same trees) and only a pattern — the
+ * mapped cover says where woods are, not where each tree stands.
+ */
+export function treesFromTile(
+  data: Uint8Array,
+  z: number,
+  x: number,
+  y: number,
+  latDeg: number,
+): TreeSpot[] {
+  const layer = readVectorTile(data, ['landcover'])['landcover'];
+  if (!layer) return [];
+  const e = layer.extent;
+  // Tile units per metre at this latitude.
+  const tileM = (40_075_016 * Math.cos((latDeg * Math.PI) / 180)) / 2 ** z;
+  const unitsPerM = e / tileM;
+  const out: TreeSpot[] = [];
+  for (const f of layer.features) {
+    if (f.type !== 3) continue;
+    const cls = f.properties['class'];
+    const sub = f.properties['subclass'];
+    const wood = cls === 'wood';
+    const park = cls === 'grass' && typeof sub === 'string' && PARK_SUBCLASSES.has(sub);
+    if (!wood && !park) continue;
+    const spacing = (wood ? WOOD_SPACING_M : PARK_SPACING_M) * unitsPerM;
+    const conifers = sub === 'forest' ? 0.5 : 0.15;
+    for (const poly of classifyRings(f.geometry)) {
+      const outer = clipRing(poly.outer, 0, e);
+      if (outer.length < 6) continue;
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+      for (let i = 0; i + 1 < outer.length; i += 2) {
+        minX = Math.min(minX, outer[i] as number);
+        maxX = Math.max(maxX, outer[i] as number);
+        minY = Math.min(minY, outer[i + 1] as number);
+        maxY = Math.max(maxY, outer[i + 1] as number);
+      }
+      const gx0 = Math.floor(minX / spacing);
+      const gy0 = Math.floor(minY / spacing);
+      const gx1 = Math.floor(maxX / spacing);
+      const gy1 = Math.floor(maxY / spacing);
+      for (let gx = gx0; gx <= gx1; gx++)
+        for (let gy = gy0; gy <= gy1; gy++) {
+          const px = (gx + 0.15 + 0.7 * hash2(gx, gy, x * 7 + y)) * spacing;
+          const py = (gy + 0.15 + 0.7 * hash2(gy, gx, x + y * 13)) * spacing;
+          if (px < 0 || py < 0 || px > e || py > e) continue;
+          if (!inRing(outer, px, py)) continue;
+          if (poly.holes.some((h) => inRing(h, px, py))) continue;
+          const r = hash2(gx * 31 + 7, gy * 17 + 3, x ^ y);
+          const conifer = r < conifers;
+          const heightM = (wood ? 9 : 7) + 9 * hash2(gx + 101, gy + 57, 3);
+          const [lon, lat] = tilePointToLonLat(z, x, y, e, px, py);
+          out.push({
+            lon,
+            lat,
+            heightM,
+            radiusM: conifer ? heightM * 0.22 : heightM * 0.33,
+            tone: hash2(gx + 11, gy + 23, 5),
+            conifer,
+          });
+        }
+    }
+  }
+  if (out.length <= MAX_TREES_PER_TILE) return out;
+  // Thin evenly.
+  const step = out.length / MAX_TREES_PER_TILE;
+  const thinned: TreeSpot[] = [];
+  for (let i = 0; i < out.length; i += step) thinned.push(out[Math.floor(i)] as TreeSpot);
+  return thinned;
+}
+
 /** The z14 tiles whose area comes within `radiusM` of a point, nearest first. */
 export function buildingTilesAround(
   lon: number,

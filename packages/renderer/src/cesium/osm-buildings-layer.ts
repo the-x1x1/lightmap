@@ -2,7 +2,8 @@
  * OpenStreetMap buildings around the camera, extruded on the terrain (the free buildings: no
  * Cesium ion token). Each z14 OpenMapTiles vector tile near where you stand or look is fetched,
  * its footprints read (`osm-buildings.ts`), the ground under each sampled from the terrain, and
- * the lot drawn as lit, shadow-casting, pickable prisms. Tiles far behind are dropped again.
+ * the lot drawn as lit, shadow-casting, pickable prisms. The same tile's land cover grows trees
+ * (`treesFromTile`): woods filled, parks scattered. Tiles far behind are dropped again.
  *
  * Geometry is built on the main thread a slice at a time (a dense city tile holds thousands of
  * footprints), each building in its own try: one malformed outline costs that building, never
@@ -15,9 +16,11 @@ import {
   buildingTilesAround,
   buildingsFromTile,
   tileUrl,
+  treesFromTile,
   type BuildingFootprint,
+  type TreeSpot,
 } from '../osm-buildings.ts';
-import { lonLatToTile } from '../vector-tile.ts';
+import { lonLatToTile, tilePointToLonLat } from '../vector-tile.ts';
 
 type CesiumModule = typeof Cesium;
 
@@ -31,6 +34,8 @@ const MAX_LOAD_HEIGHT_M = 6000;
 const SLICE = 250;
 /** The building's base sits this far into the ground, so a slope never shows a gap under it. */
 const SINK_M = 2;
+/** Trees per primitive (their geometry is built in Cesium's workers). */
+const TREE_SLICE = 1500;
 
 interface TileState {
   key: string;
@@ -176,38 +181,138 @@ export class OsmBuildingsLayer {
       const data = new Uint8Array(await res.arrayBuffer());
       if (state.cancelled || this.destroyed) return;
       const buildings = buildingsFromTile(data, BUILDING_TILE_ZOOM, state.x, state.y);
-      if (buildings.length === 0) return;
+      const [, tileLat] = tilePointToLonLat(BUILDING_TILE_ZOOM, state.x, state.y, 1, 0.5, 0.5);
+      const trees = treesFromTile(data, BUILDING_TILE_ZOOM, state.x, state.y, tileLat);
 
-      // The ground under each building, from the terrain's finest tiles.
-      const cartos = buildings.map((b) => C.Cartographic.fromDegrees(b.centre[0], b.centre[1]));
-      let grounds: number[];
-      try {
-        const sampled = await C.sampleTerrainMostDetailed(this.scene.terrainProvider, cartos);
-        grounds = sampled.map((c) => (Number.isFinite(c.height) ? c.height : 0));
-      } catch {
-        grounds = cartos.map(() => 0);
-      }
-      if (state.cancelled || this.destroyed) return;
-
-      for (let i = 0; i < buildings.length; i += SLICE) {
+      if (buildings.length > 0) {
+        // The ground under each building, from the terrain's finest tiles.
+        const grounds = await this.groundHeights(buildings.map((b) => b.centre));
         if (state.cancelled || this.destroyed) return;
-        const primitive = this.buildSlice(
-          buildings.slice(i, i + SLICE),
-          grounds.slice(i, i + SLICE),
-        );
-        if (primitive) {
-          state.primitives.push(primitive);
-          this.owned.add(primitive);
-          this.collection.add(primitive);
-          this.scene.requestRender();
+        for (let i = 0; i < buildings.length; i += SLICE) {
+          if (state.cancelled || this.destroyed) return;
+          this.adopt(
+            state,
+            this.buildSlice(buildings.slice(i, i + SLICE), grounds.slice(i, i + SLICE)),
+          );
+          // Let a frame through between slices.
+          await new Promise((r) => setTimeout(r, 0));
         }
-        // Let a frame through between slices.
-        await new Promise((r) => setTimeout(r, 0));
+      }
+
+      if (trees.length > 0) {
+        const grounds = await this.groundHeights(trees.map((t) => [t.lon, t.lat]));
+        if (state.cancelled || this.destroyed) return;
+        for (let i = 0; i < trees.length; i += TREE_SLICE) {
+          if (state.cancelled || this.destroyed) return;
+          this.adopt(
+            state,
+            this.treeSlice(trees.slice(i, i + TREE_SLICE), grounds.slice(i, i + TREE_SLICE)),
+          );
+          await new Promise((r) => setTimeout(r, 0));
+        }
       }
     } catch (error) {
       this.tiles.delete(state.key);
       this.report(error);
     }
+  }
+
+  private adopt(state: TileState, primitive: Cesium.Primitive | null): void {
+    if (!primitive) return;
+    state.primitives.push(primitive);
+    this.owned.add(primitive);
+    this.collection.add(primitive);
+    this.scene.requestRender();
+  }
+
+  /** The terrain's height at points, from its finest tiles (0 where it cannot say). */
+  private async groundHeights(points: readonly (readonly [number, number])[]): Promise<number[]> {
+    const C = this.C;
+    const cartos = points.map(([lon, lat]) => C.Cartographic.fromDegrees(lon, lat));
+    try {
+      const sampled = await C.sampleTerrainMostDetailed(this.scene.terrainProvider, cartos);
+      return sampled.map((c) => (Number.isFinite(c.height) ? c.height : 0));
+    } catch {
+      return cartos.map(() => 0);
+    }
+  }
+
+  /**
+   * A slice of trees: a trunk and a crown each (a round crown for broad-leaf, a cone for
+   * needle-leaf), placed upright on the ground. Plain shapes from Cesium's own geometry, built
+   * in its workers; they cast shadows like the buildings.
+   */
+  private treeSlice(
+    trees: readonly TreeSpot[],
+    grounds: readonly number[],
+  ): Cesium.Primitive | null {
+    const C = this.C;
+    const instances: Cesium.GeometryInstance[] = [];
+    const vertexFormat = C.PerInstanceColorAppearance.VERTEX_FORMAT;
+    const bark = C.ColorGeometryInstanceAttribute.fromColor(new C.Color(0.32, 0.25, 0.18, 1));
+    trees.forEach((t, i) => {
+      const ground = (grounds[i] ?? 0) - 0.3;
+      const enu = C.Transforms.eastNorthUpToFixedFrame(
+        C.Cartesian3.fromDegrees(t.lon, t.lat, ground),
+      );
+      const at = (up: number) =>
+        C.Matrix4.multiplyByTranslation(enu, new C.Cartesian3(0, 0, up), new C.Matrix4());
+      const crownH = t.conifer ? t.heightM * 0.8 : t.heightM * 0.6;
+      const trunkH = t.heightM - crownH + (t.conifer ? 0.5 : t.radiusM * 0.4);
+      instances.push(
+        new C.GeometryInstance({
+          geometry: new C.CylinderGeometry({
+            length: trunkH,
+            topRadius: 0.18,
+            bottomRadius: 0.25,
+            slices: 5,
+            vertexFormat,
+          }),
+          modelMatrix: at(trunkH / 2),
+          attributes: { color: bark },
+        }),
+      );
+      const g = 0.27 + 0.12 * t.tone;
+      const leaf = C.ColorGeometryInstanceAttribute.fromColor(
+        t.conifer
+          ? new C.Color(0.12 + 0.05 * t.tone, g - 0.05, 0.13, 1)
+          : new C.Color(0.2 + 0.08 * t.tone, g, 0.12 + 0.03 * t.tone, 1),
+      );
+      const crownBase = t.heightM - crownH;
+      instances.push(
+        new C.GeometryInstance({
+          geometry: t.conifer
+            ? new C.CylinderGeometry({
+                length: crownH,
+                topRadius: 0,
+                bottomRadius: t.radiusM,
+                slices: 7,
+                vertexFormat,
+              })
+            : new C.EllipsoidGeometry({
+                radii: new C.Cartesian3(t.radiusM, t.radiusM, crownH / 2),
+                stackPartitions: 5,
+                slicePartitions: 7,
+                vertexFormat,
+              }),
+          modelMatrix: at(crownBase + crownH / 2),
+          attributes: { color: leaf },
+        }),
+      );
+    });
+    if (instances.length === 0) return null;
+    return new C.Primitive({
+      geometryInstances: instances,
+      appearance: new C.PerInstanceColorAppearance({
+        flat: false,
+        translucent: false,
+        closed: true,
+      }),
+      shadows: C.ShadowMode.ENABLED,
+      asynchronous: true,
+      releaseGeometryInstances: true,
+      allowPicking: true,
+    });
   }
 
   private buildSlice(
