@@ -1303,20 +1303,27 @@ export class CesiumSceneHost implements SceneHost {
     }
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+    // One path per kind and width, stroked once: a city's thousands of streets stroked one by
+    // one held the frame (this runs on the main thread as the walk moves the map).
     const draw = (kind: 'road' | 'path', style: string) => {
       ctx.strokeStyle = style;
+      const byWidth = new Map<number, Path2D>();
       for (const l of lines) {
         if (l.kind !== kind) continue;
-        ctx.lineWidth = Math.max(1, l.widthM / mPerPx);
-        ctx.beginPath();
+        const w = Math.max(1, Math.round((l.widthM / mPerPx) * 4) / 4);
+        const path = byWidth.get(w) ?? new Path2D();
+        byWidth.set(w, path);
         l.points.forEach(([lon, la], i) => {
           const px = ((lon * DEG - west) / (east - west)) * SIZE;
           const m = Math.log(Math.tan(Math.PI / 4 + (la * DEG) / 2));
           const py = ((north - m) / (north - south)) * SIZE;
-          if (i === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
+          if (i === 0) path.moveTo(px, py);
+          else path.lineTo(px, py);
         });
-        ctx.stroke();
+      }
+      for (const [w, path] of byWidth) {
+        ctx.lineWidth = w;
+        ctx.stroke(path);
       }
     };
     draw('path', 'rgb(0,255,0)');
