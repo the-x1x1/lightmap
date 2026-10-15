@@ -34,4 +34,10 @@ describe('buildings and trees shader', () => {
     expect(tree).toContain('v_color.a < 0.995');
     expect(tree).toContain('0.050)');
   });
+
+  it('darkens roofs on buildings only', () => {
+    expect(litInstanceShader(0.2, 8000, true)).toContain('roofness');
+    expect(litInstanceShader(0.2, 8000)).not.toContain('roofness');
+    expect(treeFragmentShader(1, 0, 0.2, 8000)).not.toContain('roofness');
+  });
 });

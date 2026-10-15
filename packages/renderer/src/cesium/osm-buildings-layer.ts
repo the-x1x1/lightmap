@@ -86,9 +86,20 @@ export const PRIMITIVE_NORMAL_SHADING_SMOOTH = 0.05;
  * light but something hides still darkens as the ground's shadows do.
  * ASCII only (some drivers reject anything else in shader source).
  */
-export function litInstanceShader(shadowD = 1, shadowMaxM = 0): string {
+export function litInstanceShader(shadowD = 1, shadowMaxM = 0, roofs = false): string {
   const d = Math.max(0.05, Math.min(1, shadowD)).toFixed(3);
   const maxM = Math.max(0, shadowMaxM).toFixed(1);
+  // Buildings: a flat roof is tar, gravel or membrane, a pitched one shingle or tile - darker
+  // than the walls, and from a viewpoint stood on a roof or a map view the roofs are most of
+  // what shows (V&V: every roof the colour of its walls). Each building's own tone picks a
+  // shade of grey; tile colours are regional and left to OSM's own roof colour some day.
+  const roofCode = roofs
+    ? `
+    float roofness = smoothstep(0.55, 0.85, dot(normalEC, upEC));
+    float pick = fract(v_color.r * 97.0 + v_color.g * 13.0);
+    vec3 roofCol = vec3(0.30, 0.30, 0.31) * (0.75 + 0.6 * pick);
+    color.rgb = mix(color.rgb, czm_gammaCorrect(vec4(roofCol, 1.0)).rgb, 0.7 * roofness);`
+    : '';
   return `
 in vec3 v_positionEC;
 in vec3 v_normalEC;
@@ -103,7 +114,7 @@ void main()
 #endif
     vec4 color = czm_gammaCorrect(v_color);
     vec3 positionWC = (czm_inverseView * vec4(v_positionEC, 1.0)).xyz;
-    vec3 upEC = normalize((czm_view * vec4(normalize(positionWC), 0.0)).xyz);
+    vec3 upEC = normalize((czm_view * vec4(normalize(positionWC), 0.0)).xyz);${roofCode}
     float sun = max(dot(normalEC, czm_lightDirectionEC), 0.0);
     float sky = 0.5 + 0.5 * dot(normalEC, upEC);
     float sunUp = clamp(dot(upEC, czm_lightDirectionEC), 0.0, 1.0);
@@ -334,7 +345,7 @@ export class OsmBuildingsLayer {
       flat: false,
       translucent: false,
       closed: true,
-      fragmentShaderSource: litInstanceShader(this.shadow.d, this.shadow.maxM),
+      fragmentShaderSource: litInstanceShader(this.shadow.d, this.shadow.maxM, true),
     });
     return this.buildingAppearance;
   }
