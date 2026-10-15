@@ -21,7 +21,7 @@ import type {
 import { GRADE_FRAGMENT_SHADER } from '../shaders/grade.frag.ts';
 import { OsmBuildingsLayer } from './osm-buildings-layer.ts';
 import { coverShapesFromTile, streetLinesFromTile } from '../vector-cover.ts';
-import { lonLatToTile } from '../vector-tile.ts';
+import { lonLatToTile, tilePointToLonLat } from '../vector-tile.ts';
 import { createDetailTexture, createNoiseTexture, type DetailTileCesium } from './detail-tiles.ts';
 import { NOISE_TEXTURE_SIZE, makeNoiseTexture } from '../noise-texture.ts';
 import { FrameRateSampler } from '../frame-sampler.ts';
@@ -1187,8 +1187,10 @@ export class CesiumSceneHost implements SceneHost {
 
   /**
    * The streets around a place from the OpenStreetMap vector tiles, drawn to their width into a
-   * 3 km square map (~1.5 m texels): roads in R, paths in G. The ground paints them as asphalt
-   * and paving in place of the town grid's pattern.
+   * 3 km square map (~1.5 m texels): roads in R, paths in G, OpenStreetMap's water in B, and
+   * alpha 1 wherever a tile answered (so "no water here" is known, not assumed). The ground
+   * paints the streets as asphalt and paving in place of the town grid's pattern, and takes
+   * the shoreline from the map rather than the terrain's coarse water mask.
    */
   private async loadStreetsAround(p: GeoPoint, template: string): Promise<void> {
     const seq = ++this.roadLoadSeq;
@@ -1208,6 +1210,8 @@ export class CesiumSceneHost implements SceneHost {
     const a = lonLatToTile(z, west / DEG, latOf(north));
     const b = lonLatToTile(z, east / DEG, latOf(south));
     const lines: ReturnType<typeof streetLinesFromTile> = [];
+    const water: [number, number][][][] = [];
+    const known: { x: number; y: number }[] = [];
     const jobs: Promise<void>[] = [];
     for (let x = a.x; x <= b.x; x++)
       for (let y = a.y; y <= b.y; y++)
@@ -1215,13 +1219,17 @@ export class CesiumSceneHost implements SceneHost {
           fetch(tileUrl(template, z, x, y))
             .then(async (r) => (r.ok ? new Uint8Array(await r.arrayBuffer()) : null))
             .then((data) => {
-              if (data) lines.push(...streetLinesFromTile(data, z, x, y));
+              if (!data) return;
+              known.push({ x, y });
+              lines.push(...streetLinesFromTile(data, z, x, y));
+              for (const shape of coverShapesFromTile(data, z, x, y))
+                if (shape.cls === 'water') water.push(shape.rings);
             })
             .catch(() => undefined),
         );
     await Promise.all(jobs);
     if (this.destroyed || seq !== this.roadLoadSeq) return;
-    if (lines.length === 0) {
+    if (known.length === 0) {
       this.roadCanvas = null;
       this.roadBounds = null;
       this.applyRoadMap();
@@ -1233,6 +1241,31 @@ export class CesiumSceneHost implements SceneHost {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     const mPerPx = (2 * HALF_M) / SIZE;
+    const toPx = (lon: number, la: number): [number, number] => {
+      const m = Math.log(Math.tan(Math.PI / 4 + (la * DEG) / 2));
+      return [((lon * DEG - west) / (east - west)) * SIZE, ((north - m) / (north - south)) * SIZE];
+    };
+    // Known ground: every tile that answered.
+    ctx.fillStyle = 'rgb(0,0,0)';
+    for (const t of known) {
+      const [x0, y0] = toPx(...tilePointToLonLat(z, t.x, t.y, 1, 0, 0));
+      const [x1, y1] = toPx(...tilePointToLonLat(z, t.x, t.y, 1, 1, 1));
+      ctx.fillRect(Math.floor(x0), Math.floor(y0), Math.ceil(x1 - x0) + 1, Math.ceil(y1 - y0) + 1);
+    }
+    // Water.
+    ctx.fillStyle = 'rgb(0,0,255)';
+    for (const rings of water) {
+      ctx.beginPath();
+      for (const ring of rings) {
+        ring.forEach(([lon, la], i) => {
+          const [px, py] = toPx(lon, la);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        });
+        ctx.closePath();
+      }
+      ctx.fill('evenodd');
+    }
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     const draw = (kind: 'road' | 'path', style: string) => {

@@ -434,11 +434,17 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // steep ground stays as it is. A pattern of a city, not its streets.
     float roadsKnown = 0.0;
     float roadPaint = 0.0;
+    float osmWater = 0.0;
     vec2 roadUv = vec2(0.0);
+    vec4 rv = vec4(0.0);
     if (u_roadOn > 0.5)
     {
         roadUv = lmMapUv(positionWC, u_roadBounds);
         roadsKnown = step(0.0, roadUv.x) * step(roadUv.x, 1.0) * step(0.0, roadUv.y) * step(roadUv.y, 1.0);
+        rv = texture(u_roadMap, roadUv) * roadsKnown;
+        // Where the map answered (alpha), OpenStreetMap says what is water.
+        roadsKnown *= step(0.5, rv.a);
+        osmWater = smoothstep(0.35, 0.65, rv.b) * roadsKnown;
     }
     float townW = known * built * (1.0 - snowy) * (1.0 - rocky) * smoothstep(4.0, 12.0, pxPerM * 48.0);
     if (townW > 0.0)
@@ -481,7 +487,6 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // place (about 1.5 m texels). Inside it they replace the town grid's pattern of a city.
     if (roadsKnown > 0.0)
     {
-        vec4 rv = texture(u_roadMap, roadUv);
         vec3 asphalt = vec3(0.21, 0.21, 0.22) * (0.88 + 0.24 * grain);
         vec3 paving = vec3(0.55, 0.52, 0.48) * (0.88 + 0.24 * grain);
         float onRoad = rv.r * (1.0 - snowy * 0.85);
@@ -571,6 +576,8 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float water = max(m * (1.0 - smoothstep(0.008, 0.025, slope)), below) * (1.0 - lowW * coastLand);
     // A clean edge: half water, half city reads as a city under glass.
     water = smoothstep(0.3, 0.7, water);
+    // Near the viewer, OpenStreetMap's shoreline (metres) instead of the mask's (tens of metres).
+    water = mix(water, osmWater, roadsKnown);
     // On water the paint is a deep sea colour (a little mottled, greyer toward the horizon) over
     // most of Cesium's own water shading, leaving some for the Sun's glint and waves.
     if (water > 0.0)
