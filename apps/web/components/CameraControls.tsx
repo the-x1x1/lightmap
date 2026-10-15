@@ -164,11 +164,7 @@ export function CameraControls({ advancedAllowed }: { advancedAllowed: boolean }
               : `${camera.fovDeg.toFixed(0)}° fov`}
           </span>
         </div>
-        <div
-          role="radiogroup"
-          aria-label="Lens"
-          className="lm-scrollbar-none flex gap-1.5 overflow-x-auto pb-1"
-        >
+        <div role="radiogroup" aria-label="Lens" className="flex flex-wrap gap-1.5 pb-1">
           {FOCAL_LENGTH_PRESETS_MM.map((mm, i) => {
             const locked = lensLocked(mm);
             return (

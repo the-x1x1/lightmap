@@ -58,11 +58,7 @@ export function WeatherScenarioPicker({
           <ForecastBadge scene={scene} loading={weatherLoading} />
         </span>
       </div>
-      <div
-        role="radiogroup"
-        aria-label="Weather scenario"
-        className="lm-scrollbar-none -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1"
-      >
+      <div role="radiogroup" aria-label="Weather scenario" className="flex flex-wrap gap-1.5 pb-1">
         {forecastAvailable || showingForecast ? (
           <button
             type="button"
