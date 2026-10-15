@@ -76,11 +76,14 @@ function copyTree(src, dst) {
 
 const targetIndex = process.argv.indexOf('--target');
 const target = targetIndex >= 0 ? process.argv[targetIndex + 1] : 'windows';
-if (target !== 'windows' && target !== 'mac') fail(`unknown --target ${target}`);
+if (target !== 'windows' && target !== 'mac' && target !== 'server')
+  fail(`unknown --target ${target}`);
 const mac = target === 'mac';
-const nodeExe = arg('node');
+// `server`: the hosted web server's image (deploy/Dockerfile) - its own node, no shell.
+const serverOnly = target === 'server';
+const nodeExe = serverOnly ? null : arg('node');
 // The Mac shell is compiled into the bundle by build-app.sh; only Windows copies one in here.
-const shellDir = mac ? null : arg('shell');
+const shellDir = mac || serverOnly ? null : arg('shell');
 const out = arg('out', join(repo, 'apps', 'desktop', 'stage'));
 
 const standalone = join(web, '.next', 'standalone');
@@ -88,7 +91,7 @@ if (!existsSync(join(standalone, 'apps', 'web', 'server.js')))
   fail(
     `${standalone}\\apps\\web\\server.js is missing: build the web app with LIGHTMAP_DESKTOP=1 first`,
   );
-if (!existsSync(nodeExe)) fail(`no node runtime at ${nodeExe}`);
+if (nodeExe && !existsSync(nodeExe)) fail(`no node runtime at ${nodeExe}`);
 if (shellDir && !existsSync(join(shellDir, 'LightMap.exe'))) fail(`no LightMap.exe in ${shellDir}`);
 
 rmSync(out, { recursive: true, force: true });
@@ -120,14 +123,16 @@ copyTree(join(geoTzSource, 'data'), join(geoTzTarget, 'data'));
 if (!existsSync(join(serverWeb, 'public', 'cesium', 'VERSION')))
   fail('public/cesium is missing: the web prebuild did not copy the Cesium assets');
 
-// 4. The runtime.
-const runtime = join(out, 'runtime');
-mkdirSync(runtime, { recursive: true });
-const runtimeNode = join(runtime, mac ? 'node' : 'node.exe');
-copyFileSync(nodeExe, runtimeNode);
-if (mac) chmodSync(runtimeNode, 0o755);
-const nodeLicense = join(dirname(nodeExe), 'LICENSE');
-if (existsSync(nodeLicense)) copyFileSync(nodeLicense, join(runtime, 'LICENSE'));
+// 4. The runtime (the desktop apps carry their own node).
+if (nodeExe) {
+  const runtime = join(out, 'runtime');
+  mkdirSync(runtime, { recursive: true });
+  const runtimeNode = join(runtime, mac ? 'node' : 'node.exe');
+  copyFileSync(nodeExe, runtimeNode);
+  if (mac) chmodSync(runtimeNode, 0o755);
+  const nodeLicense = join(dirname(nodeExe), 'LICENSE');
+  if (existsSync(nodeLicense)) copyFileSync(nodeLicense, join(runtime, 'LICENSE'));
+}
 
 // 5. The shell (Windows).
 if (shellDir) copyTree(shellDir, out);

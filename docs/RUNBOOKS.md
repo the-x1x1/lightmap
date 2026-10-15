@@ -11,6 +11,40 @@ health is `GET /api/health` (`ok`, `version`, `database`, `fixtureMode`); usage 
 analytics (`PRIVACY.md` §4) are `analytics <event>` lines in the same log when
 `ANALYTICS_SINK=log` (off in production unless set — the client sends nothing then).
 
+## R0. Deploying the hosted service (accounts, saved projects, Pro)
+
+The web app with a database is what accounts live on; the Windows and Mac apps sign in to it
+(SECURITY_MODEL.md "Desktop sign-in"). It needs four things: a host for the app, PostgreSQL, a
+mail sender for sign-in links, and Stripe for Pro.
+
+1. **Database**: a managed PostgreSQL 16 (Neon, Supabase, Fly Postgres, RDS). Take its
+   connection string as `DATABASE_URL` (with `?sslmode=require` where the provider asks).
+2. **App**, either:
+   - **A container** (Fly.io, Render, Railway, a VPS): `deploy/Dockerfile`. On Fly, copy
+     `deploy/fly.toml.example` to `fly.toml`; its `release_command` applies the migrations
+     before each release takes traffic. Elsewhere, run
+     `node --experimental-strip-types db/src/migrate-cli.ts` in the image once per release.
+   - **Vercel**: import the repository with `apps/web` as the root (framework Next.js), and run
+     `pnpm db:migrate` with the production `DATABASE_URL` from a checkout before each release.
+3. **Settings** (production; `.env.example` documents each): `DATABASE_URL`, `AUTH_SECRET` (`openssl
+rand -base64 32`), `AUTH_URL` and `NEXT_PUBLIC_APP_URL` (the public https origin),
+   `EMAIL_SERVER` and `EMAIL_FROM` (for Resend: `smtp://resend:<API key>@smtp.resend.com:465` and
+   a sender on a verified domain), `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
+   `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_YEARLY`, and `OPEN_METEO_API_KEY` for commercial
+   use. The server refuses to start in production without a database, an auth secret and a real
+   sign-in method.
+4. **Stripe**: create the Pro product with a monthly and a yearly price, and a webhook endpoint at
+   `https://<origin>/api/webhooks/stripe` for the subscription events (R2 lists them). Test mode
+   first: a test card through checkout should turn the account to Pro within seconds.
+5. **Desktop apps**: set `App.AccountOrigin` (`apps/desktop/LightMap.Desktop/App.cs`) and
+   `Paths.accountOrigin` (`apps/desktop/mac/Sources/Paths.swift`) to the origin, and release;
+   installed copies update themselves and offer "Sign in with your browser".
+6. **Retention**: schedule `scripts/retention.ts` daily (`retention.yml`) against the database.
+
+**Verify**: `GET /api/health` answers `database: ok`; an email sign-in link arrives; a fourth
+project on a Free account is refused; a desktop app signs in through `/link` and lists the
+account's projects.
+
 ## R1. Weather provider outage or quota exhaustion
 
 **Notice**: `weather provider failed` warnings in logs; `/api/weather` answering 502

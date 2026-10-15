@@ -1,0 +1,14 @@
+**/node_modules
+**/.next
+**/.turbo
+**/dist
+**/coverage
+apps/desktop/stage
+apps/desktop/publish
+apps/desktop/mac/out
+apps/desktop/**/bin
+apps/desktop/**/obj
+.git
+.env
+.env.*
+!.env.example

@@ -1,0 +1,30 @@
+# An example Fly.io configuration for the hosted LightMap (deploy/Dockerfile). Copy to fly.toml,
+# set `app` and `primary_region`, then: fly launch --no-deploy; fly secrets set DATABASE_URL=...
+# AUTH_SECRET=... EMAIL_SERVER=... STRIPE_SECRET_KEY=... ; fly deploy.
+app = "lightmap"
+primary_region = "sjc"
+
+[build]
+  dockerfile = "deploy/Dockerfile"
+
+[deploy]
+  # Migrations run once per release, before the new machines take traffic.
+  release_command = "node --experimental-strip-types db/src/migrate-cli.ts"
+
+[env]
+  NEXT_PUBLIC_APP_URL = "https://lightmap.example"
+  AUTH_URL = "https://lightmap.example"
+  WEATHER_PROVIDER = "open-meteo"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    path = "/api/health"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "40s"
