@@ -61,7 +61,12 @@ vec3 saturate3(vec3 c, float s) {
 void main() {
   vec4 src = texture(colorTexture, v_textureCoordinates);
   vec3 color = src.rgb;
-  float depth = czm_readDepth(depthTexture, v_textureCoordinates);
+  // "No depth" is read from the depth as stored (logarithmic), where only what nothing was
+  // drawn over reaches 1: czm_readDepth's perspective depth is within 1e-6 of 1 from about
+  // 100 km out (near plane 0.1 m), so the far ridges that stand above the horizon were taken
+  // for sky and drawn as it - a black band along the horizon (V&V: Tromso at polar noon).
+  float storedDepth = texture(depthTexture, v_textureCoordinates).r;
+  bool noDepth = storedDepth >= 1.0 - 1e-6;
   // Sky is what the view ray reaches past the Earth, not merely "no depth": ground not yet
   // drawn (terrain still loading, or out in another frustum) also reads as no depth, and the
   // cloud decks painted over it turned a whole overcast valley into a grey sheet. So a ray
@@ -72,7 +77,7 @@ void main() {
   vec3 rayEC = normalize(nearEC.xyz / nearEC.w);
   float horizonDip = sqrt(2.0 * max(u_eyeHeightM, 0.0) / 6371000.0);
   bool hitsEarth = asin(clamp(dot(rayEC, u_eyeUpEC), -1.0, 1.0)) < -horizonDip;
-  bool isSky = depth >= 1.0 - 1e-6 && !hitsEarth;
+  bool isSky = noDepth && !hitsEarth;
   // The decks are a sky seen from under them: from above ~10 km (an orbit) there are none, and
   // space around the globe stays dark.
   float underDecks = 1.0 - smoothstep(6000.0, 14000.0, u_eyeHeightM);
@@ -188,14 +193,10 @@ void main() {
     // the light's colour.
     // czm_windowToEyeCoordinates takes the depth as stored (logarithmic), not czm_readDepth's
     // reversed value - given that, it put everything at an enormous distance.
-    float storedDepth = texture(depthTexture, v_textureCoordinates).r;
     vec4 eyePos = czm_windowToEyeCoordinates(v_textureCoordinates * czm_viewport.zw, storedDepth);
     float distM = length(eyePos.xyz / eyePos.w);
-    // Ground with no depth here is ground drawn in a farther frustum than the depth texture
-    // holds (the last ridges, 80 km out) or not drawn yet. Left unhazed, the farthest ridge
-    // stood black against a hazy range (V&V: Tromso at polar noon); it is at least as far as
-    // the ray's meeting with the sea-level sphere, so it takes that distance's haze.
-    bool noDepth = depth >= 1.0 - 1e-6;
+    // Ground with no depth is ground not drawn yet (terrain still loading): it hazes as the
+    // sea-level sphere the ray meets would, at least 20 km out, rather than not at all.
     if (noDepth) {
       float eyeH = max(u_eyeHeightM, 0.0);
       float b = (6371000.0 + eyeH) * dot(rayEC, u_eyeUpEC);
