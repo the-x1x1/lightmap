@@ -60,6 +60,8 @@ export const GROUND_UNIFORM_DEFAULTS = {
   u_detail: 2,
   /** 1 when a cover map is loaded and its bounds set; 0 leaves the procedural rules alone. */
   u_coverOn: 0,
+  /** 1 when the street map near the viewer is loaded (OpenStreetMap roads and paths). */
+  u_roadOn: 0,
   /** 1 when the detail tiles are loaded: the near field takes its grain from them instead of the noise. */
   u_detailOn: 0,
   /**
@@ -135,6 +137,10 @@ export const GROUND_TOWN_GRID = {
 export const GROUND_COVER_IMAGE_UNIFORM = 'u_coverMap';
 /** The cover map's bounds uniform, a vec4 (Cartesian4): longitude in radians (west, east), mercator y (north, south). */
 export const GROUND_COVER_BOUNDS_UNIFORM = 'u_coverBounds';
+/** The street map near the viewer (R roads, G paths), an image uniform like the cover map. */
+export const GROUND_ROAD_IMAGE_UNIFORM = 'u_roadMap';
+/** The street map's bounds, as the cover map's. */
+export const GROUND_ROAD_BOUNDS_UNIFORM = 'u_roadBounds';
 
 const P = GROUND_NOISE_PERIODS_M;
 const f = (n: number) => n.toFixed(1);
@@ -155,6 +161,9 @@ uniform float u_wet;
 uniform float u_coverOn;
 uniform vec4 u_coverBounds;
 uniform sampler2D u_coverMap;
+uniform float u_roadOn;
+uniform vec4 u_roadBounds;
+uniform sampler2D u_roadMap;
 uniform float u_detailOn;
 uniform float u_coarseBasemap;
 uniform float u_shore;
@@ -209,8 +218,9 @@ vec4 lmNoiseTex(vec2 p, float S, vec2 dpx, vec2 dpy)
 }
 
 // Geodetic longitude/latitude of an ECEF position (WGS84; one Bowring step, < 1e-6 rad), then
-// the cover map's texel: x by longitude, y by mercator latitude, as the tiles are laid out.
-vec2 lmCoverUv(vec3 p)
+// a map's texel: x by longitude, y by mercator latitude, as the tiles are laid out. The bounds
+// are (west, east) longitude in radians and (north, south) mercator y.
+vec2 lmMapUv(vec3 p, vec4 bounds)
 {
     float a = 6378137.0;
     float e2 = 0.00669437999014;
@@ -222,10 +232,10 @@ vec2 lmCoverUv(vec3 p)
     float lat = atan(p.z + e2 * N * sinL, r);
     float merc = log(tan(0.78539816 + 0.5 * lat));
     // A mosaic across the antimeridian has its west edge below -pi; bring the longitude into it.
-    if (lon < u_coverBounds.x - 3.14159265) lon += 6.28318531;
+    if (lon < bounds.x - 3.14159265) lon += 6.28318531;
     // Images are uploaded bottom-up (flipY): the canvas's first row, the north edge, is t = 1.
-    return vec2((lon - u_coverBounds.x) / (u_coverBounds.y - u_coverBounds.x),
-                (merc - u_coverBounds.w) / (u_coverBounds.z - u_coverBounds.w));
+    return vec2((lon - bounds.x) / (bounds.y - bounds.x),
+                (merc - bounds.w) / (bounds.z - bounds.w));
 }
 
 // The detail tiles' light and shade at one scale, all four surfaces blended by their weights
@@ -339,7 +349,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float bareC = 0.0;
     if (u_coverOn > 0.5)
     {
-        vec2 cuv = lmCoverUv(positionWC);
+        vec2 cuv = lmMapUv(positionWC, u_coverBounds);
         if (cuv.x > 0.0 && cuv.x < 1.0 && cuv.y > 0.0 && cuv.y < 1.0)
         {
             vec4 cv = texture(u_coverMap, cuv);
@@ -422,6 +432,14 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // each a roof or yard of its own (grey, warm, a few pale roofs, a few trees), with one block
     // in ten a park. It fades in as the blocks grow past a few pixels and the lots as they do;
     // steep ground stays as it is. A pattern of a city, not its streets.
+    float roadsKnown = 0.0;
+    float roadPaint = 0.0;
+    vec2 roadUv = vec2(0.0);
+    if (u_roadOn > 0.5)
+    {
+        roadUv = lmMapUv(positionWC, u_roadBounds);
+        roadsKnown = step(0.0, roadUv.x) * step(roadUv.x, 1.0) * step(0.0, roadUv.y) * step(roadUv.y, 1.0);
+    }
     float townW = known * built * (1.0 - snowy) * (1.0 - rocky) * smoothstep(4.0, 12.0, pxPerM * 48.0);
     if (townW > 0.0)
     {
@@ -455,7 +473,22 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         vec3 green = vec3(0.24, 0.34, 0.18) * (0.85 + n16);
         block = mix(block, green, park);
         vec3 city = mix(block, vec3(0.31, 0.31, 0.32), street);
-        ground = mix(ground, city, townW * 0.8);
+        ground = mix(ground, city, townW * 0.8 * (1.0 - roadsKnown));
+    }
+
+    // The real streets near the viewer, where OpenStreetMap maps them: asphalt for roads (R),
+    // paving for paths and pedestrian ways (G), drawn to their width in a fine map around the
+    // place (about 1.5 m texels). Inside it they replace the town grid's pattern of a city.
+    if (roadsKnown > 0.0)
+    {
+        vec4 rv = texture(u_roadMap, roadUv);
+        vec3 asphalt = vec3(0.21, 0.21, 0.22) * (0.88 + 0.24 * grain);
+        vec3 paving = vec3(0.55, 0.52, 0.48) * (0.88 + 0.24 * grain);
+        float onRoad = rv.r * (1.0 - snowy * 0.85);
+        float onPath = rv.g * (1.0 - snowy * 0.85) * (1.0 - onRoad);
+        ground = mix(ground, paving, onPath * roadsKnown);
+        ground = mix(ground, asphalt, onRoad * roadsKnown);
+        roadPaint = max(onRoad, onPath) * roadsKnown;
     }
 
     // Micro-relief: the grain read as small bumps, lit by the scene's own Sun direction, so rock
@@ -511,6 +544,8 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float nearPaint = 1.0 - smoothstep(150.0, 900.0, dist);
     float imageryAlpha = mix(mix(0.3, 0.55, cover), mix(0.75, 0.95, cover), nearPaint);
     float alpha = u_strength * mix(imageryAlpha, 0.985, u_coarseBasemap);
+    // A mapped street is the street: no imagery blur through it.
+    alpha = mix(alpha, u_strength * 0.97, roadPaint);
 #ifdef HAS_WATER_MASK
     // Water, from the terrain's own mask - which arrives with coarse tiles and is upsampled for
     // finer ones, so its edge runs in 50-100 m stair steps. A water surface in the elevation

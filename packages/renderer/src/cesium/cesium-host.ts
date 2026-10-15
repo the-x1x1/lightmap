@@ -20,7 +20,8 @@ import type {
 } from '@lightmap/geospatial';
 import { GRADE_FRAGMENT_SHADER } from '../shaders/grade.frag.ts';
 import { OsmBuildingsLayer } from './osm-buildings-layer.ts';
-import { coverShapesFromTile } from '../vector-cover.ts';
+import { coverShapesFromTile, streetLinesFromTile } from '../vector-cover.ts';
+import { lonLatToTile } from '../vector-tile.ts';
 import { createDetailTexture, createNoiseTexture, type DetailTileCesium } from './detail-tiles.ts';
 import { NOISE_TEXTURE_SIZE, makeNoiseTexture } from '../noise-texture.ts';
 import { FrameRateSampler } from '../frame-sampler.ts';
@@ -39,6 +40,8 @@ import {
 import {
   GROUND_COVER_BOUNDS_UNIFORM,
   GROUND_COVER_IMAGE_UNIFORM,
+  GROUND_ROAD_BOUNDS_UNIFORM,
+  GROUND_ROAD_IMAGE_UNIFORM,
   GROUND_DETAIL_TIERS,
   GROUND_DETAIL_UNIFORM,
   GROUND_MATERIAL_SOURCE,
@@ -136,6 +139,10 @@ export class CesiumSceneHost implements SceneHost {
   /** The free OpenStreetMap buildings (vector tiles), loaded around the camera. */
   private osmBuildings: OsmBuildingsLayer | null = null;
   private osmBuildingsCheckAt = 0;
+  /** The street map near the place (`u_roadMap`) and its bounds. */
+  private roadCanvas: HTMLCanvasElement | null = null;
+  private roadBounds: [number, number, number, number] | null = null;
+  private roadLoadSeq = 0;
   private buildingsJob: Promise<void> | null = null;
   private groundTextureFailed = false;
   private landCover: LandCoverDescriptor = { kind: 'none', attribution: '' };
@@ -553,6 +560,8 @@ export class CesiumSceneHost implements SceneHost {
             ...GROUND_UNIFORM_DEFAULTS,
             [GROUND_COVER_BOUNDS_UNIFORM]: new C.Cartesian4(0, 0, 0, 0),
             [GROUND_COVER_IMAGE_UNIFORM]: C.Material.DefaultImageId,
+            [GROUND_ROAD_BOUNDS_UNIFORM]: new C.Cartesian4(0, 0, 0, 0),
+            [GROUND_ROAD_IMAGE_UNIFORM]: C.Material.DefaultImageId,
             [GROUND_DETAIL_UNIFORM]: C.Material.DefaultImageId,
             [GROUND_NOISE_UNIFORM]: C.Material.DefaultImageId,
             u_detailOn: 0,
@@ -580,6 +589,7 @@ export class CesiumSceneHost implements SceneHost {
       globe.material = this.groundMaterial;
       this.applyNoise();
       this.applyCoverMap();
+      this.applyRoadMap();
       this.applyDetailAtlas();
     }
     const u = this.groundMaterial.uniforms as Record<string, number>;
@@ -1040,6 +1050,7 @@ export class CesiumSceneHost implements SceneHost {
     const shapes: { cls: Parameters<typeof packCover>[0]; rings: [number, number][][] }[] = [];
     const template = this.osmBuildings ? await this.osmBuildings.tileTemplate() : null;
     if (template) {
+      void this.loadStreetsAround(p, template);
       const jobs: Promise<void>[] = [];
       for (let y = mosaic.y0; y <= mosaic.y1; y++)
         for (let x = mosaic.x0; x <= mosaic.x1; x++)
@@ -1144,6 +1155,98 @@ export class CesiumSceneHost implements SceneHost {
       u[GROUND_COVER_IMAGE_UNIFORM] = C.Material.DefaultImageId;
     }
     this.scene.requestRender();
+  }
+
+  private applyRoadMap(): void {
+    const C = this.C;
+    if (!this.groundMaterial) return;
+    const u = this.groundMaterial.uniforms as Record<string, unknown>;
+    if (this.roadBounds && this.roadCanvas) {
+      const [w, e, n, so] = this.roadBounds;
+      u[GROUND_ROAD_BOUNDS_UNIFORM] = new C.Cartesian4(w, e, n, so);
+      u[GROUND_ROAD_IMAGE_UNIFORM] = this.roadCanvas;
+      const canvas = this.roadCanvas;
+      this.afterUpload(() => {
+        if (this.roadCanvas === canvas) u['u_roadOn'] = 1;
+      });
+    } else {
+      u['u_roadOn'] = 0;
+      u[GROUND_ROAD_IMAGE_UNIFORM] = C.Material.DefaultImageId;
+    }
+    this.scene.requestRender();
+  }
+
+  /**
+   * The streets around a place from the OpenStreetMap vector tiles, drawn to their width into a
+   * 3 km square map (~1.5 m texels): roads in R, paths in G. The ground paints them as asphalt
+   * and paving in place of the town grid's pattern.
+   */
+  private async loadStreetsAround(p: GeoPoint, template: string): Promise<void> {
+    const seq = ++this.roadLoadSeq;
+    const HALF_M = 1500;
+    const SIZE = 2048;
+    const R = 6378137;
+    const lat = p.latitude * DEG;
+    const lonSpan = HALF_M / (R * Math.cos(lat));
+    const merc = Math.log(Math.tan(Math.PI / 4 + lat / 2));
+    const mercSpan = HALF_M / (R * Math.cos(lat));
+    const west = p.longitude * DEG - lonSpan;
+    const east = p.longitude * DEG + lonSpan;
+    const north = merc + mercSpan;
+    const south = merc - mercSpan;
+    const latOf = (m: number) => Math.atan(Math.sinh(m)) / DEG;
+    const z = 14;
+    const a = lonLatToTile(z, west / DEG, latOf(north));
+    const b = lonLatToTile(z, east / DEG, latOf(south));
+    const lines: ReturnType<typeof streetLinesFromTile> = [];
+    const jobs: Promise<void>[] = [];
+    for (let x = a.x; x <= b.x; x++)
+      for (let y = a.y; y <= b.y; y++)
+        jobs.push(
+          fetch(tileUrl(template, z, x, y))
+            .then(async (r) => (r.ok ? new Uint8Array(await r.arrayBuffer()) : null))
+            .then((data) => {
+              if (data) lines.push(...streetLinesFromTile(data, z, x, y));
+            })
+            .catch(() => undefined),
+        );
+    await Promise.all(jobs);
+    if (this.destroyed || seq !== this.roadLoadSeq) return;
+    if (lines.length === 0) {
+      this.roadCanvas = null;
+      this.roadBounds = null;
+      this.applyRoadMap();
+      return;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = SIZE;
+    canvas.height = SIZE;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const mPerPx = (2 * HALF_M) / SIZE;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    const draw = (kind: 'road' | 'path', style: string) => {
+      ctx.strokeStyle = style;
+      for (const l of lines) {
+        if (l.kind !== kind) continue;
+        ctx.lineWidth = Math.max(1, l.widthM / mPerPx);
+        ctx.beginPath();
+        l.points.forEach(([lon, la], i) => {
+          const px = ((lon * DEG - west) / (east - west)) * SIZE;
+          const m = Math.log(Math.tan(Math.PI / 4 + (la * DEG) / 2));
+          const py = ((north - m) / (north - south)) * SIZE;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        });
+        ctx.stroke();
+      }
+    };
+    draw('path', 'rgb(0,255,0)');
+    draw('road', 'rgb(255,0,0)');
+    this.roadCanvas = canvas;
+    this.roadBounds = [west, east, north, south];
+    this.applyRoadMap();
   }
 
   /** Run `fn` after the next render has gone through (an image uniform is uploaded in it), then render again. */
