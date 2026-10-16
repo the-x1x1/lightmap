@@ -39,6 +39,7 @@ describe('migration runner', () => {
       '0004_profile_painted_ground.sql',
       '0005_profile_customized_at.sql',
       '0006_device_links.sql',
+      '0007_device_link_network.sql',
     ]);
     expect(validateMigrationSet(files)).toEqual([]);
     expect(files[0]!.sql).toContain('CREATE TABLE IF NOT EXISTS viewpoints');
