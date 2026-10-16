@@ -10,6 +10,17 @@ interface LinkInfo {
   code: string;
   deviceName: string;
   state: 'waiting' | 'approved' | 'expired';
+  /** Whether this browser is on the network the app asked from. */
+  sameNetwork?: boolean;
+  /** How long ago the app asked, seconds. */
+  ageSeconds?: number;
+}
+
+function ago(seconds: number | undefined): string {
+  if (seconds === undefined) return '';
+  if (seconds < 60) return 'just now';
+  const m = Math.round(seconds / 60);
+  return `${m} minute${m === 1 ? '' : 's'} ago`;
 }
 
 /**
@@ -21,6 +32,7 @@ interface LinkInfo {
 export function LinkDevice({ code }: { code: string }) {
   const account = useAccount();
   const [done, setDone] = useState(false);
+  const [typed, setTyped] = useState('');
   const info = useQuery({
     queryKey: ['device-link', code],
     queryFn: () => api.get<LinkInfo>(`/api/desktop/link?code=${encodeURIComponent(code)}`),
@@ -28,7 +40,8 @@ export function LinkDevice({ code }: { code: string }) {
     retry: false,
   });
   const approve = useMutation({
-    mutationFn: () => api.post<{ approved: boolean }>('/api/desktop/link/approve', { code }),
+    mutationFn: () =>
+      api.post<{ approved: boolean }>('/api/desktop/link/approve', { code, typedCode: typed }),
     onSuccess: () => setDone(true),
   });
 
@@ -78,19 +91,52 @@ export function LinkDevice({ code }: { code: string }) {
           : 'This code has expired. Start the sign-in again in the app.'}
       </p>
     );
+  // A sign-in started on another network is approved only by typing the code from the app: a
+  // link someone sent you cannot be (device-code phishing). On the same network (the app opened
+  // this browser) the code is shown to compare instead.
+  const mustType = info.data.sameNetwork !== true;
+  const norm = (v: string) => v.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const typedOk = norm(typed) === norm(info.data.code);
   return (
     <div className="space-y-4" data-testid="link-device">
       <p className="text-sm">
-        A LightMap app on a computer named <strong>{info.data.deviceName}</strong> wants to sign in
-        as <strong>{account.user?.email}</strong>. It will see and change your projects and use your
-        plan. If you did not just choose Sign in with your browser in the app, do not approve it.
+        A LightMap app on a computer named <strong>{info.data.deviceName}</strong> asked{' '}
+        {ago(info.data.ageSeconds)} to sign in as <strong>{account.user?.email}</strong>. It will
+        see and change your projects and use your plan.
       </p>
-      <p className="text-sm">
-        Approve only if the app shows this code:{' '}
-        <span className="font-mono text-lg font-semibold tracking-wider" data-testid="link-code">
-          {info.data.code}
-        </span>
-      </p>
+      {mustType ? (
+        <div
+          className="rounded-lg border border-[color:#ffb3b3]/40 p-3 text-sm"
+          role="alert"
+          data-testid="link-other-network"
+        >
+          <p>
+            This sign-in was started from a different network than this browser. If someone sent you
+            this link or asked you for a code, <strong>stop</strong>: approving it would give them
+            your account.
+          </p>
+          <label className="mt-3 block">
+            If it is your own computer, type the code its LightMap app shows:
+            <input
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              className="mt-1 block w-40 rounded-md border border-white/15 bg-transparent px-2 py-1 font-mono text-lg tracking-wider"
+              autoComplete="off"
+              spellCheck={false}
+              maxLength={9}
+              data-testid="link-typed"
+            />
+          </label>
+        </div>
+      ) : (
+        <p className="text-sm">
+          Approve only if you just chose Sign in with your browser in the app and it shows this
+          code:{' '}
+          <span className="font-mono text-lg font-semibold tracking-wider" data-testid="link-code">
+            {info.data.code}
+          </span>
+        </p>
+      )}
       {approve.isError ? (
         <p className="text-sm text-[color:#ffb3b3]" role="alert">
           {approve.error instanceof ApiRequestError
@@ -101,7 +147,7 @@ export function LinkDevice({ code }: { code: string }) {
       <Button
         variant="primary"
         onClick={() => approve.mutate()}
-        disabled={approve.isPending}
+        disabled={approve.isPending || (mustType && !typedOk)}
         data-testid="link-approve"
       >
         {approve.isPending ? 'Approving…' : 'Approve and sign in the app'}

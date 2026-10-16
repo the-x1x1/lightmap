@@ -251,6 +251,8 @@ export const deviceLinks = pgTable(
     code: text('code').notNull(),
     pollHash: text('poll_hash').notNull(),
     deviceName: text('device_name').notNull(),
+    /** Keyed hash of the requesting network's prefix (migration 0007); null for older links. */
+    requestNet: text('request_net'),
     userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
     approvedAt: timestamp('approved_at', { withTimezone: true }),
     consumedAt: timestamp('consumed_at', { withTimezone: true }),

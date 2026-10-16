@@ -52,3 +52,32 @@ export function cleanDeviceName(raw: unknown): string {
   const s = typeof raw === 'string' ? raw.replace(/[^\p{L}\p{N} ._'()-]/gu, '').trim() : '';
   return (s || 'LightMap desktop').slice(0, 60);
 }
+
+/**
+ * A keyed hash of the network a request comes from: the IPv4 /24 or the IPv6 /48 of its client
+ * address (the first forwarded hop), never the address itself. Two requests from one home or
+ * office share it; the app and the browser it opens on the same computer always do. Null when
+ * the address is unknown.
+ */
+export function networkKey(req: Request, salt: string): string | null {
+  const ip = (
+    req.headers.get('x-forwarded-for')?.split(',')[0] ??
+    req.headers.get('x-real-ip') ??
+    ''
+  ).trim();
+  if (!ip) return null;
+  const v4 = /^(?:::ffff:)?(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.\d{1,3}$/i.exec(ip);
+  let prefix: string;
+  if (v4) prefix = `4:${v4[1]}.${v4[2]}.${v4[3]}`;
+  else if (ip.includes(':')) prefix = `6:${ip.toLowerCase().split(':').slice(0, 3).join(':')}`;
+  else return null;
+  return sha256(`${salt}|net|${prefix}`).slice(0, 32);
+}
+
+/**
+ * Whether an approving browser is on the network the app asked from. Both unknown (no proxy in
+ * front, as on a computer serving itself) counts as the same; one known and one not does not.
+ */
+export function sameNetwork(requested: string | null | undefined, here: string | null): boolean {
+  return (requested ?? null) === here;
+}

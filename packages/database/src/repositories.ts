@@ -666,6 +666,7 @@ export function devicesRepo(db: Db) {
       pollHash: string;
       deviceName: string;
       expiresAt: Date;
+      requestNet?: string | null;
     }): Promise<void> {
       await db.insert(deviceLinks).values({ id: ulid(), ...v });
     },

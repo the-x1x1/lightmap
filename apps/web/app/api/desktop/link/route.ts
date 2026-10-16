@@ -8,7 +8,9 @@ import {
   POLL_INTERVAL_S,
   cleanDeviceName,
   newLinkCode,
+  networkKey,
   newSecret,
+  sameNetwork,
   normaliseLinkCode,
   sha256,
 } from '@/lib/server/device-auth';
@@ -36,6 +38,7 @@ export async function POST(req: Request) {
       pollHash: sha256(pollSecret),
       deviceName,
       expiresAt: new Date(Date.now() + LINK_TTL_MS),
+      requestNet: networkKey(req, getServices().env.AUTH_SECRET ?? 'lightmap-anon'),
     });
     const base = getServices().env.NEXT_PUBLIC_APP_URL;
     return json(
@@ -62,11 +65,16 @@ export async function GET(req: Request) {
     const link = await devicesRepo(requireDb()).linkByCode(code);
     if (!link) throw new HttpError(404, 'not_found', 'No sign-in is waiting for that code.');
     const expired = link.expiresAt.getTime() <= Date.now();
+    // Phishing context: whether this browser is on the network the app asked from, and how long
+    // ago the app asked.
+    const here = networkKey(req, getServices().env.AUTH_SECRET ?? 'lightmap-anon');
     return json(
       {
         code,
         deviceName: link.deviceName,
         state: link.approvedAt ? 'approved' : expired ? 'expired' : 'waiting',
+        sameNetwork: sameNetwork(link.requestNet, here),
+        ageSeconds: Math.max(0, Math.round((Date.now() - link.createdAt.getTime()) / 1000)),
       },
       { headers: { 'Cache-Control': 'no-store' } },
     );

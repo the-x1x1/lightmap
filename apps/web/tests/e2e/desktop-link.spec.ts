@@ -64,3 +64,36 @@ test('a desktop app signs in through the browser: code, approval, one token, sig
   expect(((await after.json()) as { signedIn: boolean }).signedIn).toBe(false);
   expect((await request.get('/api/projects', { headers: auth })).status()).toBe(401);
 });
+
+test('a sign-in link from another network needs the code typed (device-code phishing)', async ({
+  page,
+  request,
+  isMobile,
+}) => {
+  test.skip(isMobile, 'the website flow is the same on a phone; once is enough');
+  test.slow();
+  // The "app" asks from another network than the browser that will open the link.
+  const start = await request.post('/api/desktop/link', {
+    data: { deviceName: 'Somebody Else PC' },
+    headers: { 'x-forwarded-for': '203.0.113.7' },
+  });
+  expect(start.status()).toBe(201);
+  const { code } = (await start.json()) as { code: string };
+
+  await page.goto('/');
+  await page.getByTestId('panel-tab-account').click();
+  await page.getByTestId('dev-login-email').fill(`e2e-phish-${Date.now()}@example.com`);
+  await page.getByTestId('dev-login-submit').click();
+  await expect(page.getByTestId('account-button')).toHaveAttribute('data-signed-in', 'true');
+  await page.goto(`/link?code=${encodeURIComponent(code)}`);
+  await expect(page.getByTestId('link-other-network')).toBeVisible();
+  await expect(page.getByTestId('link-code')).toHaveCount(0);
+  await expect(page.getByTestId('link-approve')).toBeDisabled();
+  // The server refuses the approval without the typed code, too.
+  const direct = await page.request.post('/api/desktop/link/approve', { data: { code } });
+  expect(direct.status()).toBe(403);
+  // Typed from the app (the owner's own computer on another network), it goes through.
+  await page.getByTestId('link-typed').fill(code.toLowerCase());
+  await page.getByTestId('link-approve').click();
+  await expect(page.getByTestId('link-approved')).toBeVisible();
+});

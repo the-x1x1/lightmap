@@ -92,8 +92,14 @@ as a TV signs in to a streaming service:
    short code (`ABCD-EFGH`, an alphabet without look-alike characters) and a page to open, and
    keeps a 32-byte poll secret. The link lapses after ten minutes.
 2. The person signs in on the website as usual and approves the code on `/link` (same-origin
-   only, like every mutation). The page names the device and asks them to check that the app
-   shows the same code, so a link someone else started cannot be approved by mistake.
+   only, like every mutation). The page names the device and says how long ago it asked.
+   **Device-code phishing** (someone starts a sign-in on their own machine and sends the victim
+   the link) is met by the network: the link remembers a keyed hash of the requester's network
+   prefix (IPv4 /24, IPv6 /48; never the address; migration 0007), and the page compares it with
+   the browser's. On the same network (the app opened this browser) the code is shown to compare.
+   From another network the page warns that approving would hand over the account, hides the
+   code, and approves only when the person types the code their own app shows - which the
+   victim of a sent link does not have; the approve route enforces the typed code too.
 3. The app's next poll (`POST /api/desktop/link/poll`) trades the secret for a device token
    (`lmd_` + 32 random bytes), once; the link is spent with it.
 4. The app's server forwards account, project, viewpoint and billing requests to the hosted

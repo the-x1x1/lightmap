@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   bearerDeviceToken,
   cleanDeviceName,
+  networkKey,
   newLinkCode,
   normaliseLinkCode,
+  sameNetwork,
   sha256,
 } from '../../lib/server/device-auth.ts';
 
@@ -31,5 +33,25 @@ describe('desktop sign-in helpers', () => {
     expect(cleanDeviceName('Studio <Mac>\n')).toBe('Studio Mac');
     expect(cleanDeviceName('')).toBe('LightMap desktop');
     expect(cleanDeviceName('x'.repeat(100))).toHaveLength(60);
+  });
+
+  it('keys a request by its network, not its address (device-code phishing)', () => {
+    const req = (xff?: string) =>
+      new Request('http://x/', { headers: xff ? { 'x-forwarded-for': xff } : {} });
+    const home = networkKey(req('198.51.100.23, 10.0.0.1'), 's');
+    expect(home).toMatch(/^[0-9a-f]{32}$/);
+    expect(home).not.toContain('198');
+    expect(networkKey(req('198.51.100.200'), 's')).toBe(home); // same /24
+    expect(networkKey(req('198.51.101.23'), 's')).not.toBe(home);
+    expect(networkKey(req('::ffff:198.51.100.9'), 's')).toBe(home);
+    expect(networkKey(req('2001:db8:aa:1::5'), 's')).toBe(
+      networkKey(req('2001:db8:aa:ff::9'), 's'),
+    );
+    expect(networkKey(req(), 's')).toBeNull();
+    expect(networkKey(req('198.51.100.23'), 'other')).not.toBe(home);
+    expect(sameNetwork(home, home)).toBe(true);
+    expect(sameNetwork(null, null)).toBe(true); // a computer serving itself
+    expect(sameNetwork(home, null)).toBe(false);
+    expect(sameNetwork(null, home)).toBe(false);
   });
 });
