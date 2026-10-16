@@ -121,8 +121,20 @@ jobs:
           retention-days: 14
 
   mac:
-    name: Mac app · build · smoke · update
-    runs-on: macos-latest # Apple Silicon
+    name: Mac app (${{ matrix.label }}) · build · smoke · update
+    # Each architecture builds on its own kind of Mac: the bundled node and the native packages
+    # (sharp) are the runner's own, so an Intel build needs an Intel runner.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-latest
+            arch: arm64
+            label: Apple Silicon
+          - runner: macos-15-intel
+            arch: x64
+            label: Intel
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     permissions:
       contents: read
@@ -144,7 +156,7 @@ jobs:
           echo "version=$v" >> "$GITHUB_OUTPUT"
 
       # Hoisted node_modules: the bundle carries real files, not pnpm's links. Native packages
-      # (sharp) come in for macOS on Apple Silicon because they are installed here.
+      # (sharp) come in for this Mac's architecture because they are installed here.
       - name: Install
         run: pnpm install --frozen-lockfile --config.node-linker=hoisted
 
@@ -168,7 +180,7 @@ jobs:
           set -o pipefail
           v='${{ steps.version.outputs.version }}'
           mnt="$RUNNER_TEMP/lightmap-dmg"
-          hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "apps/desktop/mac/out/LightMap-$v-mac-arm64.dmg"
+          hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "apps/desktop/mac/out/LightMap-$v-mac-${{ matrix.arch }}.dmg"
           test -L "$mnt/Applications" || { echo "::error::the disk image has no Applications shortcut"; exit 1; }
           rm -rf /Applications/LightMap.app
           ditto "$mnt/LightMap.app" /Applications/LightMap.app
@@ -191,8 +203,8 @@ jobs:
           codesign --force --sign - --timestamp=none "$work/LightMap.app"
           updates="$HOME/Library/Application Support/LightMap/updates"
           mkdir -p "$updates"
-          ditto -c -k --keepParent "$work/LightMap.app" "$updates/LightMap-$next-mac-arm64.zip"
-          printf '{"version":"%s","zip":"%s"}' "$next" "$updates/LightMap-$next-mac-arm64.zip" > "$updates/staged.json"
+          ditto -c -k --keepParent "$work/LightMap.app" "$updates/LightMap-$next-mac-${{ matrix.arch }}.zip"
+          printf '{"version":"%s","zip":"%s"}' "$next" "$updates/LightMap-$next-mac-${{ matrix.arch }}.zip" > "$updates/staged.json"
           open /Applications/LightMap.app
           for i in $(seq 1 120); do
             got=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" /Applications/LightMap.app/Contents/Info.plist 2>/dev/null || true)
@@ -227,7 +239,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: LightMap-mac-${{ steps.version.outputs.version }}
+          name: LightMap-mac-${{ matrix.arch }}-${{ steps.version.outputs.version }}
           path: |
             apps/desktop/mac/out/*.dmg
             apps/desktop/mac/out/*.dmg.sha256
@@ -264,7 +276,7 @@ jobs:
 
           **Windows:** download \`LightMap-Setup-$V.exe\` and run it.
 
-          **Mac (Apple Silicon):** download \`LightMap-$V-mac-arm64.dmg\`, open it and drag LightMap into Applications. The first time, macOS says it cannot check LightMap: open **System Settings › Privacy & Security** and choose **Open Anyway** (LightMap is not yet signed with an Apple Developer ID).
+          **Mac:** download \`LightMap-$V-mac-arm64.dmg\` for Apple Silicon (M1 and later) or \`LightMap-$V-mac-x64.dmg\` for an Intel Mac, open it and drag LightMap into Applications. The first time, macOS says it cannot check LightMap: open **System Settings › Privacy & Security** and choose **Open Anyway** (LightMap is not yet signed with an Apple Developer ID).
 
           Installed copies on both update themselves.
           EOF

@@ -85,8 +85,10 @@ turbo and the web build never touch it.
 
 # LightMap for Mac
 
-The same app for macOS 12 or later on Apple Silicon (`mac/`): a disk image to drag into
-Applications, its own window, and updates that install themselves.
+The same app for macOS 12 or later (`mac/`), built twice - for Apple Silicon (`-mac-arm64`, on
+`macos-latest`) and for Intel Macs (`-mac-x64`, on `macos-15-intel`), each with that
+architecture's own `node` and native packages: a disk image to drag into Applications, its own
+window, and updates that install themselves.
 
 - **LightMap.app** (`mac/Sources/*.swift`, AppKit + WebKit, no Xcode project) opens a window at
   once, starts the server, and shows the app when it answers. It has the Mac menus a person
@@ -106,7 +108,8 @@ Applications, its own window, and updates that install themselves.
 | Optional server settings                 | `~/Library/Application Support/LightMap/lightmap.env` |
 
 **Updates.** Twenty seconds after launch, and every six hours, the app asks for the latest
-release. If it is newer and carries `LightMap-<version>-mac-arm64.zip` and its `.sha256`, the zip
+release. If it is newer and carries `LightMap-<version>-mac-<arch>.zip` (its own architecture's,
+`arm64` or `x64`) and its `.sha256`, the zip
 is downloaded and kept only if its SHA-256 matches; a bar says it is ready. When LightMap quits, a
 small script waits for it to be gone, unpacks the zip and swaps the new bundle in (the old one is
 kept until the new one is in place); **Restart now** does it at once. Only a copy in an
