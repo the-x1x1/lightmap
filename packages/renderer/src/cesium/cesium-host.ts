@@ -60,6 +60,12 @@ import {
   type UrbanPolygon,
 } from '../urban-areas.ts';
 import { pickSurface } from '../pick.ts';
+import {
+  seasonKey,
+  seasonShows,
+  seasonalisePixels,
+  type ImagerySeason,
+} from '../imagery-season.ts';
 import type { Vec3 } from '../sun-vector.ts';
 import type {
   HostAtmosphere,
@@ -144,6 +150,9 @@ export class CesiumSceneHost implements SceneHost {
   private snowCover = 0;
   /** The chart's dimming (`setGlobeShading`): 1 by day, lower for the unlit night chart. */
   private basemapBrightness = 1;
+  /** The base imagery's tiles take the season per pixel (`seasonalise`), and for which season. */
+  private seasonalTiles = false;
+  private imagerySeasonKey = '';
   private osmBuildingsCheckAt = 0;
   private osmLean = false;
   /** The street map near the place (`u_roadMap`) and its bounds. */
@@ -645,26 +654,85 @@ export class CesiumSceneHost implements SceneHost {
 
   /**
    * The imagery is a summer composite (Sentinel-2 cloudless): beyond the painted ground it would
-   * stay green through autumn and winter. Turned leaves warm its hue a little; bare trees and
-   * dormant grass take some of its saturation. Gentle, because it moves the whole picture (water
-   * and towns too), and the painted ground near the viewer carries the season in full.
+   * stay green through autumn and winter. The provider's tiles take the season pixel by pixel as
+   * they arrive (`imagery-season.ts`: woods turn and go bare, grass goes dormant, snow lies; water
+   * and towns stay), and the layer is rebuilt when the season moves a visible step. The bundled
+   * Natural Earth underneath (the coarse world, seen from orbit) only takes a gentle whole-layer
+   * shift. Every layer keeps the night chart's dimming.
    */
   private applyImagerySeason(): void {
     const { leafOn, autumn, grassGreen } = this.leaf;
     const turned = autumn * leafOn;
     const winter = Math.max(1 - leafOn, 1 - grassGreen);
-    // Under a lasting snowpack the far fields and clearings are white: the summer composite is
-    // lifted and drained toward it (woods stay darker, as they do over snow).
     const snow = this.snowCover;
     const layers = this.widget.imageryLayers;
     for (let i = 0; i < layers.length; i++) {
       const layer = layers.get(i);
+      const perPixel = layer === this.baseLayer && this.seasonalTiles;
       // czm_hue rotates the YIQ angle: green sits near -118 deg and yellow near -44, so a
       // positive turn warms greens toward yellow and orange.
-      layer.hue = 0.22 * turned;
-      layer.saturation = (1 + 0.12 * turned - 0.4 * winter) * (1 - 0.6 * snow);
-      layer.brightness = this.basemapBrightness * (1 + 0.45 * snow);
-      layer.gamma = 1 + 0.35 * snow;
+      layer.hue = perPixel ? 0 : 0.22 * turned;
+      layer.saturation = perPixel ? 1 : (1 + 0.12 * turned - 0.4 * winter) * (1 - 0.6 * snow);
+      layer.brightness = this.basemapBrightness * (perPixel ? 1 : 1 + 0.45 * snow);
+      layer.gamma = perPixel ? 1 : 1 + 0.35 * snow;
+    }
+    // The provider's tiles were coloured for another season: fetch them again (from the
+    // browser's cache) through a fresh layer.
+    const key = seasonKey(this.imagerySeason());
+    if (this.baseLayer && this.seasonalTiles && key !== this.imagerySeasonKey) {
+      this.imagerySeasonKey = key;
+      const old = this.baseLayer;
+      const index = layers.indexOf(old);
+      const layer = new this.C.ImageryLayer(old.imageryProvider);
+      layer.errorEvent.addEventListener((err: unknown) =>
+        this.onError?.('Imagery tile failed — Natural Earth II shown underneath', err),
+      );
+      layer.brightness = this.basemapBrightness;
+      layers.add(layer, index);
+      layers.remove(old, false);
+      this.baseLayer = layer;
+      this.scene.requestRender();
+    }
+  }
+
+  private imagerySeason(): ImagerySeason {
+    return { ...this.leaf, snow: this.snowCover };
+  }
+
+  /**
+   * Has an imagery provider's tiles take the season as they arrive (read into a canvas,
+   * recoloured, handed on). A tile that cannot be read (a host without CORS) stays as it is.
+   */
+  private seasonalise(provider: Cesium.ImageryProvider): void {
+    const request = provider.requestImage.bind(provider);
+    provider.requestImage = (x, y, level, req) => {
+      const job = request(x, y, level, req);
+      if (!job) return job;
+      return job.then((image) => this.seasonTile(image, x, y));
+    };
+    this.seasonalTiles = true;
+  }
+
+  private seasonTile<T>(image: T, x: number, y: number): T | HTMLCanvasElement {
+    const season = this.imagerySeason();
+    if (!seasonShows(season)) return image;
+    try {
+      const src = image as unknown as CanvasImageSource & { width: number; height: number };
+      const w = src.width;
+      const h = src.height;
+      if (!w || !h) return image;
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) return image;
+      ctx.drawImage(src, 0, 0);
+      const data = ctx.getImageData(0, 0, w, h);
+      seasonalisePixels(data.data, w, season, x * w, y * h);
+      ctx.putImageData(data, 0, 0);
+      return canvas;
+    } catch {
+      return image;
     }
   }
 
@@ -1788,6 +1856,7 @@ export class CesiumSceneHost implements SceneHost {
       );
       this.fallbackLayer = layers.addImageryProvider(ne, 0);
     }
+    this.seasonalTiles = false;
     try {
       let provider: Cesium.ImageryProvider | null = null;
       switch (b.kind) {
@@ -1801,6 +1870,7 @@ export class CesiumSceneHost implements SceneHost {
             credit: b.attribution,
             maximumLevel: b.maxZoom ?? 18,
           });
+          this.seasonalise(provider);
           break;
         case 'cesium-ion':
           provider = await C.IonImageryProvider.fromAssetId(
@@ -1809,7 +1879,9 @@ export class CesiumSceneHost implements SceneHost {
           );
           break;
       }
+      if (!provider) this.seasonalTiles = false;
       if (provider) {
+        this.imagerySeasonKey = seasonKey(this.imagerySeason());
         const layer = layers.addImageryProvider(provider);
         layer.errorEvent.addEventListener((err: unknown) =>
           this.onError?.('Imagery tile failed — Natural Earth II shown underneath', err),
