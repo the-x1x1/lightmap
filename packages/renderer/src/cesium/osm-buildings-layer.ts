@@ -8,7 +8,10 @@
  * Geometry is built on the main thread a slice at a time (a dense city tile holds thousands of
  * footprints), each building in its own try: one malformed outline costs that building, never
  * the tile, and never the render loop (a failed asynchronous `Primitive` throws from inside the
- * frame).
+ * frame). Once a tile's slices are all drawn, the footprints that built are built again in
+ * Cesium's workers as one primitive, which replaces the slices when it is ready: a dense tile
+ * otherwise stayed dozens of primitives (Midtown ~220, Kyoto ~370 on screen, each drawn again
+ * for every shadow cascade). A merge that fails is dropped before its frame and the slices stay.
  */
 import type * as Cesium from '@cesium/engine';
 import {
@@ -45,6 +48,8 @@ const SLICE = 250;
  * is spent and the rest waits for the next frame.
  */
 const SLICE_BUDGET_MS = 6;
+/** A tile's merge not ready by then is given up (its slices stay). */
+const MERGE_TIMEOUT_MS = 60_000;
 
 /** The next frame (or, in a page that draws no frames, 50 ms). */
 function nextFrame(): Promise<void> {
@@ -288,6 +293,9 @@ export class OsmBuildingsLayer {
   private shadow = { d: 1, maxM: 0 };
   private buildingAppearance: Cesium.PerInstanceColorAppearance | null = null;
   private readonly buildingPrims = new Set<Cesium.Primitive>();
+  /** Tiles' merged building primitives still being built in the workers (hidden). */
+  private readonly merging = new Set<Cesium.Primitive>();
+  private readonly removeGuard: () => void;
   /**
    * One slice of building or tree work per frame across every tile: tiles load side by side,
    * and their slices queued in the same frame made the walk into a dense city stutter.
@@ -308,6 +316,14 @@ export class OsmBuildingsLayer {
     this.onError = onError;
     this.collection = new C.PrimitiveCollection();
     scene.primitives.add(this.collection);
+    // A merge whose worker failed would throw from the primitives' update: drop it first.
+    this.removeGuard = scene.preRender.addEventListener(() => {
+      for (const p of this.merging)
+        if (p.isDestroyed() || (p as unknown as { _error?: unknown })._error !== undefined) {
+          this.merging.delete(p);
+          if (!p.isDestroyed()) this.collection.remove(p);
+        }
+    });
   }
 
   /** Whether a picked primitive is one of these buildings. */
@@ -601,13 +617,17 @@ export class OsmBuildingsLayer {
         const grounds = await this.footprintGrounds(buildings);
         if (state.cancelled || this.destroyed) return;
         let i = 0;
+        const slices: Cesium.Primitive[] = [];
+        const again: Cesium.GeometryInstance[] = [];
         while (i < buildings.length) {
           await this.nextSlot();
           if (state.cancelled || this.destroyed) return;
-          const slice = this.buildSlice(buildings, grounds, i);
+          const slice = this.buildSlice(buildings, grounds, i, again);
           this.adopt(state, slice.primitive);
+          if (slice.primitive) slices.push(slice.primitive);
           i = slice.next;
         }
+        if (slices.length > 1) void this.mergeSlices(state, slices, again);
       }
 
       if (trees.length > 0) {
@@ -641,6 +661,55 @@ export class OsmBuildingsLayer {
     state.primitives.push(primitive);
     this.owned.add(primitive);
     this.collection.add(primitive);
+    this.scene.requestRender();
+  }
+
+  /**
+   * Builds the tile's buildings again as one primitive in Cesium's workers and, once it is ready,
+   * shows it in place of the slices (same footprints, colours and shader).
+   */
+  private async mergeSlices(
+    state: TileState,
+    slices: readonly Cesium.Primitive[],
+    instances: Cesium.GeometryInstance[],
+  ): Promise<void> {
+    const C = this.C;
+    const merged = new C.Primitive({
+      geometryInstances: instances,
+      appearance: this.appearanceForBuildings(),
+      shadows: C.ShadowMode.ENABLED,
+      asynchronous: true,
+      releaseGeometryInstances: true,
+      allowPicking: true,
+    });
+    merged.show = false; // Cesium builds a hidden primitive all the same
+    this.merging.add(merged);
+    this.collection.add(merged);
+    const started = performance.now();
+    const gone = () =>
+      state.cancelled || this.destroyed || merged.isDestroyed() || !this.merging.has(merged);
+    while (!merged.ready && !gone() && performance.now() - started < MERGE_TIMEOUT_MS) {
+      this.scene.requestRender();
+      await nextFrame();
+    }
+    const failed = gone() || !merged.ready;
+    this.merging.delete(merged);
+    if (failed) {
+      if (!merged.isDestroyed() && !this.destroyed) this.collection.remove(merged);
+      return;
+    }
+    // The shader may have moved on (the Sun set) while the workers built it.
+    merged.appearance = this.appearanceForBuildings();
+    merged.show = true;
+    for (const p of slices) {
+      this.owned.delete(p);
+      this.buildingPrims.delete(p);
+      state.primitives = state.primitives.filter((q) => q !== p);
+      this.collection.remove(p); // destroys it
+    }
+    state.primitives.push(merged);
+    this.owned.add(merged);
+    this.buildingPrims.add(merged);
     this.scene.requestRender();
   }
 
@@ -777,12 +846,14 @@ export class OsmBuildingsLayer {
 
   /**
    * Buildings from `from` on, up to SLICE of them or SLICE_BUDGET_MS of work, as one primitive;
-   * `next` is where the following slice starts.
+   * `next` is where the following slice starts. Each footprint that built is also added to
+   * `again` as a geometry description, for the tile's merge.
    */
   private buildSlice(
     buildings: readonly BuildingFootprint[],
     grounds: readonly FootprintGround[],
     from: number,
+    again: Cesium.GeometryInstance[],
   ): { primitive: Cesium.Primitive | null; next: number } {
     const C = this.C;
     const instances: Cesium.GeometryInstance[] = [];
@@ -799,28 +870,32 @@ export class OsmBuildingsLayer {
           C.Cartesian3.fromDegreesArray(b.outer.flat()),
           b.holes.map((h) => new C.PolygonHierarchy(C.Cartesian3.fromDegreesArray(h.flat()))),
         );
-        const geometry = C.PolygonGeometry.createGeometry(
-          new C.PolygonGeometry({
-            polygonHierarchy: hierarchy,
-            // On a slope the walls start under the lowest corner, and the roof stands clear of
-            // the highest (V&V: Kyoto's Higashiyama, where the hillside came up through roofs
-            // in a saw-tooth of terrain triangles). A part lifted off the ground keeps its own
-            // heights from the centre.
-            height: b.minHeightM > 0 ? ground + b.minHeightM : gr.low - SINK_M,
-            extrudedHeight:
-              b.minHeightM > 0
-                ? ground + b.heightM
-                : Math.max(ground + b.heightM, gr.high + Math.min(b.heightM, 2.5)),
-            vertexFormat,
-          }),
-        );
+        const description = new C.PolygonGeometry({
+          polygonHierarchy: hierarchy,
+          // On a slope the walls start under the lowest corner, and the roof stands clear of
+          // the highest (V&V: Kyoto's Higashiyama, where the hillside came up through roofs
+          // in a saw-tooth of terrain triangles). A part lifted off the ground keeps its own
+          // heights from the centre.
+          height: b.minHeightM > 0 ? ground + b.minHeightM : gr.low - SINK_M,
+          extrudedHeight:
+            b.minHeightM > 0
+              ? ground + b.heightM
+              : Math.max(ground + b.heightM, gr.high + Math.min(b.heightM, 2.5)),
+          vertexFormat,
+        });
+        const geometry = C.PolygonGeometry.createGeometry(description);
         if (!geometry) continue;
+        const colour = buildingColour(C, b);
         instances.push(
           new C.GeometryInstance({
             geometry,
-            attributes: {
-              color: C.ColorGeometryInstanceAttribute.fromColor(buildingColour(C, b)),
-            },
+            attributes: { color: C.ColorGeometryInstanceAttribute.fromColor(colour) },
+          }),
+        );
+        again.push(
+          new C.GeometryInstance({
+            geometry: description,
+            attributes: { color: C.ColorGeometryInstanceAttribute.fromColor(colour) },
           }),
         );
       } catch {
@@ -842,6 +917,8 @@ export class OsmBuildingsLayer {
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
+    this.removeGuard();
+    this.merging.clear();
     for (const s of this.tiles.values()) s.cancelled = true;
     this.tiles.clear();
     this.owned.clear();
