@@ -181,3 +181,38 @@ fails in CI; a takedown notice.
 **Do**: providers are swappable behind interfaces (`DATA_SOURCES_AND_LICENSING.md` "replacement"
 column). Switch the env to the alternative or the fixture (development only), redeploy, update the
 docs row. Never ship without the attribution footer; never re-enable a blocked source.
+
+## R9. Signing the desktop apps (Windows certificate, Apple Developer ID)
+
+Without signing, Windows SmartScreen warns about an unknown publisher and macOS asks the person to
+choose **Open Anyway** once. `desktop.yml` signs as soon as the repository has the secrets below;
+nothing else changes, and builds without them stay as they are.
+
+**Windows (Authenticode).** Buy a code-signing certificate from a CA (an OV certificate works; an
+EV certificate builds SmartScreen reputation faster but usually lives on a hardware token or in a
+cloud HSM, which needs that vendor's signing tool instead of a .pfx). Export it with its private
+key as a .pfx, then in GitHub → Settings → Secrets and variables → Actions add:
+
+- `WINDOWS_CERT_PFX_BASE64`: `[Convert]::ToBase64String([IO.File]::ReadAllBytes('cert.pfx'))`
+- `WINDOWS_CERT_PASSWORD`: the .pfx password
+
+The job signs `LightMap.exe` before staging and `LightMap-Setup-<v>.exe` before hashing, with a
+DigiCert RFC 3161 timestamp, and verifies the installer's signature.
+
+**Mac (Developer ID + notarisation).** Join the Apple Developer Program ($99/yr). In Xcode or on
+developer.apple.com create a **Developer ID Application** certificate, export it with its key
+from Keychain Access as a .p12, and make an app-specific password for your Apple ID
+(appleid.apple.com → Sign-In and Security). Add:
+
+- `MAC_CERT_P12_BASE64`: `base64 -i cert.p12 | pbcopy`
+- `MAC_CERT_PASSWORD`: the .p12 password
+- `APPLE_ID`, `APPLE_TEAM_ID` (10 characters, Membership details), `APPLE_APP_PASSWORD`
+
+Both Mac jobs (Apple Silicon and Intel) import the certificate into a throwaway keychain, sign the
+native modules, the bundled `node`, the shell and the app with the hardened runtime
+(`apps/desktop/mac/entitlements.plist`: JIT for V8, library validation off for sharp), notarise
+and staple the app and the disk image, and check them with `spctl`. The release notes drop the
+Open Anyway instructions once both the certificate and the notarisation password are set.
+
+**Renewal.** Certificates expire (Windows: 1-3 years; Developer ID: 5 years). Timestamped
+signatures stay valid after expiry; replace the secrets before the next release.

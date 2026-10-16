@@ -57,11 +57,40 @@ done
 iconutil -c icns "$iconset" -o "$app/Contents/Resources/AppIcon.icns"
 rm -rf "$iconset"
 
-# 4. Sign ad hoc. Apple Silicon runs no unsigned code; an ad-hoc signature is not a Developer ID,
-#    so Gatekeeper asks once on the first open (see apps/desktop/README.md). The bundled node
-#    keeps its own signature from the Node.js project.
-codesign --force --sign - --timestamp=none "$app"
-codesign --verify --verbose=2 "$app"
+# 4. Sign. With a Developer ID (MAC_SIGN_IDENTITY, e.g. "Developer ID Application: Name (TEAMID)",
+#    in a keychain the job unlocked) every executable inside is signed with the hardened runtime
+#    and a secure timestamp, innermost first, and the app is notarised and stapled below, so
+#    it opens with no warning. Without one it is signed ad hoc: Apple Silicon runs no unsigned
+#    code, and Gatekeeper asks once on the first open (see apps/desktop/README.md).
+if [ -n "${MAC_SIGN_IDENTITY:-}" ]; then
+  ents="$here/entitlements.plist"
+  sign() { codesign --force --timestamp --options runtime --entitlements "$ents" --sign "$MAC_SIGN_IDENTITY" "$@"; }
+  while IFS= read -r -d '' f; do sign "$f"; done < <(
+    find "$app/Contents/Resources" -type f \( -name '*.node' -o -name '*.dylib' -o -name '*.so' \) -print0
+  )
+  sign "$app/Contents/Resources/runtime/node"
+  sign "$app/Contents/MacOS/LightMap"
+  sign "$app"
+  codesign --verify --strict --deep --verbose=2 "$app"
+else
+  codesign --force --sign - --timestamp=none "$app"
+  codesign --verify --verbose=2 "$app"
+fi
+
+# Notarise (Apple's malware check) when the credentials are there: APPLE_ID, APPLE_TEAM_ID and an
+# app-specific password in APPLE_APP_PASSWORD. The ticket is stapled to the app, so it opens
+# offline too.
+notarise() {
+  [ -n "${MAC_SIGN_IDENTITY:-}" ] && [ -n "${APPLE_ID:-}" ] && [ -n "${APPLE_TEAM_ID:-}" ] && [ -n "${APPLE_APP_PASSWORD:-}" ]
+}
+if notarise; then
+  ditto -c -k --keepParent "$app" "$out/notarise.zip"
+  xcrun notarytool submit "$out/notarise.zip" --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
+    --password "$APPLE_APP_PASSWORD" --wait
+  rm -f "$out/notarise.zip"
+  xcrun stapler staple "$app"
+  spctl --assess --type execute --verbose=2 "$app"
+fi
 
 # 5. The update zip and the disk image (with an Applications shortcut to drag onto).
 zip="$out/LightMap-$version-mac-$arch.zip"
@@ -73,6 +102,13 @@ ditto "$app" "$dmgroot/LightMap.app"
 ln -s /Applications "$dmgroot/Applications"
 hdiutil create -volname "LightMap $version" -srcfolder "$dmgroot" -ov -format UDZO "$dmg" > /dev/null
 rm -rf "$dmgroot"
+
+if notarise; then
+  codesign --force --timestamp --sign "$MAC_SIGN_IDENTITY" "$dmg"
+  xcrun notarytool submit "$dmg" --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
+    --password "$APPLE_APP_PASSWORD" --wait
+  xcrun stapler staple "$dmg"
+fi
 
 for f in "$zip" "$dmg"; do
   printf '%s  %s' "$(shasum -a 256 "$f" | cut -d' ' -f1)" "$(basename "$f")" > "$f.sha256"

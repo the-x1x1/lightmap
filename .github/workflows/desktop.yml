@@ -23,6 +23,12 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: read
+    # Authenticode signing, when the repository has a code-signing certificate (docs/RUNBOOKS.md
+    # R9): the shell and the installer are signed and timestamped, so SmartScreen and Windows name
+    # the publisher. Without it they are unsigned, as before.
+    env:
+      WINDOWS_CERT_PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
+      WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -63,6 +69,19 @@ jobs:
           -p:Version=${{ steps.version.outputs.version }}
           -o apps/desktop/publish
 
+      - name: Code-signing certificate (when configured)
+        if: env.WINDOWS_CERT_PFX_BASE64 != ''
+        shell: pwsh
+        run: |
+          $pfx = Join-Path $env:RUNNER_TEMP 'cert.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERT_PFX_BASE64))
+          $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" | Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $signtool) { throw 'signtool.exe is not on this runner' }
+          "SIGNTOOL=$($signtool.FullName)" >> $env:GITHUB_ENV
+          "SIGN_PFX=$pfx" >> $env:GITHUB_ENV
+          & $signtool.FullName sign /f $pfx /p $env:WINDOWS_CERT_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 apps/desktop/publish/LightMap.exe
+          if ($LASTEXITCODE -ne 0) { throw "signing LightMap.exe failed ($LASTEXITCODE)" }
+
       - name: Stage the app
         shell: pwsh
         run: |
@@ -93,6 +112,12 @@ jobs:
           & $iscc "/DAppVersion=$v" '/DPayloadDir=..\stage' apps\desktop\installer\lightmap-setup.iss
           if ($LASTEXITCODE -ne 0) { throw "ISCC exited with $LASTEXITCODE" }
           $exe = "apps/desktop/installer/Output/LightMap-Setup-$v.exe"
+          if ($env:SIGNTOOL) {
+            & $env:SIGNTOOL sign /f $env:SIGN_PFX /p $env:WINDOWS_CERT_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $exe
+            if ($LASTEXITCODE -ne 0) { throw "signing the installer failed ($LASTEXITCODE)" }
+            & $env:SIGNTOOL verify /pa $exe
+            if ($LASTEXITCODE -ne 0) { throw "the signed installer does not verify ($LASTEXITCODE)" }
+          }
           $hash = (Get-FileHash -Algorithm SHA256 -Path $exe).Hash.ToLower()
           "$hash  LightMap-Setup-$v.exe" | Set-Content -NoNewline -Encoding ascii "$exe.sha256"
           Get-Content "$exe.sha256"
@@ -135,9 +160,17 @@ jobs:
             arch: x64
             label: Intel
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 45
+    timeout-minutes: 60
     permissions:
       contents: read
+    # Developer ID signing and notarisation, when the repository has the secrets (docs/RUNBOOKS.md
+    # R9); without them the app is signed ad hoc, as before.
+    env:
+      MAC_CERT_P12_BASE64: ${{ secrets.MAC_CERT_P12_BASE64 }}
+      MAC_CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -165,6 +198,24 @@ jobs:
         env:
           LIGHTMAP_DESKTOP: '1'
           NEXT_TELEMETRY_DISABLED: '1'
+
+      - name: Developer ID certificate (when configured)
+        if: env.MAC_CERT_P12_BASE64 != ''
+        run: |
+          kc="$RUNNER_TEMP/signing.keychain-db"
+          pw="$(uuidgen)"
+          security create-keychain -p "$pw" "$kc"
+          security set-keychain-settings -lut 21600 "$kc"
+          security unlock-keychain -p "$pw" "$kc"
+          echo "$MAC_CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$kc" -P "$MAC_CERT_PASSWORD" -T /usr/bin/codesign
+          rm -f "$RUNNER_TEMP/cert.p12"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$pw" "$kc"
+          security list-keychains -d user -s "$kc" $(security list-keychains -d user | tr -d '"')
+          id=$(security find-identity -v -p codesigning "$kc" | sed -nE 's/.*"(Developer ID Application: [^"]+)".*/\1/p' | head -1)
+          if [ -z "$id" ]; then echo "::error::no Developer ID Application identity in MAC_CERT_P12_BASE64"; exit 1; fi
+          echo "MAC_SIGN_IDENTITY=$id" >> "$GITHUB_ENV"
+          echo "signing as $id"
 
       - name: Build LightMap.app, the update zip and the disk image
         run: bash apps/desktop/mac/build-app.sh "${{ steps.version.outputs.version }}"
@@ -257,6 +308,8 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: write
+    env:
+      MAC_SIGNED: ${{ secrets.MAC_CERT_P12_BASE64 != '' && secrets.APPLE_APP_PASSWORD != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -272,11 +325,15 @@ jobs:
           ls -la dist
           awk -v h="## v$V" 'index($0, h) == 1 { on = 1; next } on && /^## / { exit } on' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
           if [ ! -s "$RUNNER_TEMP/notes.md" ]; then echo "LightMap $V" > "$RUNNER_TEMP/notes.md"; fi
+          FIRST_OPEN=''
+          if [ "$MAC_SIGNED" != true ]; then
+            FIRST_OPEN=' The first time, macOS says it cannot check LightMap: open **System Settings › Privacy & Security** and choose **Open Anyway** (this build is not signed with an Apple Developer ID).'
+          fi
           cat >> "$RUNNER_TEMP/notes.md" <<EOF
 
           **Windows:** download \`LightMap-Setup-$V.exe\` and run it.
 
-          **Mac:** download \`LightMap-$V-mac-arm64.dmg\` for Apple Silicon (M1 and later) or \`LightMap-$V-mac-x64.dmg\` for an Intel Mac, open it and drag LightMap into Applications. The first time, macOS says it cannot check LightMap: open **System Settings › Privacy & Security** and choose **Open Anyway** (LightMap is not yet signed with an Apple Developer ID).
+          **Mac:** download \`LightMap-$V-mac-arm64.dmg\` for Apple Silicon (M1 and later) or \`LightMap-$V-mac-x64.dmg\` for an Intel Mac, open it and drag LightMap into Applications.$FIRST_OPEN
 
           Installed copies on both update themselves.
           EOF
