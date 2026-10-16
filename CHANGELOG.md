@@ -2,7 +2,7 @@
 
 All notable changes. Versions follow semver; `pnpm release <version>` prepends entries from commits.
 
-## Unreleased
+## v0.3.2 — 2026-10-15
 
 - **The far imagery takes the season**: beyond the painted ground, broad-leaf woods turn a mosaic
   of yellow, orange and red in autumn and grey-brown when bare, grass goes tan, and lying snow

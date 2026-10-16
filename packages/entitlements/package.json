@@ -1,6 +1,6 @@
 {
   "name": "@lightmap/entitlements",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "private": true,
   "description": "Plans, entitlements and the pure derivation from a subscription record.",
   "license": "SEE LICENSE IN ../../LICENSE",

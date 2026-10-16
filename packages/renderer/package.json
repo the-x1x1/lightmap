@@ -1,6 +1,6 @@
 {
   "name": "@lightmap/renderer",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "private": true,
   "description": "Cesium-based lighting renderer: sun vector math, scene controller, atmosphere grading, quality governor, capability detection.",
   "license": "SEE LICENSE IN ../../LICENSE",

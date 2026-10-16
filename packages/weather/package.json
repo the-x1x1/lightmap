@@ -1,6 +1,6 @@
 {
   "name": "@lightmap/weather",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "private": true,
   "description": "Weather provider interface, normalized frames, forecast horizon and lighting scenarios.",
   "license": "SEE LICENSE IN ../../LICENSE",

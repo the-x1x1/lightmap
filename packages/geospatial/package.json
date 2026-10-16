@@ -1,6 +1,6 @@
 {
   "name": "@lightmap/geospatial",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "private": true,
   "description": "Coordinates, provider interfaces (geocoding, timezone, terrain, basemap, imagery) and the provider registry.",
   "license": "SEE LICENSE IN ../../LICENSE",
