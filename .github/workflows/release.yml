@@ -7,7 +7,7 @@ on:
 jobs:
   release:
     name: Build · migrate · deploy · smoke
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     environment: production
     permissions:

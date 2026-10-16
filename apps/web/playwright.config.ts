@@ -12,6 +12,10 @@ export default defineConfig({
   // Compile every route before the first test (see warmup.ts). Skipped against a deployed app.
   ...(process.env['E2E_BASE_URL'] ? {} : { globalSetup: './tests/e2e/warmup.ts' }),
   retries: process.env['CI'] ? 1 : 0,
+  // One browser at a time in CI: two Cesium pages on the runner's software renderer beside
+  // `next dev` most likely ran it short of memory: tests failed with the browser gone
+  // ('session closed') on some runs and passed unchanged on others.
+  ...(process.env['CI'] ? { workers: 1 } : {}),
   reporter: process.env['CI'] ? [['github'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: process.env['E2E_BASE_URL'] ?? 'http://localhost:3100',

@@ -15,7 +15,7 @@ env:
 jobs:
   validate:
     name: Install · lint · typecheck · unit · build · licences
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
@@ -56,8 +56,8 @@ jobs:
     name: Integration · E2E (main only)
     if: github.ref == 'refs/heads/main'
     needs: validate
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
     services:
       postgres:
         image: postgis/postgis:16-3.4
