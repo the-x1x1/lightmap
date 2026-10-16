@@ -4,6 +4,21 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **The far imagery takes the season**: beyond the painted ground, broad-leaf woods turn a mosaic
+  of yellow, orange and red in autumn and grey-brown when bare, grass goes tan, and lying snow
+  whitens open ground; conifers, water and towns keep their colours (b3b1aa5)
+- **After sunset the landscape stays readable**, as to an eye or camera that adapts: just after
+  the Sun goes down the ground is about twice as bright as before, and it darkens through civil
+  twilight to night (fb99574)
+- **Smoother dense cities**: each building tile becomes one primitive once drawn, instead of
+  dozens (Midtown and Kyoto drew 220-370), built in the background (59e0fef)
+- **LightMap for Intel Macs**: a second disk image for x64, built and tested like Apple Silicon
+  (2d32274)
+- Desktop sign-in: a link approved from another network than the app asked from needs the code
+  typed from the app, so a sign-in link sent to someone cannot hand over their account (c9f4512)
+- Windows and Mac builds are signed (and the Mac app notarised) once the signing certificates are
+  added to the repository's secrets; until then they build unsigned as before (4f42f81)
+
 - **Winter snow in the lowlands**: where a snowpack lasts the winter (Montreal, Moscow, Helsinki,
   Tromsø, Hokkaido) the ground and the far imagery go white through its heart; places whose snow
   comes and goes stay bare, and the forecast's snow depth still decides inside its horizon (3efd2c2)
