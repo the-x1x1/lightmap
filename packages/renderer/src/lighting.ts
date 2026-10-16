@@ -94,17 +94,31 @@ export function lightingFromScene(s: SceneState): LightingParameters {
   // Direct sunlight fades in from the horizon (atmospheric extinction) and is cut by cloud.
   const horizonFade = smooth(-0.833, 4, el) * (0.55 + 0.45 * smooth(4, 25, el));
   const direct = 2.2 * horizonFade * p.sunTransmittance;
-  // Twilight ambient: a dim, cool, horizon-grazing light so the ground is not black during blue
-  // hour (Cesium's globe has no sky-ambient term). Peaks just below the horizon, gone by −14°.
+  // Twilight ambient: the sky's light once the Sun is down (Cesium's globe has no sky-ambient
+  // term). It falls about a decade every 2.6 deg of the Sun's depression, as twilight
+  // illuminance does (roughly 700 lux at sunset, 3 lux at the end of civil twilight), and is
+  // gone by astronomical night.
+  const depression = Math.min(el, -1) + 1;
   const twilightAmbient =
-    0.35 * smooth(-14, -1, el) * (1 - smooth(-1, 3, el)) * (0.6 + 0.4 * p.diffuseFraction);
+    0.25 *
+    10 ** (0.38 * depression) *
+    (1 - smooth(-1, 3, el)) *
+    smooth(-18, -12, el) *
+    (0.6 + 0.4 * p.diffuseFraction);
   // Moonlight: once the Sun is well down and the Moon is up, the scene's light comes from the
   // Moon — dim, cool, from the Moon's direction. Shadows stay off (too faint to be honest about).
   const moon = s.lunar;
   const moonUp = moon !== null && moon.isAboveHorizon;
   const moonlight = moonUp ? 0.14 * moon.illuminatedFraction * (1 - smooth(-18, -12, el)) : 0;
   const moonlit = moonlight > 0.005;
-  const sunIntensity = direct + twilightAmbient + moonlight;
+  // The eye (and a camera's exposure) adapts as the light goes: from a few degrees above the
+  // horizon down, the scene is shown at about half its drop in stops, so the landscape after
+  // sunset reads dim and blue instead of black (V&V: Erg Chebbi and Kailua at sunset) while
+  // the end of civil twilight is still several stops darker than day. Moonlight is shown as is.
+  const sunAndSky = direct + twilightAmbient;
+  const adaptW = 1 - smooth(0, 6, el);
+  const adapted = sunAndSky < 1.5 ? 1.5 * (sunAndSky / 1.5) ** 0.45 : sunAndSky;
+  const sunIntensity = sunAndSky + (adapted - sunAndSky) * adaptW + moonlight;
   const directLightPresent = el > -0.833 && p.sunTransmittance > 0.12;
   // Clamp to a grazing angle through twilight; below −18° the sky is genuinely dark. Cesium's
   // single-scattering dome collapses within ~1° of the light dipping under the horizon, so the
