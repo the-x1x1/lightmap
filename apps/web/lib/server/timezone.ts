@@ -28,7 +28,12 @@ export class GeoTzTimezoneProvider implements TimezoneProvider {
   private merged: Promise<Finder | null> | null = null;
 
   async lookup(point: GeoPoint): Promise<string | null> {
-    this.all ??= (import('geo-tz/dist/find-all') as Promise<Finder>).catch(() => null);
+    // The comprehensive dataset's entry is exported as `geo-tz/all` (the README's typed path is
+    // dist/find-all); whichever this install resolves. Not literal imports: the package is a
+    // server external, resolved by Node at run time (stage.mjs copies its dist and data).
+    this.all ??= loadFinder('geo-tz/all')
+      .catch(() => loadFinder('geo-tz/dist/find-all'))
+      .catch(() => null);
     this.merged ??= (import('geo-tz') as Promise<Finder>).catch(() => null);
     // The comprehensive dataset first; a zone this runtime's ICU does not know (the newest
     // splits) falls back to the merged dataset's name for the same clocks.
@@ -47,6 +52,10 @@ export class GeoTzTimezoneProvider implements TimezoneProvider {
 }
 
 type Finder = { find: (lat: number, lon: number) => string[] };
+
+function loadFinder(specifier: string): Promise<Finder> {
+  return import(/* webpackIgnore: true */ specifier) as Promise<Finder>;
+}
 
 function isKnownZone(zone: string): boolean {
   try {

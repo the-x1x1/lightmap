@@ -563,6 +563,9 @@ export class CesiumSceneHost implements SceneHost {
         this.detailTexture = null;
         this.groundMaterial = null;
       }
+      // No paint, no season on the far imagery either.
+      this.snowCover = 0;
+      this.applyImagerySeason();
       return;
     }
     // One material for the life of the host; its uniforms are updated in place. Cesium applies

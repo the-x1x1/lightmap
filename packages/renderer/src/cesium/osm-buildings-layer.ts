@@ -206,6 +206,46 @@ interface TileState {
   bridges: readonly BridgeLine[];
 }
 
+const boxes = new WeakMap<BuildingFootprint, [number, number, number, number]>();
+
+/** A footprint's [west, south, east, north] in degrees, worked out once. */
+function footprintBox(b: BuildingFootprint): [number, number, number, number] {
+  let box = boxes.get(b);
+  if (!box) {
+    box = [Infinity, Infinity, -Infinity, -Infinity];
+    for (const [x, y] of b.outer) {
+      box[0] = Math.min(box[0], x);
+      box[1] = Math.min(box[1], y);
+      box[2] = Math.max(box[2], x);
+      box[3] = Math.max(box[3], y);
+    }
+    boxes.set(b, box);
+  }
+  return box;
+}
+
+/** Whether [lon, lat] is within (dx, dy) degrees of any edge of a ring (scaled to a unit circle). */
+function nearRing(
+  ring: readonly (readonly [number, number])[],
+  lon: number,
+  lat: number,
+  dx: number,
+  dy: number,
+): boolean {
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [ax, ay] = ring[j] as readonly [number, number];
+    const [bx, by] = ring[i] as readonly [number, number];
+    const ux = (bx - ax) / dx;
+    const uy = (by - ay) / dy;
+    const px = (lon - ax) / dx;
+    const py = (lat - ay) / dy;
+    const len2 = ux * ux + uy * uy;
+    const t = len2 > 0 ? Math.max(0, Math.min(1, (px * ux + py * uy) / len2)) : 0;
+    if (Math.hypot(px - t * ux, py - t * uy) <= 1) return true;
+  }
+  return false;
+}
+
 /** The ground at a footprint, metres above the ellipsoid. */
 interface FootprintGround {
   centre: number;
@@ -365,7 +405,23 @@ export class OsmBuildingsLayer {
     const t = lonLatToTile(BUILDING_TILE_ZOOM, lon, lat);
     const fp = this.tiles.get(`${t.x}/${t.y}`)?.footprints;
     if (!fp) return null;
-    return fp.some((b) => inRing(b.outer, lon, lat) && !b.holes.some((h) => inRing(h, lon, lat)));
+    // Within the pick's own reach of a wall counts (the surface probe is 2 m wide, so a horizon
+    // sample just outside a footprint can meet its wall); a box test first, then the ring.
+    const mLat = 1 / 110_540;
+    const mLon = 1 / (111_320 * Math.cos((lat * Math.PI) / 180));
+    const reach = 2.5;
+    return fp.some((b) => {
+      const box = footprintBox(b);
+      if (
+        lon < box[0] - reach * mLon ||
+        lon > box[2] + reach * mLon ||
+        lat < box[1] - reach * mLat ||
+        lat > box[3] + reach * mLat
+      )
+        return false;
+      if (inRing(b.outer, lon, lat) && !b.holes.some((h) => inRing(h, lon, lat))) return true;
+      return nearRing(b.outer, lon, lat, reach * mLon, reach * mLat);
+    });
   }
 
   /** The mapped bridge deck under the point (near tiles, once read), or null. */
@@ -602,29 +658,41 @@ export class OsmBuildingsLayer {
       for (let k = 0; k < ring.length; k += step) points.push(ring[k] as [number, number]);
       spans.push([start, points.length]);
     }
-    const h = await this.groundHeights(points);
+    const h = await this.groundHeightsOrNull(points);
     return spans.map(([a, z]) => {
-      const centre = h[a] ?? 0;
-      let low = centre;
-      let high = centre;
+      // A point the terrain could not answer is left out (0 would sink a wall to the ellipsoid).
+      let centre = h[a] ?? null;
+      for (let k = a + 1; centre === null && k < z; k++) centre = h[k] ?? null;
+      const c = centre ?? 0;
+      let low = c;
+      let high = c;
       for (let k = a + 1; k < z; k++) {
-        const v = h[k] ?? centre;
+        const v = h[k] ?? c;
         low = Math.min(low, v);
         high = Math.max(high, v);
       }
-      return { centre, low, high };
+      return { centre: c, low, high };
     });
   }
 
-  /** The terrain's height at points, from its finest tiles (0 where it cannot say). */
+  /** The terrain's height at points, from its finest tiles (0, or null below, where it cannot say). */
   private async groundHeights(points: readonly (readonly [number, number])[]): Promise<number[]> {
+    return (await this.groundHeightsOrNull(points)).map((h) => h ?? 0);
+  }
+
+  private async groundHeightsOrNull(
+    points: readonly (readonly [number, number])[],
+  ): Promise<(number | null)[]> {
+    const missing = null;
     const C = this.C;
     const cartos = points.map(([lon, lat]) => C.Cartographic.fromDegrees(lon, lat));
     try {
       const sampled = await C.sampleTerrainMostDetailed(this.scene.terrainProvider, cartos);
-      return sampled.map((c) => (Number.isFinite(c.height) ? c.height : 0));
+      return sampled.map((c: Cesium.Cartographic) =>
+        Number.isFinite(c.height) ? c.height : missing,
+      );
     } catch {
-      return cartos.map(() => 0);
+      return cartos.map(() => missing);
     }
   }
 

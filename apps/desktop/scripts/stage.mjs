@@ -118,6 +118,8 @@ const geoTzSource = dirname(dirname(requireFromWeb.resolve('geo-tz')));
 const geoTzTarget = join(server, 'node_modules', 'geo-tz');
 if (!existsSync(geoTzTarget)) fail('geo-tz is not in the standalone node_modules');
 copyTree(join(geoTzSource, 'data'), join(geoTzTarget, 'data'));
+// ...and the comprehensive dataset's entry (lib/server/timezone.ts loads it by a computed name).
+copyTree(join(geoTzSource, 'dist'), join(geoTzTarget, 'dist'));
 
 // 3. Cesium's runtime assets are copied into public/ by the web prebuild.
 if (!existsSync(join(serverWeb, 'public', 'cesium', 'VERSION')))
