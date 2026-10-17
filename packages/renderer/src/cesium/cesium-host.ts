@@ -772,7 +772,7 @@ export class CesiumSceneHost implements SceneHost {
   }
 
   /**
-   * A fresh base imagery layer for the current season, drawn over the old one, which is kept
+   * A fresh base imagery layer for the current season, drawn under the old one, which is kept
    * until the new one's tiles are in: removed at once, the globe flashed to the coarse fallback
    * underneath for as long as the tiles took to come back.
    */
@@ -791,7 +791,9 @@ export class CesiumSceneHost implements SceneHost {
       this.onError?.('Imagery tile failed — Natural Earth II shown underneath', err),
     );
     layer.brightness = this.basemapBrightness;
-    layers.add(layer, index + 1);
+    // Under the old layer: it keeps covering while the new one loads (coarse parents first,
+    // then the detail), and its removal reveals the new season at full detail in one step.
+    layers.add(layer, index);
     this.baseLayer = layer;
     const globe = this.scene.globe as Cesium.Globe | undefined;
     let removeListener: (() => void) | null = null;
