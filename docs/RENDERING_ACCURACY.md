@@ -148,8 +148,20 @@ Way's band in the 3D preview stands where the planner's own Galactic Centre says
 precession and nutation Cesium leaves out (≈ 0.4° in 2026; the planner's `milkyWayCore` applies
 Meeus precession, ≈ 0.1°). The "Milky Way core" line, the rose star, the dark windows and the
 map view's violet track are the authority where the two disagree. The star field is a texture:
-no sky-brightness, light-pollution or airglow model, and it is faint under software GL
-(`README.md` "Known limitations").
+no sky-brightness or airglow model, and it is faint under software GL (`README.md` "Known
+limitations").
+
+**City glow (estimate).** Under the Milky Way line the Moon section names the glow the towns
+around the pin cast (`sky-glow.ts`): Walker's law over the bundled Natural Earth urban areas,
+each adding its built-up area times the distance to its edge to the power −2.5 (2 km at least),
+summed within 250 km and graded city (inside a built-up area), suburban, a glow on the horizon,
+a faint dome low, or none, with the side the strongest glow is on. **Verified** against places of
+known sky (Bortle class from published dark-sky surveys): Times Square and Versailles city; Red
+Rock Canyon by Las Vegas suburban; Montauk Point a horizon glow; Big Bend, Mauna Kea, the Grand
+Canyon's South Rim and Bryce Canyon none (`sky-glow.test.ts`). **Caveat:** larger towns only
+(Natural Earth, 2002–2003), so a village, a resort or a lit stadium nearby is missed and small
+towns are under-weighted; haze, snow cover and a town's own lighting shift the real sky. It
+does not change the Milky Way verdict, which stays geometry.
 
 ### Water
 

@@ -43,6 +43,8 @@ import {
   formatFullMoon,
 } from '@/features/planner/night-text';
 import { useSeasonalEnvelope } from '@/features/planner/use-seasonal';
+import { useSkyGlow } from '@/features/planner/use-sky-glow';
+import { describeSkyGlow } from '@lightmap/renderer';
 import { describeLightWindows } from '@/features/planner/light-windows';
 import { DayEventMarkers } from './Timeline';
 import { buildDarkWindowsCalendar } from '@/features/export/dark-windows-calendar';
@@ -301,6 +303,11 @@ function MoonDetails({
   // day (a few milliseconds each; the year slider is continuous).
   const phaseFrom = useSettled(scene.dayEvents.dayStart.getTime(), 300);
   const nextPhases = useMemo(() => describeNextPhases(new Date(phaseFrom), tz), [phaseFrom, tz]);
+  const glow = useSkyGlow(
+    scene.location.point.latitude,
+    scene.location.point.longitude,
+    moonOpen && scene.nightSky !== null,
+  );
   return (
     <details
       className="group"
@@ -378,6 +385,16 @@ function MoonDetails({
           data-verdict={scene.nightSky.verdict}
         >
           Milky Way core: {describeMilkyWay(scene.nightSky)}
+        </p>
+      ) : null}
+      {scene.nightSky && glow ? (
+        <p
+          className="mt-1 text-xs text-[var(--lm-text-muted)]"
+          data-testid="sky-glow"
+          data-grade={glow.grade}
+          title="Estimated from mapped built-up areas (Natural Earth) by Walker's law: larger towns only, no haze or snow. Not a sky-quality reading."
+        >
+          City glow (estimate): {describeSkyGlow(glow)}
         </p>
       ) : null}
       {scene.nightSky && moonOpen ? (

@@ -40,3 +40,4 @@ export * from './noise-texture.ts';
 export * from './frame-sampler.ts';
 export * from './water-mask.ts';
 export * from './geoid.ts';
+export * from './sky-glow.ts';

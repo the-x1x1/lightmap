@@ -2,6 +2,12 @@
 
 All notable changes. Versions follow semver; `pnpm release <version>` prepends entries from commits.
 
+## Unreleased
+
+- **City glow at night**: under the Milky Way line, an estimate of how much the towns around
+  the pin light the sky and from which side (inside a city, suburban, a glow on the horizon, a
+  faint dome, or none), from the bundled built-up areas by Walker's law
+
 ## v0.3.2 — 2026-10-15
 
 - **The far imagery takes the season**: beyond the painted ground, broad-leaf woods turn a mosaic

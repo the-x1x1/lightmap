@@ -205,8 +205,10 @@ daily account-erasure / cache-purge job once the production database secret exis
 
 - **Imagery is coarse by default.** Without an imagery key the globe shows Natural Earth II, so
   scenes are labelled _Estimated Preview_. Terrain relief and light direction are still real.
-- **No vegetation; buildings only where an operator configures Cesium OSM Buildings** (OSM
-  heights, often estimated). Otherwise shadows come from terrain only.
+- **Buildings and trees are OpenStreetMap's, not a survey**: heights often estimated (6 m when
+  unmapped), roofs flat, facade colours a pattern; trees fill mapped woods and parks with generic
+  shapes (no street trees). Loaded within about 2 km of where you stand or look, tall buildings
+  to 6 km.
 - **Sky is a model, not a spectral simulation** (single scattering in three bands for the sky
   gradient, Cesium's own dome in 3D); clouds are procedural coverage, not forecast shapes.
 - **Moon accuracy is ±0.02°** (sun ±0.01°); ample for framing. The eclipse list is a predictor
@@ -219,7 +221,8 @@ daily account-erasure / cache-purge job once the production database secret exis
 - **Night sky**: Cesium's Moon mesh is hidden (it is lit by Cesium's own Sun and renders black at
   night); a moonlit atmosphere halo marks the Moon's position and lights the scene instead. Stars
   are faint under software GL. The Milky Way core verdict and dark windows are geometry (Sun
-  depth, Moon, altitude) — light pollution, airglow and haze are not modelled.
+  depth, Moon, altitude); city glow is a separate estimate from mapped built-up areas (larger
+  towns only), and airglow and haze are not modelled.
 - **Open-Meteo and Nominatim are development-tier** until commercial arrangements are made.
 - **Legal pages are drafts** pending counsel review; `docs/PRIVACY.md` is the engineering behaviour
   they describe.
