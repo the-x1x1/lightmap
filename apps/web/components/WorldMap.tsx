@@ -74,6 +74,7 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
       terrainScreenSpaceError: number;
       resolutionScale: number;
       shadows: boolean;
+      msaaSamples: 1 | 2 | 4;
     }) => void
   >(() => {});
   const [resolving, setResolving] = useState(false);
@@ -83,6 +84,7 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
     terrainScreenSpaceError: number;
     resolutionScale: number;
     shadows: boolean;
+    msaaSamples: 1 | 2 | 4;
   } | null>(null);
   setQualityFromGovernor.current = setQuality;
 

@@ -285,7 +285,8 @@ export class SceneController {
     }
 
     // --- expensive, debounced -------------------------------------------------------------
-    const qualityKey = `${scene.render.terrainScreenSpaceError}|${scene.render.resolutionScale}`;
+    const msaa = scene.render.msaaSamples ?? 4;
+    const qualityKey = `${scene.render.terrainScreenSpaceError}|${scene.render.resolutionScale}|${msaa}`;
     if (pinMoved) this.pinRefreshPending = true;
     if (qualityKey !== this.lastQualityKey || pinMoved) {
       this.scheduleExpensive(() => {
@@ -294,6 +295,7 @@ export class SceneController {
           this.host.setQuality({
             terrainScreenSpaceError: scene.render.terrainScreenSpaceError,
             resolutionScale: scene.render.resolutionScale,
+            msaaSamples: msaa,
           });
         }
         if (this.pinRefreshPending) {

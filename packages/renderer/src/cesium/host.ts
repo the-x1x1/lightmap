@@ -170,6 +170,8 @@ export interface HostGroundTexture {
 export interface HostQuality {
   terrainScreenSpaceError: number;
   resolutionScale: number;
+  /** Multisample anti-aliasing, 1 (off: FXAA instead), 2 or 4. */
+  msaaSamples?: number;
 }
 
 export interface HostStats {

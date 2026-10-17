@@ -97,6 +97,8 @@ export interface RenderSettings {
   /** Terrain screen-space error; higher is cheaper. */
   terrainScreenSpaceError: number;
   resolutionScale: number;
+  /** Multisample anti-aliasing from the quality rung (1 = off, FXAA instead); 4 when left out. */
+  msaaSamples?: 1 | 2 | 4;
   reducedMotion: boolean;
   /**
    * Phase 4 experiment (feature flag `physicalSkyDome`): drive the 3D dome's aerosol (Mie)

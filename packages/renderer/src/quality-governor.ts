@@ -17,6 +17,11 @@ export interface QualityRung {
   resolutionScale: number;
   /** Whether the rung casts terrain shadows at all. */
   shadows: boolean;
+  /**
+   * Multisample anti-aliasing (1 = off, edges smoothed by FXAA instead): 4x is the dearest pass
+   * after the shadows on an integrated GPU at full resolution.
+   */
+  msaaSamples: 1 | 2 | 4;
 }
 
 /** Best first. Every step down must be cheaper in at least one dimension and dearer in none. */
@@ -28,6 +33,7 @@ export const QUALITY_LADDER: readonly QualityRung[] = Object.freeze([
     terrainScreenSpaceError: 1.5,
     resolutionScale: 1,
     shadows: true,
+    msaaSamples: 4,
   },
   {
     label: 'High',
@@ -36,6 +42,7 @@ export const QUALITY_LADDER: readonly QualityRung[] = Object.freeze([
     terrainScreenSpaceError: 2,
     resolutionScale: 1,
     shadows: true,
+    msaaSamples: 4,
   },
   {
     label: 'Balanced',
@@ -44,6 +51,7 @@ export const QUALITY_LADDER: readonly QualityRung[] = Object.freeze([
     terrainScreenSpaceError: 3,
     resolutionScale: 1,
     shadows: true,
+    msaaSamples: 2,
   },
   {
     label: 'Battery',
@@ -52,6 +60,7 @@ export const QUALITY_LADDER: readonly QualityRung[] = Object.freeze([
     terrainScreenSpaceError: 4,
     resolutionScale: 0.85,
     shadows: true,
+    msaaSamples: 1,
   },
   {
     label: 'Minimal',
@@ -60,6 +69,7 @@ export const QUALITY_LADDER: readonly QualityRung[] = Object.freeze([
     terrainScreenSpaceError: 6,
     resolutionScale: 0.7,
     shadows: false,
+    msaaSamples: 1,
   },
 ]);
 
@@ -70,6 +80,7 @@ function cost(r: QualityRung): number[] {
     -r.terrainScreenSpaceError,
     r.resolutionScale,
     r.shadows ? 1 : 0,
+    r.msaaSamples,
   ];
 }
 

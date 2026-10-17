@@ -397,7 +397,8 @@ from fixture data says so.
 The governor's ceiling is the stricter of the device probe (`qualityCeiling`: low-power GPU or a
 small maximum texture) and live conditions (`conditionsCeiling`: battery level while discharging,
 Save-Data). Conditions can take the view down to the Battery rung; only measured frame rate can
-take it to Minimal, where terrain shadows are off.
+take it to Minimal, where terrain shadows are off. Anti-aliasing steps with the rungs: 4x MSAA on
+Ultra and High, 2x on Balanced, and FXAA alone on Battery and Minimal.
 
 ## How to verify
 

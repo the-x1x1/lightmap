@@ -1162,6 +1162,12 @@ export class CesiumSceneHost implements SceneHost {
     this.osmLean = q.terrainScreenSpaceError >= 4;
     const dpr = typeof devicePixelRatio === 'number' && devicePixelRatio > 0 ? devicePixelRatio : 1;
     this.widget.resolutionScale = Math.min(q.resolutionScale, 2 / dpr);
+    // Fewer samples on the cheap rungs (the framebuffers are rebuilt once, on the change); with
+    // MSAA off, FXAA keeps the edges from stair-stepping at a fraction of the cost.
+    const msaa = q.msaaSamples ?? 4;
+    if (this.scene.msaaSamples !== msaa) this.scene.msaaSamples = msaa;
+    this.scene.postProcessStages.fxaa.enabled = msaa <= 1;
+    this.scene.requestRender();
   }
 
   setIonToken(token: string | undefined): void {

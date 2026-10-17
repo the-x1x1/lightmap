@@ -50,6 +50,7 @@ export interface UseRendererOptions {
     terrainScreenSpaceError: number;
     resolutionScale: number;
     shadows: boolean;
+    msaaSamples: 1 | 2 | 4;
   }) => void;
   enabled: boolean;
   /** Public, domain-scoped Cesium ion token when an ion-backed provider is configured. */
@@ -139,6 +140,7 @@ export function useRenderer(opts: UseRendererOptions): RendererHandle {
             terrainScreenSpaceError: q.terrainScreenSpaceError,
             resolutionScale: q.resolutionScale,
             shadows: q.shadows,
+            msaaSamples: q.msaaSamples,
           });
           setState((s) => ({ ...s, qualityLabel: q.label }));
         };
