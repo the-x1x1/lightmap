@@ -111,6 +111,13 @@ describe('leaf season', () => {
     expect(leafSeason(44.3, doy(11, 12), 300, -72.6).leafOn).toBeLessThan(0.05);
   });
 
+  it('holds southern Australia’s planted autumn into May (V&V: Hobart, Melbourne)', () => {
+    expect(leafSeason(-42.88, doy(5, 10), 50, 147.33).leafOn).toBeGreaterThan(0.4);
+    expect(leafSeason(-37.81, doy(5, 10), 30, 144.96).leafOn).toBeGreaterThan(0.6);
+    expect(leafSeason(-37.81, doy(5, 5), 30, 144.96).autumn).toBeGreaterThan(0.8);
+    expect(leafSeason(-42.88, doy(7, 15), 50, 147.33).leafOn).toBeLessThan(0.05);
+  });
+
   it('keeps Central Park in leaf and turned in early November (V&V)', () => {
     const cp = leafSeason(40.78, doy(11, 3), 40, -73.97);
     expect(cp.leafOn).toBeGreaterThan(0.85);

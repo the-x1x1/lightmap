@@ -9,7 +9,8 @@
  * leaf-out about early April at 35°, early May at 45°, and peak colour about late October at
  * 40°, early October at 45°, late September at 60°; later in spring and earlier in autumn with
  * height. The west coasts of the continents in the westerlies (Europe west of about 15° E, the
- * Pacific coast of North America, New Zealand, southern Chile) are maritime: about three weeks
+ * Pacific coast of North America, New Zealand, southern Chile; southern Australia in part) are
+ * maritime: about three weeks
  * earlier in spring, later in autumn, and grass that stays greener through winter. Southern
  * Japan's maples turn about three weeks later than its latitude says, the northeastern US
  * seaboard's trees about two. The transitions are spread
@@ -57,6 +58,10 @@ export function seasonalClimate(
     maritime = 1; // New Zealand
   } else if (lat < -38 && lon > -76 && lon < -70) {
     maritime = 1; // southern Chile
+  } else if (lat < -34 && lon > 113 && lon < 154) {
+    // Southern Australia and Tasmania: the Southern Ocean keeps autumn frost-free and long (the
+    // planted oaks and elms of Melbourne, Hobart and the Dandenongs hold their colour into May).
+    maritime = 0.7;
   }
   if (lat > 30 && lat < 40 && lon > 129 && lon < 142) lateAutumnDays = 22; // Honshu, Kyushu, Shikoku
   // The northeastern seaboard (Washington to Boston): the ocean and the cities hold autumn back
