@@ -41,3 +41,37 @@ export function wheelZoomFactor(e: { deltaY: number; deltaMode: number }): numbe
         : e.deltaY;
   return Math.exp(Math.max(-0.3, Math.min(0.3, px * 0.0008)));
 }
+
+/** The lens's limits (the store clamps to the same). */
+export const FOV_MIN_DEG = 5;
+export const FOV_MAX_DEG = 120;
+/** How quickly a wheel zoom eases to where the wheel sent it, ms (time constant). */
+export const ZOOM_EASE_TAU_MS = 70;
+
+/**
+ * One frame of a wheel zoom easing toward its goal: exponential in the ratio of the two fields
+ * of view (so 10° to 20° takes as long as 60° to 120°), landing on the goal once within 0.2 %. A
+ * mouse notch's 8 % step then opens over a few frames instead of in one, and a trackpad's stream
+ * of small deltas reads as one continuous zoom.
+ */
+export function easeFovToward(
+  currentDeg: number,
+  goalDeg: number,
+  dtMs: number,
+): { fovDeg: number; done: boolean } {
+  const goal = Math.max(FOV_MIN_DEG, Math.min(FOV_MAX_DEG, goalDeg));
+  if (!(currentDeg > 0) || !(dtMs >= 0)) return { fovDeg: goal, done: true };
+  const k = Math.exp(-dtMs / ZOOM_EASE_TAU_MS);
+  const next = goal * Math.pow(currentDeg / goal, k);
+  if (Math.abs(next / goal - 1) < 0.002) return { fovDeg: goal, done: true };
+  return { fovDeg: next, done: false };
+}
+
+/** Where a wheel event sends the zoom: from the goal still being eased to, if any. */
+export function wheelZoomGoal(
+  currentDeg: number,
+  goalDeg: number | null,
+  e: { deltaY: number; deltaMode: number },
+): number {
+  return Math.max(FOV_MIN_DEG, Math.min(FOV_MAX_DEG, (goalDeg ?? currentDeg) * wheelZoomFactor(e)));
+}

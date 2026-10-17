@@ -16,7 +16,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   a time, at the slowest play pace too (it had paused for a fifth of a second every minute);
   the Sun's glare follows the Sun disc and the turning camera frame by frame, and the map's sun
   marker, ray and shadow line glide with it (the day's paths are no longer rebuilt every minute);
-  integrated GPUs start on Balanced; scenes rebuild ~17x faster on a drag.
+  the wheel's zoom from the viewpoint eases over a few frames instead of jumping a notch at a
+  time; integrated GPUs start on Balanced; scenes rebuild ~17x faster on a drag.
 - **Noon between the tropics**: the year's noon height there now runs to 90° and names the two
   days the Sun passes overhead (Kailua's "Lahaina noons", 27 May and 15 July); the solstices
   bound only its lowest noon, which the line had given as its highest (Kailua's 88°).

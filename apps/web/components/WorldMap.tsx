@@ -19,7 +19,7 @@ import { LevelGuide } from './LevelGuide';
 import { EmptyState } from './states/EmptyState';
 import { cx } from '@lightmap/ui';
 import { provisionalTimeZone, samePoint } from '@/features/planner/provisional-zone';
-import { WALK_TICK_MS, walkStep, wheelZoomFactor } from '@/features/map/view-input';
+import { WALK_TICK_MS, easeFovToward, walkStep, wheelZoomGoal } from '@/features/map/view-input';
 
 export interface RendererInfo {
   mode: '3D' | 'OVERLAY' | 'loading';
@@ -309,11 +309,53 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
   const onPointerCancel = (e: React.PointerEvent) => {
     if (drag.current?.id === e.pointerId) drag.current = null; // a cancelled gesture never picks
   };
+  // The wheel sets where the zoom is going (by how far it scrolled, `wheelZoomFactor`); the lens
+  // eases there a frame at a time (`easeFovToward`), so a mouse notch opens smoothly and a
+  // trackpad's stream of deltas costs one store update a frame. A lens set elsewhere meanwhile
+  // (a focal-length button) wins, and "reduce motion" lands at once.
+  const zoomGoal = useRef<number | null>(null);
+  const zoomShown = useRef<number | null>(null);
+  const zoomFrame = useRef<number | null>(null);
+  const stopZoom = () => {
+    if (zoomFrame.current !== null) cancelAnimationFrame(zoomFrame.current);
+    zoomFrame.current = null;
+    zoomGoal.current = null;
+    zoomShown.current = null;
+  };
+  const zoomLoop = (last: number) => (t: number) => {
+    zoomFrame.current = null;
+    const goal = zoomGoal.current;
+    const st = usePlannerStore.getState();
+    if (goal === null || st.camera.mode !== 'viewpoint' || st.camera.fovDeg !== zoomShown.current) {
+      stopZoom();
+      return;
+    }
+    const step = easeFovToward(st.camera.fovDeg, goal, Math.min(50, Math.max(0, t - last)));
+    st.setFov(step.fovDeg);
+    zoomShown.current = usePlannerStore.getState().camera.fovDeg;
+    if (step.done) stopZoom();
+    else zoomFrame.current = requestAnimationFrame(zoomLoop(t));
+  };
+  useEffect(
+    () => () => {
+      if (zoomFrame.current !== null) cancelAnimationFrame(zoomFrame.current);
+    },
+    [],
+  );
   const onWheel = (e: React.WheelEvent) => {
     if (!looking) return;
     const store = usePlannerStore.getState();
-    // By how far the wheel or trackpad moved, not per event (`wheelZoomFactor`).
-    store.setFov(store.camera.fovDeg * wheelZoomFactor(e));
+    const fov = store.camera.fovDeg;
+    // A lens changed since the last frame of the zoom: start over from it.
+    if (zoomShown.current !== fov) stopZoom();
+    const goal = wheelZoomGoal(fov, zoomGoal.current, e);
+    if (store.reducedMotion) {
+      store.setFov(goal);
+      return;
+    }
+    zoomGoal.current = goal;
+    zoomShown.current = fov;
+    zoomFrame.current ??= requestAnimationFrame(zoomLoop(performance.now()));
   };
   // W A S D walk from the viewpoint while held (`walkStep`: 6 m/s, 30 with Shift), in steps
   // of a tenth of a second that the renderer glides between, so the walk does not wait for the

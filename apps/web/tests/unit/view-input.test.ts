@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  FOV_MAX_DEG,
+  FOV_MIN_DEG,
   WALK_MPS,
   WALK_TICK_MS,
+  easeFovToward,
   walkStep,
   wheelZoomFactor,
+  wheelZoomGoal,
 } from '../../features/map/view-input.ts';
 
 describe('the viewpoint walk', () => {
@@ -35,5 +39,39 @@ describe('the wheel zoom', () => {
     expect(wheelZoomFactor({ deltaY: 3, deltaMode: 1 })).toBeCloseTo(Math.exp(99 * 0.0008), 9);
     // Never more than 30 % an event.
     expect(wheelZoomFactor({ deltaY: 2, deltaMode: 2 })).toBeCloseTo(Math.exp(0.3), 9);
+  });
+});
+
+describe('easeFovToward', () => {
+  it('moves part of the way each frame, in ratio, and lands on the goal', () => {
+    const a = easeFovToward(60, 40, 16);
+    expect(a.done).toBe(false);
+    expect(a.fovDeg).toBeLessThan(60);
+    expect(a.fovDeg).toBeGreaterThan(40);
+    // The same ratio takes the same time at any focal length.
+    const b = easeFovToward(30, 20, 16);
+    expect(a.fovDeg / 40).toBeCloseTo(b.fovDeg / 20, 10);
+    let f = 60;
+    let frames = 0;
+    for (let done = false; !done && frames < 100; frames++) {
+      const s = easeFovToward(f, 40, 16);
+      f = s.fovDeg;
+      done = s.done;
+    }
+    expect(f).toBe(40);
+    expect(frames).toBeLessThan(30);
+  });
+
+  it('clamps the goal to the lens limits and lands on bad input', () => {
+    expect(easeFovToward(10, 1, 1000).fovDeg).toBe(FOV_MIN_DEG);
+    expect(easeFovToward(Number.NaN, 50, 16)).toEqual({ fovDeg: 50, done: true });
+  });
+
+  it('a wheel event zooms from the goal under way, not the eased value', () => {
+    const notch = { deltaY: -100, deltaMode: 0 };
+    const g1 = wheelZoomGoal(60, null, notch);
+    const g2 = wheelZoomGoal(58, g1, notch);
+    expect(g2).toBeCloseTo(60 * wheelZoomFactor(notch) ** 2, 10);
+    expect(wheelZoomGoal(119, null, { deltaY: 1000, deltaMode: 0 })).toBe(FOV_MAX_DEG);
   });
 });
