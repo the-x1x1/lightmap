@@ -4,6 +4,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Noon between the tropics**: the year's noon height there now runs to 90° ("overhead twice a
+  year"); the solstices bound only its lowest noon, which the line had given as its highest
+  (Kailua's 88°).
 - **Evergreen southern woods**: Australia's eucalypts, New Zealand's forests and the Cape's and
   central Chile's scrub no longer go bare grey-brown in July; about a third of the canopy (the
   planted trees) turns and drops there, most of it in the Patagonian Andes' beech; around the

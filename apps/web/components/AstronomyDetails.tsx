@@ -599,7 +599,9 @@ export function AstronomyDetails({
         <span className="uppercase tracking-wide">Across the year</span> ·{' '}
         {describeSeasonalEnvelope(seasons)}
         {' — '}
-        the June and December solstices bound every other day here.
+        {seasons.noonRange[1] >= 90
+          ? 'the June and December solstices bound every sunrise and sunset here.'
+          : 'the June and December solstices bound every other day here.'}
       </p>
       <details className="group">
         <summary className="cursor-pointer text-xs uppercase tracking-wide text-[var(--lm-text-muted)]">

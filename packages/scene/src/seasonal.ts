@@ -72,6 +72,9 @@ function range(a: number | null, b: number | null): [number, number] | null {
   return d <= 180 ? [a, b] : [b, a];
 }
 
+/** The tropics' latitude (the Earth's tilt, to the precision a noon height is printed). */
+const TROPIC_DEG = 23.44;
+
 /** The year's sunrise/sunset bearings and noon heights at a place, bounded by its two solstices. */
 export function seasonalEnvelope(
   point: { latitude: number; longitude: number },
@@ -80,9 +83,12 @@ export function seasonalEnvelope(
 ): SeasonalEnvelope {
   const june = solstice(point, timeZone, year, 6);
   const december = solstice(point, timeZone, year, 12);
+  // Between the tropics the noon Sun passes overhead on two days between the solstices, which
+  // bound only its lowest noon there.
+  const tropics = Math.abs(point.latitude) < TROPIC_DEG;
   const noons: [number, number] = [
     Math.min(june.noonElevationDeg, december.noonElevationDeg),
-    Math.max(june.noonElevationDeg, december.noonElevationDeg),
+    tropics ? 90 : Math.max(june.noonElevationDeg, december.noonElevationDeg),
   ];
   return {
     june,
@@ -109,7 +115,7 @@ export function formatBearingRange(r: [number, number]): string {
  * solstice's bearings are given on their own.
  */
 export function describeSeasonalEnvelope(e: SeasonalEnvelope): string {
-  const noon = `noon ${Math.round(e.noonRange[0])}°–${Math.round(e.noonRange[1])}°`;
+  const noon = `noon ${Math.round(e.noonRange[0])}°–${Math.round(e.noonRange[1])}°${e.noonRange[1] >= 90 ? ' (overhead twice a year)' : ''}`;
   if (e.sunriseRange && e.sunsetRange)
     return `Sunrise ${formatBearingRange(e.sunriseRange)}, sunset ${formatBearingRange(e.sunsetRange)}, ${noon}`;
   const parts: string[] = [];

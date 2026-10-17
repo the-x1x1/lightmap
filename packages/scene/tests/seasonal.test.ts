@@ -68,7 +68,7 @@ describe('seasonal envelope (plan §1 "seasonal path")', () => {
   it('reads out as one line with compass names', () => {
     const e = seasonalEnvelope({ latitude: 21.397, longitude: -157.727 }, 'Pacific/Honolulu', 2026);
     expect(describeSeasonalEnvelope(e)).toBe(
-      'Sunrise 64°–115° (ENE–ESE), sunset 245°–296° (WSW–WNW), noon 45°–88°',
+      'Sunrise 64°–115° (ENE–ESE), sunset 245°–296° (WSW–WNW), noon 45°–90° (overhead twice a year)',
     );
   });
 });
