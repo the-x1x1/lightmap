@@ -429,10 +429,12 @@ export class OsmBuildingsLayer {
 
   /**
    * The leaf season (leaf-season.ts) for the broad-leaf trees. A new date swaps the trees'
-   * shader; no tree is rebuilt.
+   * shader; no tree is rebuilt. In steps of a twentieth: each new value is a shader compiled
+   * (tens of milliseconds, a hitch while the date slider runs through autumn), and Cesium keeps
+   * the programs it has built, so coarser steps also come back from its cache more often.
    */
   setSeason(leafOn: number, autumn: number, deciduous = 1): void {
-    const q = (x: number) => Math.round(Math.max(0, Math.min(1, x)) * 50) / 50;
+    const q = (x: number) => Math.round(Math.max(0, Math.min(1, x)) * 20) / 20;
     // The averages become a deciduous crown's own season; the other crowns stay in leaf.
     const crown = deciduousCrown({ leafOn, autumn, deciduous });
     const next = { leafOn: q(crown.leafOn), autumn: q(crown.autumn), deciduous: q(deciduous) };
