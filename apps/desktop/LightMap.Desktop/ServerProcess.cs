@@ -116,7 +116,7 @@ internal sealed class ServerProcess : IDisposable
                 // Build the server's services now, while the window loads the page (the first
                 // /api/health took 3-7 s and used to hold the window back).
                 _ = Http.GetAsync(BaseUrl + "/api/health")
-                    .ContinueWith(t => _ = t.Exception, TaskScheduler.Default);
+                    .ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
                 return BaseUrl;
             }
             if (_node.HasExited)
