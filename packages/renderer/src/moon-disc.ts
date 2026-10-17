@@ -4,6 +4,7 @@
  * sky. Cesium's own Moon is lit by Cesium's Sun, not the planner's, and drew a black disc; this
  * one is drawn from the planner's Moon. Pure apart from the 2D context it is handed.
  */
+import { colorTemperatureKelvin, kelvinToRgb } from '@lightmap/weather';
 import { extinctionMag } from './planet-points.ts';
 
 /** The terminator's half-width as a share of the radius: 1 at new and full, 0 at the quarters. */
@@ -94,4 +95,18 @@ export function moonGlowStrength(
   const dark = t * t * (3 - 2 * t);
   const air = 10 ** (-0.4 * extinctionMag(moonElevationDeg));
   return moonBrightnessVsFull(illuminatedFraction) * dark * air;
+}
+
+/**
+ * The disc's colour where it stands: moonlight is sunlight through the same air, so a low Moon
+ * takes the low Sun's colour (the planner's direct-light curve, 2,900 K on the horizon to neutral
+ * from 20 deg up) and is dimmed by the air it shines through (`extinctionMag`), kept to at least
+ * a third so the rising Moon still reads on a screen - the orange disc over a skyline that a
+ * moonrise shot is planned around. White, full strength, high in the sky.
+ */
+export function moonDiscTint(elevationDeg: number): [number, number, number] {
+  const [r, g, b] = kelvinToRgb(colorTemperatureKelvin(Math.max(0, elevationDeg)));
+  const peak = Math.max(r, g, b, 1e-3);
+  const dim = Math.max(0.35, 10 ** (-0.4 * extinctionMag(elevationDeg)));
+  return [(r / peak) * dim, (g / peak) * dim, (b / peak) * dim];
 }

@@ -2500,7 +2500,8 @@ export class CesiumSceneHost implements SceneHost {
     // Never quite opaque: an opaque billboard writes depth, and the grade would take the disc
     // for ground (no cloud decks over it, haze instead); translucent it stays sky, and the
     // decks cover it where there is cloud.
-    this.moonBillboard.color = C.Color.WHITE.withAlpha(Math.max(0, Math.min(0.99, m.opacity)));
+    const [tr, tg, tb] = m.tint ?? [1, 1, 1];
+    this.moonBillboard.color = new C.Color(tr, tg, tb, Math.max(0, Math.min(0.99, m.opacity)));
     this.placeMoonDisc();
     this.scene.requestRender();
   }

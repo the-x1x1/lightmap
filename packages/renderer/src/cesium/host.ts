@@ -198,6 +198,8 @@ export interface HostMoonDisc {
   opacity: number;
   /** How strongly it lights the haze and thin cloud around it, 0-1 (`moonGlowStrength`). */
   glow?: number;
+  /** The disc's colour and dimming by the air where it stands, linear 0-1 (`moonDiscTint`). */
+  tint?: [number, number, number];
 }
 
 /** A planet as the viewpoint's sky draws it (`setPlanets`, `planet-points.ts`). */

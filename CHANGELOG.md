@@ -11,6 +11,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   or thin altostratus (the halo a night shot is framed on, or waits out), muffled under thick low
   cloud; by its phase (a quarter Moon about a tenth of a full one) and only once the sky is dark.
   Cesium's sky scatters no moonlight, so the Moon had sat in a black sky however hazy the night.
+  A low Moon is drawn orange and dimmed by the air, as a low Sun is, for the moonrise over a
+  skyline; white and full high up.
 - **Planets in the viewpoint's sky**: Mercury, Venus, Mars, Jupiter and Saturn drawn where they
   stand (JPL's approximate elements, checked against Venus's 2023 and 2025 greatest elongations,
   the 2020 Jupiter-Saturn and 2023 Venus-Jupiter conjunctions and three oppositions), each as

@@ -31,7 +31,7 @@ import {
 } from '../ground-texture.ts';
 import { lightingFromScene, type LightingParameters } from '../lighting.ts';
 import { enuTowardSun, enuToEcef } from '../sun-vector.ts';
-import { moonDiscOpacity, moonGlowStrength } from '../moon-disc.ts';
+import { moonDiscOpacity, moonDiscTint, moonGlowStrength } from '../moon-disc.ts';
 import { planetPointInSky } from '../planet-points.ts';
 import { seaProbePoints, seaSurfaceFromSamples } from '../geoid.ts';
 import type {
@@ -314,6 +314,8 @@ export class SceneController {
           scene.solar.elevationDegrees,
           moon.elevationDegrees,
         ),
+        // Orange and dimmed low down, as the low Sun is.
+        tint: moonDiscTint(moon.elevationDegrees),
       });
     } else this.host.setMoonDisc?.(null);
 

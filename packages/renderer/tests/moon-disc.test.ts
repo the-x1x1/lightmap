@@ -3,6 +3,7 @@ import {
   drawMoonPhase,
   moonBrightnessVsFull,
   moonDiscOpacity,
+  moonDiscTint,
   moonGlowStrength,
   terminatorHalfWidth,
   type PhaseContext,
@@ -78,5 +79,20 @@ describe('the Moon glow', () => {
     expect(moonGlowStrength(1, -20, 60)).toBeGreaterThan(0.95);
     expect(moonGlowStrength(1, -20, 5)).toBeLessThan(0.5);
     expect(moonGlowStrength(1, -20, 0)).toBeLessThan(0.001);
+  });
+});
+
+describe('moonDiscTint', () => {
+  it('is white and full high up, orange and dimmer low down, never black', () => {
+    const high = moonDiscTint(60);
+    expect(high[0]).toBeGreaterThan(0.95);
+    expect(high[2] / high[0]).toBeGreaterThan(0.98);
+    const low = moonDiscTint(2);
+    expect(low[0]).toBeGreaterThan(low[1]);
+    expect(low[1]).toBeGreaterThan(low[2]);
+    expect(Math.max(...low)).toBeCloseTo(0.35, 2);
+    const mid = moonDiscTint(15);
+    expect(mid[2] / mid[0]).toBeGreaterThan(low[2] / low[0]);
+    expect(Math.max(...mid)).toBeGreaterThan(0.35);
   });
 });
