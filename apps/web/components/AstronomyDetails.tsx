@@ -28,6 +28,7 @@ import {
   milkyWayWindows,
   moonApparentDiameterDeg,
   moonSizeVsMean,
+  planetPositions,
   sunApparentDiameterDeg,
   utcToLocalSelection,
   utcToWallClock,
@@ -37,6 +38,7 @@ import {
 import { useMemo, useState } from 'react';
 import { usePlannerStore } from '@/features/planner/store';
 import { quantizeDeg } from '@/features/planner/quantize';
+import { describePlanets, visiblePlanets } from '@/features/planner/planets-line';
 import { useSettled } from '@/lib/use-settled';
 import {
   DARK_WINDOW_NIGHTS,
@@ -49,7 +51,12 @@ import {
 } from '@/features/planner/night-text';
 import { useSeasonalEnvelope } from '@/features/planner/use-seasonal';
 import { useSkyGlow } from '@/features/planner/use-sky-glow';
-import { describeSkyGlow, skyBrightnessRatio, type SkyGlowGrade } from '@lightmap/renderer';
+import {
+  describeSkyGlow,
+  skyBrightnessRatio,
+  skyLimitingMagnitude,
+  type SkyGlowGrade,
+} from '@lightmap/renderer';
 import { describeLightWindows } from '@/features/planner/light-windows';
 import { DayEventMarkers } from './Timeline';
 import { buildDarkWindowsCalendar } from '@/features/export/dark-windows-calendar';
@@ -337,6 +344,22 @@ function MoonDetails({
     scene.location.point.longitude,
     moonOpen && scene.nightSky !== null,
   );
+  // The planets one can see at the planned minute (a few microseconds; per minute and place).
+  const planetMinute = Math.floor(scene.utc.getTime() / 60_000);
+  const planetLat = quantizeDeg(scene.location.point.latitude);
+  const planetLon = quantizeDeg(scene.location.point.longitude);
+  const sunEl = Math.round(scene.solar.elevationDegrees * 4) / 4;
+  const planets = useMemo(
+    () =>
+      describePlanets(
+        visiblePlanets(
+          planetPositions(new Date(planetMinute * 60_000), planetLat, planetLon),
+          sunEl,
+          skyLimitingMagnitude,
+        ),
+      ),
+    [planetMinute, planetLat, planetLon, sunEl],
+  );
   return (
     <details
       className="group"
@@ -427,6 +450,9 @@ function MoonDetails({
           Milky Way core: {describeMilkyWay(scene.nightSky)}
         </p>
       ) : null}
+      <p className="mt-1 text-xs text-[var(--lm-text-muted)]" data-testid="planets">
+        Planets: {planets ?? 'none in sight'}
+      </p>
       {scene.nightSky && glow ? (
         <p
           className="mt-1 text-xs text-[var(--lm-text-muted)]"

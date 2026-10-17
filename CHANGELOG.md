@@ -12,6 +12,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   the 2020 Jupiter-Saturn and 2023 Venus-Jupiter conjunctions and three oppositions), each as
   bright as its magnitude and the twilight allow: Venus faintly by day, Jupiter soon after
   sunset, under the clouds and behind the ridges. The star field had none.
+  The Moon section names the planets in sight, where and how bright ("Venus W 28° (mag −4.2),
+  Jupiter WNW 15° (−1.9)").
 - **Smoother walking and rendering**: hold W A S D to walk from the viewpoint (Shift to run) and
   hold an arrow key to turn smoothly, the eye gliding between steps instead of hopping at the
   keyboard's repeat rate; building tiles
