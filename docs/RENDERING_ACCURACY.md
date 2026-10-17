@@ -296,7 +296,11 @@ latitude, the day of the year, the height and a regional rule for maritime clima
   maples turn about three weeks late. The leaves come down over about three weeks after the
   peak where frost strips them, and over five or six where autumn has none (the maritime west,
   southern Japan): London's planes hold into late November, Kyoto's maples into December. The
-  seasons flip across the equator, and inside about 25° the trees keep their leaves.
+  seasons flip across the equator, and inside about 25° the trees keep their leaves. South of the
+  equator most woods are evergreen (eucalypts, southern beech, the Cape's and Chile's scrub), so
+  only about a third of the canopy turns and drops — the planted trees of towns and farms —
+  except in the Patagonian Andes' deciduous beech. North of it the Mediterranean's and
+  California's evergreen oaks and scrub are still treated like any broad-leaf wood.
 - **The 3D trees.** Broad-leaf crowns turn yellow, orange or red, each a little before or after
   its neighbours, and as the leaves fall they fade to grey-brown twigs and thin to see-through
   (their shadows thin with them). Conifers stay green.

@@ -16,6 +16,11 @@
  * seaboard's trees about two. The transitions are spread
  * over weeks so a place's own year falls inside them. The seasons flip across the equator, and
  * inside about 25° the trees keep their leaves.
+ *
+ * South of the equator most woods are evergreen whatever the latitude - eucalypts in Australia,
+ * southern beech and podocarps in New Zealand, sclerophyll scrub in Chile and the Cape - so only
+ * about a third of the canopy (the planted oaks, planes and poplars of towns and farms) turns and
+ * drops (`deciduousShare`); the deciduous southern beech of the Patagonian Andes is the exception.
  */
 export interface LeafSeason {
   /** Broad-leaf canopy in leaf: 0 bare, 1 full. */
@@ -34,6 +39,18 @@ const GRASS_DORMANCY = 0.65;
 function smooth(edge0: number, edge1: number, x: number): number {
   const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
   return t * t * (3 - 2 * t);
+}
+
+/**
+ * The share of the broad-leaf canopy that turns and drops: all of it north of the equator (its
+ * conifers are told apart by colour), about a third in the south's evergreen woods, most of it
+ * in the Patagonian Andes' deciduous beech (lenga, nire). Unknown longitude in the south: a third.
+ */
+export function deciduousShare(latitudeDeg: number, longitudeDeg: number | null): number {
+  if (latitudeDeg >= 0) return 1;
+  if (longitudeDeg !== null && latitudeDeg < -37 && longitudeDeg > -76 && longitudeDeg < -68)
+    return 0.8;
+  return 0.35;
 }
 
 /**
@@ -102,9 +119,11 @@ export function leafSeason(
     longitudeDeg === null
       ? { maritime: 0, lateAutumnDays: 0 }
       : seasonalClimate(latitudeDeg, longitudeDeg);
-  // How seasonal the trees are: none in the tropics, fully from about 34°.
+  // How seasonal the trees are: none in the tropics, fully from about 34°; the grass follows
+  // the latitude, the canopy only its deciduous share.
   const seasonal = smooth(24, 34, lat);
   if (seasonal === 0) return EVERGREEN;
+  const canopy = seasonal * deciduousShare(latitudeDeg, longitudeDeg);
   // On the northern calendar: the southern year runs half a year behind.
   const d = latitudeDeg < 0 ? (((dayOfYear + 182.6) % 365.25) + 365.25) % 365.25 : dayOfYear;
   const up = leafOutDay(lat, heightM, climate.maritime);
@@ -125,8 +144,8 @@ export function leafSeason(
   // Grass greens a little before the trees leaf out and browns a little after they drop.
   const grass = smooth(up - 34, up - 6, t) * (1 - smooth(peak + 12, peak + 46, t));
   return {
-    leafOn: round2(1 - seasonal * (1 - leafOn)),
-    autumn: round2(seasonal * autumn),
+    leafOn: round2(1 - canopy * (1 - leafOn)),
+    autumn: round2(canopy * autumn),
     grassGreen: round2(1 - seasonal * GRASS_DORMANCY * (1 - 0.7 * climate.maritime) * (1 - grass)),
   };
 }

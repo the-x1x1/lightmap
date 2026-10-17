@@ -4,6 +4,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Evergreen southern woods**: Australia's eucalypts, New Zealand's forests and the Cape's and
+  central Chile's scrub no longer go bare grey-brown in July; about a third of the canopy (the
+  planted trees) turns and drops there, most of it in the Patagonian Andes' beech.
 - **Exposure in a ridge's shadow**: with the Sun or Moon up but behind the sampled skyline, the
   exposure estimate (panel, field view, card) gives the ground the sky's share of the light only
   — about 2.3 stops under a clear Sun, nearly nothing under overcast.

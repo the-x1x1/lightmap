@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   EVERGREEN,
+  deciduousShare,
   leafOutDay,
   leafSeason,
   peakColourDay,
@@ -45,13 +46,28 @@ describe('leaf season', () => {
   });
 
   it('flips the seasons across the equator', () => {
-    // Christchurch (43.5° S) in April is autumn; in October, spring.
-    const apr = leafSeason(-43.5, doy(4, 20));
-    expect(apr.autumn).toBeGreaterThan(0.5);
-    const jul = leafSeason(-43.5, doy(7, 15));
-    expect(jul.leafOn).toBeLessThan(0.1);
-    const jan = leafSeason(-43.5, doy(1, 15));
-    expect(jan.leafOn).toBe(1);
+    // Bariloche (41° S), in the Andes' deciduous beech: April is autumn, July bare, January full.
+    const at = (m: number, d: number) => leafSeason(-41.13, doy(m, d), 800, -71.3);
+    expect(at(4, 20).autumn).toBeGreaterThan(0.5);
+    expect(at(7, 15).leafOn).toBeLessThan(0.3);
+    expect(at(1, 15).leafOn).toBe(1);
+  });
+
+  it('keeps the south’s evergreen woods mostly green: a third of the canopy turns', () => {
+    expect(deciduousShare(45, 7)).toBe(1);
+    // Christchurch, Hobart, Cape Town, Perth: July keeps about two thirds of the canopy.
+    for (const [lat, lon] of [
+      [-43.5, 172.6],
+      [-42.88, 147.33],
+      [-33.92, 18.42],
+      [-31.95, 115.86],
+    ] as const) {
+      const jul = leafSeason(lat, doy(7, 15), 20, lon);
+      expect(jul.leafOn).toBeGreaterThan(0.6);
+      expect(jul.leafOn).toBeLessThan(0.75);
+    }
+    // Christchurch's planted autumn still shows in April, as a third of the colour.
+    expect(leafSeason(-43.5, doy(4, 20), 10, 172.6).autumn).toBeGreaterThan(0.15);
   });
 
   it('brings spring later and autumn earlier up a mountain', () => {
@@ -112,10 +128,14 @@ describe('leaf season', () => {
   });
 
   it('holds southern Australia’s planted autumn into May (V&V: Hobart, Melbourne)', () => {
-    expect(leafSeason(-42.88, doy(5, 10), 50, 147.33).leafOn).toBeGreaterThan(0.4);
-    expect(leafSeason(-37.81, doy(5, 10), 30, 144.96).leafOn).toBeGreaterThan(0.6);
-    expect(leafSeason(-37.81, doy(5, 5), 30, 144.96).autumn).toBeGreaterThan(0.8);
-    expect(leafSeason(-42.88, doy(7, 15), 50, 147.33).leafOn).toBeLessThan(0.05);
+    // Of the deciduous third: Hobart's half down by 10 May, Melbourne's mostly up and turned.
+    const share = deciduousShare(-37.81, 144.96);
+    const left = (lat: number, lon: number, m: number, d: number, h: number) =>
+      1 - (1 - leafSeason(lat, doy(m, d), h, lon).leafOn) / share;
+    expect(left(-42.88, 147.33, 5, 10, 50)).toBeGreaterThan(0.4);
+    expect(left(-37.81, 144.96, 5, 10, 30)).toBeGreaterThan(0.6);
+    expect(leafSeason(-37.81, doy(5, 5), 30, 144.96).autumn / share).toBeGreaterThan(0.8);
+    expect(left(-42.88, 147.33, 7, 15, 50)).toBeLessThan(0.05);
   });
 
   it('keeps Central Park in leaf and turned in early November (V&V)', () => {
