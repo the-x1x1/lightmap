@@ -65,10 +65,26 @@ describe('seasonal envelope (plan §1 "seasonal path")', () => {
     expect(line).not.toContain('-0°');
   });
 
+  it('names the days the noon Sun passes overhead, between the tropics only', () => {
+    const at = (lat: number, lon: number, tz: string) =>
+      seasonalEnvelope({ latitude: lat, longitude: lon }, tz, 2026).overheadDates;
+    // Kailua's 'Lahaina noons', late May and mid-July; Singapore's near the equinoxes.
+    expect(at(21.397, -157.727, 'Pacific/Honolulu')).toEqual(['2026-05-27', '2026-07-15']);
+    const sg = at(1.35, 103.82, 'Asia/Singapore');
+    expect(sg).toHaveLength(2);
+    expect(sg[0]).toMatch(/^2026-03-2\d$/);
+    expect(sg[1]).toMatch(/^2026-09-[12]\d$/);
+    // Aswan, just north of the Tropic of Cancer: never overhead, noon tops out under 90°.
+    expect(at(24.09, 32.9, 'Africa/Cairo')).toEqual([]);
+    expect(
+      seasonalEnvelope({ latitude: 24.09, longitude: 32.9 }, 'Africa/Cairo', 2026).noonRange[1],
+    ).toBeLessThan(90);
+  });
+
   it('reads out as one line with compass names', () => {
     const e = seasonalEnvelope({ latitude: 21.397, longitude: -157.727 }, 'Pacific/Honolulu', 2026);
     expect(describeSeasonalEnvelope(e)).toBe(
-      'Sunrise 64°–115° (ENE–ESE), sunset 245°–296° (WSW–WNW), noon 45°–90° (overhead twice a year)',
+      'Sunrise 64°–115° (ENE–ESE), sunset 245°–296° (WSW–WNW), noon 45°–90° (overhead 27 May and 15 Jul)',
     );
   });
 });

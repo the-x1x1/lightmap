@@ -7,7 +7,13 @@
  * 21st stands in for the solstice (which falls on the 20th–22nd): within 0.03° of bearing at
  * mid-latitudes, 0.2° near the Arctic circle, under the 1° the readout shows.
  */
-import { computeDayEvents, sunPosition } from '@lightmap/astronomy';
+import {
+  computeDayEvents,
+  julianCenturiesTT,
+  solarEquatorial,
+  sunPosition,
+  utcToWallClock,
+} from '@lightmap/astronomy';
 import { compassLabel } from '@lightmap/geospatial';
 
 export interface SolsticeDay {
@@ -35,6 +41,11 @@ export interface SeasonalEnvelope {
   sunsetRange: [number, number] | null;
   /** Lowest and highest noon of the year, degrees. */
   noonRange: [number, number];
+  /**
+   * Between the tropics, the civil dates (YYYY-MM-DD, in the zone) on which the noon Sun passes
+   * closest to the zenith - shadowless noons; one on a tropic, none outside.
+   */
+  overheadDates: string[];
 }
 
 function solstice(
@@ -76,6 +87,39 @@ function range(a: number | null, b: number | null): [number, number] | null {
 /** The tropics' latitude (the Earth's tilt, to the precision a noon height is printed). */
 const TROPIC_DEG = 23.44;
 
+/**
+ * The days of the year the noon Sun stands highest between the tropics: local maxima of the
+ * noon height over the year (from the Sun's declination each day), within half a degree of the
+ * zenith. A latitude the Sun crosses twice gives two dates; a tropic, one.
+ */
+function overheadNoons(
+  point: { latitude: number; longitude: number },
+  timeZone: string,
+  year: number,
+): string[] {
+  if (Math.abs(point.latitude) >= TROPIC_DEG + 0.05) return [];
+  const start = Date.UTC(year, 0, 1, 12) - (point.longitude / 15) * 3_600_000;
+  // The noon height from the Sun's declination (90° less its distance from the latitude), so
+  // the equation of time's quarter hour does not shave degrees off it.
+  const heights: number[] = [];
+  for (let d = 0; d < 366; d++) {
+    const dec = solarEquatorial(julianCenturiesTT(new Date(start + d * 86_400_000))).declinationDeg;
+    heights.push(90 - Math.abs(point.latitude - dec));
+  }
+  const out: string[] = [];
+  for (let d = 0; d < heights.length; d++) {
+    const h = heights[d] ?? 0;
+    const prev = heights[(d + heights.length - 1) % heights.length] ?? 0;
+    const next = heights[(d + 1) % heights.length] ?? 0;
+    if (h >= prev && h > next && h > 89.5) {
+      const w = utcToWallClock(new Date(start + d * 86_400_000), timeZone);
+      const date = `${w.year}-${String(w.month).padStart(2, '0')}-${String(w.day).padStart(2, '0')}`;
+      if (w.year === year) out.push(date);
+    }
+  }
+  return out;
+}
+
 /** The year's sunrise/sunset bearings and noon heights at a place, bounded by its two solstices. */
 export function seasonalEnvelope(
   point: { latitude: number; longitude: number },
@@ -97,12 +141,21 @@ export function seasonalEnvelope(
     sunriseRange: range(june.sunriseAzimuthDeg, december.sunriseAzimuthDeg),
     sunsetRange: range(june.sunsetAzimuthDeg, december.sunsetAzimuthDeg),
     noonRange: noons,
+    overheadDates: tropics ? overheadNoons(point, timeZone, year) : [],
   };
 }
 
 /** Clockwise angular width of a range, degrees. */
 export function rangeWidthDeg(r: [number, number]): number {
   return (((r[1] - r[0]) % 360) + 360) % 360;
+}
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** "2026-05-26" -> "26 May". */
+function dayMonth(date: string): string {
+  const [, m, d] = date.split('-');
+  return `${Number(d)} ${MONTHS[Number(m) - 1] ?? ''}`;
 }
 
 /** "64°–115° (ENE–ESE)" for a clockwise bearing range. */
@@ -116,7 +169,8 @@ export function formatBearingRange(r: [number, number]): string {
  * solstice's bearings are given on their own.
  */
 export function describeSeasonalEnvelope(e: SeasonalEnvelope): string {
-  const noon = `noon ${Math.round(e.noonRange[0])}°–${Math.round(e.noonRange[1])}°${e.noonRange[1] >= 90 ? ' (overhead twice a year)' : ''}`;
+  const overhead = e.overheadDates.map(dayMonth).join(' and ');
+  const noon = `noon ${Math.round(e.noonRange[0])}°–${Math.round(e.noonRange[1])}°${overhead ? ` (overhead ${overhead})` : ''}`;
   if (e.sunriseRange && e.sunsetRange)
     return `Sunrise ${formatBearingRange(e.sunriseRange)}, sunset ${formatBearingRange(e.sunsetRange)}, ${noon}`;
   const parts: string[] = [];

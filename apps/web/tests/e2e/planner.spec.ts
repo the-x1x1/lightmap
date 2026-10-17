@@ -105,7 +105,7 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
   );
   await expect(page.getByTestId('seasonal-envelope')).toContainText('Sunrise 64°–115°');
   await expect(page.getByTestId('seasonal-envelope')).toContainText(
-    'noon 45°–90° (overhead twice a year)',
+    'noon 45°–90° (overhead 27 May and 15 Jul)',
   );
   // Moon planning: the full Moon of 31 May 2026 rises and sets inside the day — grey markers.
   await expect(

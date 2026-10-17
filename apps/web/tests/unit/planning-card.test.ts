@@ -89,7 +89,7 @@ describe('buildPlanningCard', () => {
       /^3 Jun 21:\d\d–22:\d\d \(core to 2\d°\) · 4 Jun 21:\d\d–22:\d\d \(core to 2\d°\) · \d+ more in 45 nights$/,
     );
     expect(card.facts.find((f) => f.label === 'Across the year')!.value).toBe(
-      'Sunrise 64°–115° (ENE–ESE), sunset 245°–296° (WSW–WNW), noon 45°–90° (overhead twice a year)',
+      'Sunrise 64°–115° (ENE–ESE), sunset 245°–296° (WSW–WNW), noon 45°–90° (overhead 27 May and 15 Jul)',
     );
     expect(card.fileName).toBe('lightmap-kailua-beach-2026-05-31-1230.png');
   });
