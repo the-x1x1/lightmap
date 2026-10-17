@@ -45,6 +45,10 @@ export const SKY_GLOW_REACH_KM = 250;
 const R_KM = 6371;
 const RAD = Math.PI / 180;
 
+/** Inside a built-up area at least this large, or with the index this high, the sky is a city's. */
+const CITY_AREA_KM2 = 50;
+const CITY_INDEX = 10;
+
 /** Grade thresholds on the Walker index (see the module comment). */
 const SUBURBAN = 1;
 const HORIZON = 0.15;
@@ -72,7 +76,7 @@ export function skyGlowAt(
   let best = 0;
   let bearingDeg: number | null = null;
   let distanceKm: number | null = null;
-  let inside = false;
+  let insideAreaKm2 = 0;
   // The glow as a vector: each town pulls toward itself by what it adds.
   let sumX = 0;
   let sumY = 0;
@@ -102,7 +106,7 @@ export function skyGlowAt(
     if (d > SKY_GLOW_REACH_KM) continue;
     const g = area * Math.max(d, 2) ** -2.5;
     index += g;
-    if (contains) inside = true;
+    if (contains) insideAreaKm2 = Math.max(insideAreaKm2, area);
     else if (d > 0) {
       sumX += (g * cx) / d;
       sumY += (g * cy) / d;
@@ -113,6 +117,10 @@ export function skyGlowAt(
       bearingDeg = contains ? null : (Math.atan2(cx, cy) / RAD + 360) % 360;
     }
   }
+  // Inside a large built-up area, or one in a bright metro, the sky is a city's; inside a small
+  // town on its own the glow is graded by the index like anywhere else (no jump from a horizon
+  // glow just outside its edge to a city sky just inside).
+  const inside = insideAreaKm2 > 0 && (insideAreaKm2 >= CITY_AREA_KM2 || index >= CITY_INDEX);
   const grade: SkyGlowGrade = inside
     ? 'city'
     : index >= SUBURBAN
@@ -145,13 +153,19 @@ const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const;
 
 /** One line for the night section, e.g. "a glow on the horizon to the SW (town 40 km off)". */
 export function describeSkyGlow(g: SkyGlow): string {
-  const side = g.bearingDeg === null ? '' : ` to the ${COMPASS[Math.round(g.bearingDeg / 45) % 8]}`;
-  const off = g.distanceKm === null ? '' : ` (built-up area ${Math.round(g.distanceKm)} km off)`;
+  const side =
+    g.bearingDeg === null ? '' : ` to the ${COMPASS[Math.round(g.bearingDeg / 45) % 8] ?? 'N'}`;
+  const off =
+    g.distanceKm === null
+      ? ''
+      : g.distanceKm < 0.5
+        ? ' (inside a town)'
+        : ` (built-up area ${Math.round(g.distanceKm)} km off)`;
   // Where to drive for a darker sky: away from the glow.
   const away =
     g.darkerBearingDeg === null
       ? ''
-      : `; darker away to the ${COMPASS[Math.round(g.darkerBearingDeg / 45) % 8]}`;
+      : `; darker away to the ${COMPASS[Math.round(g.darkerBearingDeg / 45) % 8] ?? 'N'}`;
   switch (g.grade) {
     case 'city':
       return 'city sky - inside a built-up area the core is washed out';

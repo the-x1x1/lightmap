@@ -50,6 +50,15 @@ describe('sky glow from the urban areas (Walker’s law)', () => {
     expect(describeSkyGlow(g)).toMatch(/washed out/);
   });
 
+  it('inside a small town the glow is graded by the index, not as a city', () => {
+    const g = skyGlowAt(30, -100, [town(30, -100, 0, 0, 1.5)]);
+    expect(g.grade).toBe('horizon');
+    expect(describeSkyGlow(g)).toBe(
+      'a glow on the horizon (inside a town); the core shows above it',
+    );
+    expect(skyBrightnessRatio(g)).toBeLessThan(5);
+  });
+
   it('falls with distance to the power 2.5 and points at the town', () => {
     const near = skyGlowAt(30, -100, [town(30, -100, 30, 0, 20)]);
     const far = skyGlowAt(30, -100, [town(30, -100, 60, 0, 20)]);

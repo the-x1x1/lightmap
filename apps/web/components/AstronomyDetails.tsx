@@ -433,7 +433,7 @@ export function AstronomyDetails({
   // At night the starting setting runs to minutes; the lens decides how long the stars stay
   // points (full-frame equivalent of the current frame; the camera box has the exact sensor).
   // After civil dusk the towns around light the sky: the floor under the Moon and the stars.
-  const glow = useSkyGlow(lat, lng, s.elevationDegrees < -6);
+  const glow = useSkyGlow(lat, lng, s.elevationDegrees <= -6);
   const exposure = estimateExposure({
     sunElevationDeg: s.elevationDegrees,
     skyGlowRatio: glow ? skyBrightnessRatio(glow) : 1,

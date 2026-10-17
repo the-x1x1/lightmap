@@ -193,7 +193,7 @@ export function treeFragmentShader(
 /** Broad-leaf crowns' alpha: the mark `treeFragmentShader` looks for. */
 const BROADLEAF_ALPHA = 0.99;
 
-/** Trees per primitive (their geometry is built in Cesium's workers). */
+/** Trees described per frame (their geometry is built in Cesium's workers). */
 const TREE_SLICE = 1500;
 
 interface TileState {
@@ -639,41 +639,41 @@ export class OsmBuildingsLayer {
         if (slices.length > 1) void this.mergeSlices(state, slices, again);
       }
 
-      if (trees.length > 0) {
-        const grounds = await this.groundHeights(trees.map((t) => [t.lon, t.lat]));
-        if (state.cancelled || this.destroyed) return;
-        // The whole tile's trees as one primitive in the workers, described TREE_SLICE trees a
-        // frame; slices only if that fails.
-        const all: Cesium.GeometryInstance[] = [];
-        const records: { id: number; base: Cesium.Cartesian3 }[] = [];
-        for (let i = 0; i < trees.length; i += TREE_SLICE) {
-          await this.nextSlot();
-          if (state.cancelled || this.destroyed) return;
-          this.treeInstances(
-            trees.slice(i, i + TREE_SLICE),
-            grounds.slice(i, i + TREE_SLICE),
-            records,
-            all,
-          );
-        }
-        const whole = all.length > 0 ? await this.mergeSlices(state, [], all, true) : null;
-        if (whole) for (const r of records) state.trees.push({ prim: whole, ...r });
-        else
-          for (let i = 0; all.length > 0 && i < trees.length; i += TREE_SLICE) {
-            await this.nextSlot();
-            if (state.cancelled || this.destroyed) return;
-            const record: { id: number; base: Cesium.Cartesian3 }[] = [];
-            const prim = this.treeSlice(
-              trees.slice(i, i + TREE_SLICE),
-              grounds.slice(i, i + TREE_SLICE),
-              record,
-            );
-            this.adopt(state, prim, true);
-            if (prim) for (const r of record) state.trees.push({ prim, ...r });
-          }
-      }
+      // The trees after the buildings, not awaited: `done` (which the horizon's building pass
+      // waits on) need not wait for them, and the horizon leaves them out anyway.
+      if (trees.length > 0) void this.loadTrees(state, trees);
     } catch (error) {
       this.tiles.delete(state.key);
+      this.report(error);
+    }
+  }
+
+  /**
+   * A tile's trees as one primitive in the workers, described TREE_SLICE trees a frame. Tree
+   * shapes are Cesium's own cylinders and ellipsoids, which do not fail; if the build does
+   * anyway (or times out) the tile goes without trees - they are a pattern, and slices built
+   * the same way would fail the same way, outside the guard.
+   */
+  private async loadTrees(state: TileState, trees: readonly TreeSpot[]): Promise<void> {
+    try {
+      const grounds = await this.groundHeights(trees.map((t) => [t.lon, t.lat]));
+      if (state.cancelled || this.destroyed) return;
+      const all: Cesium.GeometryInstance[] = [];
+      const records: { id: number; base: Cesium.Cartesian3 }[] = [];
+      for (let i = 0; i < trees.length; i += TREE_SLICE) {
+        await this.nextSlot();
+        if (state.cancelled || this.destroyed) return;
+        this.treeInstances(
+          trees.slice(i, i + TREE_SLICE),
+          grounds.slice(i, i + TREE_SLICE),
+          records,
+          all,
+        );
+      }
+      if (all.length === 0) return;
+      const whole = await this.mergeSlices(state, [], all, true);
+      if (whole) for (const r of records) state.trees.push({ prim: whole, ...r });
+    } catch (error) {
       this.report(error);
     }
   }
@@ -731,19 +731,6 @@ export class OsmBuildingsLayer {
     merged.appearance = appearance();
     merged.show = trees ? !this.lean : true;
     const replaced = new Set<Cesium.Primitive>(slices);
-    if (trees) {
-      // The trees keep their ids: their records, and any hidden at the eye, move across.
-      for (const t of state.trees) if (replaced.has(t.prim)) t.prim = merged;
-      this.hiddenTrees = this.hiddenTrees.map(([p, id]): [Cesium.Primitive, number] => {
-        if (!replaced.has(p)) return [p, id];
-        for (const part of ['t', 'c']) {
-          const a = merged.getGeometryInstanceAttributes(`${id}${part}`) as
-            { show?: unknown } | undefined;
-          if (a) a.show = C.ShowGeometryInstanceAttribute.toValue(false);
-        }
-        return [merged, id];
-      });
-    }
     for (const p of slices) {
       this.owned.delete(p);
       this.buildingPrims.delete(p);
@@ -811,31 +798,11 @@ export class OsmBuildingsLayer {
   }
 
   /**
-   * A slice of trees: a trunk and a crown each (a round crown for broad-leaf, a cone for
-   * needle-leaf), placed upright on the ground. Plain shapes from Cesium's own geometry, built
-   * in its workers; they cast shadows like the buildings.
+   * The trunk and crown of each tree (a round crown for broad-leaf, a cone for needle-leaf),
+   * placed upright on the ground: plain shapes from Cesium's own geometry, built in its workers;
+   * they cast shadows like the buildings. Ids `<n>t` and `<n>c`, so single trees can be hidden
+   * (`hideTreesNear`) by their attributes.
    */
-  private treeSlice(
-    trees: readonly TreeSpot[],
-    grounds: readonly number[],
-    record: { id: number; base: Cesium.Cartesian3 }[],
-  ): Cesium.Primitive | null {
-    const C = this.C;
-    const instances: Cesium.GeometryInstance[] = [];
-    this.treeInstances(trees, grounds, record, instances);
-    if (instances.length === 0) return null;
-    return new C.Primitive({
-      geometryInstances: instances,
-      appearance: this.appearanceForTrees(),
-      shadows: C.ShadowMode.ENABLED,
-      asynchronous: true,
-      // Kept so single trees can be hidden (`hideTreesNear`) by their attributes.
-      releaseGeometryInstances: true,
-      allowPicking: true,
-    });
-  }
-
-  /** The trunk and crown of each tree as geometry instances (ids `<n>t`, `<n>c`) into `out`. */
   private treeInstances(
     trees: readonly TreeSpot[],
     grounds: readonly number[],

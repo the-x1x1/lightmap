@@ -225,7 +225,7 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
   const plannedOffset = describePlannedOffset(scene.utc.getTime(), nowMs);
   // A starting exposure for the planned instant (the details' estimate, never a meter), with
   // the towns' glow after civil dusk.
-  const glow = useSkyGlow(lat, lng, scene.solar.elevationDegrees < -6);
+  const glow = useSkyGlow(lat, lng, scene.solar.elevationDegrees <= -6);
   const exposure = describeExposure(
     estimateExposure({
       sunElevationDeg: scene.solar.elevationDegrees,
