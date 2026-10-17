@@ -377,7 +377,8 @@ export function Timeline({
                 title={`${mk.label} ${dayEvents ? formatWallTime(new Date(dayEvents.dayStart.getTime() + mk.minutes * 60_000), timeZone) : ''}`}
                 onClick={() => setMinutes(mk.minutes)}
                 className={cx(
-                  'absolute top-0 min-w-6 -translate-x-1/2 text-[10px] leading-tight',
+                  // At least 24 x 24 px to tap (WCAG 2.5.8); they measured 24 x 19.
+                  'absolute top-0 min-h-6 min-w-6 -translate-x-1/2 text-[10px] leading-tight',
                   mk.tone === 'sun'
                     ? 'text-[var(--lm-sun)]'
                     : mk.tone === 'twilight'
