@@ -43,6 +43,8 @@ export function PreviewViewport({
   const light = lightingFromScene(scene);
   const tz = scene.timeZone;
   const s = scene.solar;
+  // First / last light over the sampled terrain, where a ridge moves them from sunrise / sunset.
+  const ridge = scene.terrainHorizon?.sunEvents ?? null;
   const [exportState, setExportState] = useState<'idle' | 'busy' | 'done' | 'paywall' | 'error'>(
     'idle',
   );
@@ -169,7 +171,11 @@ export function PreviewViewport({
           label="Sunrise"
           value={scene.dayEvents.sunrise ? formatWallTime(scene.dayEvents.sunrise, tz) : '—'}
           sub={
-            scene.dayEvents.polar !== 'normal' ? scene.dayEvents.polar.replace('-', ' ') : 'local'
+            scene.dayEvents.polar !== 'normal'
+              ? scene.dayEvents.polar.replace('-', ' ')
+              : ridge?.firstLightDiffers && ridge.firstLight
+                ? `over ridge ${formatWallTime(ridge.firstLight, tz)}`
+                : 'local'
           }
           testId="preview-sunrise"
         />
@@ -177,9 +183,12 @@ export function PreviewViewport({
           label="Sunset"
           value={scene.dayEvents.sunset ? formatWallTime(scene.dayEvents.sunset, tz) : '—'}
           sub={
-            scene.dayEvents.goldenHourEveningStart
-              ? `golden ${formatWallTime(scene.dayEvents.goldenHourEveningStart, tz)}`
-              : ''
+            // The terrain's last light is the time to be there by when a ridge takes the Sun early.
+            ridge?.lastLightDiffers && ridge.lastLight
+              ? `behind ridge ${formatWallTime(ridge.lastLight, tz)}`
+              : scene.dayEvents.goldenHourEveningStart
+                ? `golden ${formatWallTime(scene.dayEvents.goldenHourEveningStart, tz)}`
+                : ''
           }
           testId="preview-sunset"
         />
