@@ -44,7 +44,7 @@ import {
 } from '@/features/planner/night-text';
 import { useSeasonalEnvelope } from '@/features/planner/use-seasonal';
 import { useSkyGlow } from '@/features/planner/use-sky-glow';
-import { describeSkyGlow, skyBrightnessRatio } from '@lightmap/renderer';
+import { describeSkyGlow, skyBrightnessRatio, type SkyGlowGrade } from '@lightmap/renderer';
 import { describeLightWindows } from '@/features/planner/light-windows';
 import { DayEventMarkers } from './Timeline';
 import { buildDarkWindowsCalendar } from '@/features/export/dark-windows-calendar';
@@ -60,10 +60,13 @@ function DarkWindows({
   scene,
   windowEnd,
   exportAllowed,
+  glowGrade,
 }: {
   scene: SceneState;
   windowEnd: string | null;
   exportAllowed: boolean;
+  /** The city glow's grade here, when known: the windows are dark by the Sun and Moon only. */
+  glowGrade: SkyGlowGrade | null;
 }) {
   const setDate = usePlannerStore((s) => s.setDate);
   const setMinutes = usePlannerStore((s) => s.setMinutes);
@@ -118,6 +121,15 @@ function DarkWindows({
             </span>
           ))}
       {more > 0 ? ` · ${more} more in ${result.days} nights` : ''}
+      {shown.length > 0 && (glowGrade === 'city' || glowGrade === 'suburban') ? (
+        <span data-testid="milky-way-windows-glow">
+          {' '}
+          — dark by the Sun and Moon only:{' '}
+          {glowGrade === 'city'
+            ? 'from here the town light washes the core out'
+            : 'the core stays faint under the town glow'}
+        </span>
+      ) : null}
       {beyond > 0 ? (
         <span data-testid="milky-way-windows-beyond">
           {' '}
@@ -405,7 +417,12 @@ function MoonDetails({
         </p>
       ) : null}
       {scene.nightSky && moonOpen ? (
-        <DarkWindows scene={scene} windowEnd={windowEnd} exportAllowed={exportAllowed} />
+        <DarkWindows
+          scene={scene}
+          windowEnd={windowEnd}
+          exportAllowed={exportAllowed}
+          glowGrade={glow?.grade ?? null}
+        />
       ) : null}
       <p className="mt-1 text-xs text-[var(--lm-text-muted)]">{lunar.accuracyNote}</p>
     </details>
