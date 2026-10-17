@@ -417,12 +417,12 @@ milliseconds a frame (`buildingsFromTileSteps`, `FrameBudgetQueue`); a camera-on
 (a drag of the look direction) is about a tenth of a millisecond, the Moon's rise and set kept
 per place and day. Motion that the inputs deliver in steps is drawn continuously: the viewpoint
 eye glides between walk steps at the walk's speed, and the Sun's light glides between the
-clock's minute steps while the day plays or is scrubbed (each glide lasts about the time
-between steps, up to 550 ms, so the slowest pace — a minute every half second — drifts without
-pausing). The sky, the clouds, the Sun's glare and the map's sun marker, ray and shadow line glide
+clock's minute steps while the day plays or is scrubbed (steps arriving up to 550 ms apart
+glide over the time between them, so the slowest pace — a minute every half second — drifts
+without pausing; a step on its own glides a quarter of a second). The sky, the clouds, the Sun's glare and the map's sun marker, ray and shadow line glide
 with the same clock; the glare is placed on screen every frame from that gliding direction, so it
 stays on the Sun disc while the eye glides or the map turns, and the day's, the year's and the
-night's paths are laid out as geometry only when the day, the place or the year changes; a jump to a new place or a new date
+night's paths are laid out as geometry only when they change (a new day, year or pin); a jump to a new place or a new date
 lands at once, as does everything under "reduce motion". A walk does not resample the terrain
 horizon or rerun the night and season scans at every step: they wait until the pin stays put.
 

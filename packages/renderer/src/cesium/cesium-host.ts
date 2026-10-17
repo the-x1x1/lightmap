@@ -181,9 +181,12 @@ const CLOCK_GLIDE_MAX_S = 600;
  * The longest a small clock or light step glides, ms. The slowest play pace (2 day-minutes a
  * second, `PLAY_RATES` in the web app) moves the clock a minute every 500 ms; a glide shorter
  * than that left the Sun disc, the stars and the sky's colours still for part of every step, a
- * visible pulse. A little over the cadence keeps that pace one continuous drift.
+ * visible pulse. Steps arriving at most this far apart glide over the time between them, so that
+ * pace is one continuous drift; a step on its own (a key press, a click on the slider, the first
+ * step after play) glides `LONE_STEP_GLIDE_MS` instead, so it does not trail the input.
  */
 const STEP_GLIDE_MAX_MS = 550;
+const LONE_STEP_GLIDE_MS = 250;
 
 /** Light steps wider than this (cosine of 2°) land at once instead of gliding. */
 const LIGHT_GLIDE_MAX_COS = Math.cos((2 * Math.PI) / 180);
@@ -690,7 +693,9 @@ export class CesiumSceneHost implements SceneHost {
       this.clockFrom = C.JulianDate.clone(clock.currentTime);
       this.clockGoal = target;
       this.clockGlideStart = now;
-      this.clockGlideMs = Math.max(40, Math.min(STEP_GLIDE_MAX_MS, now - this.clockChangedAt));
+      const interval = now - this.clockChangedAt;
+      this.clockGlideMs =
+        interval <= STEP_GLIDE_MAX_MS ? Math.max(40, interval) : LONE_STEP_GLIDE_MS;
       this.clockGlideId++;
       this.scene.requestRender();
     }
@@ -741,7 +746,7 @@ export class CesiumSceneHost implements SceneHost {
       const goal = this.lightGoal ?? this.light.direction;
       if (C.Cartesian3.dot(next, goal) < 1 - 1e-12) {
         const interval = now - this.lightChangedAt;
-        this.lightTauMs = Math.max(40, Math.min(0.6 * STEP_GLIDE_MAX_MS, 0.6 * interval));
+        this.lightTauMs = Math.max(40, Math.min(300, 0.6 * interval));
         this.lightChangedAt = now;
         if (!this.lightGoal) this.lightEaseAt = now;
         this.lightGoal = next;
@@ -1392,14 +1397,25 @@ export class CesiumSceneHost implements SceneHost {
       // The sun marker, its ray and the shadow line move every minute step: they read the
       // gliding ends each frame (Cesium draws such lines from a polyline collection, updated in
       // place), while the day's paths below stay static geometry, laid out once per day.
-      const cart = (v: Vec3Like | null): Cesium.Cartesian3 | undefined =>
-        v ? new C.Cartesian3(v.x, v.y, v.z) : undefined;
-      const line = (end: StepGlide<Vec3Like>) =>
-        new C.CallbackProperty(() => {
+      // Scratch ends, reused every frame (Cesium copies a line's positions as it reads them).
+      const cart = (
+        v: Vec3Like | null,
+        out: Cesium.Cartesian3 = new C.Cartesian3(),
+      ): Cesium.Cartesian3 | undefined =>
+        v ? C.Cartesian3.fromElements(v.x, v.y, v.z, out) : undefined;
+      const line = (end: StepGlide<Vec3Like>) => {
+        const tip = new C.Cartesian3();
+        const pair: Cesium.Cartesian3[] = [];
+        return new C.CallbackProperty(() => {
           const a = this.overlayBase;
-          const b = cart(end.shown);
-          return a && b ? [a, b] : undefined;
+          const b = cart(end.shown, tip);
+          if (!a || !b) return undefined;
+          pair[0] = a;
+          pair[1] = b;
+          return pair;
         }, false);
+      };
+      const marker = new C.Cartesian3();
       this.overlayEntities = [
         ents.add({
           point: {
@@ -1414,7 +1430,11 @@ export class CesiumSceneHost implements SceneHost {
           polyline: { width: 3, material: gold.withAlpha(0.85), arcType: C.ArcType.NONE },
         }),
         ents.add({
-          position: new C.CallbackPositionProperty(() => cart(this.overlaySun.shown), false),
+          position: new C.CallbackPositionProperty(
+            (_t: unknown, result?: Cesium.Cartesian3) =>
+              cart(this.overlaySun.shown, result ?? marker),
+            false,
+          ),
           point: {
             pixelSize: 18,
             color: gold,
