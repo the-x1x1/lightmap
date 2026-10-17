@@ -601,14 +601,28 @@ export class OsmBuildingsLayer {
       }
       return true;
     };
-    for (const [prim, id] of this.hiddenTrees) show(prim, id, true);
-    this.hiddenTrees = [];
+    // Only what changed: re-showing and hiding the same trees every half second rewrote the
+    // primitives' per-instance attribute buffers each time, for nothing.
     const r2 = radiusM * radiusM;
+    const near: [Cesium.Primitive, number][] = [];
     for (const state of this.tiles.values())
       for (const t of state.trees)
-        if (C.Cartesian3.distanceSquared(t.base, eye) < r2 && show(t.prim, t.id, false))
-          this.hiddenTrees.push([t.prim, t.id]);
-    this.scene.requestRender();
+        if (C.Cartesian3.distanceSquared(t.base, eye) < r2) near.push([t.prim, t.id]);
+    const isNear = new Set(near.map(([, id]) => id));
+    const wasHidden = new Set(this.hiddenTrees.map(([, id]) => id));
+    let changed = false;
+    const kept: [Cesium.Primitive, number][] = [];
+    for (const [prim, id] of this.hiddenTrees) {
+      if (isNear.has(id) && !prim.isDestroyed()) kept.push([prim, id]);
+      else if (show(prim, id, true)) changed = true;
+    }
+    for (const [prim, id] of near)
+      if (!wasHidden.has(id) && show(prim, id, false)) {
+        kept.push([prim, id]);
+        changed = true;
+      }
+    this.hiddenTrees = kept;
+    if (changed) this.scene.requestRender();
   }
 
   /**
