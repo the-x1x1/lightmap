@@ -198,7 +198,8 @@ winter by a share that grows with latitude: the Alps snowy from ≈ 1 500 m in F
 lowland snowpack lasts the winter (a rule of thumb by region, `snow-season.ts`: Montreal, Moscow,
 Helsinki, Tromsø and Hokkaido white through the heart of their winter, the far imagery whitened
 with them; places whose snow comes and goes — Boston, Berlin, London — and the maritime west
-coasts left bare) the line is drawn down under the ground by the share covered — and, inside the
+coasts left bare; height lengthens only a real winter, so the high cities of the tropics —
+Mexico City, Bogotá, Nairobi — and Denver are never painted white) the line is drawn down under the ground by the share covered — and, inside the
 forecast horizon, the forecast's own word:
 when the frame has snow lying at the model's grid point (≥ 1 cm) the snowline drops to just
 under the pin's height, and when it has the ground bare it rises to just over it — and a strip of
