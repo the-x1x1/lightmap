@@ -418,7 +418,7 @@ function MoonDetails({
           data-grade={glow.grade}
           title="Estimated from mapped built-up areas (Natural Earth) by Walker's law: larger towns only, no haze or snow. Not a sky-quality reading."
         >
-          City glow (estimate): {describeSkyGlow(glow)}
+          City glow (estimate): {describeSkyGlow(glow, units)}
         </p>
       ) : null}
       {scene.nightSky && moonOpen ? (

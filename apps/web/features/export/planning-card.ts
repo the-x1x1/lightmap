@@ -213,7 +213,7 @@ export function buildPlanningCard(
           : scene.nightSky.reason,
     });
   if (opts.skyGlow && s.elevationDegrees <= -6)
-    facts.push({ label: 'City glow (est.)', value: describeSkyGlow(opts.skyGlow) });
+    facts.push({ label: 'City glow (est.)', value: describeSkyGlow(opts.skyGlow, units) });
   if (scene.nightSky)
     facts.push({
       label: 'Dark windows',

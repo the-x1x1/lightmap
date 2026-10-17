@@ -158,7 +158,7 @@ export function skyBrightnessRatio(g: SkyGlow): number {
 const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const;
 
 /** One line for the night section, e.g. "a glow on the horizon to the SW (town 40 km off)". */
-export function describeSkyGlow(g: SkyGlow): string {
+export function describeSkyGlow(g: SkyGlow, units: 'metric' | 'imperial' = 'metric'): string {
   const side =
     g.bearingDeg === null ? '' : ` to the ${COMPASS[Math.round(g.bearingDeg / 45) % 8] ?? 'N'}`;
   const off =
@@ -166,7 +166,9 @@ export function describeSkyGlow(g: SkyGlow): string {
       ? ''
       : g.distanceKm < 0.5
         ? ' (inside a town)'
-        : ` (built-up area ${Math.round(g.distanceKm)} km off)`;
+        : units === 'imperial'
+          ? ` (built-up area ${Math.round(g.distanceKm / 1.609344)} mi off)`
+          : ` (built-up area ${Math.round(g.distanceKm)} km off)`;
   // Where to drive for a darker sky: away from the glow.
   const away =
     g.darkerBearingDeg === null

@@ -101,6 +101,12 @@ describe('sky glow from the urban areas (Walker’s law)', () => {
     );
   });
 
+  it('names the distance in miles for imperial units', () => {
+    const g = skyGlowAt(30, -100, [town(30, -100, 0, -26, 20)]);
+    expect(describeSkyGlow(g, 'imperial')).toContain('(built-up area 10 mi off)');
+    expect(describeSkyGlow(g)).toContain('(built-up area 16 km off)');
+  });
+
   it('between two towns no one way is darker', () => {
     const g = skyGlowAt(30, -100, [town(30, -100, 0, -12, 20), town(30, -100, 0, 12, 20)]);
     expect(g.grade).toBe('suburban');
