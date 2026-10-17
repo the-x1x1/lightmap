@@ -60,6 +60,8 @@ export interface SceneInputs {
     capabilities: WeatherCapabilities | null;
     frames: readonly WeatherFrame[];
     providerFailed: boolean;
+    /** The weather was refused for the plan's date window (a 403): not a failure, not loading. */
+    outsidePlanWindow?: boolean;
   };
   render: RenderSettings;
   includeLunar: boolean;
@@ -289,20 +291,23 @@ export function deriveAtmosphere(
   const s = scenarioById(inputs.scenario);
   const why = inputs.weather.providerFailed
     ? 'Live forecast unavailable'
-    : inputs.forceScenario && decision.fetchWorthwhile
-      ? 'Comparing scenario'
-      : decision.mode === 'PAST'
-        ? 'Historical weather not loaded'
-        : decision.mode === 'RECENT_PAST'
-          ? 'Observed conditions not loaded'
-          : decision.mode === 'SCENARIO' && caps
-            ? 'Forecast unavailable this far ahead'
-            : decision.fetchWorthwhile && inputs.weather.frames.length === 0
-              ? // Inside the forecast's reach with nothing back yet: it is on its way.
-                'Forecast loading'
-              : decision.fetchWorthwhile
-                ? 'No forecast for this hour'
-                : 'No forecast';
+    : inputs.weather.outsidePlanWindow
+      ? // The date is beyond the plan's window: the weather is Pro's to show, not missing.
+        'Weather outside your plan’s date window'
+      : inputs.forceScenario && decision.fetchWorthwhile
+        ? 'Comparing scenario'
+        : decision.mode === 'PAST'
+          ? 'Historical weather not loaded'
+          : decision.mode === 'RECENT_PAST'
+            ? 'Observed conditions not loaded'
+            : decision.mode === 'SCENARIO' && caps
+              ? 'Forecast unavailable this far ahead'
+              : decision.fetchWorthwhile && inputs.weather.frames.length === 0
+                ? // Inside the forecast's reach with nothing back yet: it is on its way.
+                  'Forecast loading'
+                : decision.fetchWorthwhile
+                  ? 'No forecast for this hour'
+                  : 'No forecast';
   return {
     mode: 'SCENARIO',
     scenario: s.id,

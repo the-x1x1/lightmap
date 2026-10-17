@@ -141,6 +141,11 @@ export function useScene(
     ? (weatherQuery.data?.frames ?? EMPTY_FRAMES)
     : EMPTY_FRAMES;
   // A 403 is the plan's date window (the paywall is already on screen), not a provider failure.
+  const outsidePlanWindow = Boolean(
+    dateSettled &&
+    weatherQuery.error instanceof ApiRequestError &&
+    weatherQuery.error.status === 403,
+  );
   const providerFailed = Boolean(
     dateSettled &&
     horizon?.fetchWorthwhile &&
@@ -159,7 +164,7 @@ export function useScene(
       environment,
       scenario,
       forceScenario,
-      weather: { capabilities: weatherCaps, frames, providerFailed },
+      weather: { capabilities: weatherCaps, frames, providerFailed, outsidePlanWindow },
       render: opts.render ?? DEFAULT_RENDER_SETTINGS,
       includeLunar: opts.includeLunar ?? true,
       realReference: false,
@@ -180,6 +185,7 @@ export function useScene(
     weatherCaps,
     frames,
     providerFailed,
+    outsidePlanWindow,
     opts.render,
     opts.includeLunar,
     horizonProfile,

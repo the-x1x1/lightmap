@@ -179,6 +179,23 @@ describe('buildSceneState — Kailua Beach, 31 May 2026, 12:30 (acceptance case)
     expect(s.atmosphere.summary).toBe('Forecast loading — scenario: Partly Cloudy');
   });
 
+  it("says a date beyond the plan's window is that, not unloaded weather", () => {
+    const s = buildSceneState(
+      inputs({
+        now: new Date('2026-05-30T00:00:00Z'),
+        weather: {
+          capabilities: OPEN_METEO_CAPABILITIES,
+          frames: [],
+          providerFailed: false,
+          outsidePlanWindow: true,
+        },
+      }),
+    );
+    expect(s.atmosphere.summary).toBe(
+      'Weather outside your plan’s date window — scenario: Partly Cloudy',
+    );
+  });
+
   it('scenario changes visibly change the parameters', () => {
     const clear = buildSceneState(inputs({ scenario: 'clear' })).atmosphere.parameters;
     const overcast = buildSceneState(inputs({ scenario: 'overcast' })).atmosphere.parameters;
