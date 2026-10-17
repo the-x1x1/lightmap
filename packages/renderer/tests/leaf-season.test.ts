@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   EVERGREEN,
+  deciduousCrown,
   deciduousShare,
   leafOutDay,
   leafSeason,
@@ -26,7 +27,7 @@ describe('leaf season', () => {
     const nov25 = leafSeason(vt, doy(11, 25), 300);
     expect(nov25.leafOn).toBeLessThan(0.05);
     const jul15 = leafSeason(vt, doy(7, 15), 300);
-    expect(jul15).toEqual({ leafOn: 1, autumn: 0, grassGreen: 1 });
+    expect(jul15).toEqual({ leafOn: 1, autumn: 0, grassGreen: 1, deciduous: 1 });
   });
 
   it('has Boston bare with dormant grass in January and green in June', () => {
@@ -60,6 +61,24 @@ describe('leaf season', () => {
     expect(deciduousShare(37.98, 23.73)).toBe(0.5); // Athens
     expect(deciduousShare(34.05, -118.25)).toBe(0.5); // Los Angeles
     expect(deciduousShare(48.85, 2.35)).toBe(1); // Paris
+    for (const [lat, lon] of [
+      [41.9, 12.5], // Rome
+      [41.39, 2.17], // Barcelona
+      [43.3, 5.37], // Marseille
+      [43.51, 16.44], // Split
+      [36.9, 30.7], // Antalya
+    ] as const)
+      expect(deciduousShare(lat, lon)).toBe(0.5);
+    for (const [lat, lon] of [
+      [39.93, 32.85], // Ankara: the plateau's deciduous steppe oak
+      [42.7, 23.32], // Sofia
+      [39.53, -119.81], // Reno, east of the Sierra
+      [39.1, -120.04], // Lake Tahoe
+    ] as const)
+      expect(deciduousShare(lat, lon)).toBe(1);
+    // Patagonia: the Andes' deciduous beech, not the Chilean lowlands' evergreen rainforest.
+    expect(deciduousShare(-41.13, -71.3)).toBe(0.8); // Bariloche
+    expect(deciduousShare(-41.47, -72.94)).toBe(0.35); // Puerto Montt
     // Christchurch, Hobart, Cape Town, Perth: July keeps about two thirds of the canopy.
     for (const [lat, lon] of [
       [-43.5, 172.6],
@@ -71,6 +90,8 @@ describe('leaf season', () => {
       expect(jul.leafOn).toBeGreaterThan(0.6);
       expect(jul.leafOn).toBeLessThan(0.75);
     }
+    // Drawn crown by crown: the deciduous ones bare in July, the rest in full leaf.
+    expect(deciduousCrown(leafSeason(-42.88, doy(7, 15), 20, 147.33)).leafOn).toBeLessThan(0.05);
     // Christchurch's planted autumn still shows in April, as a third of the colour.
     expect(leafSeason(-43.5, doy(4, 20), 10, 172.6).autumn).toBeGreaterThan(0.15);
   });

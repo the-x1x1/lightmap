@@ -21,6 +21,11 @@ export interface ImagerySeason {
   grassGreen: number;
   /** Lying snow, 0-1 (`lowlandSnowCover`). */
   snow: number;
+  /**
+   * The share of broad-leaf stands that are deciduous (`LeafSeason.deciduous`; all when left
+   * out): the rest keep their summer green, the deciduous ones take the full season.
+   */
+  deciduous?: number;
 }
 
 export const SUMMER: ImagerySeason = { leafOn: 1, autumn: 0, grassGreen: 1, snow: 0 };
@@ -33,7 +38,7 @@ export function seasonShows(s: ImagerySeason): boolean {
 /** A key that changes only when the season moves enough to be seen (tiles are redone on it). */
 export function seasonKey(s: ImagerySeason): string {
   const q = (v: number) => Math.round(Math.max(0, Math.min(1, v)) * 10);
-  return `${q(s.leafOn)}|${q(s.autumn * s.leafOn)}|${q(s.grassGreen)}|${q(s.snow)}`;
+  return `${q(s.leafOn)}|${q(s.autumn * s.leafOn)}|${q(s.grassGreen)}|${q(s.snow)}|${q(s.deciduous ?? 1)}`;
 }
 
 // Autumn colours of a broad-leaf wood seen from far off (sRGB 0-255): yellow, orange, red.
@@ -59,8 +64,12 @@ export function seasonalisePixels(
   seedX = 0,
   seedY = 0,
 ): void {
-  const turned = clamp01(season.autumn) * clamp01(season.leafOn);
-  const bare = 1 - clamp01(season.leafOn);
+  // The averages are over every broad-leaf stand; a deciduous stand takes the whole season and
+  // the others none (an evergreen eucalypt or holm-oak wood stays green), drawn per stand.
+  const deciduous = Math.max(0.01, Math.min(1, season.deciduous ?? 1));
+  const standLeafOn = Math.max(0, 1 - (1 - clamp01(season.leafOn)) / deciduous);
+  const turned = Math.min(1, clamp01(season.autumn) / deciduous) * standLeafOn;
+  const bare = 1 - standLeafOn;
   const dormant = 1 - clamp01(season.grassGreen);
   const snow = clamp01(season.snow);
   for (let i = 0, p = 0; i < data.length; i += 4, p++) {
@@ -83,11 +92,16 @@ export function seasonalisePixels(
     let nr = r;
     let ng = g;
     let nb = b;
-    if (wood > 0 && turned > 0) {
+    // Stands of a few pixels share a colour and a kind (a hash of the 4 x 4 cell).
+    let h = 0;
+    let seasonal = true;
+    if (wood > 0 && (turned > 0 || bare > 0)) {
       const x = (p % width) + seedX;
       const y = Math.floor(p / width) + seedY;
-      // Stands of a few pixels share a colour (a hash of the 4 x 4 cell).
-      const h = fract(Math.sin((x >> 2) * 12.9898 + (y >> 2) * 78.233) * 43758.5453);
+      h = fract(Math.sin((x >> 2) * 12.9898 + (y >> 2) * 78.233) * 43758.5453);
+      seasonal = deciduous >= 1 || fract(h * 11.1) < deciduous;
+    }
+    if (wood > 0 && turned > 0 && seasonal) {
       const c = FALL[Math.floor(h * 3) % 3] as readonly [number, number, number];
       const k = (lum / 80) * (0.85 + 0.3 * fract(h * 7.13));
       const w = wood * broad * turned * 0.9;
@@ -95,7 +109,7 @@ export function seasonalisePixels(
       ng += (c[1] * k - ng) * w;
       nb += (c[2] * k - nb) * w;
     }
-    if (wood > 0 && bare > 0) {
+    if (wood > 0 && bare > 0 && seasonal) {
       const k = lum / 80;
       const w = wood * broad * bare * 0.75;
       nr += (TWIGS[0] * k - nr) * w;

@@ -39,6 +39,8 @@ export interface GroundTextureParams {
   autumn: number;
   /** How green open grass is, 0 winter-dormant – 1 growing. */
   grassGreen: number;
+  /** The share of broad-leaf crowns that are deciduous (`LeafSeason.deciduous`). */
+  deciduous: number;
   /** Lying snow in the lowlands around the place, 0–1 (`lowlandSnowCover`): the far imagery whitens with it. */
   snowCover: number;
 }

@@ -42,6 +42,29 @@ describe('the season on the far imagery (V&V: Vermont in October stayed green)',
     expect(at(s, 2)).toEqual(WATER);
   });
 
+  it('in mostly evergreen woods, leaves most stands green and bares the deciduous ones fully', () => {
+    // A 64 x 64 tile of wood under a southern winter: a third of the canopy deciduous and bare.
+    const n = 64 * 64;
+    const d = px(...Array.from({ length: n }, () => WOOD));
+    seasonalisePixels(d, 64, { leafOn: 0.65, autumn: 0, grassGreen: 1, snow: 0, deciduous: 0.35 });
+    let green = 0;
+    let bare = 0;
+    for (let i = 0; i < n; i++) {
+      const c = at(d, i);
+      if (c[0] === WOOD[0] && c[1] === WOOD[1]) green++;
+      else bare++;
+    }
+    expect(green / n).toBeGreaterThan(0.5);
+    expect(bare / n).toBeGreaterThan(0.2);
+    // The bare stands are as bare as an all-deciduous wood at leafOn 0.
+    const full = px(WOOD);
+    seasonalisePixels(full, 1, { leafOn: 0, autumn: 0, grassGreen: 1, snow: 0 });
+    const someBare = Array.from({ length: n }, (_, i) => at(d, i)).find(
+      (c) => c[0] !== WOOD[0] || c[1] !== WOOD[1],
+    );
+    expect(someBare).toEqual(at(full, 0));
+  });
+
   it('keys tiles on visible steps only', () => {
     const a = seasonKey({ leafOn: 1, autumn: 0.51, grassGreen: 1, snow: 0 });
     expect(seasonKey({ leafOn: 1, autumn: 0.53, grassGreen: 1, snow: 0 })).toBe(a);

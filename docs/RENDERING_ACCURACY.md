@@ -303,7 +303,9 @@ latitude, the day of the year, the height and a regional rule for maritime clima
   whose holm and live oaks, pines and scrub keep their leaves, half does.
 - **The 3D trees.** Broad-leaf crowns turn yellow, orange or red, each a little before or after
   its neighbours, and as the leaves fall they fade to grey-brown twigs and thin to see-through
-  (their shadows thin with them). Conifers stay green.
+  (their shadows thin with them). Conifers stay green, and where most broad-leaf woods are
+  evergreen only the deciduous share of crowns (and of stands in the far imagery) takes the
+  season, each one fully.
 - **The painted ground.** Woods turn the same way, with about a third of their crowns evergreen;
   winter-dormant grass is olive-tan (straw where the region is dry); a town's trees and parks
   follow.

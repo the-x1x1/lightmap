@@ -35,6 +35,13 @@ describe('buildings and trees shader', () => {
     expect(tree).toContain('0.050)');
   });
 
+  it('gives the season to the deciduous share of crowns only', () => {
+    expect(treeFragmentShader(0.5, 0.5)).not.toContain('11.1');
+    expect(treeFragmentShader(0, 0, 1, 0, 0.35)).toContain(
+      'if (v_color.a < 0.995 && fract(h * 11.1) < 0.350)',
+    );
+  });
+
   it('darkens roofs on buildings only', () => {
     expect(litInstanceShader(0.2, 8000, true)).toContain('roofness');
     expect(litInstanceShader(0.2, 8000)).not.toContain('roofness');

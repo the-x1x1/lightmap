@@ -9,8 +9,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   planted trees) turns and drops there, most of it in the Patagonian Andes' beech; around the
   Mediterranean and in California, half.
 - **Exposure in a ridge's shadow**: with the Sun or Moon up but behind the sampled skyline, the
-  exposure estimate (panel, field view, card) gives the ground the sky's share of the light only
-  — about 2.3 stops under a clear Sun, nearly nothing under overcast.
+  exposure estimate (panel, field view, card) takes away the direct beam the ridge blocks and a
+  little of the sky — under half a stop with the Sun 3° up, about 2.5 stops at 20°, a third
+  of a stop under overcast.
 - **Dark windows over the skyline**: with a sampled terrain horizon, the dark windows ahead, the
   timeline's dark-sky band, the week ahead and the planning card count only the hours the
   Milky Way core stands above the skyline, not merely 10° up; from a valley floor the hours it

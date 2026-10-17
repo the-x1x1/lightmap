@@ -26,6 +26,7 @@ import {
   type TreeSpot,
 } from '../osm-buildings.ts';
 import { lonLatToTile, tilePointToLonLat } from '../vector-tile.ts';
+import { deciduousCrown } from '../leaf-season.ts';
 import { bridgeAt, bridgeLinesFromTile, type BridgeLine } from '../vector-cover.ts';
 
 type CesiumModule = typeof Cesium;
@@ -158,18 +159,24 @@ const SHADOW_D_STEP = 0.05;
  * neighbours; as the leaves go it fades to grey-brown twigs and thins to a screen-door, densest
  * across the crown's middle and feathered at its edge, so a bare crown reads as the see-through
  * haze of branches it is (its shadow thins with it).
- * Conifers and trunks are untouched.
+ * Conifers and trunks are untouched. With `deciduous` under 1 (the south's eucalypts, the
+ * Mediterranean's holm oaks) only that share of the broad-leaf crowns, picked by their tone,
+ * takes the season, and takes all of it (`leafOn` / `autumn` are then a deciduous crown's own,
+ * `deciduousCrown`); the rest stay in summer leaf.
  */
 export function treeFragmentShader(
   leafOn: number,
   autumn: number,
   shadowD = 1,
   shadowMaxM = 0,
+  deciduous = 1,
 ): string {
+  // Which crowns are deciduous: a hash of each crown's tone, so a crown keeps its kind.
+  const pick = deciduous >= 1 ? '' : ` && fract(h * 11.1) < ${deciduous.toFixed(3)}`;
   const season = `
-    if (v_color.a < 0.995) {
-        float tone = clamp((v_color.g - 0.27) / 0.12, 0.0, 1.0);
-        float h = fract(tone * 17.3 + v_color.r * 31.0);
+    float tone = clamp((v_color.g - 0.27) / 0.12, 0.0, 1.0);
+    float h = fract(tone * 17.3 + v_color.r * 31.0);
+    if (v_color.a < 0.995${pick}) {
         vec3 fall = h < 0.38 ? vec3(0.56, 0.44, 0.09) : (h < 0.72 ? vec3(0.60, 0.28, 0.07) : vec3(0.44, 0.11, 0.06));
         float turn = clamp(${autumn.toFixed(3)} * 1.35 - 0.35 * fract(h * 7.7), 0.0, 1.0);
         color.rgb = mix(color.rgb, czm_gammaCorrect(vec4(fall * (0.85 + 0.3 * fract(h * 5.3)), 1.0)).rgb, turn);
@@ -355,7 +362,7 @@ export class OsmBuildingsLayer {
   /** On the cheapest quality rungs: no trees drawn and no skyline ring. */
   private lean = false;
   /** The leaf season the trees are drawn in, and its shader (shared by every tree primitive). */
-  private season = { leafOn: 1, autumn: 0 };
+  private season = { leafOn: 1, autumn: 0, deciduous: 1 };
   private treeAppearance: Cesium.PerInstanceColorAppearance | null = null;
   /** The shadow map the shaders compensate for (`litInstanceShader`), and the buildings' shader. */
   private shadow = { d: 1, maxM: 0 };
@@ -424,10 +431,17 @@ export class OsmBuildingsLayer {
    * The leaf season (leaf-season.ts) for the broad-leaf trees. A new date swaps the trees'
    * shader; no tree is rebuilt.
    */
-  setSeason(leafOn: number, autumn: number): void {
+  setSeason(leafOn: number, autumn: number, deciduous = 1): void {
     const q = (x: number) => Math.round(Math.max(0, Math.min(1, x)) * 50) / 50;
-    const next = { leafOn: q(leafOn), autumn: q(autumn) };
-    if (next.leafOn === this.season.leafOn && next.autumn === this.season.autumn) return;
+    // The averages become a deciduous crown's own season; the other crowns stay in leaf.
+    const crown = deciduousCrown({ leafOn, autumn, deciduous });
+    const next = { leafOn: q(crown.leafOn), autumn: q(crown.autumn), deciduous: q(deciduous) };
+    if (
+      next.leafOn === this.season.leafOn &&
+      next.autumn === this.season.autumn &&
+      next.deciduous === this.season.deciduous
+    )
+      return;
     this.season = next;
     this.treeAppearance = null;
     const appearance = this.appearanceForTrees();
@@ -466,6 +480,7 @@ export class OsmBuildingsLayer {
         this.season.autumn,
         this.shadow.d,
         this.shadow.maxM,
+        this.season.deciduous,
       ),
     });
     return this.treeAppearance;

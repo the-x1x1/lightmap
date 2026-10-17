@@ -161,6 +161,8 @@ export interface HostGroundTexture {
   leafOn?: number;
   autumn?: number;
   grassGreen?: number;
+  /** The share of broad-leaf crowns that are deciduous (`LeafSeason.deciduous`); all when left out. */
+  deciduous?: number;
   /** Lying snow in the lowlands, 0-1 (snow-season.ts); none when left out. */
   snowCover?: number;
 }

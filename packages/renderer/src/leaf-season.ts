@@ -29,9 +29,30 @@ export interface LeafSeason {
   autumn: number;
   /** How green open grass is: 0 winter-dormant, 1 growing. */
   grassGreen: number;
+  /**
+   * The share of broad-leaf crowns that are deciduous (`deciduousShare`): `leafOn` and `autumn`
+   * are averages over all of them, so a renderer that draws crowns one by one keeps the rest
+   * evergreen and gives these the full season (`deciduousCrown`).
+   */
+  deciduous: number;
 }
 
-export const EVERGREEN: LeafSeason = { leafOn: 1, autumn: 0, grassGreen: 1 };
+export const EVERGREEN: LeafSeason = { leafOn: 1, autumn: 0, grassGreen: 1, deciduous: 1 };
+
+/**
+ * The season of one deciduous crown from the averages: with a third of the crowns deciduous and
+ * the canopy averaging two thirds in leaf, those crowns are bare and the rest full.
+ */
+export function deciduousCrown(s: Pick<LeafSeason, 'leafOn' | 'autumn' | 'deciduous'>): {
+  leafOn: number;
+  autumn: number;
+} {
+  const d = Math.max(0.01, Math.min(1, s.deciduous));
+  return {
+    leafOn: round2(Math.max(0, 1 - (1 - s.leafOn) / d)),
+    autumn: round2(Math.min(1, s.autumn / d)),
+  };
+}
 
 /** Winter grass is dormant olive-tan, not straw: maritime winters keep it greener than this model knows. */
 const GRASS_DORMANCY = 0.65;
@@ -43,25 +64,43 @@ function smooth(edge0: number, edge1: number, x: number): number {
 
 /**
  * The share of the broad-leaf canopy that turns and drops: all of it north of the equator (its
- * conifers are told apart by colour) but half in the Mediterranean's and California's evergreen
- * oak and scrub, about a third in the south's evergreen woods, most of it in the Patagonian
- * Andes' deciduous beech (lenga, nire). Unknown longitude: all in the north, a third in the south.
+ * conifers are told apart by colour) but half in the Mediterranean-climate lowlands' evergreen
+ * oak and scrub (holm and cork oak, maquis, chaparral, live oak), about a third in the south's
+ * evergreen woods, most of it in the Patagonian Andes' deciduous beech (lenga, nire). Unknown
+ * longitude: all in the north, a third in the south.
  */
 export function deciduousShare(latitudeDeg: number, longitudeDeg: number | null): number {
-  if (latitudeDeg >= 0) {
-    if (longitudeDeg === null) return 1;
-    // Mediterranean climates' evergreen oaks, pines and scrub (holm and cork oak, maquis,
-    // chaparral, live oak): about half the woods keep their leaves through the mild wet winter.
-    const mediterranean =
-      latitudeDeg > 30 && latitudeDeg < 41 && longitudeDeg > -10 && longitudeDeg < 37;
-    const california =
-      latitudeDeg > 32 && latitudeDeg < 40 && longitudeDeg > -124.5 && longitudeDeg < -117;
-    return mediterranean || california ? 0.5 : 1;
-  }
-  if (longitudeDeg !== null && latitudeDeg < -37 && longitudeDeg > -76 && longitudeDeg < -68)
-    return 0.8;
-  return 0.35;
+  const lat = latitudeDeg;
+  if (longitudeDeg === null) return lat >= 0 ? 1 : 0.35;
+  const lon = longitudeDeg;
+  const inBox = (box: readonly [number, number, number, number]) =>
+    lat >= box[0] && lat < box[1] && lon >= box[2] && lon < box[3];
+  if (lat >= 0) return MEDITERRANEAN.some(inBox) ? 0.5 : 1;
+  // The Andes' lenga and nire beech, east of the Chilean lowlands' evergreen rainforest.
+  const patagonia = lat < -37 && lon < -68 && lon >= (lat < -46 ? -74 : -72.3);
+  return patagonia ? 0.8 : 0.35;
 }
+
+/**
+ * Mediterranean-climate lowlands, [south, north, west, east] degrees: Iberia, the Maghreb, the
+ * French and Italian coasts and islands, the Adriatic's east shore, Greece, Turkey's Aegean and
+ * southern coasts, the Levant, and California west of the Sierra. Rough boxes: the interiors
+ * (the Balkans, Anatolia's plateau, the Great Basin) are left out.
+ */
+const MEDITERRANEAN: readonly (readonly [number, number, number, number])[] = [
+  [30, 42.5, -10, 3.5], // Iberia south of the Pyrenees, Morocco
+  [30, 37.5, 3.5, 11.5], // Algeria and Tunisia
+  [42.5, 44, 3, 7.7], // Languedoc, Provence, the Riviera
+  [36.5, 44.5, 7.7, 18.6], // Italy, Corsica, Sardinia, Sicily
+  [41, 45.5, 13.5, 18], // the Dalmatian coast
+  [35, 41, 19, 26], // Greece, Albania's coast
+  [36, 41, 26, 29], // Turkey's Aegean coast
+  [36, 38.5, 29, 36.5], // Turkey's southern coast
+  [31, 37, 34, 36.6], // the Levant
+  [37.5, 40, -124.5, -120.3], // California north of Yosemite, west of the Sierra
+  [35, 37.5, -124.5, -119.2],
+  [32, 35, -121, -116.5], // southern California
+];
 
 /**
  * How maritime a place's seasons are, 0 (continental) to 1, and how many days later than its
@@ -133,7 +172,8 @@ export function leafSeason(
   // the latitude, the canopy only its deciduous share.
   const seasonal = smooth(24, 34, lat);
   if (seasonal === 0) return EVERGREEN;
-  const canopy = seasonal * deciduousShare(latitudeDeg, longitudeDeg);
+  const share = deciduousShare(latitudeDeg, longitudeDeg);
+  const canopy = seasonal * share;
   // On the northern calendar: the southern year runs half a year behind.
   const d = latitudeDeg < 0 ? (((dayOfYear + 182.6) % 365.25) + 365.25) % 365.25 : dayOfYear;
   const up = leafOutDay(lat, heightM, climate.maritime);
@@ -157,5 +197,6 @@ export function leafSeason(
     leafOn: round2(1 - canopy * (1 - leafOn)),
     autumn: round2(canopy * autumn),
     grassGreen: round2(1 - seasonal * GRASS_DORMANCY * (1 - 0.7 * climate.maritime) * (1 - grass)),
+    deciduous: share,
   };
 }

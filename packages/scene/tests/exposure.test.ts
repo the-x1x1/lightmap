@@ -6,7 +6,6 @@ import {
   describeExposure,
   describeLightKelvin,
   estimateExposure,
-  shadeFactor,
   formatShutter,
   moonlightLux,
   nearestShutter,
@@ -160,19 +159,26 @@ describe('the light’s colour line', () => {
 });
 
 describe('in a ridge’s shadow', () => {
-  it('leaves the sky’s share: about 2.3 stops under a clear Sun, almost nothing under overcast', () => {
-    const lit = estimateExposure({ sunElevationDeg: 20, sunTransmittance: 1 });
-    const shaded = estimateExposure({
-      sunElevationDeg: 20,
-      sunTransmittance: 1,
-      shade: { sun: true },
-    });
-    expect(lit.ev100 - shaded.ev100).toBeCloseTo(Math.log2(1 / 0.2), 5);
-    expect(shadeFactor(0)).toBe(1);
-    const grey = (shade: boolean) =>
-      estimateExposure({ sunElevationDeg: 20, sunTransmittance: 0.05, shade: { sun: shade } })
-        .ev100;
-    expect(grey(false) - grey(true)).toBeLessThan(0.1);
+  it('loses the direct beam: little with the Sun low, ~2.5 stops at 20°, nothing stepping at sunrise', () => {
+    const loss = (h: number, t = 1) =>
+      estimateExposure({ sunElevationDeg: h, sunTransmittance: t }).ev100 -
+      estimateExposure({ sunElevationDeg: h, sunTransmittance: t, shade: { sun: true } }).ev100;
+    expect(loss(3)).toBeLessThan(0.6);
+    expect(loss(10)).toBeGreaterThan(1.5);
+    expect(loss(20)).toBeGreaterThan(2.2);
+    expect(loss(20)).toBeLessThan(2.8);
+    // Grey sky: little beam to lose, only the ridge's share of the sky (about a third of a stop).
+    expect(loss(20, 0.05)).toBeLessThan(0.6);
+    // No step as a hidden Sun rises: just after sunrise the shaded figure is above twilight's.
+    const shadedAt = (h: number) =>
+      estimateExposure({ sunElevationDeg: h, sunTransmittance: 1, shade: { sun: true } }).ev100;
+    expect(shadedAt(-0.8)).toBeGreaterThan(shadedAt(-0.9));
+    expect(shadedAt(0.5)).toBeGreaterThan(shadedAt(0));
+    // The Sun's shade flag means nothing once it has set.
+    const dusk = { sunElevationDeg: -3, sunTransmittance: 1 };
+    expect(estimateExposure({ ...dusk, shade: { sun: true } }).ev100).toBe(
+      estimateExposure(dusk).ev100,
+    );
     // A full Moon behind the ridge: the ground gets its sky's share, still above starlight.
     const moon = { elevationDeg: 30, illuminatedFraction: 1 };
     const night = { sunElevationDeg: -30, sunTransmittance: 1, moon };
@@ -180,10 +186,5 @@ describe('in a ridge’s shadow', () => {
     const behind = estimateExposure({ ...night, shade: { moon: true } });
     expect(open.ev100 - behind.ev100).toBeGreaterThan(2);
     expect(behind.basis).toBe('moon');
-    // The Sun's shade flag means nothing once it has set.
-    const dusk = { sunElevationDeg: -3, sunTransmittance: 1 };
-    expect(estimateExposure({ ...dusk, shade: { sun: true } }).ev100).toBe(
-      estimateExposure(dusk).ev100,
-    );
   });
 });

@@ -174,7 +174,8 @@ export function PreviewViewport({
             scene.dayEvents.polar !== 'normal'
               ? scene.dayEvents.polar.replace('-', ' ')
               : ridge?.firstLightDiffers && ridge.firstLight
-                ? `over ridge ${formatWallTime(ridge.firstLight, tz)}`
+                ? // Later than sunrise: a ridge; earlier: a horizon below level (a summit, a cliff).
+                  `${ridge.firstLight.getTime() > (scene.dayEvents.sunrise?.getTime() ?? 0) ? 'over ridge' : 'first light'} ${formatWallTime(ridge.firstLight, tz)}`
                 : 'local'
           }
           testId="preview-sunrise"
@@ -183,9 +184,9 @@ export function PreviewViewport({
           label="Sunset"
           value={scene.dayEvents.sunset ? formatWallTime(scene.dayEvents.sunset, tz) : '—'}
           sub={
-            // The terrain's last light is the time to be there by when a ridge takes the Sun early.
+            // The terrain's last light: before sunset behind a ridge, after it from a summit.
             ridge?.lastLightDiffers && ridge.lastLight
-              ? `behind ridge ${formatWallTime(ridge.lastLight, tz)}`
+              ? `${ridge.lastLight.getTime() < (scene.dayEvents.sunset?.getTime() ?? Infinity) ? 'behind ridge' : 'last light'} ${formatWallTime(ridge.lastLight, tz)}`
               : scene.dayEvents.goldenHourEveningStart
                 ? `golden ${formatWallTime(scene.dayEvents.goldenHourEveningStart, tz)}`
                 : ''
