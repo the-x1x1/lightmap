@@ -43,11 +43,21 @@ function smooth(edge0: number, edge1: number, x: number): number {
 
 /**
  * The share of the broad-leaf canopy that turns and drops: all of it north of the equator (its
- * conifers are told apart by colour), about a third in the south's evergreen woods, most of it
- * in the Patagonian Andes' deciduous beech (lenga, nire). Unknown longitude in the south: a third.
+ * conifers are told apart by colour) but half in the Mediterranean's and California's evergreen
+ * oak and scrub, about a third in the south's evergreen woods, most of it in the Patagonian
+ * Andes' deciduous beech (lenga, nire). Unknown longitude: all in the north, a third in the south.
  */
 export function deciduousShare(latitudeDeg: number, longitudeDeg: number | null): number {
-  if (latitudeDeg >= 0) return 1;
+  if (latitudeDeg >= 0) {
+    if (longitudeDeg === null) return 1;
+    // Mediterranean climates' evergreen oaks, pines and scrub (holm and cork oak, maquis,
+    // chaparral, live oak): about half the woods keep their leaves through the mild wet winter.
+    const mediterranean =
+      latitudeDeg > 30 && latitudeDeg < 41 && longitudeDeg > -10 && longitudeDeg < 37;
+    const california =
+      latitudeDeg > 32 && latitudeDeg < 40 && longitudeDeg > -124.5 && longitudeDeg < -117;
+    return mediterranean || california ? 0.5 : 1;
+  }
   if (longitudeDeg !== null && latitudeDeg < -37 && longitudeDeg > -76 && longitudeDeg < -68)
     return 0.8;
   return 0.35;

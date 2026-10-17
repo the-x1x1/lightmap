@@ -55,6 +55,11 @@ describe('leaf season', () => {
 
   it('keeps the south’s evergreen woods mostly green: a third of the canopy turns', () => {
     expect(deciduousShare(45, 7)).toBe(1);
+    // The Mediterranean's and California's evergreen oak and scrub: half.
+    expect(deciduousShare(38.7, -9.14)).toBe(0.5); // Lisbon
+    expect(deciduousShare(37.98, 23.73)).toBe(0.5); // Athens
+    expect(deciduousShare(34.05, -118.25)).toBe(0.5); // Los Angeles
+    expect(deciduousShare(48.85, 2.35)).toBe(1); // Paris
     // Christchurch, Hobart, Cape Town, Perth: July keeps about two thirds of the canopy.
     for (const [lat, lon] of [
       [-43.5, 172.6],
