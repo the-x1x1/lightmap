@@ -4,11 +4,12 @@
  * place and year, since two solstice day computations are a few hundred solar positions.
  */
 import { useMemo } from 'react';
+import { quantizeDeg } from './quantize';
 import { seasonalEnvelope, type SceneState, type SeasonalEnvelope } from '@lightmap/scene';
 
 export function useSeasonalEnvelope(scene: SceneState): SeasonalEnvelope {
-  const lat = scene.location.point.latitude;
-  const lng = scene.location.point.longitude;
+  const lat = quantizeDeg(scene.location.point.latitude);
+  const lng = quantizeDeg(scene.location.point.longitude);
   const tz = scene.location.timeZone;
   const year = Number(scene.localTime.date.slice(0, 4));
   return useMemo(

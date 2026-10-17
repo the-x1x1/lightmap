@@ -9,6 +9,7 @@ import dynamic from 'next/dynamic';
 import { brand, isEnabled } from '@lightmap/config';
 import { addCivilDays, civilDateString, parseCivilDate, utcToWallClock } from '@lightmap/astronomy';
 import { DEFAULT_RENDER_SETTINGS, horizonShortCaveat, skylineOf } from '@lightmap/scene';
+import { quantizeDeg } from '@/features/planner/quantize';
 import { effectiveTimeZone, usePlannerStore } from '@/features/planner/store';
 import { useScene } from '@/features/planner/use-scene';
 import { useTerrainHorizon } from '@/features/planner/use-terrain-horizon';
@@ -171,17 +172,19 @@ export function MapShell() {
   // Dark-sky spells of the civil day (night planning) for the timeline band: per place and day,
   // the core clear of the sampled skyline.
   const skylineProfile = scene?.terrainHorizon?.profile ?? null;
+  const skyLat = location ? quantizeDeg(location.point.latitude) : null;
+  const skyLng = location ? quantizeDeg(location.point.longitude) : null;
   const darkSky = useMemo(
     () =>
-      hasLunar && location && dayStartMs !== null && dayEndMs !== null
+      hasLunar && skyLat !== null && skyLng !== null && dayStartMs !== null && dayEndMs !== null
         ? darkSkySpells(
             { dayStart: new Date(dayStartMs), dayEnd: new Date(dayEndMs) },
-            location.point.latitude,
-            location.point.longitude,
+            skyLat,
+            skyLng,
             skylineOf(skylineProfile),
           )
         : null,
-    [hasLunar, location, dayStartMs, dayEndMs, skylineProfile],
+    [hasLunar, skyLat, skyLng, dayStartMs, dayEndMs, skylineProfile],
   );
   // Terrain horizon around the pin (sampled through the renderer; nothing on the ellipsoid).
   useTerrainHorizon({

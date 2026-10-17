@@ -19,6 +19,7 @@ import { skylineOf, type SceneState } from '@lightmap/scene';
 import { decideWeatherMode, type WeatherFrame, type WindowVerdict } from '@lightmap/weather';
 import { usePlannerStore } from '@/features/planner/store';
 import { useCapabilities } from '@/features/planner/use-scene';
+import { quantizeDeg } from '@/features/planner/quantize';
 import {
   darkNights,
   weekAheadCellLabel,
@@ -56,8 +57,8 @@ export function WeekAhead({
   const setMinutes = usePlannerStore((s) => s.setMinutes);
   const caps = useCapabilities();
   const tz = scene.timeZone;
-  const lat = scene.location.point.latitude;
-  const lng = scene.location.point.longitude;
+  const lat = quantizeDeg(scene.location.point.latitude);
+  const lng = quantizeDeg(scene.location.point.longitude);
   // From today in the planning zone (not the selected day): the week ahead is about now.
   const today = utcToLocalSelection(new Date(), tz).date;
   const from = useMemo(() => parseCivilDate(today), [today]);

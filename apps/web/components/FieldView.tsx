@@ -28,6 +28,7 @@ import {
 import type { SceneState } from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
 import { usePlannerStore } from '@/features/planner/store';
+import { quantizeDeg } from '@/features/planner/quantize';
 import { useCompass } from '@/features/field/use-compass';
 import { describePlannedOffset } from '@/features/field/planned-offset';
 import { useSkyGlow } from '@/features/planner/use-sky-glow';
@@ -70,8 +71,8 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
   }, []);
   // Sky tracks for the civil day, sampled once per place and day (the Moon's 144 positions are
   // a few milliseconds) and projected into the frame on every render as the phone turns.
-  const lat = scene.location.point.latitude;
-  const lng = scene.location.point.longitude;
+  const lat = quantizeDeg(scene.location.point.latitude);
+  const lng = quantizeDeg(scene.location.point.longitude);
   const dayStartMs = scene.dayEvents.dayStart.getTime();
   const dayEndMs = scene.dayEvents.dayEnd.getTime();
   const hasLunar = scene.lunar !== null;

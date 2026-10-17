@@ -36,6 +36,7 @@ import {
 } from '@lightmap/astronomy';
 import { useMemo, useState } from 'react';
 import { usePlannerStore } from '@/features/planner/store';
+import { quantizeDeg } from '@/features/planner/quantize';
 import { useSettled } from '@/lib/use-settled';
 import {
   DARK_WINDOW_NIGHTS,
@@ -75,8 +76,8 @@ function DarkWindows({
   const setDate = usePlannerStore((s) => s.setDate);
   const setMinutes = usePlannerStore((s) => s.setMinutes);
   const tz = scene.timeZone;
-  const lat = scene.location.point.latitude;
-  const lng = scene.location.point.longitude;
+  const lat = quantizeDeg(scene.location.point.latitude);
+  const lng = quantizeDeg(scene.location.point.longitude);
   // From the selected day's noon, so the scan starts with the night that begins that evening
   // and no night is split by its edges; the day settles first (the year slider is continuous).
   const from = useSettled(scene.dayEvents.dayStart.getTime() + 12 * 3_600_000, 300);
@@ -467,8 +468,8 @@ export function AstronomyDetails({
   const units = usePlannerStore((st) => st.units);
   const seasons = useSeasonalEnvelope(scene);
   // Sampled over the day (a few ms): once per place, day and zone, never per scrub tick.
-  const lat = scene.location.point.latitude;
-  const lng = scene.location.point.longitude;
+  const lat = quantizeDeg(scene.location.point.latitude);
+  const lng = quantizeDeg(scene.location.point.longitude);
   const dayEvents = scene.dayEvents;
   const lightWindows = useMemo(
     () => describeLightWindows(dayEvents, { latitude: lat, longitude: lng }, tz),

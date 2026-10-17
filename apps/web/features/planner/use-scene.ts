@@ -5,6 +5,7 @@
  * plan §19); capabilities come from /api/scene/capabilities.
  */
 import { useMemo } from 'react';
+import { quantizeDeg } from './quantize';
 import { useQuery } from '@tanstack/react-query';
 import { computeDayEvents, parseCivilDate, type DayEvents } from '@lightmap/astronomy';
 import {
@@ -119,17 +120,17 @@ export function useScene(
   });
 
   // Day events depend only on place + date + zone; cache them so scrubbing does not recompute.
+  // The place to a thousandth of a degree (~100 m, under a second of sunrise): a walk's steps
+  // share one day's events, and everything keyed on them (the light windows, the timeline's
+  // marks and bands) is not rebuilt ten times a second.
+  const dayLat = location ? quantizeDeg(location.point.latitude) : null;
+  const dayLng = location ? quantizeDeg(location.point.longitude) : null;
   const dayEvents = useMemo(() => {
-    if (!location) return null;
+    if (dayLat === null || dayLng === null) return null;
     const civil = parseCivilDate(date);
     if (!civil) return null;
-    return computeDayEvents({
-      latitude: location.point.latitude,
-      longitude: location.point.longitude,
-      timeZone,
-      date: civil,
-    });
-  }, [location, date, timeZone]);
+    return computeDayEvents({ latitude: dayLat, longitude: dayLng, timeZone, date: civil });
+  }, [dayLat, dayLng, date, timeZone]);
 
   const environment = useMemo(
     () => environmentFromCapabilities(caps.data ?? null, location?.point.elevationM ?? null),
