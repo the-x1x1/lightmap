@@ -72,6 +72,14 @@ describe('sky glow from the urban areas (Walker’s law)', () => {
     expect(skyBrightnessRatio(skyGlowAt(30, -100, [town(30, -100, 0, 0, 10)]))).toBe(60);
   });
 
+  it('a suburban sky says which way to drive for a darker one', () => {
+    const g = skyGlowAt(30, -100, [town(30, -100, 0, -12, 20)]);
+    expect(g.grade).toBe('suburban');
+    expect(describeSkyGlow(g)).toBe(
+      'bright suburban sky to the S (built-up area 2 km off): the core faint at best; darker away to the N',
+    );
+  });
+
   it('beyond the reach a town adds nothing', () => {
     expect(skyGlowAt(30, -100, [town(30, -100, 400, 0, 40)]).index).toBe(0);
   });

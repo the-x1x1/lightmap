@@ -129,11 +129,16 @@ const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const;
 export function describeSkyGlow(g: SkyGlow): string {
   const side = g.bearingDeg === null ? '' : ` to the ${COMPASS[Math.round(g.bearingDeg / 45) % 8]}`;
   const off = g.distanceKm === null ? '' : ` (built-up area ${Math.round(g.distanceKm)} km off)`;
+  // Where to drive for a darker sky: away from the glow.
+  const away =
+    g.bearingDeg === null
+      ? ''
+      : `; darker away to the ${COMPASS[Math.round(((g.bearingDeg + 180) % 360) / 45) % 8]}`;
   switch (g.grade) {
     case 'city':
       return 'city sky - inside a built-up area the core is washed out';
     case 'suburban':
-      return `bright suburban sky${side}${off}: the core faint at best`;
+      return `bright suburban sky${side}${off}: the core faint at best${away}`;
     case 'horizon':
       return `a glow on the horizon${side}${off}; the core shows above it`;
     case 'faint':
