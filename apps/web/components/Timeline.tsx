@@ -418,11 +418,14 @@ export function DayEventMarkers({
   timeZone: string;
 }) {
   const rows: Array<[string, Date | null]> = [
+    // In the order of the day; the golden-hour rows name which edge they are (the morning's
+    // ends after sunrise, the evening's begins before sunset).
+    ['Astronomical dawn', dayEvents.astronomicalDawn],
     ['Civil dawn', dayEvents.dawn],
     ['Sunrise', dayEvents.sunrise],
-    ['Golden hour (am)', dayEvents.goldenHourMorningEnd],
+    ['Golden hour ends', dayEvents.goldenHourMorningEnd],
     ['Solar noon', dayEvents.solarNoon],
-    ['Golden hour (pm)', dayEvents.goldenHourEveningStart],
+    ['Golden hour begins', dayEvents.goldenHourEveningStart],
     ['Sunset', dayEvents.sunset],
     ['Blue hour ends', dayEvents.civilDusk],
     ['Astronomical dusk', dayEvents.astronomicalDusk],
