@@ -298,7 +298,11 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
   const onWheel = (e: React.WheelEvent) => {
     if (!looking) return;
     const store = usePlannerStore.getState();
-    store.setFov(store.camera.fovDeg * (e.deltaY > 0 ? 1.08 : 0.92));
+    // By how far the wheel or trackpad moved, not per event: a trackpad sends dozens of small
+    // deltas a second (each zoomed 8% before, racing through the lenses), a wheel notch ~100 px.
+    const px = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
+    const factor = Math.exp(Math.max(-0.3, Math.min(0.3, px * 0.0008)));
+    store.setFov(store.camera.fovDeg * factor);
   };
   // W A S D walk from the viewpoint while held (WALK_MPS, five times that with Shift), in steps
   // of a tenth of a second that the renderer glides between, so the walk does not wait for the
