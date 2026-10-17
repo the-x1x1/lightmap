@@ -47,6 +47,10 @@ export interface WorldMapProps {
 const WALK_MPS = 6;
 /** The walk's step interval; the renderer glides the eye between steps. */
 const WALK_TICK_MS = 100;
+/** A held arrow key turns the view this fast (degrees a second; Shift: three times). */
+const TURN_DEG_PER_S = 45;
+/** How long an arrow key is held before the smooth turn takes over from the single step. */
+const TURN_HOLD_MS = 280;
 
 export function WorldMap({ scene, capabilities, onRendererInfo, className }: WorldMapProps) {
   const container = useRef<HTMLDivElement | null>(null);
@@ -319,10 +323,16 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
   // A key-up can go missing (the window loses focus, a context menu takes it, macOS drops the
   // letter's key-up under Cmd): stop then, and whenever the view stops being the viewpoint.
   useEffect(() => {
-    if (!looking) stopWalking();
-    const stop = () => stopWalking();
+    if (!looking) {
+      stopWalking();
+      stopTurning();
+    }
+    const stop = () => {
+      stopWalking();
+      stopTurning();
+    };
     const hidden = () => {
-      if (document.visibilityState !== 'visible') stopWalking();
+      if (document.visibilityState !== 'visible') stop();
     };
     window.addEventListener('blur', stop);
     document.addEventListener('visibilitychange', hidden);
@@ -365,10 +375,36 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
   };
   // Keys by their physical place (e.code), so Shift, Option or a keyboard layout does not change
   // which key-up ends the walk.
+  // Arrow keys: a press turns one step (3°, 15° with Shift), as before; held, the view then
+  // turns smoothly at TURN_DEG_PER_S a frame at a time instead of jumping at the keyboard's
+  // repeat rate.
+  const turning = useRef(new Set<string>());
+  const turnFrame = useRef<number | null>(null);
+  const turnHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stopTurning = () => {
+    turning.current.clear();
+    if (turnFrame.current !== null) cancelAnimationFrame(turnFrame.current);
+    turnFrame.current = null;
+    if (turnHoldTimer.current) clearTimeout(turnHoldTimer.current);
+    turnHoldTimer.current = null;
+  };
+  const turnLoop = (last: number) => (t: number) => {
+    const keys = turning.current;
+    if (keys.size === 0) return;
+    const dt = Math.min(0.1, Math.max(0, (t - last) / 1000));
+    const rate = (shiftHeld.current ? 3 : 1) * TURN_DEG_PER_S * dt;
+    const yaw = (keys.has('ArrowRight') ? 1 : 0) - (keys.has('ArrowLeft') ? 1 : 0);
+    const pitch = (keys.has('ArrowUp') ? 1 : 0) - (keys.has('ArrowDown') ? 1 : 0);
+    if (yaw !== 0 || pitch !== 0) rotateCamera(yaw * rate, pitch * rate * 0.6);
+    turnFrame.current = requestAnimationFrame(turnLoop(t));
+  };
+  useEffect(() => () => stopTurning(), []);
   const onKeyUp = (e: React.KeyboardEvent) => {
     shiftHeld.current = e.shiftKey;
     held.current.delete(e.code);
     if (held.current.size === 0) stopWalking();
+    turning.current.delete(e.key);
+    if (turning.current.size === 0) stopTurning();
   };
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (!looking) return;
@@ -376,6 +412,7 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
     // A shortcut (Cmd/Ctrl with a letter) is not a step, and its letter's key-up may never come.
     if (e.metaKey || e.ctrlKey) {
       stopWalking();
+      stopTurning();
       return;
     }
     const k = e.code;
@@ -393,12 +430,26 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
       return;
     }
     const step = e.shiftKey ? 15 : 3;
+    const arrow =
+      e.key === 'ArrowLeft' ||
+      e.key === 'ArrowRight' ||
+      e.key === 'ArrowUp' ||
+      e.key === 'ArrowDown';
+    if (!arrow) return;
+    e.preventDefault();
+    if (e.repeat || turning.current.has(e.key)) return;
     if (e.key === 'ArrowLeft') rotateCamera(-step, 0);
     else if (e.key === 'ArrowRight') rotateCamera(step, 0);
     else if (e.key === 'ArrowUp') rotateCamera(0, step);
-    else if (e.key === 'ArrowDown') rotateCamera(0, -step);
-    else return;
-    e.preventDefault();
+    else rotateCamera(0, -step);
+    turning.current.add(e.key);
+    // Held past a moment: the smooth turn takes over.
+    if (turnHoldTimer.current === null && turnFrame.current === null)
+      turnHoldTimer.current = setTimeout(() => {
+        turnHoldTimer.current = null;
+        if (turning.current.size > 0)
+          turnFrame.current = requestAnimationFrame(turnLoop(performance.now()));
+      }, TURN_HOLD_MS);
   };
 
   const overlayMode = renderer.mode === 'OVERLAY';
@@ -435,8 +486,14 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
         onWheel={onWheel}
         onKeyDown={onKeyDown}
         onKeyUp={onKeyUp}
-        onBlur={stopWalking}
-        onContextMenu={stopWalking}
+        onBlur={() => {
+          stopWalking();
+          stopTurning();
+        }}
+        onContextMenu={() => {
+          stopWalking();
+          stopTurning();
+        }}
       />
       {overlayMode && !location ? (
         <div className="absolute inset-0 flex items-center justify-center p-6">

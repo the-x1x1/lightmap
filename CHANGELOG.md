@@ -4,8 +4,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
-- **Smoother walking and rendering**: hold W A S D to walk from the viewpoint (Shift to run),
-  the eye gliding between steps instead of hopping at the keyboard's repeat rate; building tiles
+- **Smoother walking and rendering**: hold W A S D to walk from the viewpoint (Shift to run) and
+  hold an arrow key to turn smoothly, the eye gliding between steps instead of hopping at the
+  keyboard's repeat rate; building tiles
   and seasonal imagery tiles are decoded and recoloured a few milliseconds a frame instead of
   stalling one; anti-aliasing steps down with the quality rungs; no preserved drawing buffer;
   the Sun and the shadows glide through a played or scrubbed day instead of stepping a minute at
