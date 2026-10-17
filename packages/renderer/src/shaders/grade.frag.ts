@@ -39,6 +39,7 @@ uniform float u_sunElevation;   // degrees, geometric
 uniform float u_time;
 uniform vec2  u_sunScreen;      // sun position in 0..1 screen space (may be off-screen)
 uniform float u_sunVisible;     // 1 when the sun is above the horizon and not blocked by cloud
+uniform float u_starField;      // 1 while the star field is drawn (the host's skybox)
 
 // --- value noise / fbm -------------------------------------------------------------------
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
@@ -89,15 +90,21 @@ void main() {
   if (isSky) {
     vec2 uv = v_textureCoordinates;
     // The star field comes out through the twilight (lighting.ts \`starFieldVisibility\`): it is
-    // drawn from a Sun at -4 deg, and until -15 deg part of each star's light is taken back out.
-    // A star is a point brighter than every pixel a star's width away (a texel of the 1024-px
-    // star cube, 0.088 deg, as drawn at this lens: a few pixels, dozens zoomed in); a disc's
-    // limb (the Moon) or a cloud edge always has a neighbour as bright on its inside, so those
-    // keep their light.
+    // drawn from a Sun at -4 deg, and until -15 deg part of each star's light is taken back out
+    // (the faint stars' all of it, the brightest - blurred discs in the cube - the peak above
+    // their skirt, so they come out first). Gated on the host's own skybox switch, not on the
+    // gliding elevation, so a step across -4 deg never shows the field whole for a frame.
+    // A star is a point brighter than every pixel a star's width away: 1.5 texels of the
+    // 1024-px star cube (0.088 deg), as drawn along this ray (a gnomonic view magnifies by
+    // 1/cos^2 off its axis): a few pixels, dozens zoomed in. The Moon's limb and a crescent have
+    // a neighbour about as bright on their inside, so they keep their light; the cloud decks are
+    // composited after this, so their edges are never touched.
     float starFade = 1.0 - smoothstep(-15.0, -4.0, u_sunElevation);
-    if (starFade < 1.0 && u_sunElevation < -3.5) {
-      float pixelRad = 2.0 * atan(1.0 / czm_projection[1][1]) / czm_viewport.w;
-      float reach = clamp(1.5 * 0.001534 / max(pixelRad, 1e-6), 2.0, 24.0);
+    if (starFade < 1.0 && u_starField > 0.5) {
+      float cosAxis = max(-rayEC.z, 0.2);
+      float reach = clamp(
+          1.5 * 0.001534 * czm_projection[1][1] * czm_viewport.w * 0.5 / (cosAxis * cosAxis),
+          2.0, 48.0);
       vec2 px = reach / czm_viewport.zw;
       vec3 around = texture(colorTexture, uv + vec2(px.x, 0.0)).rgb;
       around = max(around, texture(colorTexture, uv - vec2(px.x, 0.0)).rgb);
@@ -107,7 +114,11 @@ void main() {
       around = max(around, texture(colorTexture, uv - px * 0.7071).rgb);
       around = max(around, texture(colorTexture, uv + vec2(px.x, -px.y) * 0.7071).rgb);
       around = max(around, texture(colorTexture, uv + vec2(-px.x, px.y) * 0.7071).rgb);
-      color -= max(color - around, vec3(0.0)) * (1.0 - starFade);
+      // A small disc (the Moon at a wide lens, a few pixels across) lights its neighbours more
+      // than half as much as its centre; a star does not.
+      vec3 lumW = vec3(0.2126, 0.7152, 0.0722);
+      if (dot(around, lumW) < 0.5 * dot(color, lumW))
+        color -= max(color - around, vec3(0.0)) * (1.0 - starFade);
     }
     // The clear dome first (Cesium's single-scattering sky, corrected for twilight), then the
     // decks composite over it - a cloud's colour comes from how *it* is lit, not from the dome.

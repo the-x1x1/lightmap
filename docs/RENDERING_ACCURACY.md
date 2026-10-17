@@ -142,10 +142,11 @@ by the light's colour. The light direction and terrain shading are untouched by 
 `tools/renderer-smoke` (contact sheet `docs/media/renderer-smoke-2026-09-24c.png`).
 
 **Night sky.** In viewpoint mode, below a Sun elevation of −4°, the dome shows Cesium's star
-field, coming out through the twilight (`starFieldVisibility`: a third of its light at −8°, all
-of it from −15°, the grade taking the rest back out of each star-sized point and following the
-clock's glide; it had switched on whole at −8°) (its J2000 star cube), which Cesium turns by Greenwich sidereal time for the scene's
-instant (`czm_temeToPseudoFixed`; the host sets the clock to the planned UTC) — so the Milky
+field (its J2000 star cube), coming out through the twilight: the grade takes part of each
+star-sized point's light back out until −15° (`starFieldVisibility`: none of the faint stars at
+−4°, a third of the field at −8°, all of it from −15°; the brightest come out first), following
+the clock's glide (it had switched on whole at −8°). Cesium turns the field by Greenwich
+sidereal time for the scene's instant (`czm_temeToPseudoFixed`; the host sets the clock to the planned UTC) — so the Milky
 Way's band in the 3D preview stands where the planner's own Galactic Centre says, within the
 precession and nutation Cesium leaves out (≈ 0.4° in 2026; the planner's `milkyWayCore` applies
 Meeus precession, ≈ 0.1°). The "Milky Way core" line, the rose star, the dark windows and the

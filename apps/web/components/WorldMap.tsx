@@ -355,7 +355,8 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
     }
     zoomGoal.current = goal;
     zoomShown.current = fov;
-    zoomFrame.current ??= requestAnimationFrame(zoomLoop(performance.now()));
+    // A frame earlier: the first frame's timestamp can precede this event's.
+    zoomFrame.current ??= requestAnimationFrame(zoomLoop(performance.now() - 16));
   };
   // W A S D walk from the viewpoint while held (`walkStep`: 6 m/s, 30 with Shift), in steps
   // of a tenth of a second that the renderer glides between, so the walk does not wait for the

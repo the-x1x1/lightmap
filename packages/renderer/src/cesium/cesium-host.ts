@@ -524,6 +524,7 @@ export class CesiumSceneHost implements SceneHost {
       u_time: 0,
       u_sunScreen: new C.Cartesian2(-1, -1),
       u_sunVisible: 0,
+      u_starField: 0,
       // Evaluated every frame (a function uniform): where "up" is in the view, and how high the
       // camera is — the grade tells sky from ground by the view ray, not by the depth buffer.
       u_eyeUpEC: () => {
@@ -2425,6 +2426,11 @@ export class CesiumSceneHost implements SceneHost {
     if (s.sun) s.sun.show = v.sun;
     if (s.moon) s.moon.show = v.moon;
     if (s.skyBox) s.skyBox.show = v.stars;
+    // The grade fades the field in through the twilight while it is drawn.
+    const starField = s.skyBox && v.stars ? 1 : 0;
+    this.gradeUniforms['u_starField'] = starField;
+    (this.grade.uniforms as Record<string, unknown>)['u_starField'] = starField;
+    s.requestRender();
   }
 
   setMoonDisc(m: HostMoonDisc | null): void {

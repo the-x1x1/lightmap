@@ -15,8 +15,8 @@ import { BETA_MIE, clearSkyStops, mieScaleForHaze, type SkyStops } from './sky-m
 export const STAR_FIELD_FROM_DEG = -4;
 
 /**
- * How much of the star field shows at a Sun elevation, 0-1: none from −4° (the brightest stars
- * come out about the end of civil twilight), about a third at −8°, all of it from −15° (most of
+ * How much of the star field shows at a Sun elevation, 0-1: none from −4° (the brightest stars,
+ * which the grade cannot take wholly out, come out first, about the end of civil twilight), about a third at −8°, all of it from −15° (most of
  * the naked-eye stars by the middle of nautical twilight, on the way to astronomical night). The
  * grade shader's `starFade` is the same curve.
  */
