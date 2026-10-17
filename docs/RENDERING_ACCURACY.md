@@ -398,7 +398,21 @@ The governor's ceiling is the stricter of the device probe (`qualityCeiling`: lo
 small maximum texture) and live conditions (`conditionsCeiling`: battery level while discharging,
 Save-Data). Conditions can take the view down to the Battery rung; only measured frame rate can
 take it to Minimal, where terrain shadows are off. Anti-aliasing steps with the rungs: 4x MSAA on
-Ultra and High, 2x on Balanced, and FXAA alone on Battery and Minimal.
+Ultra and High, 2x on Balanced, and FXAA alone on Battery and Minimal. The governor starts on
+High, or on Balanced where the WebGL renderer names an integrated GPU (Intel HD/UHD/Iris, AMD's
+APU graphics, Adreno), and climbs if the machine has headroom.
+
+### Smoothness
+
+The scene renders on demand, and the work that is not drawing is kept out of the frames that
+are: building tiles are decoded and described, and seasonal imagery tiles recoloured, a few
+milliseconds a frame (`buildingsFromTileSteps`, `FrameBudgetQueue`); a camera-only scene rebuild
+(a drag of the look direction) is about a tenth of a millisecond, the Moon's rise and set kept
+per place and day. Motion that the inputs deliver in steps is drawn continuously: the viewpoint
+eye glides between walk steps at the walk's speed, and the Sun's light glides between the
+clock's minute steps while the day plays or is scrubbed; a jump to a new place or a new date
+lands at once, as does everything under "reduce motion". A walk does not resample the terrain
+horizon or rerun the night and season scans at every step: they wait until the pin stays put.
 
 ## How to verify
 
