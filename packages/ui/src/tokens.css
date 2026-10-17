@@ -6,7 +6,8 @@
   --lm-panel-border: rgba(255, 255, 255, 0.08);
   --lm-text: #f4f4f5;
   --lm-text-muted: #a1a1aa;
-  --lm-text-faint: #71717a;
+  /* 5:1 on the raised panel (WCAG AA for small text); #71717a measured 3.4:1. */
+  --lm-text-faint: #8e8e97;
   --lm-sun: #f5b342;
   --lm-sun-deep: #d98b1a;
   --lm-twilight: #5b8def;
