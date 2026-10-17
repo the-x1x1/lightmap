@@ -40,6 +40,13 @@ uniform float u_time;
 uniform vec2  u_sunScreen;      // sun position in 0..1 screen space (may be off-screen)
 uniform float u_sunVisible;     // 1 when the sun is above the horizon and not blocked by cloud
 uniform float u_starField;      // 1 while the star field is drawn (the host's skybox)
+// The naked-eye planets (Mercury, Venus, Mars, Jupiter, Saturn): screen xy (0..1), the point's
+// peak brightness (0: not drawn) and its Gaussian radius in CSS pixels (planet-points.ts).
+uniform vec4 u_planet0;
+uniform vec4 u_planet1;
+uniform vec4 u_planet2;
+uniform vec4 u_planet3;
+uniform vec4 u_planet4;
 
 // --- value noise / fbm -------------------------------------------------------------------
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
@@ -57,6 +64,16 @@ float fbm(vec2 p) {
 vec3 saturate3(vec3 c, float s) {
   float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
   return mix(vec3(l), c, s);
+}
+
+/** A planet's point on the dome at this pixel. */
+vec3 planetLight(vec4 p, vec3 tint) {
+  if (p.z <= 0.0) return vec3(0.0);
+  vec2 d = (v_textureCoordinates - p.xy) * czm_viewport.zw;
+  float s = p.w * czm_pixelRatio;
+  float r2 = dot(d, d);
+  if (r2 > 36.0 * s * s) return vec3(0.0);
+  return tint * p.z * exp(-r2 / (2.0 * s * s));
 }
 
 void main() {
@@ -169,6 +186,13 @@ void main() {
       dome += window * clear * (anti * (belt * vec3(0.38, 0.25, 0.29) + earthShadow * vec3(0.10, 0.13, 0.19))
           + vec3(0.04, 0.06, 0.10));
     }
+    // The planets: points on the clear dome after the stars have faded and the twilight is
+    // graded, before the decks, so cloud covers them and a ridge (not sky) hides them.
+    dome += planetLight(u_planet0, vec3(1.0, 0.93, 0.82))
+        + planetLight(u_planet1, vec3(1.0, 0.98, 0.92))
+        + planetLight(u_planet2, vec3(1.0, 0.70, 0.50))
+        + planetLight(u_planet3, vec3(1.0, 0.95, 0.86))
+        + planetLight(u_planet4, vec3(1.0, 0.91, 0.72));
     vec3 sky = dome;
     // Clouds share the scene's sky-luminance dimming (overcast decks are darker than fair ones).
     float deckLum = mix(1.0, u_skyLuminance, 0.6);
@@ -310,4 +334,10 @@ export const GRADE_UNIFORM_NAMES = [
   'u_sunVisible',
   'u_eyeUpEC',
   'u_eyeHeightM',
+  'u_starField',
+  'u_planet0',
+  'u_planet1',
+  'u_planet2',
+  'u_planet3',
+  'u_planet4',
 ] as const;

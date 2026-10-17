@@ -33,6 +33,7 @@ validated against the US Naval Observatory (`packages/astronomy/tests/fixtures/u
 | Moonrise/set                                       | ±1 min                                                                              |                                                                                                                       |
 | Principal phase instants (New/Quarter/Full)        | ±2 min against the almanac                                                          | Elongation bisected on the same series (`nextMoonPhases`)                                                             |
 | Galactic Centre (Milky Way core) azimuth/elevation | ≈0.1° (precession to date; no nutation or aberration)                               | Sgr A* J2000 via Meeus 21.3–21.4; visibility verdict is geometry only (Sun depth, Moon, altitude), not sky brightness |
+| Planets (Mercury to Saturn) azimuth/elevation      | ≈0.05° (Mercury–Mars), ≈0.2° (Jupiter, Saturn)                                      | JPL approximate elements 1800–2050; magnitudes ±0.2 (Saturn with ring tilt)                                           |
 | Time zone conversion                               | Exact for IANA zones via `Intl`; DST gap → shift forward, overlap → earlier instant | Zone lookup from coordinates is geo-tz (ODbL boundaries)                                                              |
 
 ## What is simulated
@@ -145,9 +146,13 @@ by the light's colour. The light direction and terrain shading are untouched by 
 field (its J2000 star cube), coming out through the twilight: the grade takes part of each
 star-sized point's light back out until −15° (`starFieldVisibility`: none of the faint stars at
 −4°, a third of the field at −8°, all of it from −15°; the brightest come out first), following
-the clock's glide (it had switched on whole at −8°). Cesium turns the field by Greenwich
-sidereal time for the scene's instant (`czm_temeToPseudoFixed`; the host sets the clock to the planned UTC) — so the Milky
-Way's band in the 3D preview stands where the planner's own Galactic Centre says, within the
+the clock's glide (it had switched on whole at −8°). The star field has no planets: the grade
+draws Mercury, Venus, Mars, Jupiter and Saturn as points on the clear dome (`planetPositions`,
+`planetPoint`), as bright as each one's magnitude against what the twilight shows
+(`skyLimitingMagnitude`: Venus faintly by day, Jupiter from about −3°, Saturn from about −5°),
+under the cloud decks and behind the ridges, gliding with the clock like the Sun. Cesium turns
+the field by Greenwich sidereal time for the scene's instant (`czm_temeToPseudoFixed`; the host
+sets the clock to the planned UTC) — so the Milky Way's band in the 3D preview stands where the planner's own Galactic Centre says, within the
 precession and nutation Cesium leaves out (≈ 0.4° in 2026; the planner's `milkyWayCore` applies
 Meeus precession, ≈ 0.1°). The "Milky Way core" line, the rose star, the dark windows and the
 map view's violet track are the authority where the two disagree. The star field is a texture:

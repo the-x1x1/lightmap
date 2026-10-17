@@ -596,7 +596,8 @@ export class OsmBuildingsLayer {
       if (prim.isDestroyed() || !prim.ready) return false;
       for (const part of ['t', 'c']) {
         const a = prim.getGeometryInstanceAttributes(`${id}${part}`) as
-          { show?: unknown } | undefined;
+          | { show?: unknown }
+          | undefined;
         if (a) a.show = C.ShowGeometryInstanceAttribute.toValue(on);
       }
       return true;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GRADE_FRAGMENT_SHADER } from '../src/shaders/grade.frag.ts';
+import { GRADE_FRAGMENT_SHADER, GRADE_UNIFORM_NAMES } from '../src/shaders/grade.frag.ts';
 import { GROUND_MATERIAL_SOURCE } from '../src/shaders/ground.frag.ts';
 
 /**
@@ -16,4 +16,13 @@ describe('shader sources', () => {
       expect(bad).toEqual([]);
     });
   }
+});
+
+describe('the grade shader and its uniform list', () => {
+  it('declares exactly the uniforms GRADE_UNIFORM_NAMES lists (besides the stage textures)', () => {
+    const declared = [...GRADE_FRAGMENT_SHADER.matchAll(/^uniform\s+\w+\s+(\w+)\s*;/gm)]
+      .map((m) => m[1])
+      .filter((n) => n !== 'colorTexture' && n !== 'depthTexture');
+    expect([...declared].sort()).toEqual([...GRADE_UNIFORM_NAMES].sort());
+  });
 });

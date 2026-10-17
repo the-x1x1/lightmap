@@ -89,6 +89,7 @@ import type {
   HostLight,
   HostMoonDisc,
   HostSunGlare,
+  HostPlanet,
   HostOrbitCamera,
   HostOverlay,
   HostQuality,
@@ -173,6 +174,9 @@ const MOON_IMAGE_PX = 128;
  * every ridge in front of it hides it.
  */
 const MOON_DISC_RANGE_M = 5_000_000;
+
+/** The grade's planet uniforms, one per naked-eye planet in `PLANETS` order. */
+const PLANET_SLOTS = ['u_planet0', 'u_planet1', 'u_planet2', 'u_planet3', 'u_planet4'] as const;
 
 /** Clock steps longer than this (seconds) land at once instead of gliding. */
 const CLOCK_GLIDE_MAX_S = 600;
@@ -327,6 +331,9 @@ export class CesiumSceneHost implements SceneHost {
   private sunGlare = new StepGlide<Vec3Like>(nlerpDir);
   private sunGlareLit = false;
   private sunGlareOn = false;
+  /** The planets' directions, gliding with the clock, and their points (`setPlanets`). */
+  private planetGlides = PLANET_SLOTS.map(() => new StepGlide<Vec3Like>(nlerpDir));
+  private planetPoints: Array<HostPlanet | null> = PLANET_SLOTS.map(() => null);
   private nightMaterials: {
     moon: Cesium.PolylineDashMaterialProperty;
     core: Cesium.PolylineDashMaterialProperty;
@@ -525,6 +532,7 @@ export class CesiumSceneHost implements SceneHost {
       u_sunScreen: new C.Cartesian2(-1, -1),
       u_sunVisible: 0,
       u_starField: 0,
+      ...Object.fromEntries(PLANET_SLOTS.map((name) => [name, new C.Cartesian4(-10, -10, 0, 1)])),
       // Evaluated every frame (a function uniform): where "up" is in the view, and how high the
       // camera is — the grade tells sky from ground by the view ray, not by the depth buffer.
       u_eyeUpEC: () => {
@@ -555,6 +563,7 @@ export class CesiumSceneHost implements SceneHost {
       this.keepEyeAboveGlobe();
       this.placeMoonDisc();
       this.placeSunGlare();
+      this.placePlanets();
       const m = this.groundMaterial;
       if (!m) return;
       const cam = scene.camera.positionWC;
@@ -713,6 +722,7 @@ export class CesiumSceneHost implements SceneHost {
     const clock = this.widget.clock;
     this.glideGrade(t);
     this.sunGlare.step(t);
+    for (const g of this.planetGlides) g.step(t);
     this.overlaySun.step(t);
     this.overlayShadow.step(t);
     if (t >= 1) {
@@ -2529,6 +2539,37 @@ export class CesiumSceneHost implements SceneHost {
     this.sunGlareLit = glare.lit;
     const d = glare.towardEcef;
     this.sunGlare.set({ x: d.x, y: d.y, z: d.z }, this.clockStepId);
+  }
+
+  setPlanets(planets: ReadonlyArray<HostPlanet | null> | null): void {
+    const id = this.clockStepId;
+    PLANET_SLOTS.forEach((_, i) => {
+      const p = planets?.[i] ?? null;
+      const was = this.planetPoints[i];
+      this.planetPoints[i] = p;
+      if (!p) return;
+      const d = p.directionEcef;
+      // A planet just come into view lands where it is; one in view glides with the clock.
+      this.planetGlides[i]!.set({ x: d.x, y: d.y, z: d.z }, was ? id : null);
+    });
+    this.scene.requestRender();
+  }
+
+  /** The planets' points placed on screen each frame, like the glare (`placeSunGlare`). */
+  private placePlanets(): void {
+    const g = this.gradeUniforms;
+    const target = this.grade.uniforms as Record<string, unknown>;
+    PLANET_SLOTS.forEach((name, i) => {
+      const u = g[name] as Cesium.Cartesian4;
+      const p = this.planetPoints[i];
+      const dir = p ? this.planetGlides[i]!.shown : null;
+      const pos = p && dir ? this.sunScreenPosition(dir) : null;
+      u.x = pos ? pos[0] : -10;
+      u.y = pos ? pos[1] : -10;
+      u.z = pos && p ? p.peak : 0;
+      u.w = p ? p.sigmaPx : 1;
+      target[name] = u;
+    });
   }
 
   /**

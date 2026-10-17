@@ -198,6 +198,16 @@ export interface HostMoonDisc {
   opacity: number;
 }
 
+/** A planet as the viewpoint's sky draws it (`setPlanets`, `planet-points.ts`). */
+export interface HostPlanet {
+  /** Unit vector from the eye toward the planet, ECEF. */
+  directionEcef: Vec3;
+  /** Peak brightness of its point, 0-1. */
+  peak: number;
+  /** Gaussian radius of its point, CSS pixels. */
+  sigmaPx: number;
+}
+
 /** The Sun the grade's glare is drawn around (`setSunGlare`). */
 export interface HostSunGlare {
   /** Unit vector toward the Sun, ECEF. */
@@ -241,6 +251,11 @@ export interface SceneHost {
    * glide and the camera between applies); without it `u_sunScreen` is used as given.
    */
   setSunGlare?(glare: HostSunGlare | null): void;
+  /**
+   * The naked-eye planets in the viewpoint's sky, in `PLANETS` order (Mercury, Venus, Mars,
+   * Jupiter, Saturn; null for one not shown); null hides them all.
+   */
+  setPlanets?(planets: ReadonlyArray<HostPlanet | null> | null): void;
   /** Screen position (0..1) of a world direction from the camera, or null when behind. */
   sunScreenPosition(directionTowardSunEcef: Vec3): [number, number] | null;
   /**

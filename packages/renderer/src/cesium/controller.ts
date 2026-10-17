@@ -3,7 +3,12 @@
  * camera) apply immediately on every scrub tick; expensive things (terrain detail, shadow map
  * size, provider swaps) are debounced and diffed (plan §4 "debounce expensive visual refresh").
  */
-import { localDayBounds, moonApparentDiameterDeg, sunPosition } from '@lightmap/astronomy';
+import {
+  localDayBounds,
+  moonApparentDiameterDeg,
+  planetPositions,
+  sunPosition,
+} from '@lightmap/astronomy';
 import {
   aboveTerrain,
   coreTrackPosition,
@@ -27,6 +32,7 @@ import {
 import { lightingFromScene, type LightingParameters } from '../lighting.ts';
 import { enuTowardSun, enuToEcef } from '../sun-vector.ts';
 import { moonDiscOpacity } from '../moon-disc.ts';
+import { planetPoint } from '../planet-points.ts';
 import { seaProbePoints, seaSurfaceFromSamples } from '../geoid.ts';
 import type {
   HostCamera,
@@ -304,6 +310,26 @@ export class SceneController {
         opacity: moonDiscOpacity(scene.solar.elevationDegrees),
       });
     } else this.host.setMoonDisc?.(null);
+
+    // The naked-eye planets in the viewpoint's sky (the star field has none), each as bright as
+    // its magnitude and the twilight allow; none by day but Venus, faintly.
+    if (viewpoint && this.host.setPlanets) {
+      const lat = scene.location.point.latitude;
+      const lon = scene.location.point.longitude;
+      const sunEl = scene.solar.elevationDegrees;
+      this.host.setPlanets(
+        planetPositions(scene.utc, lat, lon).map((p) => {
+          const point = p.elevationDeg > -2 ? planetPoint(p.magnitude, sunEl) : null;
+          return point
+            ? {
+                directionEcef: enuToEcef(enuTowardSun(p.azimuthDeg, p.elevationDeg), lat, lon),
+                peak: point.peak,
+                sigmaPx: point.sigmaPx,
+              }
+            : null;
+        }),
+      );
+    } else this.host.setPlanets?.(null);
 
     // --- expensive, debounced -------------------------------------------------------------
     const msaa = scene.render.msaaSamples ?? 4;

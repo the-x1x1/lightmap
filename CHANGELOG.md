@@ -7,6 +7,11 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 - **The Moon in the viewpoint's sky**: drawn where the planner's Moon stands, at its size for
   the day, with its phase and the lit limb toward the Sun; pale by day, under the cloud decks,
   hidden by the ridges in front of it. Cesium's own Moon (a black disc, lit by Cesium's Sun) stays off.
+- **Planets in the viewpoint's sky**: Mercury, Venus, Mars, Jupiter and Saturn drawn where they
+  stand (JPL's approximate elements, checked against Venus's 2023 and 2025 greatest elongations,
+  the 2020 Jupiter-Saturn and 2023 Venus-Jupiter conjunctions and three oppositions), each as
+  bright as its magnitude and the twilight allow: Venus faintly by day, Jupiter soon after
+  sunset, under the clouds and behind the ridges. The star field had none.
 - **Smoother walking and rendering**: hold W A S D to walk from the viewpoint (Shift to run) and
   hold an arrow key to turn smoothly, the eye gliding between steps instead of hopping at the
   keyboard's repeat rate; building tiles
