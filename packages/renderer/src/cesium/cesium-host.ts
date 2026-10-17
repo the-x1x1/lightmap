@@ -143,6 +143,9 @@ const LABEL_PICK_INTERVAL_MS = 200;
  */
 const DETAIL_REANCHOR_M = 200_000;
 
+/** The eye settles down to its height with this time constant (ms) when the ground drops. */
+const EYE_SETTLE_TAU_MS = 120;
+
 /** New place labels per frame (each rasterises its text). */
 const LABELS_ADDED_PER_FRAME = 24;
 
@@ -285,6 +288,8 @@ export class CesiumSceneHost implements SceneHost {
   private eyeGlideStart = 0;
   private eyeGlideMs = 0;
   private eyeStepAt = 0;
+  /** When the eye last settled toward its height (`keepEyeAboveGlobe`). */
+  private eyeSettleAt = 0;
   /** The light's glide (`setLight`): the direction it is heading for, and how fast. */
   private lightGoal: Cesium.Cartesian3 | null = null;
   private lightTauMs = 100;
@@ -1007,9 +1012,22 @@ export class CesiumSceneHost implements SceneHost {
     if (surface !== undefined && Number.isFinite(surface) && wanted < surface + 0.5)
       target = surface + 1.7;
     if (Math.abs(carto.height - target) < 0.05) return;
+    // Up at once (the eye must never sink into the drawn ground), down gently: as finer terrain
+    // tiles replace coarse ones the surface under the eye drops by a metre or two, and snapping
+    // down with it jolted the view while walking.
+    const t = performance.now();
+    const dt = Math.min(100, Math.max(0, t - this.eyeSettleAt));
+    this.eyeSettleAt = t;
+    let height = target;
+    if (target < carto.height) {
+      const k = 1 - Math.exp(-dt / EYE_SETTLE_TAU_MS);
+      height = carto.height + (target - carto.height) * k;
+      if (carto.height - height > 0.05 && target < height - 0.05) this.scene.requestRender();
+      else height = target;
+    }
     const C = this.C;
     cam.setView({
-      destination: C.Cartesian3.fromRadians(carto.longitude, carto.latitude, target),
+      destination: C.Cartesian3.fromRadians(carto.longitude, carto.latitude, height),
       orientation: { heading: cam.heading, pitch: cam.pitch, roll: 0 },
     });
   }
