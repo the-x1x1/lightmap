@@ -152,6 +152,9 @@ const LABELS_ADDED_PER_FRAME = 24;
 /** The season must hold this long (ms) before the imagery is refetched in it. */
 const SEASON_SWAP_SETTLE_MS = 250;
 
+/** Clock steps longer than this (seconds) land at once instead of gliding. */
+const CLOCK_GLIDE_MAX_S = 600;
+
 /** Light steps wider than this (cosine of 2°) land at once instead of gliding. */
 const LIGHT_GLIDE_MAX_COS = Math.cos((2 * Math.PI) / 180);
 
@@ -295,6 +298,12 @@ export class CesiumSceneHost implements SceneHost {
   private lightTauMs = 100;
   private lightEaseAt = 0;
   private lightChangedAt = 0;
+  /** The clock's glide (`setTime`). */
+  private clockGoal: Cesium.JulianDate | null = null;
+  private clockFrom: Cesium.JulianDate | null = null;
+  private clockGlideStart = 0;
+  private clockGlideMs = 100;
+  private clockChangedAt = 0;
 
   constructor(C: CesiumModule, options: CesiumHostOptions) {
     this.C = C;
@@ -568,6 +577,7 @@ export class CesiumSceneHost implements SceneHost {
       const moving = !C.Matrix4.equalsEpsilon(view, this.lastView, 1e-9);
       C.Matrix4.clone(view, this.lastView);
       this.updateOsmBuildings();
+      this.glideClock();
       const fps = this.frameSampler.frame(performance.now(), moving);
       if (fps !== null) {
         this.lastFps = fps;
@@ -595,7 +605,47 @@ export class CesiumSceneHost implements SceneHost {
   }
 
   setTime(utc: Date): void {
-    this.widget.clock.currentTime = this.C.JulianDate.fromDate(utc);
+    // The clock places Cesium's Sun disc, the Moon and the stars. Like the light (`setLight`), a
+    // step of a few minutes (the play button, a scrub) glides over about the time between steps,
+    // so the disc does not hop a quarter of a degree a minute; a jump lands at once.
+    const C = this.C;
+    const target = C.JulianDate.fromDate(utc);
+    const clock = this.widget.clock;
+    const now = performance.now();
+    const from = this.clockGoal ?? clock.currentTime;
+    if (C.JulianDate.equals(from, target)) return;
+    const stepS = Math.abs(C.JulianDate.secondsDifference(target, clock.currentTime));
+    if (stepS > CLOCK_GLIDE_MAX_S || prefersReducedMotion()) {
+      clock.currentTime = target;
+      this.clockGoal = null;
+    } else {
+      this.clockFrom = C.JulianDate.clone(clock.currentTime);
+      this.clockGoal = target;
+      this.clockGlideStart = now;
+      this.clockGlideMs = Math.max(40, Math.min(300, now - this.clockChangedAt));
+      this.scene.requestRender();
+    }
+    this.clockChangedAt = now;
+  }
+
+  /** One frame of the clock's glide (after the frame, so the next one draws the new time). */
+  private glideClock(): void {
+    const goal = this.clockGoal;
+    const from = this.clockFrom;
+    if (!goal || !from) return;
+    const C = this.C;
+    const t = Math.min(1, (performance.now() - this.clockGlideStart) / this.clockGlideMs);
+    const clock = this.widget.clock;
+    if (t >= 1) {
+      clock.currentTime = goal;
+      this.clockGoal = null;
+    } else
+      clock.currentTime = C.JulianDate.addSeconds(
+        from,
+        C.JulianDate.secondsDifference(goal, from) * t,
+        new C.JulianDate(),
+      );
+    this.scene.requestRender();
   }
 
   setLight(light: HostLight): void {
