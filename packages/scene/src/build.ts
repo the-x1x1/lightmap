@@ -206,10 +206,13 @@ export function buildSceneState(inputs: SceneInputs): SceneState {
     weatherProviderFailed: inputs.weather.providerFailed,
     groundPainted: inputs.render.groundTexture !== false && inputs.render.shadows,
   });
-  // When the user pins a scenario inside the forecast window, the weather dimension is a scenario.
+  // A scenario shown where weather could be (pinned by the user, refused for the plan's window,
+  // still loading): the weather dimension is a scenario, and the note says which.
   if (atmosphere.mode === 'SCENARIO' && confidence.weather !== 'SCENARIO') {
     confidence.weather = 'SCENARIO';
-    confidence.notes.weather = 'You are comparing a scenario instead of the forecast';
+    confidence.notes.weather = inputs.forceScenario
+      ? `You are comparing a scenario instead of the ${horizon.mode === 'RECENT_PAST' ? 'observed weather' : 'forecast'}`
+      : `${atmosphere.summary.split(' — ')[0] ?? 'No weather'} — showing a scenario`;
   }
 
   return {

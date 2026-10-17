@@ -194,6 +194,9 @@ describe('buildSceneState — Kailua Beach, 31 May 2026, 12:30 (acceptance case)
     expect(s.atmosphere.summary).toBe(
       'Weather outside your plan’s date window — scenario: Partly Cloudy',
     );
+    expect(s.confidence.notes.weather).toBe(
+      'Weather outside your plan’s date window — showing a scenario',
+    );
   });
 
   it('scenario changes visibly change the parameters', () => {
