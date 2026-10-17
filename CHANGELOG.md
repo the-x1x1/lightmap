@@ -4,6 +4,11 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **No painted snow in the high cities of the tropics**: past the forecast, Mexico City,
+  Bogota, Quito, Nairobi, Addis Ababa and Johannesburg (in its February summer) were drawn under
+  lying snow, because height lengthened a snow season that their latitude does not have. Height
+  now lengthens only a real winter (in full from 45 deg, nothing south of 30 deg), and the
+  southern hemisphere has no lowland snowpack; Denver and Albuquerque stay bare too.
 - **City glow at night**: under the Milky Way line, an estimate of how much the towns around
   the pin light the sky and from which side (inside a city, suburban, a glow on the horizon, a
   faint dome, or none), from the bundled built-up areas by Walker's law

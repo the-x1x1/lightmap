@@ -54,6 +54,24 @@ describe('lowland snow (V&V: Tromso in December, Montreal in February)', () => {
     expect(lowlandSnowCover(55.75, 37.6, NOV_1)).toBe(0);
   });
 
+  it('height lengthens a winter, never paints a high city of the tropics or the south', () => {
+    for (const [lat, lon, h] of [
+      [19.43, -99.13, 2240], // Mexico City
+      [4.71, -74.07, 2640], // Bogota
+      [-0.18, -78.47, 2850], // Quito
+      [-16.5, -68.15, 3640], // La Paz
+      [-1.29, 36.82, 1795], // Nairobi
+      [9.03, 38.74, 2355], // Addis Ababa
+      [-26.2, 28.05, 1753], // Johannesburg (February is its summer)
+      [39.74, -104.99, 1609], // Denver: snow melts within days
+      [35.08, -106.65, 1619], // Albuquerque
+      [34.53, 69.17, 1790], // Kabul
+    ] as const)
+      expect(lowlandSnowCover(lat, lon, FEB_1, h)).toBe(0);
+    // Height still lengthens a real winter (Calgary on its plateau, the Alps' valleys).
+    expect(lowlandSnowCover(51.05, -114.07, FEB_1, 1045)).toBe(1);
+  });
+
   it('draws the snowline under the ground by the share covered', () => {
     expect(snowlineWithLowlandSnow(700, 0, 20)).toBe(700);
     expect(snowlineWithLowlandSnow(700, 1, 20)).toBe(-230);

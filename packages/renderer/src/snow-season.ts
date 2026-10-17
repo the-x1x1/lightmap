@@ -22,7 +22,10 @@
  *   Korea and Honshu's Pacific side stay bare; Harbin is just in, Siberia all winter).
  * - The southern hemisphere has no lowland snowpack to speak of outside Antarctica (the ice
  *   sheet is painted by its own rule).
- * Height lengthens the season, about five days per 100 m above 200 m.
+ * Height lengthens the season, about five days per 100 m above 200 m, where the latitude has a
+ * winter for it to lengthen: in full from 45 deg, easing to nothing at 30 deg, so Denver,
+ * Albuquerque and Kabul stay bare and the high cities of the tropics (Mexico City, Bogota,
+ * Quito, Nairobi) are never painted white; their peaks keep the mountain snowline.
  */
 
 function smooth(edge0: number, edge1: number, x: number): number {
@@ -90,8 +93,11 @@ export function lowlandSnowCover(
   dayOfYear: number,
   heightM = 0,
 ): number {
+  // The southern hemisphere has no lowland snowpack (and this season's middle is February).
+  if (latitudeDeg <= 0) return 0;
   const days =
-    snowSeasonDaysAtSeaLevel(latitudeDeg, longitudeDeg) + Math.max(0, heightM - 200) / 20;
+    snowSeasonDaysAtSeaLevel(latitudeDeg, longitudeDeg) +
+    (Math.max(0, heightM - 200) / 20) * smooth(30, 45, latitudeDeg);
   if (days < MIN_SNOWPACK_DAYS) return 0;
   // Only the reliable core: the season's ends vary by weeks from year to year.
   const core = Math.min(330, days - 20);
