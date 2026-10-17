@@ -306,6 +306,7 @@ export class CesiumSceneHost implements SceneHost {
   /** When the eye last settled toward its height, and how far above it the ground lifts it. */
   private eyeSettleAt = 0;
   private eyeLiftM = 0;
+  private eyeWantedM: number | null = null;
   /** The light's glide (`setLight`): the direction it is heading for, and how fast. */
   private lightGoal: Cesium.Cartesian3 | null = null;
   private lightTauMs = 100;
@@ -1036,7 +1037,12 @@ export class CesiumSceneHost implements SceneHost {
       for (const key of GRADE_GLIDE_KEYS) {
         const a = shown[key];
         const b = g[key];
-        if (typeof a === 'number' && typeof b === 'number') {
+        // The cloud clock wraps every ~69 days: across the wrap it hops, not sweeps back.
+        if (
+          typeof a === 'number' &&
+          typeof b === 'number' &&
+          !(key === 'u_time' && Math.abs(b - a) > 15)
+        ) {
           from[key] = a;
           to[key] = b;
         }
@@ -1050,18 +1056,21 @@ export class CesiumSceneHost implements SceneHost {
         if (typeof b === 'number') this.gradeTo[key] = b;
       }
     } else this.gradeFrom = null;
+    // What is on screen is kept here, not read back from the stage: once Cesium has built its
+    // uniform map the stage's `uniforms` are accessors onto `g` (already the new values).
+    const onScreen = this.gradeShown ?? {};
     for (const key of Object.keys(g)) {
-      if (typeof g[key] === 'function') continue;
+      const v = g[key];
+      if (typeof v === 'function') continue;
       // Gliding values stay as shown; the glide (after each frame) moves them on.
       if (this.gradeFrom && key in this.gradeFrom) continue;
-      target[key] = g[key];
+      target[key] = v;
+      if (typeof v === 'number') onScreen[key] = v;
     }
     if (this.groundMaterial && this.gradeFrom)
       (this.groundMaterial.uniforms as Record<string, number>)['u_cloudTime'] =
         shown?.['u_time'] ?? u.u_time;
-    this.gradeShown = Object.fromEntries(
-      Object.entries(target).filter(([, v]) => typeof v === 'number'),
-    ) as Record<string, number>;
+    this.gradeShown = onScreen;
   }
 
   /** The sky's glide, at the clock glide's own fraction `t` (0-1). */
@@ -1151,6 +1160,11 @@ export class CesiumSceneHost implements SceneHost {
     // After a pause (the scene draws on demand) count one ordinary frame, not the whole pause.
     const dt = gap > 50 ? 16 : Math.max(0, gap);
     this.eyeSettleAt = t;
+    // A rise of the wanted height (the terrain look-up catching up) comes off the lift at once,
+    // or the eased lift would carry the eye past where it should stand.
+    if (this.eyeWantedM !== null && wanted > this.eyeWantedM)
+      this.eyeLiftM = Math.max(needed, this.eyeLiftM - (wanted - this.eyeWantedM));
+    this.eyeWantedM = wanted;
     let lift = needed;
     if (needed < this.eyeLiftM) {
       const k = 1 - Math.exp(-dt / EYE_SETTLE_TAU_MS);
