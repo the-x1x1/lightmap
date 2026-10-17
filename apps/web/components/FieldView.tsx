@@ -29,6 +29,8 @@ import { compassLabel } from '@lightmap/geospatial';
 import { usePlannerStore } from '@/features/planner/store';
 import { useCompass } from '@/features/field/use-compass';
 import { describePlannedOffset } from '@/features/field/planned-offset';
+import { useSkyGlow } from '@/features/planner/use-sky-glow';
+import { skyBrightnessRatio } from '@lightmap/renderer';
 import { Button } from '@lightmap/ui';
 
 /** How often the "sun now" mark and the clock line catch up with the present while the view is open. */
@@ -221,10 +223,13 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
   // The sun as it is now (a hollow ring) when the planner is not on the present: the same
   // horizon rule as the planned sun, from the same ephemeris.
   const plannedOffset = describePlannedOffset(scene.utc.getTime(), nowMs);
-  // A starting exposure for the planned instant (the details' estimate, never a meter).
+  // A starting exposure for the planned instant (the details' estimate, never a meter), with
+  // the towns' glow after civil dusk.
+  const glow = useSkyGlow(lat, lng, scene.solar.elevationDegrees < -6);
   const exposure = describeExposure(
     estimateExposure({
       sunElevationDeg: scene.solar.elevationDegrees,
+      skyGlowRatio: glow ? skyBrightnessRatio(glow) : 1,
       sunTransmittance: scene.atmosphere.parameters.sunTransmittance,
       moon: scene.lunar
         ? {
