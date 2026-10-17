@@ -218,6 +218,8 @@ export interface HostSunGlare {
   towardEcef: Vec3;
   /** Whether the Sun lights the scene directly (no glare through overcast or below the horizon). */
   lit: boolean;
+  /** The colour of its direct light at its elevation, brightest channel 1 (`directLightTint`). */
+  tint?: [number, number, number];
 }
 
 export interface SceneHost {

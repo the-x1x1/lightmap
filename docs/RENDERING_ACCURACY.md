@@ -157,7 +157,9 @@ and only in a dark sky; a tight glow and a wide one, stronger in haze and far st
 cirrus or thin altostratus, muffled under thick cloud, dimmed by the air when the Moon is low) - a
 look, not a photometric model. The disc takes the low Sun's colour low down (`moonDiscTint`: the
 direct-light curve, 2,900 K on the horizon, neutral from 20°) and is dimmed by the air, to no
-less than a third.
+less than a third. The Sun's own disc and glow (Cesium's, one white-yellow at any height) are
+tinted by the grade within a few degrees of it by `directLightTint` for its elevation, the same
+curve.
 Cesium turns the field by Greenwich sidereal time for the scene's instant
 (`czm_temeToPseudoFixed`; the host sets the clock to the planned UTC) — so the Milky Way's band
 in the 3D preview stands where the planner's own Galactic Centre says, within the

@@ -105,8 +105,18 @@ export function moonGlowStrength(
  * moonrise shot is planned around. White, full strength, high in the sky.
  */
 export function moonDiscTint(elevationDeg: number): [number, number, number] {
+  const [r, g, b] = directLightTint(elevationDeg);
+  const dim = Math.max(0.35, 10 ** (-0.4 * extinctionMag(elevationDeg)));
+  return [r * dim, g * dim, b * dim];
+}
+
+/**
+ * The colour of direct light from a body at an elevation, brightest channel 1: the planner's
+ * direct-light curve (2,900 K on the horizon, 3,800 K at 5 deg, neutral from 20 deg) - the Sun's
+ * own colour as it sinks, and the Moon's.
+ */
+export function directLightTint(elevationDeg: number): [number, number, number] {
   const [r, g, b] = kelvinToRgb(colorTemperatureKelvin(Math.max(0, elevationDeg)));
   const peak = Math.max(r, g, b, 1e-3);
-  const dim = Math.max(0.35, 10 ** (-0.4 * extinctionMag(elevationDeg)));
-  return [(r / peak) * dim, (g / peak) * dim, (b / peak) * dim];
+  return [r / peak, g / peak, b / peak];
 }

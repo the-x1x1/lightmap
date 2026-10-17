@@ -4,6 +4,7 @@ import {
   moonBrightnessVsFull,
   moonDiscOpacity,
   moonDiscTint,
+  directLightTint,
   moonGlowStrength,
   terminatorHalfWidth,
   type PhaseContext,
@@ -94,5 +95,16 @@ describe('moonDiscTint', () => {
     const mid = moonDiscTint(15);
     expect(mid[2] / mid[0]).toBeGreaterThan(low[2] / low[0]);
     expect(Math.max(...mid)).toBeGreaterThan(0.35);
+  });
+});
+
+describe('directLightTint', () => {
+  it('is white high up and orange on the horizon, brightest channel 1', () => {
+    const noon = directLightTint(50);
+    expect(Math.min(...noon)).toBeGreaterThan(0.97);
+    const set = directLightTint(0);
+    expect(Math.max(...set)).toBeCloseTo(1, 6);
+    expect(set[2]).toBeLessThan(0.6);
+    expect(set[1]).toBeLessThan(0.85);
   });
 });

@@ -534,6 +534,8 @@ export class CesiumSceneHost implements SceneHost {
       u_sunScreen: new C.Cartesian2(-1, -1),
       u_sunVisible: 0,
       u_starField: 0,
+      u_sunDirEC: new C.Cartesian3(0, 0, -1),
+      u_sunTint: new C.Cartesian3(1, 1, 1),
       u_moonDirEC: new C.Cartesian3(0, 0, -1),
       u_moonGlow: 0,
       ...Object.fromEntries(PLANET_SLOTS.map((name) => [name, new C.Cartesian4(-10, -10, 0, 1)])),
@@ -2568,6 +2570,9 @@ export class CesiumSceneHost implements SceneHost {
     }
     this.sunGlareOn = true;
     this.sunGlareLit = glare.lit;
+    const tint = this.gradeUniforms['u_sunTint'] as Cesium.Cartesian3;
+    [tint.x, tint.y, tint.z] = glare.tint ?? [1, 1, 1];
+    (this.grade.uniforms as Record<string, unknown>)['u_sunTint'] = tint;
     const d = glare.towardEcef;
     this.sunGlare.set({ x: d.x, y: d.y, z: d.z }, this.clockStepId);
   }
@@ -2622,6 +2627,16 @@ export class CesiumSceneHost implements SceneHost {
     const target = this.grade.uniforms as Record<string, unknown>;
     target['u_sunScreen'] = screen;
     target['u_sunVisible'] = visible;
+    // The same gliding direction in eye coordinates, for the disc's tint.
+    const C = this.C;
+    const dirEC = g['u_sunDirEC'] as Cesium.Cartesian3;
+    C.Matrix4.multiplyByPointAsVector(
+      this.scene.camera.viewMatrix,
+      new C.Cartesian3(dir.x, dir.y, dir.z),
+      dirEC,
+    );
+    C.Cartesian3.normalize(dirEC, dirEC);
+    target['u_sunDirEC'] = dirEC;
     if (this.gradeShown) this.gradeShown['u_sunVisible'] = visible;
   }
 

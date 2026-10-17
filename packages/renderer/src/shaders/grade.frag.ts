@@ -47,6 +47,8 @@ uniform vec4 u_planet1;
 uniform vec4 u_planet2;
 uniform vec4 u_planet3;
 uniform vec4 u_planet4;
+uniform vec3 u_sunDirEC;        // toward the Sun, eye coordinates (per frame, gliding)
+uniform vec3 u_sunTint;         // the colour of the Sun's direct light at its elevation
 uniform vec3 u_moonDirEC;       // toward the Moon, eye coordinates (per frame)
 uniform float u_moonGlow;       // the Moon's aureole, 0 none - 1 a full Moon in a dark sky
 
@@ -163,6 +165,17 @@ void main() {
     float underSun = (1.0 - smoothstep(-1.0, 0.5, u_sunElevation)) * smoothstep(-9.0, -5.0, u_sunElevation);
     float whiteness = smoothstep(0.7, 0.95, min(dome.r, min(dome.g, dome.b)));
     dome = mix(dome, dome * vec3(1.0, 0.8, 0.52), whiteness * underSun * 0.85);
+    // The Sun's disc and its glow take the colour of its light: Cesium draws them one white-yellow
+    // at every height, so a setting Sun was a white disc in an orange sky. Within a few degrees of
+    // it the sky is tinted by the direct-light colour for its elevation (white from 20 deg up,
+    // orange on the horizon); seen from under the decks only.
+    {
+      float a = degrees(acos(clamp(dot(rayEC, u_sunDirEC), -1.0, 1.0)));
+      // Only while the disc is up: under the horizon the glow's colour is the block above's.
+      float nearSun = (1.0 - smoothstep(0.4, 3.5, a)) * underDecks
+          * smoothstep(-1.5, -0.5, u_sunElevation);
+      dome = mix(dome, dome * u_sunTint, nearSun);
+    }
     // Darken the atmospheric glow but keep bright point sources (stars, moon) readable.
     float domeLum = dot(dome, vec3(0.2126, 0.7152, 0.0722));
     float keep = smoothstep(0.12, 0.5, domeLum);
@@ -365,6 +378,8 @@ export const GRADE_UNIFORM_NAMES = [
   'u_planet2',
   'u_planet3',
   'u_planet4',
+  'u_sunDirEC',
+  'u_sunTint',
   'u_moonDirEC',
   'u_moonGlow',
 ] as const;
