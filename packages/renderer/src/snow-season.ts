@@ -15,8 +15,9 @@
  *   Montreal (45.5 deg), 6 at Winnipeg, the whole winter in Alaska and the North; the chinook
  *   belt east of the Rockies keeps about half its latitude's season.
  * - Europe and western Asia: the Atlantic keeps the west bare (the British Isles, France, the
- *   Low Countries, Norway's west coast); Moscow about 4 months, the Baltic shores 3-4, northern
- *   Scandinavia and Finland 6-7.
+ *   Low Countries, Norway's west coast); Warsaw, Kyiv and the plains south of ~52 deg have snow
+ *   that comes and goes in recent winters; Moscow about 4 months, the Baltic and Gulf of Finland
+ *   shores (Stockholm, Helsinki, St Petersburg) 3-4, northern Scandinavia and Finland 6-7.
  * - East Asia: Hokkaido 4 months and more; elsewhere from about 45 deg (the north China plain,
  *   Korea and Honshu's Pacific side stay bare; Harbin is just in, Siberia all winter).
  * - The southern hemisphere has no lowland snowpack to speak of outside Antarctica (the ice
@@ -59,7 +60,7 @@ export function snowSeasonDaysAtSeaLevel(latitudeDeg: number, longitudeDeg: numb
   if (lon >= -25 && lon < -12) return 0;
   // Europe and western Asia.
   if (lon >= -12 && lon < 60) {
-    const base = clamp((lat - 46) * 15, 0, 220);
+    const base = clamp((lat - 49) * 18, 0, 220);
     let maritime: number;
     if (lat < 57) maritime = 1 - smooth(2, 22, lon);
     else if (lon < 7)
@@ -67,8 +68,9 @@ export function snowSeasonDaysAtSeaLevel(latitudeDeg: number, longitudeDeg: numb
     else if (lon < 11 && lat < 62)
       maritime = 0.5; // Oslofjord, Skagerrak
     else maritime = 0;
-    // The Baltic's open water shortens the season on its shores (Stockholm, Helsinki, Tallinn).
-    const baltic = lat >= 57 && lat < 62.5 && lon >= 14 && lon < 30 ? 0.65 : 1;
+    // The Baltic's open water shortens the season on its shores (Stockholm, Helsinki, Tallinn,
+    // St Petersburg at the head of the Gulf of Finland).
+    const baltic = lat >= 57 && lat < 62.5 && lon >= 14 && lon < 31 ? 0.65 : 1;
     return base * (1 - maritime) * baltic;
   }
   // East Asia: Hokkaido's sea-effect snow; elsewhere a continental rule.

@@ -26,6 +26,8 @@ describe('lowland snow (V&V: Tromso in December, Montreal in February)', () => {
       [42.36, -71.06], // Boston
       [41.9, -87.6], // Chicago
       [52.5, 13.4], // Berlin
+      [52.23, 21.01], // Warsaw
+      [50.45, 30.52], // Kyiv
       [51.5, -0.1], // London
       [60.39, 5.32], // Bergen
       [49.28, -123.1], // Vancouver
@@ -45,6 +47,9 @@ describe('lowland snow (V&V: Tromso in December, Montreal in February)', () => {
     // Tromso: the whole of December and January, both sides of 1 January.
     expect(lowlandSnowCover(69.65, 18.96, 360)).toBe(1);
     expect(lowlandSnowCover(69.65, 18.96, 5)).toBe(1);
+    // The Baltic shores keep about four months, not six (St Petersburg, Stockholm).
+    expect(snowSeasonDaysAtSeaLevel(59.94, 30.31)).toBeLessThan(140);
+    expect(snowSeasonDaysAtSeaLevel(59.33, 18.07)).toBeLessThan(130);
     // Moscow's season has not started on 1 November.
     expect(lowlandSnowCover(55.75, 37.6, NOV_1)).toBe(0);
   });
