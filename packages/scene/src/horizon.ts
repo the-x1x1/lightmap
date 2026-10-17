@@ -66,11 +66,14 @@ export const HORIZON_CAVEAT =
 export const HORIZON_WITH_BUILDINGS_CAVEAT =
   'Terrain and mapped buildings: trees and cloud on the ridge are not in the model, buildings are as OpenStreetMap has them (heights often estimated or missing), and a sharp edge can sit between samples.';
 
-/** A sampled reach for the caveat: "1.5 km" / "40 km", or "0.9 mi" / "25 mi" in imperial units. */
-function reach(m: number, units: 'metric' | 'imperial'): string {
-  const v = units === 'imperial' ? m / 1609.344 : m / 1000;
-  const n = v < 10 ? v.toFixed(1).replace(/\.0$/, '') : String(Math.round(v));
-  return `${n} ${units === 'imperial' ? 'mi' : 'km'}`;
+/**
+ * A sampled reach: in km to one decimal ("2.5 km", "40 km"), or in miles to one decimal under 10
+ * and whole above ("1.6 mi", "25 mi").
+ */
+export function formatReach(m: number, units: 'metric' | 'imperial'): string {
+  if (units === 'metric') return `${(m / 1000).toFixed(1).replace(/\.0$/, '')} km`;
+  const v = m / 1609.344;
+  return `${v < 10 ? v.toFixed(1).replace(/\.0$/, '') : String(Math.round(v))} mi`;
 }
 
 /**
@@ -84,10 +87,10 @@ export function horizonCaveat(
   units: 'metric' | 'imperial' = 'metric',
 ): string {
   const terrain =
-    units === 'metric' ? `${Math.round(maxDistanceM / 1000)} km` : reach(maxDistanceM, units);
+    units === 'metric' ? `${Math.round(maxDistanceM / 1000)} km` : formatReach(maxDistanceM, units);
   const base =
     buildingsReachM !== null
-      ? `${HORIZON_WITH_BUILDINGS_CAVEAT} Buildings beyond ${reach(buildingsReachM, units)} and terrain beyond ${terrain} were not sampled.`
+      ? `${HORIZON_WITH_BUILDINGS_CAVEAT} Buildings beyond ${formatReach(buildingsReachM, units)} and terrain beyond ${terrain} were not sampled.`
       : `${HORIZON_CAVEAT} Terrain beyond ${terrain} was not sampled.`;
   return onRoof ? `${ROOF_CAVEAT} ${base}` : base;
 }

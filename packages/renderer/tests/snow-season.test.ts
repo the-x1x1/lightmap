@@ -70,6 +70,9 @@ describe('lowland snow (V&V: Tromso in December, Montreal in February)', () => {
       expect(lowlandSnowCover(lat, lon, FEB_1, h)).toBe(0);
     // Height still lengthens a real winter (Calgary on its plateau, the Alps' valleys).
     expect(lowlandSnowCover(51.05, -114.07, FEB_1, 1045)).toBe(1);
+    // The Sierra's deep snowpack: Tahoe City and Truckee white in February.
+    expect(lowlandSnowCover(39.17, -120.14, FEB_1, 1900)).toBe(1);
+    expect(lowlandSnowCover(39.33, -120.18, FEB_1, 1800)).toBe(1);
   });
 
   it('draws the snowline under the ground by the share covered', () => {

@@ -7,6 +7,7 @@ import {
   horizonProfileFromSamples,
   horizonRingDistances,
   horizonSamplePoints,
+  horizonCaveat,
   profileCaveat,
   ridgeContactElevationDeg,
   seaHorizonDipDeg,
@@ -104,6 +105,7 @@ describe('terrain horizon profile', () => {
       buildingsReachM: 2500,
     });
     expect(profileCaveat(p, 'metric')).toBe(p.caveat);
+    expect(horizonCaveat(40_000, 12_500)).toContain('Buildings beyond 12.5 km');
     expect(profileCaveat(p, 'imperial')).toContain(
       'Buildings beyond 1.6 mi and terrain beyond 25 mi were not sampled.',
     );

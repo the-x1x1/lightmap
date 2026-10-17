@@ -554,7 +554,7 @@ buildings are in the profile) beside the source and forecast badges while the su
 astronomically up but below the ridge; `▲ Ridge` / `▽ Ridge` markers on the timeline (only when
 they differ from sunrise/sunset by more than three minutes — under that, refraction conventions
 differ by as much); "First/Last light over terrain" and "Terrain horizon at sun" rows in Sun &
-moon details; the preview-basis Terrain row names the sampled reach and the highest ridge; the
+moon details; the preview-basis Terrain row names the sampled reach and the highest ridge (the skyline's top when buildings are in it); the
 light finder tags moments that are **behind terrain** and can hide them. Every surface carries the
 caveat — terrain only: trees, buildings and cloud on the ridge are not in the elevation model,
 a sharp ridgeline can sit between samples, and terrain beyond the sampled reach was not sampled;

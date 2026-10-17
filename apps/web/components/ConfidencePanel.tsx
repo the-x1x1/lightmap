@@ -1,6 +1,6 @@
 'use client';
 import type { SceneState } from '@lightmap/scene';
-import { SOURCE_MODE_DESCRIPTION, formatDeg, profileCaveat } from '@lightmap/scene';
+import { SOURCE_MODE_DESCRIPTION, formatDeg, formatReach, profileCaveat } from '@lightmap/scene';
 import { usePlannerStore } from '@/features/planner/store';
 import { PreviewSourceBadge } from './PreviewSourceBadge';
 
@@ -28,7 +28,7 @@ export function ConfidencePanel({ scene }: { scene: SceneState }) {
   const t = scene.terrainHorizon;
   const sampledTo = t
     ? units === 'imperial'
-      ? `${Math.round(t.profile.maxDistanceM / 1609.344)} mi`
+      ? formatReach(t.profile.maxDistanceM, units)
       : `${Math.round(t.profile.maxDistanceM / 1000)} km`
     : '';
   // With mapped buildings in the profile its highest point is usually a wall, not a ridge.

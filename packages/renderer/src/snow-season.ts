@@ -23,7 +23,8 @@
  * - The southern hemisphere has no lowland snowpack to speak of outside Antarctica (the ice
  *   sheet is painted by its own rule).
  * Height lengthens the season, about five days per 100 m above 200 m, where the latitude has a
- * winter for it to lengthen: in full from 45 deg, easing to nothing at 30 deg, so Denver,
+ * winter for it to lengthen: in full from 45 deg (and in the Sierra Nevada, Tahoe and Truckee
+ * white all winter), easing to nothing at 30 deg, so Denver,
  * Albuquerque and Kabul stay bare and the high cities of the tropics (Mexico City, Bogota,
  * Quito, Nairobi) are never painted white; their peaks keep the mountain snowline.
  */
@@ -83,6 +84,17 @@ export function snowSeasonDaysAtSeaLevel(latitudeDeg: number, longitudeDeg: numb
 }
 
 /**
+ * How much height lengthens the season here: in full from 45 deg, nothing south of 30 deg; and in
+ * full in the Sierra Nevada, whose Pacific storms bury Tahoe and Truckee all winter at a latitude
+ * where the dry interior (Denver) keeps only snow that comes and goes.
+ */
+function heightGain(latitudeDeg: number, longitudeDeg: number): number {
+  const sierra =
+    latitudeDeg > 35.5 && latitudeDeg < 41 && longitudeDeg > -121.5 && longitudeDeg < -118;
+  return sierra ? 1 : smooth(30, 45, latitudeDeg);
+}
+
+/**
  * The share of the ground under lying snow, 0-1, at a latitude and longitude on a day of the
  * year, `heightM` metres above sea level: 1 through the middle of a lasting snowpack, easing to
  * 0 over about ten days at its ends; 0 where the snowpack does not last.
@@ -97,7 +109,7 @@ export function lowlandSnowCover(
   if (latitudeDeg <= 0) return 0;
   const days =
     snowSeasonDaysAtSeaLevel(latitudeDeg, longitudeDeg) +
-    (Math.max(0, heightM - 200) / 20) * smooth(30, 45, latitudeDeg);
+    (Math.max(0, heightM - 200) / 20) * heightGain(latitudeDeg, longitudeDeg);
   if (days < MIN_SNOWPACK_DAYS) return 0;
   // Only the reliable core: the season's ends vary by weeks from year to year.
   const core = Math.min(330, days - 20);
