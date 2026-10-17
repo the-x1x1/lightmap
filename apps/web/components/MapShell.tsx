@@ -247,6 +247,17 @@ export function MapShell() {
     prevExpanded.current = previewExpanded;
     if (!previewExpanded) expandButtonRef.current?.focus();
   }, [previewExpanded]);
+  // Escape leaves the expanded preview, as it closes a dialog (the controls come back).
+  useEffect(() => {
+    if (!previewExpanded) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') usePlannerStore.getState().setPreviewExpanded(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [previewExpanded]);
 
   const captureThumbnail = useCallback(() => rendererInfo.capture(), [rendererInfo]);
   const onRendererInfo = useCallback((info: RendererInfo) => setRendererInfo(info), []);
