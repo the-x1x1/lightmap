@@ -2,6 +2,7 @@
 import type { SceneState } from '@lightmap/scene';
 import {
   describeExposure,
+  describeLightKelvin,
   profileCaveat,
   describeSeasonalEnvelope,
   estimateExposure,
@@ -549,7 +550,10 @@ export function AstronomyDetails({
         ) : null}
         <Row label="Phase" value={s.phase.replace('-', ' ')} />
         <Row label="Solar time" value={hoursMinutes(Math.round(s.solarTime * 60))} />
-        <Row label="Colour temp." value={`${Math.round(scene.atmosphere.colorTemperatureK)} K`} />
+        <Row
+          label="Colour temp."
+          value={describeLightKelvin(scene.atmosphere.colorTemperatureK, exposure)}
+        />
         <Row
           label="Exposure (est.)"
           value={`${describeExposure(exposure)}${

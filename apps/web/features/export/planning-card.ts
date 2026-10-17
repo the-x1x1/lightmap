@@ -29,6 +29,7 @@ import {
   circleOfConfusionMm,
   depthOfField,
   describeExposure,
+  describeLightKelvin,
   estimateExposure,
   fieldConditions,
   focalLengthForFov,
@@ -122,6 +123,18 @@ export function buildPlanningCard(
       ? `Observed conditions: ${scenario} · ${Math.round(a.parameters.sunTransmittance * 100)} % direct light`
       : `Scenario (not a forecast): ${scenario} · ${Math.round(a.parameters.sunTransmittance * 100)} % direct light`;
 
+  const exposure = estimateExposure({
+    sunElevationDeg: s.elevationDegrees,
+    sunTransmittance: a.parameters.sunTransmittance,
+    skyGlowRatio: opts.skyGlow ? skyBrightnessRatio(opts.skyGlow) : 1,
+    moon: scene.lunar
+      ? {
+          elevationDeg: scene.lunar.elevationDegrees,
+          illuminatedFraction: scene.lunar.illuminatedFraction,
+        }
+      : null,
+  });
+
   const facts: Array<{ label: string; value: string }> = [
     {
       label: 'Sun',
@@ -134,25 +147,13 @@ export function buildPlanningCard(
     },
     {
       label: 'Light',
-      value: `${s.phase.replace('-', ' ')} · ${Math.round(a.colorTemperatureK)} K`,
+      value: `${s.phase.replace('-', ' ')} · ${describeLightKelvin(a.colorTemperatureK, exposure)}`,
     },
     {
       // Incident-light model (clear-sky curve × the scenario's direct share; Moon and stars at
       // night): a starting point, never a meter reading — the notes say so.
       label: 'Exposure (est.)',
-      value: describeExposure(
-        estimateExposure({
-          sunElevationDeg: s.elevationDegrees,
-          sunTransmittance: a.parameters.sunTransmittance,
-          skyGlowRatio: opts.skyGlow ? skyBrightnessRatio(opts.skyGlow) : 1,
-          moon: scene.lunar
-            ? {
-                elevationDeg: scene.lunar.elevationDegrees,
-                illuminatedFraction: scene.lunar.illuminatedFraction,
-              }
-            : null,
-        }),
-      ),
+      value: describeExposure(exposure),
     },
     { label: 'Sunrise / sunset', value: `${t(ev.sunrise)} / ${t(ev.sunset)}` },
     {

@@ -164,6 +164,22 @@ export function estimateExposure(input: ExposureInput): ExposureEstimate {
   };
 }
 
+/**
+ * Moonlight's colour on the ground, about 4,100 K: sunlight reflected by a slightly reddish Moon
+ * (it reads blue only to the dark-adapted eye). Where the Moon lights the scene the sky's
+ * twilight blue (the panel's ~11,000 K) is the wrong white balance for the land.
+ */
+export const MOONLIGHT_KELVIN = 4100;
+
+/**
+ * The light's colour line: the sky's colour temperature, and the moonlit ground's when the Moon
+ * is what lights the scene ("11000 K · moonlit ground ~4100 K").
+ */
+export function describeLightKelvin(skyKelvin: number, e: Pick<ExposureEstimate, 'basis'>): string {
+  const sky = `${Math.round(skyKelvin)} K`;
+  return e.basis === 'moon' ? `${sky} · moonlit ground ~${MOONLIGHT_KELVIN} K` : sky;
+}
+
 /** "EV 14.8 · 1/500 s f/8 ISO 100". */
 export function describeExposure(e: ExposureEstimate): string {
   const ev = e.ev100 < 0 ? `−${Math.abs(e.ev100).toFixed(1)}` : e.ev100.toFixed(1);

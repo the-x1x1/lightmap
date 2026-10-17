@@ -4,6 +4,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Moonlit white balance**: where the Moon lights the scene, the colour temperature line (Sun &
+  Moon details, planning card) adds the moonlit ground's ~4,100 K beside the sky's ~11,000 K,
+  which is the wrong white balance for moonlit land.
 - **No painted snow in the high cities of the tropics**: past the forecast, Mexico City,
   Bogota, Quito, Nairobi, Addis Ababa and Johannesburg (in its February summer) were drawn under
   lying snow, because height lengthened a snow season that their latitude does not have. Height

@@ -4,6 +4,7 @@ import {
   clearSkyIlluminanceLux,
   cloudIlluminanceFactor,
   describeExposure,
+  describeLightKelvin,
   estimateExposure,
   formatShutter,
   moonlightLux,
@@ -134,5 +135,22 @@ describe('estimateExposure', () => {
     expect(nearestShutter(1 / 400)).toBeCloseTo(1 / 500, 9);
     expect(nearestShutter(0.0035)).toBeCloseTo(1 / 250, 9);
     expect(nearestShutter(1000)).toBe(240);
+  });
+});
+
+describe('the light’s colour line', () => {
+  it('names the moonlit ground’s white balance when the Moon lights the scene', () => {
+    const night = { sunElevationDeg: -30, sunTransmittance: 1 };
+    const full = estimateExposure({
+      ...night,
+      moon: { elevationDeg: 40, illuminatedFraction: 1 },
+    });
+    expect(full.basis).toBe('moon');
+    expect(describeLightKelvin(11000, full)).toBe('11000 K · moonlit ground ~4100 K');
+    // A moonless night and the day keep the sky's figure alone.
+    expect(describeLightKelvin(11000, estimateExposure({ ...night, moon: null }))).toBe('11000 K');
+    expect(
+      describeLightKelvin(5600, estimateExposure({ sunElevationDeg: 50, sunTransmittance: 1 })),
+    ).toBe('5600 K');
   });
 });
