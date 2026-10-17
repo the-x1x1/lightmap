@@ -146,7 +146,7 @@ export class MeeusAstronomyService implements AstronomyService {
     const m = moonPosition(input.timestampUtc, input.latitude, input.longitude);
     const local = utcToWallClock(input.timestampUtc, input.timeZone);
     const { start, end } = localDayBounds(local, input.timeZone);
-    const rs = moonRiseSet(start, end, input.latitude, input.longitude);
+    const rs = cachedMoonRiseSet(start, end, input.latitude, input.longitude);
     return {
       azimuthDegrees: m.azimuthDeg,
       elevationDegrees: m.topocentricElevationDeg,
@@ -168,6 +168,37 @@ export class MeeusAstronomyService implements AstronomyService {
   getDayEvents(input: DayEventInput): DayEvents {
     return computeDayEvents(input);
   }
+}
+
+/**
+ * Moonrise and moonset per place and civil day, kept for the last few days asked for: the scan
+ * is some 600 Moon positions, nine tenths of a scene's build, and a scene is rebuilt on every
+ * drag of the look direction and every tick of the timeline, the day and place unchanged.
+ */
+const RISE_SET_CACHE_SIZE = 16;
+const riseSetCache = new Map<string, ReturnType<typeof moonRiseSet>>();
+
+function cachedMoonRiseSet(
+  start: Date,
+  end: Date,
+  latitude: number,
+  longitude: number,
+): ReturnType<typeof moonRiseSet> {
+  const key = `${start.getTime()}|${end.getTime()}|${latitude}|${longitude}`;
+  const hit = riseSetCache.get(key);
+  if (hit) {
+    // Most recently used last.
+    riseSetCache.delete(key);
+    riseSetCache.set(key, hit);
+    return hit;
+  }
+  const rs = moonRiseSet(start, end, latitude, longitude);
+  riseSetCache.set(key, rs);
+  if (riseSetCache.size > RISE_SET_CACHE_SIZE) {
+    const oldest = riseSetCache.keys().next().value;
+    if (oldest !== undefined) riseSetCache.delete(oldest);
+  }
+  return rs;
 }
 
 /** Convenience: the UTC instant for a wall-clock selection at the location. */
