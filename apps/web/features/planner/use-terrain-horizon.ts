@@ -66,6 +66,8 @@ const pending = new Map<string, Promise<HorizonProfile | null>>();
 const MAX_CACHE = 24;
 /** Below this share of answered samples the profile is not trusted (a hole could hide a ridge). */
 const MIN_COVERAGE = 0.6;
+/** The pin must stay this long (ms) before its horizon is sampled. */
+export const HORIZON_SETTLE_MS = 350;
 
 /** Terrain tile level per ring distance: DEM detail where it matters, cheap tiles far away. */
 export function levelForDistance(distanceM: number): number {
@@ -160,20 +162,27 @@ export function useTerrainHorizon(input: {
       }
       return profile;
     };
-    let job = pending.get(key);
-    if (!job) {
-      job = run()
-        .catch(() => null) // tiles unavailable: the planner simply has no terrain horizon
-        .finally(() => {
-          pending.delete(key);
-        });
-      pending.set(key, job);
-    }
-    void job.then((profile) => {
-      if (!cancelled && profile) setHorizonProfile(profile);
-    });
+    const start = () => {
+      let job = pending.get(key);
+      if (!job) {
+        job = run()
+          .catch(() => null) // tiles unavailable: the planner simply has no terrain horizon
+          .finally(() => {
+            pending.delete(key);
+          });
+        pending.set(key, job);
+      }
+      void job.then((profile) => {
+        if (!cancelled && profile) setHorizonProfile(profile);
+      });
+    };
+    // Once the pin has stayed put a moment: a walk moves it ten times a second, and each of the
+    // 2,640-sample runs it started (and the 45-night dark-window scan each answer re-ran) loaded
+    // terrain tiles for a place already left behind.
+    const timer = setTimeout(start, HORIZON_SETTLE_MS);
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
   }, [
     location,
