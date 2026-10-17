@@ -7,7 +7,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 - **City glow at night**: under the Milky Way line, an estimate of how much the towns around
   the pin light the sky and from which side (inside a city, suburban, a glow on the horizon, a
   faint dome, or none), from the bundled built-up areas by Walker's law
-- Woods and parks are drawn as one batch per tile once loaded, like the buildings
+- **Dense cities fill in seconds**: a tile's buildings are built whole in the background (a
+  Kyoto tile of 21,000 footprints in about 1.5 s) instead of a slice a frame for hundreds of
+  frames; woods and parks become one batch per tile too
 - The night exposure estimate counts the city glow: in a city about six stops brighter than a
   desert sky, and brighter again under cloud
 - The planning card names the city glow at night and counts it in its exposure, as the field

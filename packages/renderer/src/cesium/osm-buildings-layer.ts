@@ -5,14 +5,15 @@
  * the lot drawn as lit, shadow-casting, pickable prisms. The same tile's land cover grows trees
  * (`treesFromTile`): woods filled, parks scattered. Tiles far behind are dropped again.
  *
- * Geometry is built on the main thread a slice at a time (a dense city tile holds thousands of
- * footprints), each building in its own try: one malformed outline costs that building, never
- * the tile, and never the render loop (a failed asynchronous `Primitive` throws from inside the
- * frame). Once a tile's slices are all drawn, the footprints that built (and the trees, which
- * keep their ids) are built again in Cesium's workers as one primitive each, which replaces the
- * slices when it is ready: a dense tile otherwise stayed dozens of primitives (Midtown ~220,
- * Kyoto ~370 on screen, each drawn again for every shadow cascade). A merge that fails is
- * dropped before its frame and the slices stay.
+ * A tile's buildings are first built whole, as one primitive in Cesium's workers: nothing is
+ * triangulated on the main thread, and a dense tile (Kyoto's hold 10,000-20,000 footprints)
+ * shows in seconds. One outline the workers cannot triangulate fails that primitive; it is
+ * dropped before its frame (a failed asynchronous `Primitive` would throw from inside the
+ * frame) and the tile is built instead on the main thread a slice at a time, each building in
+ * its own try, so a malformed outline costs that building only. Those slices, and the trees (in
+ * slices of 1,500, which keep their ids), are then built again in the workers as one primitive
+ * each, which replaces them when it is ready: a dense tile otherwise stayed dozens of
+ * primitives (Midtown ~220, Kyoto ~370 on screen, each drawn again for every shadow cascade).
  */
 import type * as Cesium from '@cesium/engine';
 import {
@@ -616,7 +617,15 @@ export class OsmBuildingsLayer {
         // on a slope, the lowest and highest of up to six of its corners.
         const grounds = await this.footprintGrounds(buildings);
         if (state.cancelled || this.destroyed) return;
-        let i = 0;
+        // First the whole tile at once in Cesium's workers: no triangulation on the main thread,
+        // and a dense tile (Kyoto's hold 10,000-20,000 footprints) shows in seconds instead of
+        // a slice a frame for hundreds of frames. A footprint the workers cannot triangulate
+        // fails the whole primitive; then the tile is built in checked slices as before.
+        const whole = await this.describeAll(state, buildings, grounds);
+        if (!whole) return;
+        const built = whole.length > 0 && (await this.mergeSlices(state, [], whole));
+        if (state.cancelled || this.destroyed) return;
+        let i = built || whole.length === 0 ? buildings.length : 0;
         const slices: Cesium.Primitive[] = [];
         const again: Cesium.GeometryInstance[] = [];
         while (i < buildings.length) {
@@ -672,15 +681,16 @@ export class OsmBuildingsLayer {
   }
 
   /**
-   * Builds the tile's buildings (or trees) again as one primitive in Cesium's workers and, once
-   * it is ready, shows it in place of the slices (same shapes, colours, ids and shader).
+   * Builds a tile's buildings (or trees) as one primitive in Cesium's workers and, once it is
+   * ready, shows it in place of the slices drawn meanwhile, if any (same shapes, colours, ids
+   * and shader). False when it failed, timed out or the tile went away.
    */
   private async mergeSlices(
     state: TileState,
     slices: readonly Cesium.Primitive[],
     instances: Cesium.GeometryInstance[],
     trees = false,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const C = this.C;
     const appearance = () => (trees ? this.appearanceForTrees() : this.appearanceForBuildings());
     const merged = new C.Primitive({
@@ -705,7 +715,7 @@ export class OsmBuildingsLayer {
     this.merging.delete(merged);
     if (failed) {
       if (!merged.isDestroyed() && !this.destroyed) this.collection.remove(merged);
-      return;
+      return false;
     }
     // The shader may have moved on (the Sun set, the season turned) while the workers built it.
     merged.appearance = appearance();
@@ -735,6 +745,7 @@ export class OsmBuildingsLayer {
     this.owned.add(merged);
     (trees ? this.treePrims : this.buildingPrims).add(merged);
     this.scene.requestRender();
+    return true;
   }
 
   /** The ground at each footprint: its centre, and the lowest and highest of its corners. */
@@ -872,6 +883,69 @@ export class OsmBuildingsLayer {
     });
   }
 
+  /** A footprint's extrusion as a geometry description (not yet triangulated), and its colour. */
+  private describeBuilding(
+    b: BuildingFootprint,
+    gr: FootprintGround | undefined,
+  ): { description: Cesium.PolygonGeometry; colour: Cesium.Color } | null {
+    const C = this.C;
+    const g = gr ?? { centre: 0, low: 0, high: 0 };
+    const ground = g.centre;
+    const hierarchy = new C.PolygonHierarchy(
+      C.Cartesian3.fromDegreesArray(b.outer.flat()),
+      b.holes.map((h) => new C.PolygonHierarchy(C.Cartesian3.fromDegreesArray(h.flat()))),
+    );
+    const description = new C.PolygonGeometry({
+      polygonHierarchy: hierarchy,
+      // On a slope the walls start under the lowest corner, and the roof stands clear of the
+      // highest (V&V: Kyoto's Higashiyama, where the hillside came up through roofs in a
+      // saw-tooth of terrain triangles). A part lifted off the ground keeps its own heights from
+      // the centre.
+      height: b.minHeightM > 0 ? ground + b.minHeightM : g.low - SINK_M,
+      extrudedHeight:
+        b.minHeightM > 0
+          ? ground + b.heightM
+          : Math.max(ground + b.heightM, g.high + Math.min(b.heightM, 2.5)),
+      vertexFormat: C.PerInstanceColorAppearance.VERTEX_FORMAT,
+    });
+    return { description, colour: buildingColour(C, b) };
+  }
+
+  /**
+   * Every footprint of a tile as geometry descriptions for the workers, a frame's budget at a
+   * time (describing is cheap: no triangulation here). Null when the tile went away meanwhile.
+   */
+  private async describeAll(
+    state: TileState,
+    buildings: readonly BuildingFootprint[],
+    grounds: readonly FootprintGround[],
+  ): Promise<Cesium.GeometryInstance[] | null> {
+    const C = this.C;
+    const out: Cesium.GeometryInstance[] = [];
+    let i = 0;
+    while (i < buildings.length) {
+      await this.nextSlot();
+      if (state.cancelled || this.destroyed) return null;
+      const started = performance.now();
+      for (; i < buildings.length; i++) {
+        if (performance.now() - started > SLICE_BUDGET_MS) break;
+        try {
+          const d = this.describeBuilding(buildings[i] as BuildingFootprint, grounds[i]);
+          if (d)
+            out.push(
+              new C.GeometryInstance({
+                geometry: d.description,
+                attributes: { color: C.ColorGeometryInstanceAttribute.fromColor(d.colour) },
+              }),
+            );
+        } catch {
+          // An outline Cesium refuses even to describe is left out.
+        }
+      }
+    }
+    return out;
+  }
+
   /**
    * Buildings from `from` on, up to SLICE of them or SLICE_BUDGET_MS of work, as one primitive;
    * `next` is where the following slice starts. Each footprint that built is also added to
@@ -885,35 +959,17 @@ export class OsmBuildingsLayer {
   ): { primitive: Cesium.Primitive | null; next: number } {
     const C = this.C;
     const instances: Cesium.GeometryInstance[] = [];
-    const vertexFormat = C.PerInstanceColorAppearance.VERTEX_FORMAT;
     const started = performance.now();
     let i = from;
     for (; i < buildings.length && i < from + SLICE; i++) {
       if (i > from && performance.now() - started > SLICE_BUDGET_MS) break;
       const b = buildings[i] as BuildingFootprint;
       try {
-        const gr = grounds[i] ?? { centre: 0, low: 0, high: 0 };
-        const ground = gr.centre;
-        const hierarchy = new C.PolygonHierarchy(
-          C.Cartesian3.fromDegreesArray(b.outer.flat()),
-          b.holes.map((h) => new C.PolygonHierarchy(C.Cartesian3.fromDegreesArray(h.flat()))),
-        );
-        const description = new C.PolygonGeometry({
-          polygonHierarchy: hierarchy,
-          // On a slope the walls start under the lowest corner, and the roof stands clear of
-          // the highest (V&V: Kyoto's Higashiyama, where the hillside came up through roofs
-          // in a saw-tooth of terrain triangles). A part lifted off the ground keeps its own
-          // heights from the centre.
-          height: b.minHeightM > 0 ? ground + b.minHeightM : gr.low - SINK_M,
-          extrudedHeight:
-            b.minHeightM > 0
-              ? ground + b.heightM
-              : Math.max(ground + b.heightM, gr.high + Math.min(b.heightM, 2.5)),
-          vertexFormat,
-        });
+        const described = this.describeBuilding(b, grounds[i]);
+        if (!described) continue;
+        const { description, colour } = described;
         const geometry = C.PolygonGeometry.createGeometry(description);
         if (!geometry) continue;
-        const colour = buildingColour(C, b);
         instances.push(
           new C.GeometryInstance({
             geometry,
