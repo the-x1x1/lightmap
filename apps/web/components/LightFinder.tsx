@@ -15,6 +15,7 @@ import {
   civilDateString,
   formatWallTime,
   parseCivilDate,
+  planetPositions,
   refractionDeg,
   utcToLocalSelection,
   utcToWallClock,
@@ -38,6 +39,7 @@ import type { SerializedMatch, SolverResultDto } from '@/features/finder/solver-
 import { Paywall } from './Paywall';
 import { finderResultsText } from '@/features/finder/results-text';
 import { buildFinderCalendar } from '@/features/export/finder-calendar';
+import { bodyLabel, isPointBody } from '@/features/finder/body-name';
 import { downloadBlob, fileStem } from '@/features/export/download';
 import { track } from '@/lib/client/analytics';
 
@@ -110,20 +112,39 @@ export function LightFinder({
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
-  const bodyName = body === 'sun' ? 'sun' : body === 'moon' ? 'moon' : 'Milky Way core';
+  const bodyName = body === 'sun' ? 'sun' : body === 'moon' ? 'moon' : bodyLabel(body);
+  const planetBody = body === 'venus' || body === 'jupiter';
+  // "the sun", "the Milky Way core", but "Venus".
+  const theBody = planetBody ? bodyName : `the ${bodyName}`;
+  // Where the chosen planet is now (worked out here: a few microseconds).
+  const planetNow = useMemo(
+    () =>
+      planetBody
+        ? (planetPositions(
+            scene.utc,
+            scene.location.point.latitude,
+            scene.location.point.longitude,
+          ).find((p) => p.name === body) ?? null)
+        : null,
+    [planetBody, body, scene.utc, scene.location.point.latitude, scene.location.point.longitude],
+  );
   // Where the chosen body is right now (the Moon and the core ride on the lunar state).
   const nowAz =
     body === 'moon'
       ? (scene.lunar?.azimuthDegrees ?? null)
       : body === 'core'
         ? (scene.nightSky?.azimuthDeg ?? null)
-        : scene.solar.azimuthDegrees;
+        : planetBody
+          ? (planetNow?.azimuthDeg ?? null)
+          : scene.solar.azimuthDegrees;
   const nowEl =
     body === 'moon'
       ? (scene.lunar?.elevationDegrees ?? null)
       : body === 'core'
         ? (scene.nightSky?.elevationDeg ?? null)
-        : scene.solar.elevationDegrees;
+        : planetBody
+          ? (planetNow?.elevationDeg ?? null)
+          : scene.solar.elevationDegrees;
   const profile = scene.terrainHorizon?.profile ?? null;
   const units = usePlannerStore((s) => s.units);
   const caveat = profile ? profileCaveat(profile, units) : undefined;
@@ -219,7 +240,7 @@ export function LightFinder({
         // horizon floor (−0.833°); the ridge target must still be reachable.
         ...(mode === 'ridge' ? { minElevationDegrees: target.el - elTol - 1 } : {}),
         ...(body === 'moon' ? { minIlluminatedFraction: minIllum / 100 } : {}),
-        ...(body === 'core' ? { darkSkyOnly: darkOnly } : {}),
+        ...(body === 'core' || planetBody ? { darkSkyOnly: darkOnly } : {}),
         maxDays: 1100,
       });
       setResult({ res, clipped, ms });
@@ -244,7 +265,7 @@ export function LightFinder({
       m.azimuthDegrees,
       m.elevationDegrees,
       // The core is a point on the sky, not a disc whose upper limb shows first.
-      body === 'moon' ? MOON_SEMIDIAMETER_DEG : body === 'core' ? 0 : undefined,
+      body === 'moon' ? MOON_SEMIDIAMETER_DEG : isPointBody(body) ? 0 : undefined,
     );
   const allMatches = result?.res.matches ?? [];
   const terrainFilter = Boolean(profile) && hideBehindTerrain && mode !== 'ridge';
@@ -279,7 +300,7 @@ export function LightFinder({
   return (
     <div className="space-y-3" data-testid="light-finder">
       <p className="text-sm text-[var(--lm-text-muted)]">
-        Find every moment when the {bodyName} sits at a chosen direction from this viewpoint — for
+        Find every moment when {theBody} sits at a chosen direction from this viewpoint — for
         example setting behind a ridge, rising over the bay, or standing over that peak.
       </p>
 
@@ -308,6 +329,14 @@ export function LightFinder({
                 ? {}
                 : { locked: true, lockedReason: 'Night planning is part of Pro.' }),
             },
+            ...(['venus', 'jupiter'] as const).map((p) => ({
+              value: p,
+              label: bodyLabel(p),
+              testId: `finder-body-${p}`,
+              ...(moonAllowed
+                ? {}
+                : { locked: true, lockedReason: 'Night planning is part of Pro.' }),
+            })),
           ]}
         />
       </div>
@@ -368,7 +397,7 @@ export function LightFinder({
           <div className="flex items-center justify-between gap-2 text-xs text-[var(--lm-text-muted)]">
             <span>
               {finderPicking
-                ? `Click the spot in the 3D view where the ${bodyName} should be.`
+                ? `Click the spot in the 3D view where ${theBody} should be.`
                 : finderTarget
                   ? `Picked ${Math.round(finderTarget.azimuthDeg)}° ${compassLabel(finderTarget.azimuthDeg)}, ${finderTarget.elevationDeg.toFixed(1)}° up — drag the ring in the view to adjust.`
                   : 'Nothing picked yet.'}
@@ -393,7 +422,7 @@ export function LightFinder({
         ) : null}
         {mode === 'ridge' ? (
           <p className="text-xs text-[var(--lm-text-muted)]">
-            Every moment the {body === 'core' ? 'core' : `${body}’s upper limb`} touches the
+            Every moment {isPointBody(body) ? theBody : `the ${body}’s upper limb`} touches the
             modelled skyline at this bearing — when it sets behind (or rises over) that ridge. Type
             the bearing; the elevation is read from the sampled terrain (
             {profile ? `${target.el.toFixed(1)}° here` : '—'}).{' '}
@@ -404,14 +433,14 @@ export function LightFinder({
         ) : null}
         {mode === 'current' && nowAz === null ? (
           <p className="text-xs text-[var(--lm-text-muted)]">
-            {body === 'moon' ? 'Moon' : 'Milky Way core'} data is not available here.
+            {body === 'moon' ? 'Moon' : bodyLabel(body)} data is not available here.
           </p>
         ) : null}
         {currentBelow ? (
           <p className="text-xs text-[var(--lm-text-muted)]" data-testid="finder-current-below">
             {body === 'sun'
               ? `The sun is ${Math.abs(nowEl ?? 0).toFixed(0)}° below the horizon now: full night, the same every night.`
-              : `The ${bodyName} is below the horizon now (${(nowEl ?? 0).toFixed(0)}°): move the time to when it is up, or choose a direction another way.`}
+              : `${planetBody ? bodyName : `The ${bodyName}`} is below the horizon now (${(nowEl ?? 0).toFixed(0)}°): move the time to when it is up, or choose a direction another way.`}
           </p>
         ) : null}
         <div className="grid grid-cols-2 gap-2">
@@ -558,6 +587,18 @@ export function LightFinder({
               Dark sky only — astronomical night, no Moon over 30 % lit above the horizon
             </label>
           ) : null}
+          {planetBody ? (
+            <label className="col-span-2 flex items-center gap-2 text-xs text-[var(--lm-text-muted)]">
+              <input
+                type="checkbox"
+                checked={darkOnly}
+                onChange={(e) => setDarkOnly(e.target.checked)}
+                data-testid="finder-visible-only"
+              />
+              Visible only — after sunset or before sunrise, clear of the Sun&apos;s glare and
+              bright enough for the sky once the air low down has dimmed it
+            </label>
+          ) : null}
         </div>
       </details>
 
@@ -669,7 +710,7 @@ export function LightFinder({
             onChange={(e) => setHideBehindTerrain(e.target.checked)}
             data-testid="finder-hide-terrain"
           />
-          Hide moments when the {bodyName} is behind the terrain
+          Hide moments when {theBody} is behind the terrain
           <span className="sr-only">. {caveat}</span>
         </label>
       ) : null}
@@ -688,15 +729,17 @@ export function LightFinder({
             // The plan cut the range short: say so, not that the direction may be unreachable.
             <p className="text-sm text-[var(--lm-text-muted)]">
               Nothing in this range inside your plan’s date window ({result.res.scannedDays} days).
-              Widen the tolerances or drop the elevation match; the {bodyName} may reach that
-              direction elsewhere in the year, or never from this latitude
-              {body === 'core' && darkOnly ? ', or never in a dark sky' : ''}.
+              Widen the tolerances or drop the elevation match; {theBody} may reach that direction
+              elsewhere in the year, or never from this latitude
+              {body === 'core' && darkOnly ? ', or never in a dark sky' : ''}
+              {planetBody && darkOnly ? ', or never while it can be seen' : ''}.
             </p>
           ) : matches.length === 0 ? (
             <p className="text-sm text-[var(--lm-text-muted)]">
               Nothing in this range. Widen the tolerances, drop the elevation match, or extend the
-              dates — the {bodyName} may never reach that direction from this latitude
-              {body === 'core' && darkOnly ? ', or never in a dark sky' : ''}.
+              dates — {theBody} may never reach that direction from this latitude
+              {body === 'core' && darkOnly ? ', or never in a dark sky' : ''}
+              {planetBody && darkOnly ? ', or never while it can be seen' : ''}.
             </p>
           ) : (
             <ol className="max-h-64 space-y-1 overflow-y-auto pr-1 text-sm">

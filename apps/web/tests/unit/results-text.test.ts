@@ -46,3 +46,27 @@ describe('finderResultsText', () => {
     );
   });
 });
+
+describe('finderResultsText with a planet', () => {
+  it('names the planet and says why an instant cannot be seen', () => {
+    const venus: SerializedMatch = {
+      ...base,
+      body: 'venus',
+      timestampUtc: '2026-06-02T07:04:54.000Z',
+      date: '2026-06-01',
+      azimuthDegrees: 293,
+      elevationDegrees: 8.1,
+      apparentDiameterDegrees: null,
+      sky: 'dark',
+    };
+    const text = finderResultsText([venus, { ...venus, sky: 'low' }], {
+      timeZone: 'Pacific/Honolulu',
+      body: 'venus',
+      place: 'Kailua Beach',
+    });
+    const lines = text.split('\n');
+    expect(lines[0]).toBe('Venus at Kailua Beach — 2 moments (times Pacific/Honolulu)');
+    expect(lines[1]).toBe('2026-06-01 21:05  293° WNW, 8.1° setting');
+    expect(lines[2]).toBe('2026-06-01 21:05  293° WNW, 8.1° setting · low');
+  });
+});

@@ -6,9 +6,10 @@
  * re-importing updates. Pure, unit-tested.
  */
 import { brand } from '@lightmap/config';
-import { formatWallTime } from '@lightmap/astronomy';
+import { formatWallTime, type CelestialBody } from '@lightmap/astronomy';
 import { compassLabel, gridKey } from '@lightmap/geospatial';
 import type { SerializedMatch } from '@/features/finder/solver-types';
+import { bodyLabel } from '@/features/finder/body-name';
 import {
   AFTER_MINUTES,
   REMINDER_MINUTES,
@@ -21,9 +22,9 @@ import {
 export function buildFinderCalendar(
   matches: readonly SerializedMatch[],
   place: { label: string; latitude: number; longitude: number; timeZone: string },
-  opts: { body: 'sun' | 'moon' | 'core'; generatedAt: Date },
+  opts: { body: CelestialBody; generatedAt: Date },
 ): string {
-  const name = opts.body === 'sun' ? 'Sun' : opts.body === 'moon' ? 'Moon' : 'Milky Way core';
+  const name = bodyLabel(opts.body);
   // A comma-free cell: a UID is a text value and the RFC wants commas escaped.
   const cell = gridKey({ latitude: place.latitude, longitude: place.longitude }).replace(',', '_');
   const events = matches.flatMap((m) => {

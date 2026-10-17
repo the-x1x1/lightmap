@@ -3,15 +3,16 @@
  * planning zone, with the bearing, height, trend and the Moon's lit share and disc when it is
  * the Moon — so a search can go into notes or a message. Pure, unit-tested.
  */
-import { formatWallTime } from '@lightmap/astronomy';
+import { formatWallTime, type CelestialBody } from '@lightmap/astronomy';
 import { compassLabel } from '@lightmap/geospatial';
 import type { SerializedMatch } from './solver-types';
+import { bodyLabel } from './body-name';
 
 export function finderResultsText(
   matches: readonly SerializedMatch[],
-  opts: { timeZone: string; body: 'sun' | 'moon' | 'core'; place: string },
+  opts: { timeZone: string; body: CelestialBody; place: string },
 ): string {
-  const name = opts.body === 'sun' ? 'Sun' : opts.body === 'moon' ? 'Moon' : 'Milky Way core';
+  const name = bodyLabel(opts.body);
   const lines = [
     `${name} at ${opts.place} — ${matches.length} ${matches.length === 1 ? 'moment' : 'moments'} (times ${opts.timeZone})`,
     ...matches.map((m) => {

@@ -21,14 +21,37 @@
 import { moonApparentDiameterDeg, sunApparentDiameterDeg } from './apparent-size.ts';
 import { moonHorizonThresholdDeg, moonPosition } from './lunar.ts';
 import { galacticCentrePosition, MILKY_WAY_MOON_LIMIT } from './night-sky.ts';
-import { sunPosition } from './solar.ts';
-import { addCivilDays, civilDateString, localDayBounds, type CivilTime } from './time.ts';
+import { sunPosition, toHorizontal } from './solar.ts';
+import { planetGeocentric } from './planets.ts';
+import { extinctionMag, planetVisible, skyLimitingMagnitude } from './visibility.ts';
+import {
+  addCivilDays,
+  civilDateString,
+  julianCenturiesTT,
+  localDayBounds,
+  type CivilTime,
+} from './time.ts';
 
-/** The Sun, the Moon, or the Galactic Centre (the Milky Way's core, a fixed point on the sky). */
-export type CelestialBody = 'sun' | 'moon' | 'core';
+/**
+ * The Sun, the Moon, the Galactic Centre (the Milky Way's core, a fixed point on the sky), or
+ * one of the two brightest planets (a point too: Venus or Jupiter over a peak, or setting into
+ * the glow).
+ */
+export type CelestialBody = 'sun' | 'moon' | 'core' | 'venus' | 'jupiter';
 
-/** For the core: what stands between the band and the camera at an instant. */
-export type SkyState = 'dark' | 'daylight' | 'twilight' | 'moonlit';
+/** The planets the finder takes. */
+export const FINDER_PLANETS = ['venus', 'jupiter'] as const;
+
+function isPlanet(body: CelestialBody): body is (typeof FINDER_PLANETS)[number] {
+  return body === 'venus' || body === 'jupiter';
+}
+
+/**
+ * For the core: what stands between the band and the camera at an instant. For a planet:
+ * `dark` when it can be seen (`planetVisible`), else why not - `daylight`, `twilight` (the sky
+ * too bright for it), `glare` (within 10 deg of the Sun) or `low` (dimmed by the air).
+ */
+export type SkyState = 'dark' | 'daylight' | 'twilight' | 'moonlit' | 'glare' | 'low';
 
 export interface DirectionTarget {
   /** Compass azimuth of the desired body position, degrees clockwise from north. */
@@ -60,6 +83,7 @@ export interface SolverInput {
   /**
    * Core only: keep an instant only when the sky can show the band — astronomical night and no
    * Moon brighter than 30 % above the horizon (default true; the core is invisible otherwise).
+   * Venus and Jupiter: keep an instant only when the planet can be seen (default true).
    */
   darkSkyOnly?: boolean;
   /** Safety cap on scanned days (default 1100 ≈ 3 years). */
@@ -94,7 +118,8 @@ export interface DirectionMatch {
   apparentDiameterDegrees: number | null;
   /**
    * Core only: whether the sky can show the band at the instant — `dark` (astronomical night, no
-   * Moon over 30 % up), `daylight`, `twilight`, or `moonlit`; null for the Sun and Moon.
+   * Moon over 30 % up), `daylight`, `twilight`, or `moonlit`. Venus and Jupiter: `dark` when the
+   * planet can be seen, else `daylight`, `twilight`, `glare` or `low`. Null for the Sun and Moon.
    */
   sky: SkyState | null;
   /** Rising (elevation increasing) or setting at the instant. */
@@ -119,7 +144,30 @@ export function wrapDelta(deg: number): number {
   return d;
 }
 
-function positionOf(body: CelestialBody, t: number, lat: number, lon: number) {
+interface BodyPosition {
+  azimuth: number;
+  elevation: number;
+  illuminated: number | null;
+  diameter: number | null;
+  /** Planets: their magnitude and distance from the Sun on the sky, for the sky state. */
+  magnitude?: number;
+  elongation?: number;
+}
+
+function positionOf(body: CelestialBody, t: number, lat: number, lon: number): BodyPosition {
+  if (isPlanet(body)) {
+    const d = new Date(t);
+    const g = planetGeocentric(body, julianCenturiesTT(d));
+    const hz = toHorizontal(g, d, lat, lon);
+    return {
+      azimuth: hz.azimuthDeg,
+      elevation: hz.elevationDeg,
+      illuminated: null,
+      diameter: null,
+      magnitude: g.magnitude,
+      elongation: g.elongationDeg,
+    };
+  }
   if (body === 'moon') {
     const m = moonPosition(new Date(t), lat, lon);
     return {
@@ -155,6 +203,23 @@ function skyAt(t: number, lat: number, lon: number): SkyState {
   const moon = moonPosition(d, lat, lon);
   const moonUp = moon.elevationDeg > moonHorizonThresholdDeg(moon.distanceKm);
   return moonUp && moon.illuminatedFraction > MILKY_WAY_MOON_LIMIT ? 'moonlit' : 'dark';
+}
+
+/** A planet's sky state at an instant (see `SkyState`). */
+function planetSkyAt(p: BodyPosition, t: number, lat: number, lon: number): SkyState {
+  const sunEl = sunPosition(new Date(t), lat, lon).elevationDeg;
+  // A daytime Venus can be seen by an eye that knows where to look, but it is not a photograph
+  // the finder is for.
+  if (sunEl > -0.833) return 'daylight';
+  const mag = p.magnitude ?? 0;
+  const elong = p.elongation ?? 180;
+  if (planetVisible({ magnitude: mag, elevationDeg: p.elevation, elongationDeg: elong }, sunEl))
+    return 'dark';
+  if (elong <= 10) return 'glare';
+  const limit = skyLimitingMagnitude(sunEl);
+  // Bright enough for this sky overhead, so it is the air low down that hides it.
+  if (mag < limit && mag + extinctionMag(p.elevation) >= limit) return 'low';
+  return 'twilight';
 }
 
 /** Bisection on a signed function between two instants that bracket a sign change. */
@@ -212,7 +277,8 @@ export function findDirectionMatches(input: SolverInput): SolverResult {
   const record = (dayKey: string, tc: number, via: DirectionMatch['via']) => {
     const p = positionOf(body, tc, lat, lon);
     if (p.elevation < minEl || (p.illuminated ?? 1) < minIllum) return;
-    const sky = body === 'core' ? skyAt(tc, lat, lon) : null;
+    const sky =
+      body === 'core' ? skyAt(tc, lat, lon) : isPlanet(body) ? planetSkyAt(p, tc, lat, lon) : null;
     if (sky !== null && sky !== 'dark' && darkOnly) return;
     // The two detectors can find the same instant (body crossing the bearing exactly at the
     // target elevation); keep one.
