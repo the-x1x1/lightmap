@@ -20,6 +20,9 @@ export interface VectorLayer {
   features: VectorFeature[];
 }
 
+/** One decoder for every string of every tile (a new one per string cost more than the read). */
+const UTF8 = new TextDecoder();
+
 class Reader {
   pos = 0;
   readonly buf: Uint8Array;
@@ -57,7 +60,7 @@ class Reader {
   }
   string(): string {
     const r = this.sub();
-    return new TextDecoder().decode(this.buf.subarray(r.pos, r.end));
+    return UTF8.decode(this.buf.subarray(r.pos, r.end));
   }
   packed(): number[] {
     const r = this.sub();
@@ -143,7 +146,16 @@ function readFeature(r: Reader, keys: string[], values: (VectorValue | null)[]):
   return { type, properties, geometry: decodeGeometry(geom) };
 }
 
-function readLayer(r: Reader, wanted: ReadonlySet<string> | null): VectorLayer | null {
+/** A layer whose features are decoded one at a time, when asked for (`feature(i)`). */
+export interface LazyVectorLayer {
+  name: string;
+  extent: number;
+  /** How many features the layer holds. */
+  count: number;
+  feature(i: number): VectorFeature;
+}
+
+function readLayer(r: Reader, wanted: ReadonlySet<string> | null): LazyVectorLayer | null {
   // Keys and values come after the features in practice, so features are kept raw until the end.
   let name = '';
   let extent = 4096;
@@ -154,25 +166,41 @@ function readLayer(r: Reader, wanted: ReadonlySet<string> | null): VectorLayer |
     const tag = r.varint();
     const field = Math.floor(tag / 8);
     const wire = tag & 7;
-    if (field === 1 && wire === 2) name = r.string();
-    else if (field === 2 && wire === 2) raw.push(r.sub());
+    if (field === 1 && wire === 2) {
+      name = r.string();
+      // A layer nobody asked for is left unread: its keys, values and features are most of a
+      // tile's strings (the transport and place layers), decoded for nothing.
+      if (wanted && !wanted.has(name)) return null;
+    } else if (field === 2 && wire === 2) raw.push(r.sub());
     else if (field === 3 && wire === 2) keys.push(r.string());
     else if (field === 4 && wire === 2) values.push(readValue(r.sub()));
     else if (field === 5 && wire === 0) extent = r.varint();
     else r.skip(wire);
   }
   if (wanted && !wanted.has(name)) return null;
-  return { name, extent, features: raw.map((f) => readFeature(f, keys, values)) };
+  return {
+    name,
+    extent,
+    count: raw.length,
+    feature: (i) => {
+      const f = raw[i];
+      if (!f) throw new RangeError(`vector tile: no feature ${i}`);
+      // A fresh reader each time, so a feature can be read again.
+      const copy = new Reader(f.buf, f.end);
+      copy.pos = f.pos;
+      return readFeature(copy, keys, values);
+    },
+  };
 }
 
-/** The layers of a tile, or only those named in `only`. */
-export function readVectorTile(
+/** The layers of a tile with their features left undecoded, or only those named in `only`. */
+export function readVectorTileLazy(
   data: Uint8Array,
   only?: readonly string[],
-): Record<string, VectorLayer> {
+): Record<string, LazyVectorLayer> {
   const wanted = only ? new Set(only) : null;
   const r = new Reader(data);
-  const layers: Record<string, VectorLayer> = {};
+  const layers: Record<string, LazyVectorLayer> = {};
   while (r.pos < r.end) {
     const tag = r.varint();
     const field = Math.floor(tag / 8);
@@ -181,6 +209,20 @@ export function readVectorTile(
       const layer = readLayer(r.sub(), wanted);
       if (layer) layers[layer.name] = layer;
     } else r.skip(wire);
+  }
+  return layers;
+}
+
+/** The layers of a tile, or only those named in `only`. */
+export function readVectorTile(
+  data: Uint8Array,
+  only?: readonly string[],
+): Record<string, VectorLayer> {
+  const layers: Record<string, VectorLayer> = {};
+  for (const [name, l] of Object.entries(readVectorTileLazy(data, only))) {
+    const features: VectorFeature[] = [];
+    for (let i = 0; i < l.count; i++) features.push(l.feature(i));
+    layers[name] = { name: l.name, extent: l.extent, features };
   }
   return layers;
 }
@@ -213,6 +255,16 @@ export function classifyRings(
 
 /** Sutherland–Hodgman clip of a ring to the square [lo, hi]² (vector tiles carry a buffer). */
 export function clipRing(ring: readonly number[], lo: number, hi: number): number[] {
+  // Most rings lie wholly inside the tile: nothing to cut.
+  let inside = true;
+  for (let i = 0; i < ring.length; i++) {
+    const v = ring[i] as number;
+    if (v < lo || v > hi) {
+      inside = false;
+      break;
+    }
+  }
+  if (inside) return ring.slice();
   let pts = ring.slice();
   const edges: [number, number, boolean][] = [
     [0, lo, true],

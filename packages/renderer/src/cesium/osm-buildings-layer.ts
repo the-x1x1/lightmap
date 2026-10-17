@@ -19,7 +19,7 @@ import type * as Cesium from '@cesium/engine';
 import {
   BUILDING_TILE_ZOOM,
   buildingTilesAround,
-  buildingsFromTile,
+  buildingsFromTileSteps,
   tileUrl,
   treesFromTile,
   type BuildingFootprint,
@@ -683,11 +683,31 @@ export class OsmBuildingsLayer {
       if (!res.ok) throw new Error(`building tile ${state.key}: HTTP ${res.status}`);
       const data = new Uint8Array(await res.arrayBuffer());
       if (state.cancelled || this.destroyed) return;
-      const all = buildingsFromTile(data, BUILDING_TILE_ZOOM, state.x, state.y);
+      // Decoded a frame's budget at a time: a dense city tile took a tenth of a second or more
+      // of one frame to read, a visible stall while panning.
+      const steps = buildingsFromTileSteps(data, BUILDING_TILE_ZOOM, state.x, state.y);
+      let all: BuildingFootprint[] | null = null;
+      while (!all) {
+        const started = performance.now();
+        let step = steps.next();
+        while (!step.done && performance.now() - started < SLICE_BUDGET_MS) step = steps.next();
+        if (step.done) all = step.value;
+        else {
+          await this.nextSlot();
+          if (state.cancelled || this.destroyed) return;
+        }
+      }
       const buildings = state.near ? all : all.filter((b) => b.heightM >= FAR_MIN_HEIGHT_M);
       state.footprints = buildings;
-      if (state.near)
+      // The bridges (the transport layer) and the trees (land cover) each in a frame of their
+      // own, after the buildings'.
+      if (state.near) {
+        await this.nextSlot();
+        if (state.cancelled || this.destroyed) return;
         state.bridges = bridgeLinesFromTile(data, BUILDING_TILE_ZOOM, state.x, state.y);
+        await this.nextSlot();
+        if (state.cancelled || this.destroyed) return;
+      }
       const [, tileLat] = tilePointToLonLat(BUILDING_TILE_ZOOM, state.x, state.y, 1, 0.5, 0.5);
       const trees = state.near
         ? treesFromTile(data, BUILDING_TILE_ZOOM, state.x, state.y, tileLat)

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BUILDINGS_PER_STEP,
   buildingTilesAround,
   buildingsFromTile,
+  buildingsFromTileSteps,
   DEFAULT_BUILDING_HEIGHT_M,
   tileUrl,
   treesFromTile,
@@ -228,5 +230,25 @@ describe('trees from land cover', () => {
     const [hx1, hy0] = tilePointToLonLat(14, 10, 10, 4096, 1480, 560);
     expect(a.some((p) => p.lon > hx0 && p.lon < hx1 && p.lat > hy1 && p.lat < hy0)).toBe(false);
     expect(a.some((p) => p.conifer)).toBe(true);
+  });
+});
+
+describe('decoding a dense tile in steps', () => {
+  it('yields every few hundred features and returns what the one-shot decode does', () => {
+    const feats = [];
+    for (let i = 0; i < 40; i++)
+      for (let j = 0; j < 30; j++)
+        feats.push({ rings: [square(20 + i * 100, 20 + j * 130, 40)], tags: [0, 0] });
+    const t = tile(feats, ['render_height'], [doubleValue(12)]);
+    const steps = buildingsFromTileSteps(t, 14, 8000, 5000);
+    let yields = 0;
+    let r = steps.next();
+    while (!r.done) {
+      yields++;
+      r = steps.next();
+    }
+    expect(yields).toBe(Math.floor((feats.length - 1) / BUILDINGS_PER_STEP));
+    expect(r.value).toEqual(buildingsFromTile(t, 14, 8000, 5000));
+    expect(r.value).toHaveLength(feats.length);
   });
 });

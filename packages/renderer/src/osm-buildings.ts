@@ -12,6 +12,7 @@ import {
   clipRing,
   lonLatToTile,
   readVectorTile,
+  readVectorTileLazy,
   tilePointToLonLat,
   type VectorValue,
 } from './vector-tile.ts';
@@ -44,21 +45,62 @@ export function buildingsFromTile(
   y: number,
   layerName = 'building',
 ): BuildingFootprint[] {
-  const layer = readVectorTile(data, [layerName])[layerName];
+  const steps = buildingsFromTileSteps(data, z, x, y, layerName);
+  for (;;) {
+    const s = steps.next();
+    if (s.done) return s.value;
+  }
+}
+
+/** Features decoded between two yields of `buildingsFromTileSteps`. */
+export const BUILDINGS_PER_STEP = 400;
+
+/**
+ * `buildingsFromTile` in steps: it yields every BUILDINGS_PER_STEP features, so a caller can
+ * spread a dense tile (Kyoto's hold 20,000 footprints, a tenth of a second or more to decode)
+ * over frames instead of stalling one; the generator's return value is the footprints.
+ */
+export function* buildingsFromTileSteps(
+  data: Uint8Array,
+  z: number,
+  x: number,
+  y: number,
+  layerName = 'building',
+): Generator<void, BuildingFootprint[], void> {
+  const layer = readVectorTileLazy(data, [layerName])[layerName];
   if (!layer) return [];
   const out: BuildingFootprint[] = [];
   const e = layer.extent;
+  // Longitude is linear across the tile; latitude depends on the row alone, and nearly every
+  // vertex sits on a whole row, so each row's latitude is worked out once (the inverse Mercator
+  // was a third of the decode on a dense tile).
+  const n = 2 ** z;
+  const lonPerUnit = 360 / (n * e);
+  const lon0 = (x / n) * 360 - 180;
+  const rowLat = new Float64Array(e + 1).fill(Number.NaN);
+  const latAt = (py: number): number => {
+    if (Number.isInteger(py) && py >= 0 && py <= e) {
+      const cached = rowLat[py] as number;
+      if (!Number.isNaN(cached)) return cached;
+      const lat = tilePointToLonLat(z, x, y, e, 0, py)[1];
+      rowLat[py] = lat;
+      return lat;
+    }
+    return tilePointToLonLat(z, x, y, e, 0, py)[1];
+  };
   const toLonLat = (ring: number[]): [number, number][] => {
     const pts: [number, number][] = [];
     for (let i = 0; i + 1 < ring.length; i += 2)
-      pts.push(tilePointToLonLat(z, x, y, e, ring[i] as number, ring[i + 1] as number));
+      pts.push([lon0 + (ring[i] as number) * lonPerUnit, latAt(ring[i + 1] as number)]);
     // Drop a closing vertex equal to the first.
     const first = pts[0];
     const last = pts[pts.length - 1];
     if (pts.length > 1 && first && last && first[0] === last[0] && first[1] === last[1]) pts.pop();
     return pts;
   };
-  for (const f of layer.features) {
+  for (let fi = 0; fi < layer.count; fi++) {
+    if (fi > 0 && fi % BUILDINGS_PER_STEP === 0) yield;
+    const f = layer.feature(fi);
     if (f.type !== 3) continue;
     if (f.properties['hide_3d'] === true) continue;
     const top = num(f.properties['render_height']);
