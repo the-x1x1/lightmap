@@ -121,6 +121,12 @@ function DarkWindows({
             </span>
           ))}
       {more > 0 ? ` · ${more} more in ${result.days} nights` : ''}
+      {beyond > 0 ? (
+        <span data-testid="milky-way-windows-beyond">
+          {' '}
+          · {beyond} more beyond your window · Pro
+        </span>
+      ) : null}
       {shown.length > 0 && (glowGrade === 'city' || glowGrade === 'suburban') ? (
         <span data-testid="milky-way-windows-glow">
           {' '}
@@ -128,12 +134,6 @@ function DarkWindows({
           {glowGrade === 'city'
             ? 'from here the town light washes the core out'
             : 'the core stays faint under the town glow'}
-        </span>
-      ) : null}
-      {beyond > 0 ? (
-        <span data-testid="milky-way-windows-beyond">
-          {' '}
-          · {beyond} more beyond your window · Pro
         </span>
       ) : null}
       {exportAllowed && inWindow.length > 0 ? (
@@ -350,11 +350,11 @@ function MoonDetails({
           label="Moonrise / set"
           value={
             // Far north or south the Moon can stay up (or down) the whole day: say so, not "— / —".
-            !lunar.moonrise && !lunar.moonset
-              ? lunar.isAboveHorizon
-                ? 'up all day'
-                : 'down all day'
-              : `${lunar.moonrise ? formatWallTime(lunar.moonrise, tz) : '—'} / ${lunar.moonset ? formatWallTime(lunar.moonset, tz) : '—'}`
+            lunar.alwaysUp
+              ? 'up all day'
+              : lunar.alwaysDown
+                ? 'down all day'
+                : `${lunar.moonrise ? formatWallTime(lunar.moonrise, tz) : '—'} / ${lunar.moonset ? formatWallTime(lunar.moonset, tz) : '—'}`
           }
         />
         {scene.terrainHorizon?.moonEvents?.differsFromAstronomical ? (

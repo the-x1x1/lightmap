@@ -674,7 +674,8 @@ export function LightFinder({
             <p className="text-sm text-[var(--lm-text-muted)]">
               Nothing in this range inside your plan’s date window ({result.res.scannedDays} days).
               Widen the tolerances or drop the elevation match; the {bodyName} may reach that
-              direction later in the year.
+              direction elsewhere in the year, or never from this latitude
+              {body === 'core' && darkOnly ? ', or never in a dark sky' : ''}.
             </p>
           ) : matches.length === 0 ? (
             <p className="text-sm text-[var(--lm-text-muted)]">

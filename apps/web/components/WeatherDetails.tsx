@@ -24,7 +24,7 @@ export function WeatherDetails({ scene }: { scene: SceneState }) {
         {f ? <Row label="Conditions" value={describeWeatherCode(f.weatherCode)} /> : null}
         {observed && f?.precipitationAmount !== null && f?.precipitationAmount !== undefined ? (
           // A past hour has what fell, not a chance of it.
-          <Row label="Rain" value={rainAmount(f.precipitationAmount, units)} />
+          <Row label="Precipitation" value={rainAmount(f.precipitationAmount, units)} />
         ) : f?.precipitationProbability !== null && f?.precipitationProbability !== undefined ? (
           <Row label="Rain chance" value={`${Math.round(f.precipitationProbability)} %`} />
         ) : null}
@@ -53,12 +53,12 @@ export function WeatherDetails({ scene }: { scene: SceneState }) {
   );
 }
 
-/** What fell in the hour: "none", "0.4 mm", or in inches. */
+/** What fell in the hour (rain or snow as water): "none", "a trace", "0.4 mm", or in inches. */
 function rainAmount(mm: number, units: 'metric' | 'imperial'): string {
-  if (mm < 0.05) return 'none in the hour';
-  return units === 'imperial'
-    ? `${(mm / 25.4).toFixed(2)} in in the hour`
-    : `${mm.toFixed(1)} mm in the hour`;
+  if (mm <= 0) return 'none in the hour';
+  const shown = units === 'imperial' ? (mm / 25.4).toFixed(2) : mm.toFixed(1);
+  if (Number(shown) === 0) return 'a trace in the hour';
+  return `${shown} ${units === 'imperial' ? 'in' : 'mm'} in the hour`;
 }
 
 function Row({ label, value }: { label: string; value: string }) {
