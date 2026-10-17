@@ -123,3 +123,73 @@ describe('topocentric correction (Meeus ch. 40)', () => {
     expect(worst).toBeLessThan(0.015);
   });
 });
+
+describe("moonrise and moonset against the National Astronomical Observatory of Japan's table", () => {
+  // NAO's koyomi for Chiba (35.6000 N, 140.1167 E, UT+9), October 2026, times to the minute.
+  // NAO times the Moon's centre on the horizon (altitude -34' with refraction); this app times
+  // its upper limb, the semidiameter (~0.26 deg, about 1.5 minutes) earlier at rise and later
+  // at set. Rows are [day, rise, set] in local time; '--' is no rise that day.
+  const NAO: [number, string, string][] = [
+    [1, '20:08', '10:27'],
+    [2, '21:07', '11:36'],
+    [3, '22:13', '12:38'],
+    [4, '23:25', '13:30'],
+    [5, '--', '14:13'],
+    [6, '0:36', '14:49'],
+    [7, '1:46', '15:20'],
+    [8, '2:53', '15:48'],
+    [9, '3:59', '16:14'],
+    [10, '5:02', '16:40'],
+  ];
+  const lat = 35.6;
+  const lon = 140.1167;
+  const centreUp = (t: number) =>
+    moonPosition(new Date(t), lat, lon).topocentricElevationDeg + 34 / 60;
+  /** The crossing of the centre's threshold inside [a, a + 1 min), by bisection. */
+  const cross = (a: number) => {
+    let lo = a;
+    let hi = a + 60_000;
+    const below = centreUp(lo) < 0;
+    for (let i = 0; i < 30; i++) {
+      const m = (lo + hi) / 2;
+      if (centreUp(m) < 0 === below) lo = m;
+      else hi = m;
+    }
+    return lo;
+  };
+  const minutes = (hhmm: string) => {
+    const [h, m] = hhmm.split(':').map(Number);
+    return (h ?? 0) * 60 + (m ?? 0);
+  };
+
+  it('times the centre within 45 s of the table (its minute plus rounding), and the upper limb ~1.5 min outside it', () => {
+    for (const [day, rise, set] of NAO) {
+      const start = Date.UTC(2026, 9, day) - 9 * 3_600_000;
+      let r: number | null = null;
+      let s: number | null = null;
+      for (let t = start; t < start + 86_400_000; t += 60_000) {
+        const a = centreUp(t) < 0;
+        const b = centreUp(t + 60_000) < 0;
+        if (a === b) continue;
+        if (a) r = cross(t);
+        else s = cross(t);
+      }
+      const local = (t: number) => (t - start) / 60_000;
+      if (rise === '--') expect(r).toBeNull();
+      else expect(Math.abs(local(r!) - minutes(rise))).toBeLessThanOrEqual(0.75);
+      expect(Math.abs(local(s!) - minutes(set))).toBeLessThanOrEqual(0.75);
+      // The app's upper-limb times sit outside the centre's by the semidiameter.
+      const limb = moonRiseSet(new Date(start), new Date(start + 86_400_000), lat, lon);
+      if (limb.moonrise && r !== null) {
+        const lead = (r - limb.moonrise.getTime()) / 60_000;
+        expect(lead).toBeGreaterThan(1);
+        expect(lead).toBeLessThan(2.5);
+      }
+      if (limb.moonset && s !== null) {
+        const lag = (limb.moonset.getTime() - s) / 60_000;
+        expect(lag).toBeGreaterThan(1);
+        expect(lag).toBeLessThan(2.5);
+      }
+    }
+  });
+});
