@@ -9,9 +9,10 @@
  * footprints), each building in its own try: one malformed outline costs that building, never
  * the tile, and never the render loop (a failed asynchronous `Primitive` throws from inside the
  * frame). Once a tile's slices are all drawn, the footprints that built (and the trees, which
- * keep their ids) are built again in Cesium's workers as one primitive each, which replaces the slices when it is ready: a dense tile
- * otherwise stayed dozens of primitives (Midtown ~220, Kyoto ~370 on screen, each drawn again
- * for every shadow cascade). A merge that fails is dropped before its frame and the slices stay.
+ * keep their ids) are built again in Cesium's workers as one primitive each, which replaces the
+ * slices when it is ready: a dense tile otherwise stayed dozens of primitives (Midtown ~220,
+ * Kyoto ~370 on screen, each drawn again for every shadow cascade). A merge that fails is
+ * dropped before its frame and the slices stay.
  */
 import type * as Cesium from '@cesium/engine';
 import {
