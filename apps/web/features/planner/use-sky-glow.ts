@@ -64,6 +64,12 @@ async function polygonsAround(lat: number, lon: number): Promise<UrbanPolygon[] 
   return (await Promise.all(keys.map(cell))).flat();
 }
 
+/** The glow at a place, once (for an export); null when the cells cannot be read. */
+export async function skyGlowAround(lat: number, lon: number): Promise<SkyGlow | null> {
+  const polys = await polygonsAround(lat, lon);
+  return polys ? skyGlowAt(lat, lon, polys) : null;
+}
+
 /** `enabled` false (the night section closed) fetches nothing. */
 export function useSkyGlow(lat: number, lng: number, enabled = true): SkyGlow | null {
   // About a kilometre: a drag of the pin along a street does not refetch or recompute.

@@ -58,12 +58,19 @@ export function PreviewViewport({
       // Loaded on demand: the card renderer is not part of the first-load bundle (plan §27).
       const { buildPlanningCard, downloadBlob, renderPlanningCardPng } =
         await import('@/features/export/planning-card');
+      const { skyGlowAround } = await import('@/features/planner/use-sky-glow');
       const image = capture ? await capture(1280) : null;
       const st = usePlannerStore.getState();
       const sensor = SENSOR_PRESETS.find((x) => Math.abs(x.widthMm - st.sensorWidthMm) < 0.05);
+      // After civil dusk the card names the towns' glow and counts it in the exposure.
+      const skyGlow =
+        scene.solar.elevationDegrees <= -6
+          ? await skyGlowAround(scene.location.point.latitude, scene.location.point.longitude)
+          : null;
       const model = buildPlanningCard(scene, {
         generatedAt: new Date(),
         units: st.units,
+        skyGlow,
         ...(typeof window !== 'undefined' ? { appUrl: window.location.origin } : {}),
         // The card carries the photographer's own lens and depth of field when the camera tools
         // are theirs to use (the same gate as the "Your camera" panel).

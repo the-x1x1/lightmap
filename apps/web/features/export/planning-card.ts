@@ -17,7 +17,12 @@ import {
 } from '@lightmap/astronomy';
 import { brand } from '@lightmap/config';
 import { compassLabel } from '@lightmap/geospatial';
-import { lightingFromScene } from '@lightmap/renderer';
+import {
+  describeSkyGlow,
+  lightingFromScene,
+  skyBrightnessRatio,
+  type SkyGlow,
+} from '@lightmap/renderer';
 import {
   SOURCE_MODE_LABEL,
   GALACTIC_CENTRE_DECLINATION_DEG,
@@ -93,6 +98,8 @@ export function buildPlanningCard(
     camera?: CardCameraOptions;
     /** Distances and heights on the card (plan §17 profile `units`); metric by default. */
     units?: DistanceUnits;
+    /** The towns' glow at the place (`skyGlowAt`), for a night card's floor and its own line. */
+    skyGlow?: SkyGlow | null;
   } = {
     generatedAt: new Date(),
   },
@@ -137,6 +144,7 @@ export function buildPlanningCard(
         estimateExposure({
           sunElevationDeg: s.elevationDegrees,
           sunTransmittance: a.parameters.sunTransmittance,
+          skyGlowRatio: opts.skyGlow ? skyBrightnessRatio(opts.skyGlow) : 1,
           moon: scene.lunar
             ? {
                 elevationDeg: scene.lunar.elevationDegrees,
@@ -204,6 +212,8 @@ export function buildPlanningCard(
           ? `${Math.round(scene.nightSky.elevationDeg)}° up ${compassLabel(scene.nightSky.azimuthDeg)} · ${scene.nightSky.reason}`
           : scene.nightSky.reason,
     });
+  if (opts.skyGlow && s.elevationDegrees <= -6)
+    facts.push({ label: 'City glow (est.)', value: describeSkyGlow(opts.skyGlow) });
   if (scene.nightSky)
     facts.push({
       label: 'Dark windows',

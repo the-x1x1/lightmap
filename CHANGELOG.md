@@ -10,6 +10,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 - Woods and parks are drawn as one batch per tile once loaded, like the buildings
 - The night exposure estimate counts the city glow: in a city about six stops brighter than a
   desert sky, and brighter again under cloud
+- The planning card names the city glow at night and counts it in its exposure, as the field
+  view does
 
 ## v0.3.2 — 2026-10-15
 

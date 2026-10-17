@@ -239,4 +239,30 @@ describe('planning card — depth of field', () => {
     ).facts.find((f) => f.label === 'Sky drift');
     expect(night?.value).toMatch(/^stars stay points up to 1\d s \(the core (1\d|2\d) s\)$/);
   });
+
+  it('a night card names the city glow and counts it in the exposure; by day it is left out', () => {
+    const nightScene = scene({
+      utc: localSelectionToUtc({ year: 2026, month: 6, day: 15 }, 2 * 60, kailua.timeZone),
+    });
+    const glow = { grade: 'horizon' as const, index: 0.44, bearingDeg: 185, distanceKm: 10 };
+    const generatedAt = new Date('2026-05-30T20:00:00Z');
+    const withGlow = buildPlanningCard(nightScene, { generatedAt, skyGlow: glow });
+    const without = buildPlanningCard(nightScene, { generatedAt });
+    expect(withGlow.facts.find((f) => f.label === 'City glow (est.)')?.value).toBe(
+      'a glow on the horizon to the S (built-up area 10 km off); the core shows above it',
+    );
+    expect(without.facts.some((f) => f.label === 'City glow (est.)')).toBe(false);
+    const ev = (c: typeof withGlow) =>
+      Number(
+        /^EV (−?[\d.]+)/
+          .exec(c.facts.find((f) => f.label === 'Exposure (est.)')!.value)![1]!
+          .replace('−', '-'),
+      );
+    expect(ev(withGlow)).toBeGreaterThan(ev(without));
+    expect(
+      buildPlanningCard(scene(), { generatedAt, skyGlow: glow }).facts.some(
+        (f) => f.label === 'City glow (est.)',
+      ),
+    ).toBe(false);
+  });
 });
