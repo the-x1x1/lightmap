@@ -20,6 +20,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   while it is on its way; the Moon 'up all day' far north; the preview basis names the OSM
   buildings it draws and the Moon's ±0.02° accuracy; the desktop app explains its account panel
 - Building lookups for the horizon are about ten times faster in dense cities
+- The desktop app's window opens as soon as its server is up (3-7 s sooner), with the server's
+  services built in the background
 - Accessibility checklist pass: faint text meets 4.5:1 contrast, the timeline's event markers
   are 24 px tall to tap, and the date row and viewpoint hint fit a 320 px phone
 
