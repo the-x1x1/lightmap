@@ -1,7 +1,8 @@
 /**
  * The seasonal envelope of the Sun at a place (plan §1 "seasonal path", one of the deterministic
  * facts): where sunrise and sunset swing to over the year and how high noon gets, taken at the
- * two solstices, which bound every other day. Pure astronomy — no weather, no terrain — so it
+ * two solstices, which bound every other day (between the tropics, the noon Sun's lowest only:
+ * it passes overhead twice a year there). Pure astronomy — no weather, no terrain — so it
  * can be drawn on the compass rose and read in the details panel for any place, any year. The
  * 21st stands in for the solstice (which falls on the 20th–22nd): within 0.03° of bearing at
  * mid-latitudes, 0.2° near the Arctic circle, under the 1° the readout shows.
