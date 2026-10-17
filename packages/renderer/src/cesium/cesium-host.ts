@@ -815,7 +815,8 @@ export class CesiumSceneHost implements SceneHost {
       globe?.tileLoadProgressEvent.addEventListener((queued: number) => {
         if (queued === 0) retire();
       }) ?? null;
-    fallback = setTimeout(retire, 10_000);
+    // While the camera keeps moving the queue may never empty: the new season shows anyway.
+    fallback = setTimeout(retire, 4000);
     this.scene.requestRender();
   }
 

@@ -317,7 +317,16 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
     const store = usePlannerStore.getState();
     // By how far the wheel or trackpad moved, not per event: a trackpad sends dozens of small
     // deltas a second (each zoomed 8% before, racing through the lenses), a wheel notch ~100 px.
-    const px = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
+    // macOS reports a mouse-wheel notch as a multiple of 4.000244140625 px (a trackpad never is):
+    // count it as a full notch, or a wheel would barely zoom there.
+    const notch = e.deltaMode === 0 && e.deltaY !== 0 && e.deltaY % 4.000244140625 === 0;
+    const px = notch
+      ? Math.sign(e.deltaY) * 100
+      : e.deltaMode === 1
+        ? e.deltaY * 33
+        : e.deltaMode === 2
+          ? e.deltaY * 400
+          : e.deltaY;
     const factor = Math.exp(Math.max(-0.3, Math.min(0.3, px * 0.0008)));
     store.setFov(store.camera.fovDeg * factor);
   };
@@ -419,7 +428,13 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
     if (yaw !== 0 || pitch !== 0) rotateCamera(yaw * rate, pitch * rate * 0.6);
     turnFrame.current = requestAnimationFrame(turnLoop(t));
   };
-  useEffect(() => () => stopTurning(), []);
+  useEffect(
+    () => () => {
+      if (turnFrame.current !== null) cancelAnimationFrame(turnFrame.current);
+      if (turnHoldTimer.current) clearTimeout(turnHoldTimer.current);
+    },
+    [],
+  );
   const onKeyUp = (e: React.KeyboardEvent) => {
     shiftHeld.current = e.shiftKey;
     held.current.delete(e.code);
@@ -458,11 +473,24 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
       e.key === 'ArrowDown';
     if (!arrow) return;
     e.preventDefault();
-    if (e.repeat || turning.current.has(e.key)) return;
-    if (e.key === 'ArrowLeft') rotateCamera(-step, 0);
-    else if (e.key === 'ArrowRight') rotateCamera(step, 0);
-    else if (e.key === 'ArrowUp') rotateCamera(0, step);
-    else rotateCamera(0, -step);
+    if (turning.current.has(e.key)) return;
+    const startTurning = () => {
+      if (turnFrame.current === null)
+        turnFrame.current = requestAnimationFrame(turnLoop(performance.now()));
+    };
+    if (e.repeat) {
+      // A key still held after the turn was stopped (a blur, a shortcut): pick the turn up again.
+      turning.current.add(e.key);
+      startTurning();
+      return;
+    }
+    // A second arrow during a smooth turn joins it; on its own a press turns one step.
+    if (turnFrame.current === null) {
+      if (e.key === 'ArrowLeft') rotateCamera(-step, 0);
+      else if (e.key === 'ArrowRight') rotateCamera(step, 0);
+      else if (e.key === 'ArrowUp') rotateCamera(0, step);
+      else rotateCamera(0, -step);
+    }
     turning.current.add(e.key);
     // Held past a moment: the smooth turn takes over.
     if (turnHoldTimer.current === null && turnFrame.current === null)
