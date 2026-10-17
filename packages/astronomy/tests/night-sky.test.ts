@@ -67,7 +67,7 @@ describe('Galactic Centre (Milky Way core)', () => {
     expect(low.reason).toBe('Core only 6° up: in haze near the horizon');
     const thin = milkyWayCoreFrom({ azimuthDeg: 180, elevationDeg: 40 }, -20, true, 0.2);
     expect(thin.verdict).toBe('visible');
-    expect(thin.reason).toBe('Astronomical night, core 40° up, thin Moon');
+    expect(thin.reason).toBe('Astronomical night, thin Moon');
     const bright = milkyWayCoreFrom({ azimuthDeg: 180, elevationDeg: 40 }, -20, true, 0.31);
     expect(bright.verdict).toBe('moonlit');
     expect(bright.reason).toBe('Moon up and 31 % lit: the sky is too bright');

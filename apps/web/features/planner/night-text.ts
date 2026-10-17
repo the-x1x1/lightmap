@@ -28,7 +28,7 @@ const PHASE_LABEL: Record<PrincipalPhase, string> = {
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-/** "36° up SSW — Astronomical night, core 36° up, Moon down" / "below the horizon — …". */
+/** "36° up SSW — Astronomical night, Moon down" / "below the horizon — …". */
 export function describeMilkyWay(n: MilkyWayCoreState): string {
   const where =
     n.elevationDeg > 0

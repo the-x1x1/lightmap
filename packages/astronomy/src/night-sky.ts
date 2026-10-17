@@ -116,7 +116,8 @@ export function milkyWayCoreFrom(
   return {
     ...base,
     verdict: 'visible',
-    reason: `Astronomical night, core ${core.elevationDeg.toFixed(0)}° up${moonUp ? ', thin Moon' : ', Moon down'}`,
+    // Every surface prints the core's place before the reason ("36° up SSW — …"): no repeat here.
+    reason: `Astronomical night${moonUp ? ', thin Moon' : ', Moon down'}`,
   };
 }
 

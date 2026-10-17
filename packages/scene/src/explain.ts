@@ -110,7 +110,7 @@ export function explainScene(s: SceneState): ExplanationLine[] {
   return lines;
 }
 
-/** "Astronomical night, core 36° up, Moon down" → "astronomical night, core 36° up, Moon down". */
+/** "Astronomical night, Moon down" → "astronomical night, Moon down". */
 function lowerFirst(text: string): string {
   return text.charAt(0).toLowerCase() + text.slice(1);
 }

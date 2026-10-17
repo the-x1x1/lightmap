@@ -13,7 +13,7 @@ import {
 describe('night read-outs', () => {
   it('names where the core stands and the reason, or that it is below the horizon', () => {
     const dark = describeMilkyWay(milkyWayCore(new Date('2026-06-15T12:00:00Z'), 21.397, -157.727));
-    expect(dark).toMatch(/^3\d° up S(SW|W) — Astronomical night, core 3\d° up, Moon down$/);
+    expect(dark).toMatch(/^3\d° up S(SW|W) — Astronomical night, Moon down$/);
     const winter = describeMilkyWay(
       milkyWayCore(new Date('2026-12-15T10:00:00Z'), 21.397, -157.727),
     );

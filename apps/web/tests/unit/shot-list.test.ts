@@ -54,7 +54,7 @@ describe('shot list', () => {
     const night = shotBlock({ ...base, id: 'v2', selectedDatetimeUtc: '2026-06-15T12:00:00Z' });
     expect(night.find((l) => l.startsWith('  Moon:'))).toMatch(/^ {2}Moon: {4}down, \d+ % lit$/);
     expect(night.find((l) => l.startsWith('  Core:'))).toMatch(
-      /^ {2}Core: {4}3\d° up, \d+° S(SW|W) — Astronomical night, core 3\d° up, Moon down$/,
+      /^ {2}Core: {4}3\d° up, \d+° S(SW|W) — Astronomical night, Moon down$/,
     );
     // Full-Moon midnight (31 May 00:00 HST): the Moon is up, so the line adds how wide it is.
     const moonlit = shotBlock({ ...base, id: 'v3', selectedDatetimeUtc: '2026-05-31T10:00:00Z' });
