@@ -7,6 +7,24 @@ import { kelvinToRgb } from '@lightmap/weather';
 import { shadowOnGround, sunLightDirectionEcef, type Vec3 } from './sun-vector.ts';
 import { BETA_MIE, clearSkyStops, mieScaleForHaze, type SkyStops } from './sky-model.ts';
 
+/**
+ * The Sun elevation below which the star field is drawn, degrees. It is drawn faint at first
+ * (`starFieldVisibility`, applied by the grade shader), so the stars come out through the
+ * twilight instead of switching on together.
+ */
+export const STAR_FIELD_FROM_DEG = -4;
+
+/**
+ * How much of the star field shows at a Sun elevation, 0-1: none from −4° (the brightest stars
+ * come out about the end of civil twilight), about a third at −8°, all of it from −15° (most of
+ * the naked-eye stars by the middle of nautical twilight, on the way to astronomical night). The
+ * grade shader's `starFade` is the same curve.
+ */
+export function starFieldVisibility(sunElevationDeg: number): number {
+  const t = Math.max(0, Math.min(1, (sunElevationDeg + 15) / 11));
+  return 1 - t * t * (3 - 2 * t);
+}
+
 export interface LightingParameters {
   /** True Sun → ground direction in ECEF (for overlays and the ephemeris cross-check). */
   sunDirectionEcef: Vec3;
@@ -124,7 +142,7 @@ export function lightingFromScene(s: SceneState): LightingParameters {
   // single-scattering dome collapses within ~1° of the light dipping under the horizon, so the
   // clamp sits just under it and the grade shader restores the real blue-hour darkening.
   const lightElevation = el >= -0.6 ? el : el > -18 ? -0.6 : el;
-  const starsVisible = el < -8;
+  const starsVisible = el < STAR_FIELD_FROM_DEG;
 
   // Colour: black-body tint from elevation, desaturated toward white as cloud diffuses it.
   const tint = kelvinToRgb(atmosphere.colorTemperatureK);

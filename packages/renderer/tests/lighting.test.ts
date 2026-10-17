@@ -8,7 +8,13 @@ import {
   type SceneInputs,
 } from '@lightmap/scene';
 import { OPEN_METEO_CAPABILITIES, type WeatherScenarioId } from '@lightmap/weather';
-import { lightingFromScene, skyGradientFor, visibilityFromHaze } from '../src/lighting.ts';
+import {
+  STAR_FIELD_FROM_DEG,
+  lightingFromScene,
+  skyGradientFor,
+  starFieldVisibility,
+  visibilityFromHaze,
+} from '../src/lighting.ts';
 import { azElFromEcefToward, type Vec3 } from '../src/sun-vector.ts';
 
 const neg = (v: Vec3): Vec3 => ({ x: -v.x, y: -v.y, z: -v.z });
@@ -147,7 +153,9 @@ describe('lightingFromScene', () => {
     expect(night.grade.nightFactor).toBeCloseTo(1, 3);
     expect(night.sunIntensity).toBe(0);
     expect(night.starsVisible).toBe(true);
-    expect(blue.starsVisible).toBe(false);
+    // At −5° the star field is drawn but barely shows (it fades in through the twilight).
+    expect(blue.starsVisible).toBe(true);
+    expect(golden.starsVisible).toBe(false);
     // Blue hour keeps a dim, cool ambient and lifts the atmosphere light to a grazing angle.
     expect(blue.sunIntensity).toBeGreaterThan(0.1);
     expect(blue.sunIntensity).toBeLessThan(0.5);
@@ -240,5 +248,22 @@ describe('visibility and fog', () => {
     const fogAt = (m: number) => 1 - Math.exp(-((d * m) ** 2));
     expect(fogAt(1500)).toBeLessThan(0.05);
     expect(fogAt(40_000)).toBeGreaterThan(0.9);
+  });
+});
+
+describe('starFieldVisibility', () => {
+  it('fades the stars in from −4° to −15°, monotonically', () => {
+    expect(starFieldVisibility(-3)).toBe(0);
+    expect(starFieldVisibility(STAR_FIELD_FROM_DEG)).toBe(0);
+    expect(starFieldVisibility(-8)).toBeGreaterThan(0.25);
+    expect(starFieldVisibility(-8)).toBeLessThan(0.4);
+    expect(starFieldVisibility(-15)).toBe(1);
+    expect(starFieldVisibility(-40)).toBe(1);
+    let prev = 0;
+    for (let el = -4; el >= -16; el -= 0.5) {
+      const v = starFieldVisibility(el);
+      expect(v).toBeGreaterThanOrEqual(prev);
+      prev = v;
+    }
   });
 });

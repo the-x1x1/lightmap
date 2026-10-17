@@ -141,8 +141,10 @@ ground is lifted toward the sky colour by depth, more strongly at low Sun (`hori
 by the light's colour. The light direction and terrain shading are untouched by either. Verified in
 `tools/renderer-smoke` (contact sheet `docs/media/renderer-smoke-2026-09-24c.png`).
 
-**Night sky.** In viewpoint mode, below a Sun elevation of −8°, the dome shows Cesium's star
-field (its J2000 star cube), which Cesium turns by Greenwich sidereal time for the scene's
+**Night sky.** In viewpoint mode, below a Sun elevation of −4°, the dome shows Cesium's star
+field, coming out through the twilight (`starFieldVisibility`: a third of its light at −8°, all
+of it from −15°, the grade taking the rest back out of each star-sized point and following the
+clock's glide; it had switched on whole at −8°) (its J2000 star cube), which Cesium turns by Greenwich sidereal time for the scene's
 instant (`czm_temeToPseudoFixed`; the host sets the clock to the planned UTC) — so the Milky
 Way's band in the 3D preview stands where the planner's own Galactic Centre says, within the
 precession and nutation Cesium leaves out (≈ 0.4° in 2026; the planner's `milkyWayCore` applies
