@@ -12,6 +12,7 @@ export function WeatherDetails({ scene }: { scene: SceneState }) {
   const sunEl = scene.solar.elevationDegrees;
   // Wind on the tripod, dew or fog on the glass — from the frame's own fields (none for a scenario).
   const field = useMemo(() => fieldConditions(f, sunEl, units), [f, sunEl, units]);
+  const observed = a.mode === 'RECENT_PAST' || a.mode === 'PAST';
   return (
     <div className="space-y-2 text-sm" data-testid="weather-details">
       <p className="text-[var(--lm-text-muted)]">{a.summary}</p>
@@ -21,7 +22,10 @@ export function WeatherDetails({ scene }: { scene: SceneState }) {
         <Row label="Diffuse share" value={`${Math.round(p.diffuseFraction * 100)} %`} />
         <Row label="Haze" value={`${Math.round(p.haze * 100)} %`} />
         {f ? <Row label="Conditions" value={describeWeatherCode(f.weatherCode)} /> : null}
-        {f?.precipitationProbability !== null && f?.precipitationProbability !== undefined ? (
+        {observed && f?.precipitationAmount !== null && f?.precipitationAmount !== undefined ? (
+          // A past hour has what fell, not a chance of it.
+          <Row label="Rain" value={rainAmount(f.precipitationAmount, units)} />
+        ) : f?.precipitationProbability !== null && f?.precipitationProbability !== undefined ? (
           <Row label="Rain chance" value={`${Math.round(f.precipitationProbability)} %`} />
         ) : null}
         {f?.visibility !== null && f?.visibility !== undefined ? (
@@ -47,6 +51,14 @@ export function WeatherDetails({ scene }: { scene: SceneState }) {
       ) : null}
     </div>
   );
+}
+
+/** What fell in the hour: "none", "0.4 mm", or in inches. */
+function rainAmount(mm: number, units: 'metric' | 'imperial'): string {
+  if (mm < 0.05) return 'none in the hour';
+  return units === 'imperial'
+    ? `${(mm / 25.4).toFixed(2)} in in the hour`
+    : `${mm.toFixed(1)} mm in the hour`;
 }
 
 function Row({ label, value }: { label: string; value: string }) {
