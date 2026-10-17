@@ -114,6 +114,15 @@ export function skyGlowAt(
   return { grade, index, bearingDeg, distanceKm };
 }
 
+/**
+ * The night sky's brightness over a natural one (for the exposure estimate's floor): 1 + 6x the
+ * Walker index, so a suburb's index of 1 is ~7x (about 19.8 mag/arcsec^2 against 21.9), a
+ * horizon glow ~2x; capped at 60x (~17.5 mag/arcsec^2), which a city sky reaches.
+ */
+export function skyBrightnessRatio(g: SkyGlow): number {
+  return g.grade === 'city' ? 60 : Math.min(60, 1 + 6 * g.index);
+}
+
 const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const;
 
 /** One line for the night section, e.g. "a glow on the horizon to the SW (town 40 km off)". */

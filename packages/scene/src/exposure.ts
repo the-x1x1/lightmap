@@ -10,7 +10,10 @@
  * the scenario's own direct-light share (overcast noon ≈ 18 klx, storm ≈ 9 klx), twilight by
  * its square root, blended over the Sun's first five degrees. At night the
  * Moon adds ≈ 0.26 lx · sin(h) at full, falling steeply with phase, over a 0.002 lx
- * starlight-and-airglow floor; light pollution is not modelled, and the docs say so.
+ * starlight-and-airglow floor. Where towns light the sky (`skyGlowRatio`, the sky's brightness
+ * over a natural one: ~1 in the desert, ~7 in a suburb, up to 60 in a city) the floor is raised
+ * by that much, and cloud, which dims the stars, reflects the towns' light back down (up to
+ * three times as bright under overcast, as a city's orange cloud base shows).
  * EV100 = log2(E / 2.5) (an incident meter's constant C = 250). Pure, unit-tested.
  */
 
@@ -67,7 +70,7 @@ export interface ExposureEstimate {
   /** One starting setting at a sensible aperture and ISO for the light. */
   setting: { aperture: number; shutter: string; iso: number };
   /** What the number rests on. */
-  basis: 'sun' | 'twilight' | 'moon' | 'stars';
+  basis: 'sun' | 'twilight' | 'moon' | 'stars' | 'city glow';
 }
 
 export interface ExposureInput {
@@ -75,6 +78,8 @@ export interface ExposureInput {
   /** The scenario's direct-light share, 0–1 (`AtmosphereParameters.sunTransmittance`). */
   sunTransmittance: number;
   moon?: { elevationDeg: number; illuminatedFraction: number } | null;
+  /** The night sky's brightness over a natural one from town light (1 or absent: none). */
+  skyGlowRatio?: number;
 }
 
 /** Standard shutter steps, seconds, from 1/8000 s to 4 min. */
@@ -132,16 +137,21 @@ export function estimateExposure(input: ExposureInput): ExposureEstimate {
     ? moonlightLux(input.moon.elevationDeg, input.moon.illuminatedFraction)
     : 0;
   const nightFactor = 0.4 + 0.6 * Math.max(0, Math.min(1, input.sunTransmittance));
-  const lux = sky + (night + STARLIGHT_LX) * nightFactor;
+  const glowRatio = Math.max(1, Math.min(60, input.skyGlowRatio ?? 1));
+  const cloudCover = 1 - Math.max(0, Math.min(1, input.sunTransmittance));
+  const glow = STARLIGHT_LX * (glowRatio - 1) * (1 + 2 * cloudCover);
+  const lux = sky + (night + STARLIGHT_LX) * nightFactor + glow;
   const ev100 = Math.log2((lux * 100) / METER_C);
   const basis: ExposureEstimate['basis'] =
     h > -0.833
       ? 'sun'
-      : h > -12 && sky > night + STARLIGHT_LX
+      : h > -12 && sky > night + STARLIGHT_LX + glow
         ? 'twilight'
-        : night > STARLIGHT_LX
-          ? 'moon'
-          : 'stars';
+        : glow > night && glow > STARLIGHT_LX
+          ? 'city glow'
+          : night > STARLIGHT_LX
+            ? 'moon'
+            : 'stars';
   // Daylight at f/8 ISO 100; low light opens up and raises ISO so the shutter stays usable.
   const [aperture, iso] = ev100 >= 9 ? [8, 100] : ev100 >= 3 ? [4, 400] : [2.8, 3200];
   const evAtIso = ev100 + Math.log2(iso / 100);

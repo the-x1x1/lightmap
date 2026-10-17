@@ -84,6 +84,32 @@ describe('estimateExposure', () => {
     const cloudy = estimateExposure({ sunElevationDeg: -30, sunTransmittance: 0.2, moon: null });
     expect(cloudy.illuminanceLux / stars.illuminanceLux).toBeCloseTo(0.52, 2);
   });
+  it('town light raises the night floor, more under cloud, and names itself', () => {
+    const night = { sunElevationDeg: -30, moon: null } as const;
+    const dark = estimateExposure({ ...night, sunTransmittance: 1 });
+    expect(estimateExposure({ ...night, sunTransmittance: 1, skyGlowRatio: 1 })).toEqual(dark);
+    // A city sky (60x a natural one): about six stops brighter than the desert, and its own basis.
+    const city = estimateExposure({ ...night, sunTransmittance: 1, skyGlowRatio: 60 });
+    expect(city.basis).toBe('city glow');
+    expect(city.ev100 - dark.ev100).toBeGreaterThan(5.5);
+    expect(city.ev100 - dark.ev100).toBeLessThan(6.5);
+    // Overcast over a city is brighter still (the cloud base lit orange), not darker.
+    const cityCloud = estimateExposure({ ...night, sunTransmittance: 0.2, skyGlowRatio: 60 });
+    expect(cityCloud.illuminanceLux).toBeGreaterThan(city.illuminanceLux * 2);
+    // A full Moon high up still outshines a suburb's glow.
+    const suburbMoon = estimateExposure({
+      sunElevationDeg: -30,
+      sunTransmittance: 1,
+      moon: { elevationDeg: 60, illuminatedFraction: 1 },
+      skyGlowRatio: 7,
+    });
+    expect(suburbMoon.basis).toBe('moon');
+    // Out of range ratios are clamped.
+    expect(
+      estimateExposure({ ...night, sunTransmittance: 1, skyGlowRatio: 1e6 }).illuminanceLux,
+    ).toBeCloseTo(city.illuminanceLux, 9);
+  });
+
   it('an overcast sky never steps at the horizon and dims the dusk by a stop or two, not three', () => {
     const ev = (h: number) => estimateExposure({ sunElevationDeg: h, sunTransmittance: 0.2 }).ev100;
     for (let h = -3; h <= 8; h += 0.25) expect(Math.abs(ev(h + 0.25) - ev(h))).toBeLessThan(0.6);

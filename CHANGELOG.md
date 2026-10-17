@@ -8,6 +8,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   the pin light the sky and from which side (inside a city, suburban, a glow on the horizon, a
   faint dome, or none), from the bundled built-up areas by Walker's law
 - Woods and parks are drawn as one batch per tile once loaded, like the buildings
+- The night exposure estimate counts the city glow: in a city about six stops brighter than a
+  desert sky, and brighter again under cloud
 
 ## v0.3.2 — 2026-10-15
 

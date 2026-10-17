@@ -215,8 +215,9 @@ daily account-erasure / cache-purge job once the production database secret exis
   built on the same series — contacts within a minute or two of the almanac, a path edge within
   a few tens of km — not an ephemeris; confirm before travelling for one.
 - **The exposure estimate is a model, not a meter**: a clear-sky illuminance curve scaled by the
-  forecast's or scenario's cloud, moonlight by phase and a starlight floor; no light pollution,
-  no local terrain shading. Every place it appears says "estimate".
+  forecast's or scenario's cloud, moonlight by phase and a starlight floor, raised in the planner
+  by the estimated city glow; no street lighting, no local terrain shading. Every place it appears
+  says "estimate".
 - **Real-reference imagery is disabled** until a licensed provider contract exists.
 - **Night sky**: Cesium's Moon mesh is hidden (it is lit by Cesium's own Sun and renders black at
   night); a moonlit atmosphere halo marks the Moon's position and lights the scene instead. Stars

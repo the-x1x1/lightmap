@@ -241,8 +241,10 @@ green only on _visible_; the compass rose marks the core as a four-point star on
 below −6° and the core is up (full strength on _visible_, faint otherwise), and the overlay's
 description names its bearing and height. `milkyWayCoreFrom()` in `@lightmap/astronomy`: the J2000 direction of
 Sgr A\* precessed to the date, the observer's sidereal time, and the Sun and Moon the scene already
-has. It is not a sky-brightness model — light pollution, airglow and haze stay the photographer's
-call — and it says so in the accuracy docs.
+has. It is not a sky-brightness model — airglow and haze stay the photographer's call — and it
+says so in the accuracy docs; beside it the Moon section gives an estimate of the city glow
+(Walker's law over the bundled urban areas: city, suburban, a horizon glow toward a side, a faint
+dome, or none).
 
 Under it, while the Moon details are open, **Dark windows ahead** lists the next nights on which
 the core can be shot — every stretch of at least 30 minutes, over the 45 nights starting with
@@ -278,7 +280,9 @@ sin(elevation), plus a diffuse term ≈ 12 klx·sin(h)^0.7 — giving ≈ 130 kl
 share (overcast noon ≈ 18 klx, EV 12.8; storm ≈ 9 klx); at night a full Moon overhead adds
 ≈ 0.26 lx (EV −3.5), falling steeply with phase, over a 0.002 lx starlight-and-airglow floor
 (EV −10.3). EV = log2(E·ISO/250). It is labelled an estimate everywhere and the card's notes and
-the shot list's footer say it is not a meter reading; light pollution is not modelled. The shot
+the shot list's footer say it is not a meter reading. In the planner the night floor is raised by
+the estimated city glow (up to 60x the natural sky in a city, up to three times more under
+cloud); the card and the shot list leave it out. The shot
 list adds a "Now:" line with the forecast around the shot when the planner already holds that
 day's frames (read at export time, never fetched for the list). The shot
 list uses the saved scenario's cloud, or for a viewpoint saved on a forecast or observed day the

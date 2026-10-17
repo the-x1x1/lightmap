@@ -44,7 +44,7 @@ import {
 } from '@/features/planner/night-text';
 import { useSeasonalEnvelope } from '@/features/planner/use-seasonal';
 import { useSkyGlow } from '@/features/planner/use-sky-glow';
-import { describeSkyGlow } from '@lightmap/renderer';
+import { describeSkyGlow, skyBrightnessRatio } from '@lightmap/renderer';
 import { describeLightWindows } from '@/features/planner/light-windows';
 import { DayEventMarkers } from './Timeline';
 import { buildDarkWindowsCalendar } from '@/features/export/dark-windows-calendar';
@@ -432,8 +432,11 @@ export function AstronomyDetails({
   // The Sun inside the frame at a viewpoint: flare and a blown highlight unless exposed for it.
   // At night the starting setting runs to minutes; the lens decides how long the stars stay
   // points (full-frame equivalent of the current frame; the camera box has the exact sensor).
+  // After civil dusk the towns around light the sky: the floor under the Moon and the stars.
+  const glow = useSkyGlow(lat, lng, s.elevationDegrees < -6);
   const exposure = estimateExposure({
     sunElevationDeg: s.elevationDegrees,
+    skyGlowRatio: glow ? skyBrightnessRatio(glow) : 1,
     sunTransmittance: scene.atmosphere.parameters.sunTransmittance,
     moon: scene.lunar
       ? {
@@ -443,7 +446,8 @@ export function AstronomyDetails({
       : null,
   });
   const starsTrail =
-    scene.camera.mode === 'viewpoint' && (exposure.basis === 'stars' || exposure.basis === 'moon')
+    scene.camera.mode === 'viewpoint' &&
+    (exposure.basis === 'stars' || exposure.basis === 'moon' || exposure.basis === 'city glow')
       ? skyDriftShutterS(focalLengthForFov(scene.camera.fovDeg), circleOfConfusionMm(36, 24))
       : null;
   const sunInFrame = (() => {

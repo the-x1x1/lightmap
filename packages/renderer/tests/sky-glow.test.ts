@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { decodeUrbanCell, urbanCellsFor, type UrbanPolygon } from '../src/urban-areas.ts';
-import { describeSkyGlow, skyGlowAt } from '../src/sky-glow.ts';
+import { describeSkyGlow, skyBrightnessRatio, skyGlowAt } from '../src/sky-glow.ts';
 
 /** A square town of `sideKm` centred `eastKm`/`northKm` from (lat, lon). */
 function town(lat: number, lon: number, eastKm: number, northKm: number, sideKm: number) {
@@ -61,6 +61,15 @@ describe('sky glow from the urban areas (Walker’s law)', () => {
     expect(big.bearingDeg).toBeCloseTo(180, 0);
     const both = skyGlowAt(30, -100, [town(30, -100, 0, -40, 10), town(30, -100, 40, 0, 10)]);
     expect(both.index).toBeGreaterThan(small.index * 1.5);
+  });
+
+  it('the sky brightness ratio: 1 when dark, ~7 at the suburban mark, 60 in a city', () => {
+    expect(skyBrightnessRatio(skyGlowAt(30, -100, []))).toBe(1);
+    const at = (index: number) =>
+      skyBrightnessRatio({ grade: 'suburban', index, bearingDeg: 0, distanceKm: 5 });
+    expect(at(1)).toBeCloseTo(7, 9);
+    expect(at(1000)).toBe(60);
+    expect(skyBrightnessRatio(skyGlowAt(30, -100, [town(30, -100, 0, 0, 10)]))).toBe(60);
   });
 
   it('beyond the reach a town adds nothing', () => {
