@@ -177,6 +177,7 @@ function DarkWindows({
  * are named (they are almanac facts) but not jumped to.
  */
 function FullMoons({ scene, windowEnd }: { scene: SceneState; windowEnd: string | null }) {
+  const units = usePlannerStore((s) => s.units);
   const setDate = usePlannerStore((s) => s.setDate);
   const setMinutes = usePlannerStore((s) => s.setMinutes);
   const tz = scene.timeZone;
@@ -196,7 +197,11 @@ function FullMoons({ scene, windowEnd }: { scene: SceneState; windowEnd: string 
       <button
         type="button"
         className="underline decoration-dotted underline-offset-2 hover:text-[var(--lm-text)]"
-        title={`Jump the planner to this full Moon (${Math.round(m.distanceKm).toLocaleString('en-US')} km away)`}
+        title={`Jump the planner to this full Moon (${
+          units === 'imperial'
+            ? `${Math.round(m.distanceKm / 1.609344).toLocaleString('en-US')} mi`
+            : `${Math.round(m.distanceKm).toLocaleString('en-US')} km`
+        } away)`}
         data-testid={testId}
         onClick={() => jump(m.at)}
       >
