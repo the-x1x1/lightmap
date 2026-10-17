@@ -143,6 +143,9 @@ const LABEL_PICK_INTERVAL_MS = 200;
  */
 const DETAIL_REANCHOR_M = 200_000;
 
+/** The season must hold this long (ms) before the imagery is refetched in it. */
+const SEASON_SWAP_SETTLE_MS = 250;
+
 /** Light steps wider than this (cosine of 2°) land at once instead of gliding. */
 const LIGHT_GLIDE_MAX_COS = Math.cos((2 * Math.PI) / 180);
 
@@ -177,6 +180,10 @@ export class CesiumSceneHost implements SceneHost {
   /** The base imagery's tiles take the season per pixel (`seasonalise`), and for which season. */
   private seasonalTiles = false;
   private imagerySeasonKey = '';
+  private seasonSwapTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Removes the base layer a season swap replaced, once the new one's tiles are in. */
+  private retireLayer: (() => void) | null = null;
+  private retiringBase: Cesium.ImageryLayer | null = null;
   private osmBuildingsCheckAt = 0;
   private osmLean = false;
   /** The street map near the place (`u_roadMap`) and its bounds. */
@@ -737,7 +744,9 @@ export class CesiumSceneHost implements SceneHost {
     const layers = this.widget.imageryLayers;
     for (let i = 0; i < layers.length; i++) {
       const layer = layers.get(i);
-      const perPixel = layer === this.baseLayer && this.seasonalTiles;
+      // The base layer a season swap is replacing keeps its own per-pixel colours meanwhile.
+      const perPixel =
+        (layer === this.baseLayer || layer === this.retiringBase) && this.seasonalTiles;
       // czm_hue rotates the YIQ angle: green sits near -118 deg and yellow near -44, so a
       // positive turn warms greens toward yellow and orange.
       layer.hue = perPixel ? 0 : 0.22 * turned;
@@ -749,19 +758,60 @@ export class CesiumSceneHost implements SceneHost {
     // browser's cache) through a fresh layer.
     const key = seasonKey(this.imagerySeason());
     if (this.baseLayer && this.seasonalTiles && key !== this.imagerySeasonKey) {
-      this.imagerySeasonKey = key;
-      const old = this.baseLayer;
-      const index = layers.indexOf(old);
-      const layer = new this.C.ImageryLayer(old.imageryProvider);
-      layer.errorEvent.addEventListener((err: unknown) =>
-        this.onError?.('Imagery tile failed — Natural Earth II shown underneath', err),
-      );
-      layer.brightness = this.basemapBrightness;
-      layers.add(layer, index);
-      layers.remove(old, false);
-      this.baseLayer = layer;
-      this.scene.requestRender();
+      // Once the season has held for a moment: the date slider runs through dozens of seasons
+      // a second, each a full refetch and recolour of the visible tiles.
+      if (this.seasonSwapTimer) clearTimeout(this.seasonSwapTimer);
+      this.seasonSwapTimer = setTimeout(() => {
+        this.seasonSwapTimer = null;
+        this.swapSeasonLayer();
+      }, SEASON_SWAP_SETTLE_MS);
     }
+  }
+
+  /**
+   * A fresh base imagery layer for the current season, drawn over the old one, which is kept
+   * until the new one's tiles are in: removed at once, the globe flashed to the coarse fallback
+   * underneath for as long as the tiles took to come back.
+   */
+  private swapSeasonLayer(): void {
+    if (this.destroyed || !this.baseLayer) return;
+    const key = seasonKey(this.imagerySeason());
+    if (key === this.imagerySeasonKey) return;
+    this.imagerySeasonKey = key;
+    const layers = this.widget.imageryLayers;
+    // A previous swap still waiting: its old layer goes now.
+    this.retireLayer?.();
+    const old = this.baseLayer;
+    const index = layers.indexOf(old);
+    const layer = new this.C.ImageryLayer(old.imageryProvider);
+    layer.errorEvent.addEventListener((err: unknown) =>
+      this.onError?.('Imagery tile failed — Natural Earth II shown underneath', err),
+    );
+    layer.brightness = this.basemapBrightness;
+    layers.add(layer, index + 1);
+    this.baseLayer = layer;
+    const globe = this.scene.globe as Cesium.Globe | undefined;
+    let removeListener: (() => void) | null = null;
+    let fallback: ReturnType<typeof setTimeout> | null = null;
+    const retire = () => {
+      removeListener?.();
+      if (fallback) clearTimeout(fallback);
+      if (this.retireLayer === retire) {
+        this.retireLayer = null;
+        this.retiringBase = null;
+      }
+      if (this.destroyed) return;
+      if (layers.contains(old)) layers.remove(old, false);
+      this.scene.requestRender();
+    };
+    this.retireLayer = retire;
+    this.retiringBase = old;
+    removeListener =
+      globe?.tileLoadProgressEvent.addEventListener((queued: number) => {
+        if (queued === 0) retire();
+      }) ?? null;
+    fallback = setTimeout(retire, 10_000);
+    this.scene.requestRender();
   }
 
   private readonly seasonQueue = new FrameBudgetQueue({ budgetMs: 6 });
@@ -2480,6 +2530,8 @@ export class CesiumSceneHost implements SceneHost {
   }
 
   destroy(): void {
+    if (this.seasonSwapTimer) clearTimeout(this.seasonSwapTimer);
+    this.retireLayer?.();
     if (this.destroyed) return;
     this.destroyed = true;
     this.preRenderRemover?.();
