@@ -7,6 +7,7 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 - **City glow at night**: under the Milky Way line, an estimate of how much the towns around
   the pin light the sky and from which side (inside a city, suburban, a glow on the horizon, a
   faint dome, or none), from the bundled built-up areas by Walker's law
+- Woods and parks are drawn as one batch per tile once loaded, like the buildings
 
 ## v0.3.2 — 2026-10-15
 

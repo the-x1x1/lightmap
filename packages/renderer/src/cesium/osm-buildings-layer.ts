@@ -8,8 +8,8 @@
  * Geometry is built on the main thread a slice at a time (a dense city tile holds thousands of
  * footprints), each building in its own try: one malformed outline costs that building, never
  * the tile, and never the render loop (a failed asynchronous `Primitive` throws from inside the
- * frame). Once a tile's slices are all drawn, the footprints that built are built again in
- * Cesium's workers as one primitive, which replaces the slices when it is ready: a dense tile
+ * frame). Once a tile's slices are all drawn, the footprints that built (and the trees, which
+ * keep their ids) are built again in Cesium's workers as one primitive each, which replaces the slices when it is ready: a dense tile
  * otherwise stayed dozens of primitives (Midtown ~220, Kyoto ~370 on screen, each drawn again
  * for every shadow cascade). A merge that fails is dropped before its frame and the slices stay.
  */
@@ -632,6 +632,8 @@ export class OsmBuildingsLayer {
       if (trees.length > 0) {
         const grounds = await this.groundHeights(trees.map((t) => [t.lon, t.lat]));
         if (state.cancelled || this.destroyed) return;
+        const slices: Cesium.Primitive[] = [];
+        const again: Cesium.GeometryInstance[] = [];
         for (let i = 0; i < trees.length; i += TREE_SLICE) {
           await this.nextSlot();
           if (state.cancelled || this.destroyed) return;
@@ -640,10 +642,15 @@ export class OsmBuildingsLayer {
             trees.slice(i, i + TREE_SLICE),
             grounds.slice(i, i + TREE_SLICE),
             record,
+            again,
           );
           this.adopt(state, prim, true);
-          if (prim) for (const r of record) state.trees.push({ prim, ...r });
+          if (prim) {
+            slices.push(prim);
+            for (const r of record) state.trees.push({ prim, ...r });
+          }
         }
+        if (slices.length > 1) void this.mergeSlices(state, slices, again, true);
       }
     } catch (error) {
       this.tiles.delete(state.key);
@@ -664,18 +671,20 @@ export class OsmBuildingsLayer {
   }
 
   /**
-   * Builds the tile's buildings again as one primitive in Cesium's workers and, once it is ready,
-   * shows it in place of the slices (same footprints, colours and shader).
+   * Builds the tile's buildings (or trees) again as one primitive in Cesium's workers and, once
+   * it is ready, shows it in place of the slices (same shapes, colours, ids and shader).
    */
   private async mergeSlices(
     state: TileState,
     slices: readonly Cesium.Primitive[],
     instances: Cesium.GeometryInstance[],
+    trees = false,
   ): Promise<void> {
     const C = this.C;
+    const appearance = () => (trees ? this.appearanceForTrees() : this.appearanceForBuildings());
     const merged = new C.Primitive({
       geometryInstances: instances,
-      appearance: this.appearanceForBuildings(),
+      appearance: appearance(),
       shadows: C.ShadowMode.ENABLED,
       asynchronous: true,
       releaseGeometryInstances: true,
@@ -697,18 +706,33 @@ export class OsmBuildingsLayer {
       if (!merged.isDestroyed() && !this.destroyed) this.collection.remove(merged);
       return;
     }
-    // The shader may have moved on (the Sun set) while the workers built it.
-    merged.appearance = this.appearanceForBuildings();
-    merged.show = true;
+    // The shader may have moved on (the Sun set, the season turned) while the workers built it.
+    merged.appearance = appearance();
+    merged.show = trees ? !this.lean : true;
+    const replaced = new Set<Cesium.Primitive>(slices);
+    if (trees) {
+      // The trees keep their ids: their records, and any hidden at the eye, move across.
+      for (const t of state.trees) if (replaced.has(t.prim)) t.prim = merged;
+      this.hiddenTrees = this.hiddenTrees.map(([p, id]): [Cesium.Primitive, number] => {
+        if (!replaced.has(p)) return [p, id];
+        for (const part of ['t', 'c']) {
+          const a = merged.getGeometryInstanceAttributes(`${id}${part}`) as
+            { show?: unknown } | undefined;
+          if (a) a.show = C.ShowGeometryInstanceAttribute.toValue(false);
+        }
+        return [merged, id];
+      });
+    }
     for (const p of slices) {
       this.owned.delete(p);
       this.buildingPrims.delete(p);
-      state.primitives = state.primitives.filter((q) => q !== p);
+      this.treePrims.delete(p);
       this.collection.remove(p); // destroys it
     }
+    state.primitives = state.primitives.filter((q) => !replaced.has(q));
     state.primitives.push(merged);
     this.owned.add(merged);
-    this.buildingPrims.add(merged);
+    (trees ? this.treePrims : this.buildingPrims).add(merged);
     this.scene.requestRender();
   }
 
@@ -773,6 +797,7 @@ export class OsmBuildingsLayer {
     trees: readonly TreeSpot[],
     grounds: readonly number[],
     record: { id: number; base: Cesium.Cartesian3 }[],
+    again: Cesium.GeometryInstance[],
   ): Cesium.Primitive | null {
     const C = this.C;
     const instances: Cesium.GeometryInstance[] = [];
@@ -788,7 +813,8 @@ export class OsmBuildingsLayer {
         C.Matrix4.multiplyByTranslation(enu, new C.Cartesian3(0, 0, up), new C.Matrix4());
       const crownH = t.conifer ? t.heightM * 0.8 : t.heightM * 0.6;
       const trunkH = t.heightM - crownH + (t.conifer ? 0.5 : t.radiusM * 0.4);
-      instances.push(
+      // Each shape twice: once for this slice, once for the tile's merge (`again`).
+      const trunk = () =>
         new C.GeometryInstance({
           geometry: new C.CylinderGeometry({
             length: trunkH,
@@ -800,8 +826,9 @@ export class OsmBuildingsLayer {
           modelMatrix: at(trunkH / 2),
           id: `${id}t`,
           attributes: { color: bark, show: new C.ShowGeometryInstanceAttribute(true) },
-        }),
-      );
+        });
+      instances.push(trunk());
+      again.push(trunk());
       const g = 0.27 + 0.12 * t.tone;
       const leaf = C.ColorGeometryInstanceAttribute.fromColor(
         t.conifer
@@ -809,7 +836,7 @@ export class OsmBuildingsLayer {
           : new C.Color(0.2 + 0.08 * t.tone, g, 0.12 + 0.03 * t.tone, BROADLEAF_ALPHA),
       );
       const crownBase = t.heightM - crownH;
-      instances.push(
+      const crown = () =>
         new C.GeometryInstance({
           geometry: t.conifer
             ? new C.CylinderGeometry({
@@ -828,8 +855,9 @@ export class OsmBuildingsLayer {
           modelMatrix: at(crownBase + crownH / 2),
           id: `${id}c`,
           attributes: { color: leaf, show: new C.ShowGeometryInstanceAttribute(true) },
-        }),
-      );
+        });
+      instances.push(crown());
+      again.push(crown());
     });
     if (instances.length === 0) return null;
     return new C.Primitive({
