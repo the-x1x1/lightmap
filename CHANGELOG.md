@@ -16,6 +16,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   view does
 - Leaves come down slowly where autumn has no hard frost: London's trees hold into late November
   and Kyoto's maples into December; Warsaw and Kyiv are no longer painted white all winter
+- Panel wording checked in the app: a past hour shows the rain that fell; 'Forecast loading'
+  while it is on its way; the Moon 'up all day' far north; the preview basis names the OSM
+  buildings it draws and the Moon's ±0.02° accuracy; the desktop app explains its account panel
+- Building lookups for the horizon are about ten times faster in dense cities
 
 ## v0.3.2 — 2026-10-15
 
