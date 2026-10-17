@@ -243,7 +243,8 @@ export function LightFinder({
       profile,
       m.azimuthDegrees,
       m.elevationDegrees,
-      body === 'moon' ? MOON_SEMIDIAMETER_DEG : undefined,
+      // The core is a point on the sky, not a disc whose upper limb shows first.
+      body === 'moon' ? MOON_SEMIDIAMETER_DEG : body === 'core' ? 0 : undefined,
     );
   const allMatches = result?.res.matches ?? [];
   const terrainFilter = Boolean(profile) && hideBehindTerrain && mode !== 'ridge';
