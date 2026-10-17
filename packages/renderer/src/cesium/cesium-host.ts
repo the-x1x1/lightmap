@@ -66,6 +66,7 @@ import {
   seasonalisePixels,
   type ImagerySeason,
 } from '../imagery-season.ts';
+import { FrameBudgetQueue } from '../frame-budget.ts';
 import type { Vec3 } from '../sun-vector.ts';
 import type {
   HostAtmosphere,
@@ -703,6 +704,8 @@ export class CesiumSceneHost implements SceneHost {
     }
   }
 
+  private readonly seasonQueue = new FrameBudgetQueue({ budgetMs: 6 });
+
   private imagerySeason(): ImagerySeason {
     return { ...this.leaf, snow: this.snowCover };
   }
@@ -716,7 +719,12 @@ export class CesiumSceneHost implements SceneHost {
     provider.requestImage = (x, y, level, req) => {
       const job = request(x, y, level, req);
       if (!job) return job;
-      return job.then((image) => this.seasonTile(image, x, y));
+      // Recoloured a frame's budget at a time: tiles land in bursts while the camera moves.
+      return job.then((image) =>
+        seasonShows(this.imagerySeason())
+          ? this.seasonQueue.run(() => this.seasonTile(image, x, y))
+          : image,
+      );
     };
     this.seasonalTiles = true;
   }
