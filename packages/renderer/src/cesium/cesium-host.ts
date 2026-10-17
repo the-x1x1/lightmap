@@ -331,6 +331,7 @@ export class CesiumSceneHost implements SceneHost {
   private sunGlare = new StepGlide<Vec3Like>(nlerpDir);
   private sunGlareLit = false;
   private sunGlareOn = false;
+  private sunDirScratch: Cesium.Cartesian3 | null = null;
   /** The planets' directions, gliding with the clock, and their points (`setPlanets`). */
   private planetGlides = PLANET_SLOTS.map(() => new StepGlide<Vec3Like>(nlerpDir));
   private planetPoints: Array<HostPlanet | null> = PLANET_SLOTS.map(() => null);
@@ -2630,9 +2631,10 @@ export class CesiumSceneHost implements SceneHost {
     // The same gliding direction in eye coordinates, for the disc's tint.
     const C = this.C;
     const dirEC = g['u_sunDirEC'] as Cesium.Cartesian3;
+    this.sunDirScratch ??= new C.Cartesian3();
     C.Matrix4.multiplyByPointAsVector(
       this.scene.camera.viewMatrix,
-      new C.Cartesian3(dir.x, dir.y, dir.z),
+      C.Cartesian3.fromElements(dir.x, dir.y, dir.z, this.sunDirScratch),
       dirEC,
     );
     C.Cartesian3.normalize(dirEC, dirEC);

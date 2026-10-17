@@ -101,12 +101,12 @@ export function moonGlowStrength(
  * The disc's colour where it stands: moonlight is sunlight through the same air, so a low Moon
  * takes the low Sun's colour (the planner's direct-light curve, 2,900 K on the horizon to neutral
  * from 20 deg up) and is dimmed by the air it shines through (`extinctionMag`), kept to at least
- * a third so the rising Moon still reads on a screen - the orange disc over a skyline that a
+ * about half so the rising Moon still reads on a screen - the orange disc over a skyline that a
  * moonrise shot is planned around. White, full strength, high in the sky.
  */
 export function moonDiscTint(elevationDeg: number): [number, number, number] {
-  const [r, g, b] = directLightTint(elevationDeg);
-  const dim = Math.max(0.35, 10 ** (-0.4 * extinctionMag(elevationDeg)));
+  const [r, g, b] = discTint(elevationDeg);
+  const dim = Math.max(0.55, 10 ** (-0.4 * extinctionMag(elevationDeg)));
   return [r * dim, g * dim, b * dim];
 }
 
@@ -119,4 +119,16 @@ export function directLightTint(elevationDeg: number): [number, number, number] 
   const [r, g, b] = kelvinToRgb(colorTemperatureKelvin(Math.max(0, elevationDeg)));
   const peak = Math.max(r, g, b, 1e-3);
   return [r / peak, g / peak, b / peak];
+}
+
+/**
+ * The colour of a disc seen low through the air (the Sun's or the Moon's), brightest channel 1.
+ * The light-curve colour (`directLightTint`) is the light the scene receives, mixed with the
+ * sky's; the disc itself is the beam alone and redder: the curve's tint is deepened under 6 deg
+ * up, to about (1, 0.5, 0.18) on the horizon - a 2,000 K disc.
+ */
+export function discTint(elevationDeg: number): [number, number, number] {
+  const [r, g, b] = directLightTint(elevationDeg);
+  const k = 1 + 1.2 * (1 - Math.max(0, Math.min(1, elevationDeg / 6)));
+  return [r ** k, g ** k, b ** k];
 }

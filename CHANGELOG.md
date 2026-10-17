@@ -15,7 +15,7 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   skyline; white and full high up.
 - **An orange setting Sun**: Cesium draws its Sun one white-yellow at every height, so a setting
   Sun was a white disc in an orange sky; the disc and its glow now take the colour of its light
-  (white from 20° up, 3,800 K at 5°, 2,900 K on the horizon), following its gliding direction.
+  (white from 20° up, deepening to about 2,000 K on the horizon), following its gliding direction.
 - **Planets in the viewpoint's sky**: Mercury, Venus, Mars, Jupiter and Saturn drawn where they
   stand (JPL's approximate elements, checked against Venus's 2023 and 2025 greatest elongations,
   the 2020 Jupiter-Saturn and 2023 Venus-Jupiter conjunctions and three oppositions), each as

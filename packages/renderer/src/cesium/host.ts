@@ -198,7 +198,7 @@ export interface HostMoonDisc {
   opacity: number;
   /** How strongly it lights the haze and thin cloud around it, 0-1 (`moonGlowStrength`). */
   glow?: number;
-  /** The disc's colour and dimming by the air where it stands, linear 0-1 (`moonDiscTint`). */
+  /** The disc's colour and dimming by the air where it stands, display-space 0-1 (`moonDiscTint`). */
   tint?: [number, number, number];
 }
 
@@ -218,7 +218,7 @@ export interface HostSunGlare {
   towardEcef: Vec3;
   /** Whether the Sun lights the scene directly (no glare through overcast or below the horizon). */
   lit: boolean;
-  /** The colour of its direct light at its elevation, brightest channel 1 (`directLightTint`). */
+  /** The colour of its disc at its elevation, brightest channel 1 (`discTint`). */
   tint?: [number, number, number];
 }
 

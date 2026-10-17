@@ -5,6 +5,7 @@ import {
   moonDiscOpacity,
   moonDiscTint,
   directLightTint,
+  discTint,
   moonGlowStrength,
   terminatorHalfWidth,
   type PhaseContext,
@@ -91,10 +92,10 @@ describe('moonDiscTint', () => {
     const low = moonDiscTint(2);
     expect(low[0]).toBeGreaterThan(low[1]);
     expect(low[1]).toBeGreaterThan(low[2]);
-    expect(Math.max(...low)).toBeCloseTo(0.35, 2);
-    const mid = moonDiscTint(15);
+    expect(Math.max(...low)).toBeCloseTo(0.55, 2);
+    const mid = moonDiscTint(25);
     expect(mid[2] / mid[0]).toBeGreaterThan(low[2] / low[0]);
-    expect(Math.max(...mid)).toBeGreaterThan(0.35);
+    expect(Math.max(...mid)).toBeGreaterThan(0.55);
   });
 });
 
@@ -106,5 +107,16 @@ describe('directLightTint', () => {
     expect(Math.max(...set)).toBeCloseTo(1, 6);
     expect(set[2]).toBeLessThan(0.6);
     expect(set[1]).toBeLessThan(0.85);
+  });
+});
+
+describe('discTint', () => {
+  it('is deeper than the light it gives near the horizon, the same from 6 deg up', () => {
+    const d = discTint(0);
+    expect(d[0]).toBeCloseTo(1, 6);
+    expect(d[1]).toBeGreaterThan(0.4);
+    expect(d[1]).toBeLessThan(0.6);
+    expect(d[2]).toBeLessThan(0.25);
+    expect(discTint(10)).toEqual(directLightTint(10));
   });
 });

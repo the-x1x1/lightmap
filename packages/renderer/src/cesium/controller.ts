@@ -31,7 +31,7 @@ import {
 } from '../ground-texture.ts';
 import { lightingFromScene, type LightingParameters } from '../lighting.ts';
 import { enuTowardSun, enuToEcef } from '../sun-vector.ts';
-import { directLightTint, moonDiscOpacity, moonDiscTint, moonGlowStrength } from '../moon-disc.ts';
+import { discTint, moonDiscOpacity, moonDiscTint, moonGlowStrength } from '../moon-disc.ts';
 import { planetPointInSky } from '../planet-points.ts';
 import { seaProbePoints, seaSurfaceFromSamples } from '../geoid.ts';
 import type {
@@ -234,7 +234,7 @@ export class SceneController {
     this.host.setSunGlare?.({
       towardEcef: toward,
       lit: lighting.directLightPresent,
-      tint: directLightTint(scene.solar.elevationDegrees),
+      tint: discTint(scene.solar.elevationDegrees),
     });
 
     const pinMoved =
