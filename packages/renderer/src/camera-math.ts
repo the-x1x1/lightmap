@@ -126,3 +126,49 @@ export function steeperPitches(pitchDeg: number): number[] {
   while (out.at(-1)! > -85) out.push(Math.max(-85, out.at(-1)! - 7.5));
   return out;
 }
+
+/** Where a viewpoint's eye stands: degrees and metres above the ellipsoid. */
+export interface EyePosition {
+  longitude: number;
+  latitude: number;
+  heightM: number;
+}
+
+/** A move this far or farther (metres) is a jump to a new place, not a step: no easing. */
+export const EYE_EASE_MAX_M = 250;
+/** The eye eases toward a step's end with this time constant (ms): ~3τ to arrive. */
+export const EYE_EASE_TAU_MS = 70;
+
+/** Metres between two eye positions (flat-earth, ample under EYE_EASE_MAX_M). */
+export function eyeDistanceM(a: EyePosition, b: EyePosition): number {
+  const kx = 111_320 * Math.cos(((a.latitude + b.latitude) / 2) * DEG);
+  return Math.hypot(
+    (b.longitude - a.longitude) * kx,
+    (b.latitude - a.latitude) * 110_540,
+    b.heightM - a.heightM,
+  );
+}
+
+/**
+ * One frame of the eye's glide toward `target`: exponential, so a run of W-key steps or the
+ * height a terrain look-up settles on reads as one smooth move instead of a hop per step. A jump
+ * (EYE_EASE_MAX_M or more) lands at once; within 2 cm it snaps. `done` once it is there.
+ */
+export function easeEye(
+  current: EyePosition,
+  target: EyePosition,
+  dtMs: number,
+  tauMs = EYE_EASE_TAU_MS,
+): { eye: EyePosition; done: boolean } {
+  const d = eyeDistanceM(current, target);
+  if (d >= EYE_EASE_MAX_M || d < 0.02 || tauMs <= 0) return { eye: { ...target }, done: true };
+  const k = 1 - Math.exp(-Math.max(0, dtMs) / tauMs);
+  return {
+    eye: {
+      longitude: current.longitude + (target.longitude - current.longitude) * k,
+      latitude: current.latitude + (target.latitude - current.latitude) * k,
+      heightM: current.heightM + (target.heightM - current.heightM) * k,
+    },
+    done: false,
+  };
+}

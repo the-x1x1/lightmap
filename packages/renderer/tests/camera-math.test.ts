@@ -4,6 +4,8 @@ import {
   altitudeToZoom,
   clampOrbit,
   clearOrbitPitch,
+  easeEye,
+  eyeDistanceM,
   normalizeHeadingDegrees,
   orbitSightLine,
   steeperPitches,
@@ -84,5 +86,36 @@ describe('orbit terrain clearance', () => {
     // Open ground: the requested pitch stands; unknown ground counts as clear.
     expect(clearOrbitPitch(-20, candidates, () => 1200)).toBe(-20);
     expect(clearOrbitPitch(-20, candidates, () => null)).toBe(-20);
+  });
+});
+
+describe('the viewpoint eye glides between steps', () => {
+  const at = { longitude: 7.9, latitude: 46.5, heightM: 1000 };
+  const ahead = (m: number) => ({ ...at, latitude: at.latitude + m / 110_540 });
+
+  it('arrives over a few frames, never overshooting, and lands exactly', () => {
+    let eye = at;
+    const goal = ahead(2); // a W-key step
+    let frames = 0;
+    let last = eyeDistanceM(eye, goal);
+    for (;;) {
+      const s = easeEye(eye, goal, 16.7);
+      frames++;
+      eye = s.eye;
+      const d = eyeDistanceM(eye, goal);
+      expect(d).toBeLessThanOrEqual(last);
+      last = d;
+      if (s.done) break;
+    }
+    expect(eye).toEqual(goal);
+    // ~3 time constants of 70 ms at 60 fps: about a fifth of a second.
+    expect(frames).toBeGreaterThan(5);
+    expect(frames).toBeLessThan(30);
+  });
+
+  it('jumps to a new place, and a slow frame does not overshoot', () => {
+    expect(easeEye(at, ahead(400), 16.7)).toEqual({ eye: ahead(400), done: true });
+    const s = easeEye(at, ahead(10), 10_000);
+    expect(eyeDistanceM(s.eye, ahead(10))).toBeLessThan(0.01);
   });
 });

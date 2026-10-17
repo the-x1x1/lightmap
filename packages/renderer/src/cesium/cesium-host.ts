@@ -27,7 +27,15 @@ import { NOISE_TEXTURE_SIZE, makeNoiseTexture } from '../noise-texture.ts';
 import { FrameRateSampler } from '../frame-sampler.ts';
 import { geoidCellKey, geoidHeightM } from '../geoid.ts';
 import { GLOBE_MASK_SAMPLE_LINE, patchGlobeFragmentSource } from '../water-mask.ts';
-import { clearOrbitPitch, orbitSightLine, steeperPitches } from '../camera-math.ts';
+import {
+  EYE_EASE_MAX_M,
+  clearOrbitPitch,
+  easeEye,
+  eyeDistanceM,
+  orbitSightLine,
+  steeperPitches,
+  type EyePosition,
+} from '../camera-math.ts';
 import {
   countryDistanceBandM,
   parsePlaceLabels,
@@ -133,6 +141,17 @@ const LABEL_PICK_INTERVAL_MS = 200;
  * rare: with a pin the frame stays at the pin (zooming in and out never moves it).
  */
 const DETAIL_REANCHOR_M = 200_000;
+
+/** The reader's "reduce motion" setting (false where it cannot be read). */
+function prefersReducedMotion(): boolean {
+  try {
+    return (
+      typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+    );
+  } catch {
+    return false;
+  }
+}
 
 export class CesiumSceneHost implements SceneHost {
   private readonly C: CesiumModule;
@@ -245,6 +264,10 @@ export class CesiumSceneHost implements SceneHost {
   private preRenderGroundRemover: (() => void) | null = null;
   /** A viewpoint's measured eye height (kept above the drawn globe until that catches up). */
   private viewpointHeightM: number | null = null;
+  /** The viewpoint eye's glide (`easeEye`): where it is drawn now and where it is going. */
+  private eyeNow: EyePosition | null = null;
+  private eyeGoal: EyePosition | null = null;
+  private eyeEaseAt = 0;
 
   constructor(C: CesiumModule, options: CesiumHostOptions) {
     this.C = C;
@@ -422,6 +445,7 @@ export class CesiumSceneHost implements SceneHost {
     if (this.detailAtlasUrl) this.loadDetailAtlas(this.detailAtlasUrl);
     if (options.placeLabelsUrl) void this.loadPlaceLabels(options.placeLabelsUrl);
     this.preRenderGroundRemover = scene.preRender.addEventListener(() => {
+      this.glideEye();
       this.keepEyeAboveGlobe();
       const m = this.groundMaterial;
       if (!m) return;
@@ -840,6 +864,30 @@ export class CesiumSceneHost implements SceneHost {
    * ground drawn (V&V: Moab, 1 250 m above the last place, ten seconds of terrain seen from
    * below). Until then the eye stands on the globe as drawn.
    */
+  /** One frame of the viewpoint eye's glide toward its goal; keeps frames coming until there. */
+  private glideEye(): void {
+    const now = this.eyeNow;
+    const goal = this.eyeGoal;
+    if (!now || !goal) return;
+    const t = performance.now();
+    const dt = Math.min(100, t - this.eyeEaseAt);
+    this.eyeEaseAt = t;
+    const step = easeEye(now, goal, dt);
+    this.eyeNow = step.eye;
+    if (step.done) this.eyeGoal = null;
+    else this.scene.requestRender();
+    const cam = this.scene.camera;
+    this.viewpointHeightM = step.eye.heightM;
+    cam.setView({
+      destination: this.C.Cartesian3.fromDegrees(
+        step.eye.longitude,
+        step.eye.latitude,
+        step.eye.heightM,
+      ),
+      orientation: { heading: cam.heading, pitch: cam.pitch, roll: 0 },
+    });
+  }
+
   private keepEyeAboveGlobe(): void {
     const wanted = this.viewpointHeightM;
     if (wanted === null) return;
@@ -868,6 +916,7 @@ export class CesiumSceneHost implements SceneHost {
     const pin = c.kind === 'viewpoint' ? c.eye : c.target;
     this.detailAnchorTarget = C.Cartesian3.fromDegrees(pin.longitude, pin.latitude, 0);
     this.setLabelsForCamera(c.kind);
+    const wasViewpoint = this.viewpointHeightM !== null;
     this.viewpointHeightM = c.kind === 'viewpoint' ? c.heightM : null;
     if (c.kind === 'viewpoint') {
       ssc.enableInputs = false; // React layer handles drag-to-look via CameraState
@@ -876,11 +925,37 @@ export class CesiumSceneHost implements SceneHost {
       cam.lookAtTransform(C.Matrix4.IDENTITY);
       const frustum = cam.frustum;
       if (frustum instanceof C.PerspectiveFrustum) frustum.fov = c.fovDeg * DEG;
+      // A step of the eye (W A S D, the height a terrain look-up settles on) glides there over
+      // a few frames; a new place, or a reader who asks for less motion, lands at once. The
+      // look direction always changes at once: the sky overlays follow it exactly.
+      const goal: EyePosition = {
+        longitude: c.eye.longitude,
+        latitude: c.eye.latitude,
+        heightM: c.heightM,
+      };
+      const from = this.eyeNow;
+      const glide =
+        from !== null &&
+        wasViewpoint &&
+        !prefersReducedMotion() &&
+        eyeDistanceM(from, goal) < EYE_EASE_MAX_M;
+      if (glide) {
+        if (!this.eyeGoal) this.eyeEaseAt = performance.now();
+        this.eyeGoal = goal;
+        this.viewpointHeightM = from.heightM;
+      } else {
+        this.eyeNow = goal;
+        this.eyeGoal = null;
+      }
+      const at = this.eyeNow ?? goal;
       cam.setView({
-        destination: C.Cartesian3.fromDegrees(c.eye.longitude, c.eye.latitude, c.heightM),
+        destination: C.Cartesian3.fromDegrees(at.longitude, at.latitude, at.heightM),
         orientation: { heading: c.headingDeg * DEG, pitch: c.pitchDeg * DEG, roll: 0 },
       });
+      this.scene.requestRender();
     } else {
+      this.eyeNow = null;
+      this.eyeGoal = null;
       ssc.enableInputs = true;
       ssc.enableTranslate = true;
       ssc.enableRotate = true;
