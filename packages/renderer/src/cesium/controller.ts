@@ -225,6 +225,7 @@ export class SceneController {
       u_sunVisible: sunScreen && lighting.directLightPresent ? 1 : 0,
     };
     this.host.setGrade(uniforms);
+    this.host.setSunGlare?.({ towardEcef: toward, lit: lighting.directLightPresent });
 
     const pinMoved =
       !prev ||

@@ -198,6 +198,14 @@ export interface HostMoonDisc {
   opacity: number;
 }
 
+/** The Sun the grade's glare is drawn around (`setSunGlare`). */
+export interface HostSunGlare {
+  /** Unit vector toward the Sun, ECEF. */
+  towardEcef: Vec3;
+  /** Whether the Sun lights the scene directly (no glare through overcast or below the horizon). */
+  lit: boolean;
+}
+
 export interface SceneHost {
   setTime(utc: Date): void;
   setLight(light: HostLight): void;
@@ -228,6 +236,11 @@ export interface SceneHost {
   setCelestialBodies(v: { sun: boolean; moon: boolean; stars: boolean }): void;
   /** The Moon drawn in the viewpoint's sky with its phase and size; null hides it. */
   setMoonDisc?(m: HostMoonDisc | null): void;
+  /**
+   * Where the grade's sun glare sits, placed by the host each frame (so it follows the clock's
+   * glide and the camera between applies); without it `u_sunScreen` is used as given.
+   */
+  setSunGlare?(glare: HostSunGlare | null): void;
   /** Screen position (0..1) of a world direction from the camera, or null when behind. */
   sunScreenPosition(directionTowardSunEcef: Vec3): [number, number] | null;
   /**

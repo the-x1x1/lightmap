@@ -78,6 +78,7 @@ import {
 } from '../imagery-season.ts';
 import { FrameBudgetQueue } from '../frame-budget.ts';
 import { drawMoonPhase } from '../moon-disc.ts';
+import { StepGlide, lerpVec3, nlerpDir, type Vec3Like } from '../step-glide.ts';
 import type { Vec3 } from '../sun-vector.ts';
 import type {
   HostAtmosphere,
@@ -87,6 +88,7 @@ import type {
   HostGroundTexture,
   HostLight,
   HostMoonDisc,
+  HostSunGlare,
   HostOrbitCamera,
   HostOverlay,
   HostQuality,
@@ -300,6 +302,28 @@ export class CesiumSceneHost implements SceneHost {
   private seasonEntities: Cesium.Entity[] = [];
   private nightEntities: Cesium.Entity[] = [];
   private nightKinds: Array<'moon' | 'core' | undefined> = [];
+  /**
+   * The overlay's geometry as last laid out: the controller keeps its paths until the day, the
+   * place or the year changes, so the same arrays at the same pin and radius are not handed to
+   * Cesium again (each new `ConstantProperty` rebuilt the static line batch in a worker).
+   */
+  private overlayLaid: {
+    sunPath: unknown;
+    seasonPaths: unknown;
+    nightPaths: unknown;
+    pinKey: string;
+    radiusM: number;
+  } | null = null;
+  /** The map's sun marker and shadow line ends, gliding with the clock (ECEF, metres). */
+  private overlaySun = new StepGlide<Vec3Like>(lerpVec3);
+  private overlayShadow = new StepGlide<Vec3Like>(lerpVec3);
+  private overlayBase: Cesium.Cartesian3 | null = null;
+  /** The path entities the last layout showed (restored when the overlay is shown again). */
+  private overlayShownPaths = new Set<Cesium.Entity>();
+  /** The sun glare's direction (toward the Sun, ECEF), gliding with the clock (`setSunGlare`). */
+  private sunGlare = new StepGlide<Vec3Like>(nlerpDir);
+  private sunGlareLit = false;
+  private sunGlareOn = false;
   private nightMaterials: {
     moon: Cesium.PolylineDashMaterialProperty;
     core: Cesium.PolylineDashMaterialProperty;
@@ -526,6 +550,7 @@ export class CesiumSceneHost implements SceneHost {
       this.glideLight();
       this.keepEyeAboveGlobe();
       this.placeMoonDisc();
+      this.placeSunGlare();
       const m = this.groundMaterial;
       if (!m) return;
       const cam = scene.camera.positionWC;
@@ -681,6 +706,9 @@ export class CesiumSceneHost implements SceneHost {
     const t = Math.min(1, (performance.now() - this.clockGlideStart) / this.clockGlideMs);
     const clock = this.widget.clock;
     this.glideGrade(t);
+    this.sunGlare.step(t);
+    this.overlaySun.step(t);
+    this.overlayShadow.step(t);
     if (t >= 1) {
       clock.currentTime = goal;
       this.clockGoal = null;
@@ -1361,6 +1389,17 @@ export class CesiumSceneHost implements SceneHost {
     // Entities are created once and updated in place; add/remove per scrub tick was measurable.
     if (this.overlayEntities.length === 0) {
       const gold = C.Color.fromCssColorString('#f5b342');
+      // The sun marker, its ray and the shadow line move every minute step: they read the
+      // gliding ends each frame (Cesium draws such lines from a polyline collection, updated in
+      // place), while the day's paths below stay static geometry, laid out once per day.
+      const cart = (v: Vec3Like | null): Cesium.Cartesian3 | undefined =>
+        v ? new C.Cartesian3(v.x, v.y, v.z) : undefined;
+      const line = (end: StepGlide<Vec3Like>) =>
+        new C.CallbackProperty(() => {
+          const a = this.overlayBase;
+          const b = cart(end.shown);
+          return a && b ? [a, b] : undefined;
+        }, false);
       this.overlayEntities = [
         ents.add({
           point: {
@@ -1375,6 +1414,7 @@ export class CesiumSceneHost implements SceneHost {
           polyline: { width: 3, material: gold.withAlpha(0.85), arcType: C.ArcType.NONE },
         }),
         ents.add({
+          position: new C.CallbackPositionProperty(() => cart(this.overlaySun.shown), false),
           point: {
             pixelSize: 18,
             color: gold,
@@ -1385,6 +1425,7 @@ export class CesiumSceneHost implements SceneHost {
         }),
         ents.add({
           polyline: {
+            positions: line(this.overlaySun),
             width: 2,
             material: new C.PolylineDashMaterialProperty({
               color: gold.withAlpha(0.7),
@@ -1395,6 +1436,7 @@ export class CesiumSceneHost implements SceneHost {
         }),
         ents.add({
           polyline: {
+            positions: line(this.overlayShadow),
             width: 6,
             material: C.Color.fromCssColorString('#0b0b0d').withAlpha(0.6),
             arcType: C.ArcType.NONE,
@@ -1426,8 +1468,60 @@ export class CesiumSceneHost implements SceneHost {
       Cesium.Entity,
       Cesium.Entity,
     ];
-    pinE.position = new C.ConstantPositionProperty(base);
+    const pinKey = `${pin.longitude}|${pin.latitude}|${pin.heightM}`;
+    const laid = this.overlayLaid;
+    const pinMoved = !laid || laid.pinKey !== pinKey || laid.radiusM !== o.radiusM;
+    if (pinMoved) {
+      pinE.position = new C.ConstantPositionProperty(base);
+      this.overlayBase = base;
+    }
     pinE.show = true;
+    // The sun marker and the shadow line glide with the clock's minute steps, like the light;
+    // a new pin, a new radius or a Sun just risen lands at once.
+    const stepId = pinMoved ? null : this.clockStepId;
+    if (o.sun) {
+      this.overlaySun.set(
+        local(o.sun.azimuthDeg, o.sun.elevationDeg, o.radiusM),
+        sunE.show ? stepId : null,
+      );
+      sunE.show = true;
+      rayE.show = true;
+    } else {
+      sunE.show = false;
+      rayE.show = false;
+    }
+    if (o.shadowAzimuthDeg !== null) {
+      this.overlayShadow.set(
+        local(o.shadowAzimuthDeg, 0.5, Math.min(o.radiusM * 0.5, 200)),
+        shadowE.show ? stepId : null,
+      );
+      shadowE.show = true;
+    } else shadowE.show = false;
+    // The day's, the year's and the night's paths: laid out again only when they change.
+    if (
+      laid &&
+      !pinMoved &&
+      laid.sunPath === o.sunPath &&
+      laid.seasonPaths === o.seasonPaths &&
+      laid.nightPaths === o.nightPaths
+    ) {
+      // Hidden by an earlier `visible: false`: shown again as they were.
+      for (const e of [
+        pathE,
+        ...this.seasonEntities,
+        ...this.nightEntities,
+        ...this.hiddenRunEntities,
+      ])
+        e.show = this.overlayShownPaths.has(e);
+      return;
+    }
+    this.overlayLaid = {
+      sunPath: o.sunPath,
+      seasonPaths: o.seasonPaths,
+      nightPaths: o.nightPaths,
+      pinKey,
+      radiusM: o.radiusM,
+    };
     if (o.sunPath.length > 1) {
       pathE.polyline!.positions = new C.ConstantProperty(
         o.sunPath.map((s) => local(s.azimuthDeg, s.elevationDeg, o.radiusM)),
@@ -1517,23 +1611,16 @@ export class CesiumSceneHost implements SceneHost {
         e.show = true;
       } else e.show = false;
     });
-    if (o.sun) {
-      const sunPos = local(o.sun.azimuthDeg, o.sun.elevationDeg, o.radiusM);
-      sunE.position = new C.ConstantPositionProperty(sunPos);
-      sunE.show = true;
-      rayE.polyline!.positions = new C.ConstantProperty([base, sunPos]);
-      rayE.show = true;
-    } else {
-      sunE.show = false;
-      rayE.show = false;
-    }
-    if (o.shadowAzimuthDeg !== null) {
-      shadowE.polyline!.positions = new C.ConstantProperty([
-        base,
-        local(o.shadowAzimuthDeg, 0.5, Math.min(o.radiusM * 0.5, 200)),
-      ]);
-      shadowE.show = true;
-    } else shadowE.show = false;
+    this.overlayShownPaths = new Set(
+      [pathE, ...this.seasonEntities, ...this.nightEntities, ...this.hiddenRunEntities].filter(
+        (e) => e.show,
+      ),
+    );
+  }
+
+  /** The clock step under way (`setTime`), for values that glide with it; null when none. */
+  private get clockStepId(): number | null {
+    return this.clockGoal ? this.clockGlideId : null;
   }
 
   setQuality(q: HostQuality): void {
@@ -2405,6 +2492,38 @@ export class CesiumSceneHost implements SceneHost {
     const p1 = C.SceneTransforms.worldToWindowCoordinates(this.scene, toward);
     // Window y runs down; a billboard's rotation is counter-clockwise on the screen.
     if (p0 && p1) b.rotation = Math.atan2(-(p1.y - p0.y), p1.x - p0.x);
+  }
+
+  setSunGlare(glare: HostSunGlare | null): void {
+    if (!glare) {
+      this.sunGlareOn = false;
+      return;
+    }
+    this.sunGlareOn = true;
+    this.sunGlareLit = glare.lit;
+    const d = glare.towardEcef;
+    this.sunGlare.set({ x: d.x, y: d.y, z: d.z }, this.clockStepId);
+  }
+
+  /**
+   * The grade's sun glare, placed on screen each frame from the gliding Sun direction and the
+   * camera as it is drawn: projected once per apply, it hopped a minute at a time while the Sun
+   * disc glided, and stood where the Sun had been while the eye glided or the map turned.
+   */
+  private placeSunGlare(): void {
+    const dir = this.sunGlare.shown;
+    if (!this.sunGlareOn || !dir) return;
+    const pos = this.sunScreenPosition(dir);
+    const g = this.gradeUniforms;
+    const screen = g['u_sunScreen'] as Cesium.Cartesian2;
+    screen.x = pos ? pos[0] : -1;
+    screen.y = pos ? pos[1] : -1;
+    const visible = pos && this.sunGlareLit ? 1 : 0;
+    g['u_sunVisible'] = visible;
+    const target = this.grade.uniforms as Record<string, unknown>;
+    target['u_sunScreen'] = screen;
+    target['u_sunVisible'] = visible;
+    if (this.gradeShown) this.gradeShown['u_sunVisible'] = visible;
   }
 
   sunScreenPosition(toward: Vec3): [number, number] | null {
