@@ -256,6 +256,14 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
     const y = 1 - ((e.clientY - rect.top) / rect.height) * 2;
     setFinderTarget(directionFromFrame(camera, x, y, rect.width / rect.height));
   };
+  const pendingLook = useRef({ yaw: 0, pitch: 0 });
+  const lookFrame = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (lookFrame.current !== null) cancelAnimationFrame(lookFrame.current);
+    },
+    [],
+  );
   const onPointerMove = (e: React.PointerEvent) => {
     if (!drag.current || drag.current.id !== e.pointerId) return;
     const dx = e.clientX - drag.current.x;
@@ -271,7 +279,16 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
         Math.hypot(e.clientX - drag.current.ox, e.clientY - drag.current.oy) > drag.current.slop,
     };
     const degPerPx = camera.fovDeg / Math.max(320, container.current?.clientWidth ?? 800);
-    rotateCamera(dx * degPerPx, -dy * degPerPx);
+    // Gathered and applied once a frame: a fast mouse or a 120 Hz trackpad sends several moves a
+    // frame, each a store update, a scene rebuild and a re-render for a view drawn only once.
+    pendingLook.current.yaw += dx * degPerPx;
+    pendingLook.current.pitch += -dy * degPerPx;
+    lookFrame.current ??= requestAnimationFrame(() => {
+      lookFrame.current = null;
+      const { yaw, pitch } = pendingLook.current;
+      pendingLook.current = { yaw: 0, pitch: 0 };
+      if (yaw !== 0 || pitch !== 0) rotateCamera(yaw, pitch);
+    });
   };
   const onPointerUp = (e: React.PointerEvent) => {
     if (drag.current?.id !== e.pointerId) return;
