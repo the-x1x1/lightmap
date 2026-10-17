@@ -2072,6 +2072,8 @@ export class CesiumSceneHost implements SceneHost {
   }
 
   async setBasemap(b: BasemapDescriptor): Promise<void> {
+    // A season swap still waiting to drop its old layer: drop it now, before the base changes.
+    this.retireLayer?.();
     const C = this.C;
     const layers = this.widget.imageryLayers;
     if (this.baseLayer) {

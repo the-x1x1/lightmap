@@ -89,7 +89,10 @@ function terrainHorizonState(
   dayEvents: DayEvents,
 ): TerrainHorizonState {
   const { location } = inputs;
-  const key = `${dayEvents.date}|${dayEvents.timeZone}|${location.point.latitude}|${location.point.longitude}`;
+  // The events belong to the profile's own origin (where its skyline was sampled): a walk's
+  // step that keeps the profile reuses them instead of rescanning the day at each step.
+  const at = profile.origin;
+  const key = `${dayEvents.date}|${dayEvents.timeZone}`;
   let perDay = terrainEventCache.get(profile);
   if (!perDay) {
     perDay = new Map();
@@ -103,8 +106,8 @@ function terrainHorizonState(
         profile,
         (t) => {
           const s = svc.getSolarState({
-            latitude: location.point.latitude,
-            longitude: location.point.longitude,
+            latitude: at.latitude,
+            longitude: at.longitude,
             timestampUtc: t,
             timeZone: location.timeZone,
           });
@@ -123,7 +126,7 @@ function terrainHorizonState(
       ? terrainSunEvents(
           profile,
           (t) => {
-            const m = moonPosition(t, location.point.latitude, location.point.longitude);
+            const m = moonPosition(t, at.latitude, at.longitude);
             return { azimuthDeg: m.azimuthDeg, elevationDeg: m.topocentricElevationDeg };
           },
           {

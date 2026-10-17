@@ -173,7 +173,18 @@ export function useTerrainHorizon(input: {
         pending.set(key, job);
       }
       void job.then((profile) => {
-        if (!cancelled && profile) setHorizonProfile(profile);
+        if (cancelled) return;
+        if (profile) setHorizonProfile(profile);
+        else {
+          // No horizon here (tiles unavailable, too few samples): one kept from a few steps
+          // back is not this place's either.
+          const kept = usePlannerStore.getState().horizonProfile;
+          if (
+            kept &&
+            (kept.origin.latitude !== origin.latitude || kept.origin.longitude !== origin.longitude)
+          )
+            setHorizonProfile(null);
+        }
       });
     };
     // Once the pin has stayed put a moment: a walk moves it ten times a second, and each of the

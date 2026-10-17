@@ -209,15 +209,17 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
           mode: prev.camera.mode,
         };
     // Keep the chosen wall-clock time when the zone changes: "12:30" stays "12:30" at the new place.
-    // A picked finder target belongs to the old viewpoint. A walk's step (the camera kept, a few
-    // metres on) keeps the horizon it had until the new one is sampled where the walk stops: a
-    // ridge a kilometre off has not moved, and clearing it on every step made everything that
-    // reads it (the terrain badge, the dark windows over the skyline) flicker and recompute.
+    // A picked finder target belongs to the old viewpoint. A walk's step (the camera kept)
+    // keeps the horizon it had while the pin is within ~50 m of where that horizon was sampled,
+    // until the new one is in: a ridge a kilometre off has not moved, and clearing it on every
+    // step made everything that reads it (the terrain badge, the dark windows over the skyline)
+    // flicker and recompute. Farther from its origin it is no longer this place's horizon.
+    const origin = prev.horizonProfile?.origin ?? null;
     const step =
       opts?.keepCamera === true &&
-      prev.location !== null &&
-      Math.abs(prev.location.point.latitude - loc.point.latitude) < WALK_KEEP_HORIZON_DEG &&
-      Math.abs(prev.location.point.longitude - loc.point.longitude) <
+      origin !== null &&
+      Math.abs(origin.latitude - loc.point.latitude) < WALK_KEEP_HORIZON_DEG &&
+      Math.abs(origin.longitude - loc.point.longitude) <
         WALK_KEEP_HORIZON_DEG / Math.max(0.1, Math.cos((loc.point.latitude * Math.PI) / 180));
     set({
       location: loc,
