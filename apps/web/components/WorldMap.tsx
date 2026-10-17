@@ -397,7 +397,7 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
       ) : null}
       {looking && walkHint && !finderPicking && !overlayMode ? (
         <p
-          className="pointer-events-none absolute bottom-24 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/65 px-3 py-1.5 text-xs text-[var(--lm-text)] lg:bottom-8"
+          className="pointer-events-none absolute bottom-24 left-1/2 z-10 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-full bg-black/65 px-3 py-1.5 text-center text-xs text-[var(--lm-text)] lg:bottom-8"
           data-testid="walk-hint"
         >
           Drag to look · click the ground to walk there · W A S D to step

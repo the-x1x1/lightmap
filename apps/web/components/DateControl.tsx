@@ -51,7 +51,8 @@ export function DateControl({
           {location ? effectiveTimeZone({ location, timeZoneMode }) : 'device time zone'}
         </span>
       </div>
-      <div className="flex items-center gap-1">
+      {/* Wraps on the narrowest phones (320 px): Now and Tonight drop under the date. */}
+      <div className="flex flex-wrap items-center gap-1">
         <Button
           variant="ghost"
           size="md"
@@ -67,7 +68,7 @@ export function DateControl({
           value={date}
           onChange={(e) => e.target.value && setDate(e.target.value)}
           disabled={disabled}
-          className="h-11 flex-1 rounded-[var(--lm-radius-sm)] border border-[var(--lm-panel-border)] bg-[var(--lm-panel-raised)] px-3 text-sm text-[var(--lm-text)] focus:outline-none focus-visible:[box-shadow:var(--lm-focus)]"
+          className="h-11 min-w-[8.5rem] flex-1 rounded-[var(--lm-radius-sm)] border border-[var(--lm-panel-border)] bg-[var(--lm-panel-raised)] px-3 text-sm text-[var(--lm-text)] focus:outline-none focus-visible:[box-shadow:var(--lm-focus)]"
           aria-describedby={blockedReason ? 'lm-date-human lm-date-blocked' : 'lm-date-human'}
           data-testid="date-input"
         />
