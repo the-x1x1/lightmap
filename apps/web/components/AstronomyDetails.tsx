@@ -336,7 +336,14 @@ function MoonDetails({
         />
         <Row
           label="Moonrise / set"
-          value={`${lunar.moonrise ? formatWallTime(lunar.moonrise, tz) : '—'} / ${lunar.moonset ? formatWallTime(lunar.moonset, tz) : '—'}`}
+          value={
+            // Far north or south the Moon can stay up (or down) the whole day: say so, not "— / —".
+            !lunar.moonrise && !lunar.moonset
+              ? lunar.isAboveHorizon
+                ? 'up all day'
+                : 'down all day'
+              : `${lunar.moonrise ? formatWallTime(lunar.moonrise, tz) : '—'} / ${lunar.moonset ? formatWallTime(lunar.moonset, tz) : '—'}`
+          }
         />
         {scene.terrainHorizon?.moonEvents?.differsFromAstronomical ? (
           <Row
