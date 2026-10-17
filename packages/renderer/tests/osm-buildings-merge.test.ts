@@ -173,3 +173,54 @@ describe('the buildings layer builds a tile whole in the workers', () => {
     expect(merged!.show).toBe(false);
   });
 });
+
+describe('hasBuildingAt over a grid of a dense tile', () => {
+  it('answers like a scan of every footprint: inside, within the 2.5 m reach, and clear of it', async () => {
+    const { lonLatToTile } = await import('../src/vector-tile.ts');
+    for (const lat0 of [35, 70]) {
+      const { l, layer } = setup();
+      const lon0 = 135.78;
+      const t = lonLatToTile(14, lon0, lat0);
+      const mLat = 1 / 110_540;
+      const mLon = 1 / (111_320 * Math.cos((lat0 * Math.PI) / 180));
+      // A 60 x 60 block of 8 m houses on a 20 m pitch (3,600 footprints).
+      const fp = [];
+      for (let i = 0; i < 60; i++)
+        for (let j = 0; j < 60; j++) {
+          const w = lon0 + i * 20 * mLon;
+          const s = lat0 + j * 20 * mLat;
+          const outer: [number, number][] = [
+            [w, s],
+            [w + 8 * mLon, s],
+            [w + 8 * mLon, s + 8 * mLat],
+            [w, s + 8 * mLat],
+          ];
+          fp.push({
+            outer,
+            holes: [],
+            heightM: 6,
+            minHeightM: 0,
+            colour: null,
+            centre: [w + 4 * mLon, s + 4 * mLat] as [number, number],
+          });
+        }
+      // The block may straddle tile edges (a z14 tile is ~800 m wide at 70 deg): every tile it
+      // touches holds it, as neighbouring tiles each hold the buildings across their edge.
+      const t1 = lonLatToTile(14, lon0 + 1200 * mLon, lat0 + 1200 * mLat);
+      for (let x = Math.min(t.x, t1.x); x <= Math.max(t.x, t1.x); x++)
+        for (let y = Math.min(t.y, t1.y); y <= Math.max(t.y, t1.y); y++)
+          l.tiles.set(`${x}/${y}`, { key: `${x}/${y}`, footprints: fp, bridges: [] });
+      for (const [i, j] of [
+        [0, 0],
+        [17, 42],
+        [59, 59],
+      ] as const) {
+        const w = lon0 + i * 20 * mLon;
+        const s = lat0 + j * 20 * mLat;
+        expect(layer.hasBuildingAt(w + 4 * mLon, s + 4 * mLat)).toBe(true); // inside
+        expect(layer.hasBuildingAt(w + 10 * mLon, s + 4 * mLat)).toBe(true); // 2 m off a wall
+        expect(layer.hasBuildingAt(w + 14 * mLon, s + 4 * mLat)).toBe(false); // 6 m off
+      }
+    }
+  });
+});

@@ -231,6 +231,72 @@ function footprintBox(b: BuildingFootprint): [number, number, number, number] {
   return box;
 }
 
+/**
+ * A tile's footprints bucketed on a grid, so a point query tests the few near it: a dense tile
+ * holds 10,000-20,000 (Kyoto), and the horizon asks about thousands of points (0.9 ms a query
+ * when every footprint's box was tested).
+ */
+interface FootprintGrid {
+  west: number;
+  south: number;
+  cellLon: number;
+  cellLat: number;
+  cells: Map<number, BuildingFootprint[]>;
+}
+
+const GRID_N = 64;
+/** Degrees a footprint's box is widened by when bucketed: covers the 2.5 m reach to 83 deg. */
+const GRID_PAD_DEG = 2e-4;
+const grids = new WeakMap<readonly BuildingFootprint[], FootprintGrid>();
+
+function footprintGrid(fp: readonly BuildingFootprint[]): FootprintGrid {
+  let grid = grids.get(fp);
+  if (grid) return grid;
+  let west = Infinity;
+  let south = Infinity;
+  let east = -Infinity;
+  let north = -Infinity;
+  for (const b of fp) {
+    const box = footprintBox(b);
+    west = Math.min(west, box[0]);
+    south = Math.min(south, box[1]);
+    east = Math.max(east, box[2]);
+    north = Math.max(north, box[3]);
+  }
+  west -= GRID_PAD_DEG;
+  south -= GRID_PAD_DEG;
+  const cellLon = Math.max(1e-9, (east + GRID_PAD_DEG - west) / GRID_N);
+  const cellLat = Math.max(1e-9, (north + GRID_PAD_DEG - south) / GRID_N);
+  const cells = new Map<number, BuildingFootprint[]>();
+  const clampCell = (v: number) => Math.max(0, Math.min(GRID_N - 1, Math.floor(v)));
+  for (const b of fp) {
+    const box = footprintBox(b);
+    const x0 = clampCell((box[0] - GRID_PAD_DEG - west) / cellLon);
+    const x1 = clampCell((box[2] + GRID_PAD_DEG - west) / cellLon);
+    const y0 = clampCell((box[1] - GRID_PAD_DEG - south) / cellLat);
+    const y1 = clampCell((box[3] + GRID_PAD_DEG - south) / cellLat);
+    for (let x = x0; x <= x1; x++)
+      for (let y = y0; y <= y1; y++) {
+        const k = y * GRID_N + x;
+        const list = cells.get(k);
+        if (list) list.push(b);
+        else cells.set(k, [b]);
+      }
+  }
+  grid = { west, south, cellLon, cellLat, cells };
+  grids.set(fp, grid);
+  return grid;
+}
+
+/** The footprints whose padded box may hold [lon, lat] (none outside the tile's grid). */
+function footprintsNear(fp: readonly BuildingFootprint[], lon: number, lat: number) {
+  const g = footprintGrid(fp);
+  const x = Math.floor((lon - g.west) / g.cellLon);
+  const y = Math.floor((lat - g.south) / g.cellLat);
+  if (x < 0 || y < 0 || x >= GRID_N || y >= GRID_N) return [];
+  return g.cells.get(y * GRID_N + x) ?? [];
+}
+
 /** Whether [lon, lat] is within (dx, dy) degrees of any edge of a ring (scaled to a unit circle). */
 function nearRing(
   ring: readonly (readonly [number, number])[],
@@ -428,7 +494,7 @@ export class OsmBuildingsLayer {
     const mLat = 1 / 110_540;
     const mLon = 1 / (111_320 * Math.cos((lat * Math.PI) / 180));
     const reach = 2.5;
-    return fp.some((b) => {
+    return footprintsNear(fp, lon, lat).some((b) => {
       const box = footprintBox(b);
       if (
         lon < box[0] - reach * mLon ||
