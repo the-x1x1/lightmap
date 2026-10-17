@@ -175,7 +175,7 @@ export function buildSceneState(inputs: SceneInputs): SceneState {
   const solar = svc.getSolarState(solarInput);
   const lunar = inputs.includeLunar ? svc.getLunarState(solarInput) : null;
   // Night planning rides with the lunar state: the Milky Way core and whether the sky is dark.
-  const nightSky = lunar
+  const coreSky = lunar
     ? milkyWayCoreFrom(
         galacticCentrePosition(utc, location.point.latitude, location.point.longitude),
         solar.elevationDegrees,
@@ -183,6 +183,19 @@ export function buildSceneState(inputs: SceneInputs): SceneState {
         lunar.illuminatedFraction,
       )
     : null;
+  // Over a sampled skyline a core that is up and in the dark can still be behind the ridge.
+  const skyline =
+    coreSky && inputs.horizonProfile && coreSky.verdict === 'visible'
+      ? horizonElevationAt(inputs.horizonProfile, coreSky.azimuthDeg)
+      : null;
+  const nightSky =
+    coreSky && skyline !== null && coreSky.elevationDeg < skyline
+      ? {
+          ...coreSky,
+          verdict: 'behind-terrain' as const,
+          reason: `Behind the skyline (${skyline.toFixed(0)}° high at the core's bearing)`,
+        }
+      : coreSky;
   const wall = utcToWallClock(utc, timeZone);
   const dayEvents =
     inputs.dayEvents &&

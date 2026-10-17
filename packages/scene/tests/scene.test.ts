@@ -238,6 +238,31 @@ describe('buildSceneState — Kailua Beach, 31 May 2026, 12:30 (acceptance case)
     expect(c.dayEvents.date).toBe('2026-06-01');
   });
 
+  it('a Milky Way core up in the dark but behind the sampled skyline is not called visible', () => {
+    // 15 June 2026, 01:00 HST, a new-Moon night: the core stands ~39° up due south.
+    const at = localSelectionToUtc({ year: 2026, month: 6, day: 15 }, 60, kailua.timeZone);
+    const open = buildSceneState(inputs({ utc: at }));
+    expect(open.nightSky!.verdict).toBe('visible');
+    // A cliff 1.5 km high on the ~1 km ring from SSE to SW: ~56° of skyline where the core is.
+    const ring = horizonRingDistances().reduce((b, d) =>
+      Math.abs(d - 1000) < Math.abs(b - 1000) ? d : b,
+    );
+    const samples = horizonSamplePoints(kailua.point).map((p) => ({
+      azimuthDeg: p.azimuthDeg,
+      distanceM: p.distanceM,
+      heightM: p.azimuthDeg >= 150 && p.azimuthDeg <= 230 && p.distanceM === ring ? 1500 : 0,
+    }));
+    const profile = horizonProfileFromSamples(kailua.point, 2, 1.6, samples, {
+      providerId: 'test-dem',
+      resolutionM: 30,
+    });
+    const walled = buildSceneState(inputs({ utc: at, horizonProfile: profile }));
+    expect(walled.nightSky!.verdict).toBe('behind-terrain');
+    expect(walled.nightSky!.reason).toMatch(
+      /^Behind the skyline \(\d\d° high at the core's bearing\)$/,
+    );
+  });
+
   it('carries the terrain horizon when a profile is supplied: a ridge to the east delays first light', () => {
     expect(buildSceneState(inputs()).terrainHorizon).toBeNull();
     // A 600 m ridge on the ~2 km ring across the whole eastern half; flat to the west.

@@ -54,7 +54,7 @@ export function galacticCentrePosition(
 }
 
 export type MilkyWayVerdict =
-  'visible' | 'low' | 'below-horizon' | 'twilight' | 'moonlit' | 'daylight';
+  'visible' | 'low' | 'below-horizon' | 'behind-terrain' | 'twilight' | 'moonlit' | 'daylight';
 
 export interface MilkyWayCoreState {
   azimuthDeg: number;
