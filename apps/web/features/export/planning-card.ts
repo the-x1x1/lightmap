@@ -40,6 +40,7 @@ import {
   formatShutterS,
   formatVisibility,
   seasonalEnvelope,
+  shadeOf,
   skyDriftShutterS,
   skylineOf,
   type DistanceUnits,
@@ -128,6 +129,7 @@ export function buildPlanningCard(
     sunElevationDeg: s.elevationDegrees,
     sunTransmittance: a.parameters.sunTransmittance,
     skyGlowRatio: opts.skyGlow ? skyBrightnessRatio(opts.skyGlow) : 1,
+    shade: shadeOf(scene),
     moon: scene.lunar
       ? {
           elevationDeg: scene.lunar.elevationDegrees,

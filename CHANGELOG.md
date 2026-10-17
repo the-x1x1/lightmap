@@ -4,6 +4,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Exposure in a ridge's shadow**: with the Sun or Moon up but behind the sampled skyline, the
+  exposure estimate (panel, field view, card) gives the ground the sky's share of the light only
+  — about 2.3 stops under a clear Sun, nearly nothing under overcast.
 - **Dark windows over the skyline**: with a sampled terrain horizon, the dark windows ahead, the
   timeline's dark-sky band, the week ahead and the planning card count only the hours the
   Milky Way core stands above the skyline, not merely 10° up; from a valley floor the hours it

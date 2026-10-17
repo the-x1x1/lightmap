@@ -4,6 +4,7 @@ import {
   describeExposure,
   describeLightKelvin,
   profileCaveat,
+  shadeOf,
   skylineOf,
   describeSeasonalEnvelope,
   estimateExposure,
@@ -481,6 +482,8 @@ export function AstronomyDetails({
   const exposure = estimateExposure({
     sunElevationDeg: s.elevationDegrees,
     skyGlowRatio: glow ? skyBrightnessRatio(glow) : 1,
+    // A Sun or Moon behind the sampled ridge leaves the ground in its shadow.
+    shade: shadeOf(scene),
     sunTransmittance: scene.atmosphere.parameters.sunTransmittance,
     moon: scene.lunar
       ? {

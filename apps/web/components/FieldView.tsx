@@ -16,6 +16,7 @@ import {
   describeExposure,
   edgeIndicator,
   estimateExposure,
+  shadeOf,
   frameCoordinates,
   levelLineSegment,
   moonTrackPosition,
@@ -230,6 +231,7 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
     estimateExposure({
       sunElevationDeg: scene.solar.elevationDegrees,
       skyGlowRatio: glow ? skyBrightnessRatio(glow) : 1,
+      shade: shadeOf(scene),
       sunTransmittance: scene.atmosphere.parameters.sunTransmittance,
       moon: scene.lunar
         ? {

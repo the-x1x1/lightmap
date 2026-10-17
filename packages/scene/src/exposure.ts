@@ -16,6 +16,7 @@
  * three times as bright under overcast, as a city's orange cloud base shows).
  * EV100 = log2(E / 2.5) (an incident meter's constant C = 250). Pure, unit-tested.
  */
+import type { SceneState } from './types.ts';
 
 /** Direct normal illuminance outside the atmosphere's attenuation, lux (≈ 118 klx at air mass 1). */
 const DIRECT_NORMAL_KLX = 118_000;
@@ -80,6 +81,32 @@ export interface ExposureInput {
   moon?: { elevationDeg: number; illuminatedFraction: number } | null;
   /** The night sky's brightness over a natural one from town light (1 or absent: none). */
   skyGlowRatio?: number;
+  /**
+   * The Sun or the Moon is up but behind the sampled skyline (`TerrainHorizonState`): the ground
+   * is in the ridge's shadow and gets the sky's share of the light only.
+   */
+  shade?: { sun?: boolean; moon?: boolean };
+}
+
+/** The sky's share of a clear day's light on open ground; the rest comes straight from the disc. */
+const CLEAR_DIFFUSE_SHARE = 0.2;
+
+/** Which of the Sun and the Moon a scene has up but behind its sampled skyline. */
+export function shadeOf(scene: Pick<SceneState, 'terrainHorizon' | 'solar' | 'lunar'>): {
+  sun: boolean;
+  moon: boolean;
+} {
+  const t = scene.terrainHorizon;
+  return {
+    sun: t !== null && scene.solar.isAboveHorizon && !t.sunAboveTerrain,
+    moon: t !== null && scene.lunar?.isAboveHorizon === true && t.moonAboveTerrain === false,
+  };
+}
+
+/** The share of the light left in a ridge's shadow: the sky's, all of it under full overcast. */
+export function shadeFactor(sunTransmittance: number): number {
+  const t = Math.max(0, Math.min(1, sunTransmittance));
+  return CLEAR_DIFFUSE_SHARE + (1 - CLEAR_DIFFUSE_SHARE) * (1 - t);
 }
 
 /** Standard shutter steps, seconds, from 1/8000 s to 4 min. */
@@ -132,10 +159,14 @@ export function estimateExposure(input: ExposureInput): ExposureEstimate {
   const cloud = cloudIlluminanceFactor(input.sunTransmittance);
   const twilightCloud = Math.sqrt(cloud);
   const blend = Math.max(0, Math.min(1, h / 5));
-  const sky = clearSkyIlluminanceLux(h) * (twilightCloud + (cloud - twilightCloud) * blend);
-  const night = input.moon
-    ? moonlightLux(input.moon.elevationDeg, input.moon.illuminatedFraction)
-    : 0;
+  const shade = shadeFactor(input.sunTransmittance);
+  const sky =
+    clearSkyIlluminanceLux(h) *
+    (twilightCloud + (cloud - twilightCloud) * blend) *
+    (input.shade?.sun && h > -0.833 ? shade : 1);
+  const night =
+    (input.moon ? moonlightLux(input.moon.elevationDeg, input.moon.illuminatedFraction) : 0) *
+    (input.shade?.moon ? shade : 1);
   const nightFactor = 0.4 + 0.6 * Math.max(0, Math.min(1, input.sunTransmittance));
   const glowRatio = Math.max(1, Math.min(60, input.skyGlowRatio ?? 1));
   const cloudCover = 1 - Math.max(0, Math.min(1, input.sunTransmittance));
