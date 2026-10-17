@@ -291,16 +291,22 @@ latitude, the day of the year, the height and a regional rule for maritime clima
   month per 1 200–1 500 m). The west coasts in the westerlies (Europe west of about 15° E, the
   Pacific coast of North America, New Zealand, southern Chile) are about three weeks earlier in
   spring and later in autumn, and their grass stays greener through winter; southern Japan's
-  maples turn about three weeks late. The seasons flip across the equator, and inside about 25°
-  the trees keep their leaves.
+  maples turn about three weeks late. The leaves come down over about three weeks after the
+  peak where frost strips them, and over five or six where autumn has none (the maritime west,
+  southern Japan): London's planes hold into late November, Kyoto's maples into December. The
+  seasons flip across the equator, and inside about 25° the trees keep their leaves.
 - **The 3D trees.** Broad-leaf crowns turn yellow, orange or red, each a little before or after
   its neighbours, and as the leaves fall they fade to grey-brown twigs and thin to see-through
   (their shadows thin with them). Conifers stay green.
 - **The painted ground.** Woods turn the same way, with about a third of their crowns evergreen;
   winter-dormant grass is olive-tan (straw where the region is dry); a town's trees and parks
   follow.
-- **The far imagery** is a summer composite; its hue warms a little at peak colour and it loses
-  some saturation in winter. It is a tint, not seasonal imagery.
+- **The far imagery** is a summer composite, recoloured pixel by pixel
+  (`imagery-season.ts`): what reads as broad-leaf woods turns the autumn mosaic and then
+  grey-brown, open grass goes tan when dormant, lying snow whitens open ground fully and woods
+  partly; the darkest woods (conifers), water and towns keep their colour. It is a rule applied
+  to a 2016–2017 picture, not seasonal imagery: a field that reads green is treated as grass
+  whatever grows there.
 
 A model of a typical year, not this year's: an early spring or a late frost moves a real place by
 a week or two, and a single valley can differ from its region. Peak-colour reports for the place

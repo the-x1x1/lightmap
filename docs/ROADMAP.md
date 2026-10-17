@@ -188,7 +188,10 @@ stands and one verdict on whether the sky can show it (daylight / twilight / bel
 moonlit / low / visible; `milkyWayCore()` in `@lightmap/astronomy`, in the Moon details and on
 the planning card), the **dark windows ahead** — the next nights the core can be shot, each a
 click away (`milkyWayWindows()`) — and the core as a Light-finder body ("the core over that
-peak", dark-sky nights only). Geometry only — no sky-brightness or light-pollution model.
+peak", dark-sky nights only). The verdict is geometry; beside it a **city glow estimate**
+(`skyGlowAt`: Walker's law over the bundled urban areas — city, suburban, a horizon glow toward a
+side, a faint dome, or none, and which way is darker) raises the night exposure floor and flags
+dark windows a city sky would still spoil.
 
 Also delivered: an **exposure estimate** — the incident light at the planned instant as EV and
 one starting setting, from a clear-sky curve, the cloud's direct share, the Moon and starlight
