@@ -259,6 +259,12 @@ on a failure (`release.yml` runs it after the deploy); the rest are by hand.
       to Overcast and it drops to EV 12–13; scrub through sunset — the figure falls smoothly
       (no jump at the horizon) and the night reading names f/2.8 ISO 3200; the planning card and
       the shot list carry the same line labelled an estimate.
+- [ ] City glow: Kailua on a dark-sky night, Moon details open, reads "City glow (estimate): a
+      glow on the horizon to the SW"; Times Square at night reads "city sky" and its exposure is
+      about six stops brighter than Big Bend's; a night planning card carries "City glow (est.)".
+- [ ] Dense city: pin Kyoto (34.9954, 135.783) in viewpoint mode — the buildings fill in within a
+      few seconds, the perf panel shows about one building primitive per tile once loaded, and
+      the frame rate holds while they do.
 - [ ] Week ahead (Pro): open the block on a forecast-covered day — seven rows with morning and
       evening golden hours, verdicts with a cloud figure for the days inside the horizon,
       "beyond the forecast" for the rest; a time jumps the planner to that window; the network
