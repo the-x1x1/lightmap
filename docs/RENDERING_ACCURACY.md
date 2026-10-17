@@ -154,10 +154,9 @@ limitations").
 **The Moon.** In viewpoint mode the Moon is drawn where the planner's own Moon stands (its
 topocentric position), at its apparent size for the day's distance, with its phase and the lit
 limb turned toward the Sun on the screen; a faint earthshine fills the dark side. It is pale in a
-daylit sky, full at night, and dimmed by the cloud's share of the direct light (gone under
-overcast; the cloud decks are not drawn over it). It stands 40 km out along its direction, so a
-ridge nearer than that hides it as the real one would and one farther does not. No craters or
-maria: a lit disc, not a photograph.
+daylit sky and full at night, and the cloud decks are drawn over it where there is cloud. It
+stands 5,000 km out along its direction, beyond any terrain, so every ridge in front of it hides
+it as the real one would. No craters or maria: a lit disc, not a photograph.
 
 **City glow (estimate).** Under the Milky Way line the Moon section names the glow the towns
 around the pin cast (`sky-glow.ts`): Walker's law over the bundled Natural Earth urban areas,

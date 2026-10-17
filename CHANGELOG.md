@@ -5,8 +5,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 ## Unreleased
 
 - **The Moon in the viewpoint's sky**: drawn where the planner's Moon stands, at its size for
-  the day, with its phase and the lit limb toward the Sun; pale by day, gone under overcast, hidden
-  by a nearby ridge. Cesium's own Moon (a black disc, lit by Cesium's Sun) stays off.
+  the day, with its phase and the lit limb toward the Sun; pale by day, under the cloud decks,
+  hidden by the ridges in front of it. Cesium's own Moon (a black disc, lit by Cesium's Sun) stays off.
 - **Smoother walking and rendering**: hold W A S D to walk from the viewpoint (Shift to run) and
   hold an arrow key to turn smoothly, the eye gliding between steps instead of hopping at the
   keyboard's repeat rate; building tiles

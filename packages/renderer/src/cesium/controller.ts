@@ -299,11 +299,8 @@ export class SceneController {
         towardSunEcef: toward,
         illuminatedFraction: moon.illuminatedFraction,
         diameterDeg: moonApparentDiameterDeg(moon.distanceKm, Math.max(0, moon.elevationDegrees)),
-        // The cloud decks are painted over the sky behind the scene, not over the disc: the
-        // cloud's own share of the direct light dims it instead (gone under overcast).
-        opacity:
-          moonDiscOpacity(scene.solar.elevationDegrees) *
-          Math.max(0, Math.min(1, scene.atmosphere.parameters.sunTransmittance)),
+        // The grade's cloud decks are painted over it where there is cloud.
+        opacity: moonDiscOpacity(scene.solar.elevationDegrees),
       });
     } else this.host.setMoonDisc?.(null);
 

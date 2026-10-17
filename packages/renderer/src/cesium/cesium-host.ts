@@ -166,8 +166,11 @@ const GRADE_GLIDE_KEYS = [
 
 /** The Moon's phase image, pixels square. */
 const MOON_IMAGE_PX = 128;
-/** How far out along its direction the Moon's disc is placed, metres (ridges nearer hide it). */
-const MOON_DISC_RANGE_M = 40_000;
+/**
+ * How far out along its direction the Moon's disc is placed, metres: beyond any terrain, so
+ * every ridge in front of it hides it.
+ */
+const MOON_DISC_RANGE_M = 5_000_000;
 
 /** Clock steps longer than this (seconds) land at once instead of gliding. */
 const CLOCK_GLIDE_MAX_S = 600;
@@ -2313,7 +2316,10 @@ export class CesiumSceneHost implements SceneHost {
     this.moonDisc = m;
     const C = this.C;
     if (!m) {
-      if (this.moonBillboard) this.moonBillboard.show = false;
+      if (this.moonBillboard?.show) {
+        this.moonBillboard.show = false;
+        this.scene.requestRender();
+      }
       return;
     }
     if (!this.moonBillboards) {
@@ -2325,31 +2331,36 @@ export class CesiumSceneHost implements SceneHost {
     const phase = Math.round(m.illuminatedFraction * 100) / 100;
     if (!this.moonBillboard || phase !== this.moonPhaseDrawn) {
       this.moonPhaseDrawn = phase;
+      // One atlas entry per hundredth of phase, reused: a fresh canvas each time took a new
+      // entry in Cesium's texture atlas, which never gives one back.
+      const id = `lightmap-moon-${Math.round(phase * 100)}`;
       const canvas = document.createElement('canvas');
       canvas.width = MOON_IMAGE_PX;
       canvas.height = MOON_IMAGE_PX;
       const ctx = canvas.getContext('2d');
       if (ctx) drawMoonPhase(ctx, MOON_IMAGE_PX, phase);
-      if (this.moonBillboard) this.moonBillboard.image = canvas;
-      else
+      if (!this.moonBillboard)
         this.moonBillboard = this.moonBillboards.add({
-          image: canvas,
           position: new C.Cartesian3(),
           sizeInMeters: true,
           width: 1,
           height: 1,
         });
+      this.moonBillboard.setImage(id, canvas);
     }
     this.moonBillboard.show = true;
-    this.moonBillboard.color = C.Color.WHITE.withAlpha(Math.max(0, Math.min(1, m.opacity)));
+    // Never quite opaque: an opaque billboard writes depth, and the grade would take the disc
+    // for ground (no cloud decks over it, haze instead); translucent it stays sky, and the
+    // decks cover it where there is cloud.
+    this.moonBillboard.color = C.Color.WHITE.withAlpha(Math.max(0, Math.min(0.99, m.opacity)));
     this.placeMoonDisc();
     this.scene.requestRender();
   }
 
   /**
-   * The Moon's billboard this frame: MOON_DISC_RANGE_M from the eye along its direction (near
-   * enough that a ridge closer than that hides it, as the real Moon is hidden), as wide in metres
-   * as its apparent diameter there, and turned so its lit limb faces the Sun on the screen.
+   * The Moon's billboard this frame: MOON_DISC_RANGE_M from the eye along its direction (beyond
+   * any terrain, so a ridge in front hides it as the real Moon is hidden), as wide in metres as
+   * its apparent diameter there, and turned so its lit limb faces the Sun on the screen.
    */
   private placeMoonDisc(): void {
     const m = this.moonDisc;
