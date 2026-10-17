@@ -103,6 +103,7 @@ final class Server {
         while Date() < deadline {
             if Server.isLightMapServing(baseURL) {
                 ready = true
+                Server.warm(baseURL)
                 return baseURL
             }
             if !p.isRunning {
@@ -125,12 +126,20 @@ final class Server {
         }
     }
 
-    /// Is LightMap answering there? /api/health names its version, so anything else is told apart.
+    /// Is LightMap answering there? /api/ready names its version, so anything else is told apart,
+    /// and answers without loading the server's services (fast on a cold start).
     static func isLightMapServing(_ baseURL: String) -> Bool {
-        guard let url = URL(string: baseURL + "/api/health") else { return false }
+        guard let url = URL(string: baseURL + "/api/ready") else { return false }
         guard let answer = httpGet(url, timeout: 3), answer.0 == 200 else { return false }
         guard let obj = (try? JSONSerialization.jsonObject(with: answer.1)) as? [String: Any] else { return false }
-        return obj["version"] != nil && obj["fixtureMode"] != nil
+        return obj["version"] != nil && obj["ready"] != nil
+    }
+
+    /// Builds the server's services in the background while the window loads the page (the first
+    /// /api/health took seconds and used to hold the window back).
+    static func warm(_ baseURL: String) {
+        guard let url = URL(string: baseURL + "/api/health") else { return }
+        URLSession.shared.dataTask(with: url) { _, _, _ in }.resume()
     }
 
     /// A blocking GET (the server start and the self-test run off the main thread).

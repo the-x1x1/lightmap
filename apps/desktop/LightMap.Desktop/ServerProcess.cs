@@ -111,7 +111,14 @@ internal sealed class ServerProcess : IDisposable
         var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(90);
         while (DateTime.UtcNow < deadline)
         {
-            if (IsLightMapServing(BaseUrl)) return BaseUrl;
+            if (IsLightMapServing(BaseUrl))
+            {
+                // Build the server's services now, while the window loads the page (the first
+                // /api/health took 3-7 s and used to hold the window back).
+                _ = Http.GetAsync(BaseUrl + "/api/health")
+                    .ContinueWith(t => _ = t.Exception, TaskScheduler.Default);
+                return BaseUrl;
+            }
             if (_node.HasExited)
                 throw new InvalidOperationException(
                     $"The LightMap server stopped while starting (code {SafeExitCode(_node)}).\n\n{DesktopLog.Tail()}");
@@ -120,14 +127,17 @@ internal sealed class ServerProcess : IDisposable
         throw new InvalidOperationException($"LightMap did not answer on {BaseUrl} within 90 seconds.\n\n{DesktopLog.Tail()}");
     }
 
-    /// <summary>Is LightMap answering there? /api/health names its version, so anything else is told apart.</summary>
+    /// <summary>
+    /// Is LightMap answering there? /api/ready names its version, so anything else is told apart,
+    /// and answers without loading the server's services (fast on a cold start).
+    /// </summary>
     public static bool IsLightMapServing(string baseUrl)
     {
         try
         {
-            var body = Http.GetStringAsync(baseUrl + "/api/health").GetAwaiter().GetResult();
+            var body = Http.GetStringAsync(baseUrl + "/api/ready").GetAwaiter().GetResult();
             using var doc = JsonDocument.Parse(body);
-            return doc.RootElement.TryGetProperty("version", out _) && doc.RootElement.TryGetProperty("fixtureMode", out _);
+            return doc.RootElement.TryGetProperty("version", out _) && doc.RootElement.TryGetProperty("ready", out _);
         }
         catch
         {

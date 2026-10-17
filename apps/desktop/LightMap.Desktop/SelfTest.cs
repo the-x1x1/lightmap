@@ -25,7 +25,7 @@ internal static partial class SelfTest
         {
             var started = DateTime.UtcNow;
             var url = server.Start(s => DesktopLog.Write("status: " + s));
-            Check("server answers /api/health", true, $"{url} in {(DateTime.UtcNow - started).TotalSeconds:0.0} s");
+            Check("server answers /api/ready", true, $"{url} in {(DateTime.UtcNow - started).TotalSeconds:0.0} s");
 
             using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(45) };
             (int Status, string Body) Get(string path)

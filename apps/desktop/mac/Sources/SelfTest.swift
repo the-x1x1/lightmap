@@ -17,7 +17,7 @@ enum SelfTest {
         do {
             let started = Date()
             let base = try server.start { Log.write("status: " + $0) }
-            check("server answers /api/health", true, String(format: "%@ in %.1f s", base, Date().timeIntervalSince(started)))
+            check("server answers /api/ready", true, String(format: "%@ in %.1f s", base, Date().timeIntervalSince(started)))
 
             func get(_ path: String) -> (Int, String) {
                 guard let url = URL(string: base + path), let answer = Server.httpGet(url, timeout: 45) else {
