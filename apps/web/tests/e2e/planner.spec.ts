@@ -166,7 +166,15 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
     'aria-valuetext',
     /dark sky: Milky Way core up$/,
   );
+  // At 20:00 Venus and Jupiter stand together in the WNW (a week before their 9 June
+  // conjunction) with Mercury under them: the details line and the rose both show the three.
+  await setDateTime(page, '2026-06-03', 20 * 60);
+  await expect(page.getByTestId('planets')).toHaveText(
+    /^Planets: Venus WNW 2\d° \(mag −4\.0\), Jupiter WNW 2\d° \(−1\.9\), Mercury WNW \d+° \(−0\.3\)$/,
+  );
+  await expect(overlay.getByTestId('rose-planet')).toHaveCount(3);
   await setDateTime(page, '2026-05-31', 12 * 60 + 30);
+  await expect(overlay.getByTestId('rose-planet')).toHaveCount(0);
   await expect(overlay.getByTestId('rose-core')).toHaveCount(0);
   await expect(page.getByTestId('timeline-track')).not.toHaveAttribute('data-dark-sky', 'true');
   await expect(page.getByTestId('timeline-time')).toHaveText('12:30');

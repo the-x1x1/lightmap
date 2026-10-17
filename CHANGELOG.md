@@ -18,6 +18,7 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   Jupiter soon after, dimmed low in the air and lost near the Sun, under the clouds and behind
   the ridges. The star field had none. The Moon section names the planets visible, where and how
   bright ("Venus W 28° (mag −4.2), Jupiter WNW 15° (−1.9)"), or which are up but lost and why.
+  The compass rose marks them too.
 - **Smoother walking and rendering**: hold W A S D to walk from the viewpoint (Shift to run) and
   hold an arrow key to turn smoothly, the eye gliding between steps instead of hopping at the
   keyboard's repeat rate; building tiles

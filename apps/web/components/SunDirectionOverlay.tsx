@@ -5,12 +5,28 @@
  * Always correct, always available, driven by SceneState only. In 3D mode it shrinks to a corner
  * compass; in overlay mode it is the hero.
  */
-import { lightingFromScene } from '@lightmap/renderer';
+import { lightingFromScene, planetPointInSky } from '@lightmap/renderer';
 import { rangeWidthDeg, type SceneState } from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
-import { sunPosition } from '@lightmap/astronomy';
+import { planetPositions, sunPosition } from '@lightmap/astronomy';
+import { visiblePlanets } from '@/features/planner/planets-line';
 import { useMemo } from 'react';
 import { useSeasonalEnvelope } from '@/features/planner/use-seasonal';
+
+const PLANET_NAMES = {
+  mercury: 'Mercury',
+  venus: 'Venus',
+  mars: 'Mars',
+  jupiter: 'Jupiter',
+  saturn: 'Saturn',
+} as const;
+const PLANET_FILL = {
+  mercury: '#e8dccb',
+  venus: '#fff8e6',
+  mars: '#f2a77c',
+  jupiter: '#f6ead2',
+  saturn: '#ecd9a8',
+} as const;
 
 /** Bearing (0 = north, clockwise) → SVG angle with north at the top. */
 const rad = (d: number) => ((d - 90) * Math.PI) / 180;
@@ -81,6 +97,23 @@ export function SunDirectionOverlay({ scene, compact }: { scene: SceneState; com
   const gx = core ? c + coreR * Math.cos(rad(core.azimuthDeg)) : 0;
   const gy = core ? c + coreR * Math.sin(rad(core.azimuthDeg)) : 0;
   const gs = compact ? 4 : 8;
+  // The planets one can see (moon planning, like the Moon): small dots on the same dome, by the
+  // rule the 3D sky and the details line use (`planetPointInSky`).
+  const planetMinute = Math.floor(scene.utc.getTime() / 60_000);
+  const planetSunEl = Math.round(el * 4) / 4;
+  const { latitude: plat, longitude: plon } = scene.location.point;
+  const moonPlanning = Boolean(scene.lunar);
+  const planets = useMemo(
+    () =>
+      moonPlanning
+        ? visiblePlanets(
+            planetPositions(new Date(planetMinute * 60_000), plat, plon),
+            planetSunEl,
+            planetPointInSky,
+          )
+        : [],
+    [moonPlanning, planetMinute, plat, plon, planetSunEl],
+  );
 
   const label =
     (up
@@ -91,7 +124,13 @@ export function SunDirectionOverlay({ scene, compact }: { scene: SceneState; com
       : '') +
     (core
       ? ` Milky Way core at ${Math.round(core.elevationDeg)}° elevation, bearing ${Math.round(core.azimuthDeg)}° (${compassLabel(core.azimuthDeg)})${core.verdict === 'visible' ? '' : ' — ' + core.reason.toLowerCase()}.`
-      : '');
+      : '') +
+    planets
+      .map(
+        (p) =>
+          ` ${PLANET_NAMES[p.name]} at ${Math.round(p.elevationDeg)}° elevation, bearing ${Math.round(p.azimuthDeg)}° (${compassLabel(p.azimuthDeg)}).`,
+      )
+      .join('');
 
   return (
     <figure
@@ -216,6 +255,24 @@ export function SunDirectionOverlay({ scene, compact }: { scene: SceneState; com
             data-testid="rose-moon"
           />
         ) : null}
+        {planets.map((p) => {
+          const pr = r * Math.cos(p.elevationDeg * (Math.PI / 180));
+          return (
+            <circle
+              key={p.name}
+              cx={c + pr * Math.cos(rad(p.azimuthDeg))}
+              cy={c + pr * Math.sin(rad(p.azimuthDeg))}
+              r={(compact ? 1.5 : 3) + (p.magnitude < -2 ? (compact ? 1 : 1.5) : 0)}
+              fill={PLANET_FILL[p.name]}
+              stroke="#1f2430"
+              strokeWidth={1}
+              data-testid="rose-planet"
+              data-name={p.name}
+            >
+              <title>{PLANET_NAMES[p.name]}</title>
+            </circle>
+          );
+        })}
         {core ? (
           <path
             d={`M${gx} ${gy - gs} Q${gx} ${gy} ${gx + gs} ${gy} Q${gx} ${gy} ${gx} ${gy + gs} Q${gx} ${gy} ${gx - gs} ${gy} Q${gx} ${gy} ${gx} ${gy - gs} Z`}
