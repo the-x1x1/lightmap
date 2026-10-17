@@ -101,6 +101,16 @@ describe('leaf season', () => {
     }
   });
 
+  it('strips frost-free autumns slowly: London into late November, Kyoto into December (V&V)', () => {
+    const london = (m: number, d: number) => leafSeason(51.5, doy(m, d), 20, -0.12).leafOn;
+    expect(london(11, 10)).toBeGreaterThan(0.7);
+    expect(london(11, 20)).toBeGreaterThan(0.2);
+    expect(london(12, 10)).toBeLessThan(0.05);
+    expect(leafSeason(35.0, doy(12, 8), 50, 135.78).leafOn).toBeGreaterThan(0.5);
+    // A continental autumn still comes down in a few weeks (Vermont bare by mid-November).
+    expect(leafSeason(44.3, doy(11, 12), 300, -72.6).leafOn).toBeLessThan(0.05);
+  });
+
   it('keeps Central Park in leaf and turned in early November (V&V)', () => {
     const cp = leafSeason(40.78, doy(11, 3), 40, -73.97);
     expect(cp.leafOn).toBeGreaterThan(0.85);

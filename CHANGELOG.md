@@ -12,6 +12,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   desert sky, and brighter again under cloud
 - The planning card names the city glow at night and counts it in its exposure, as the field
   view does
+- Leaves come down slowly where autumn has no hard frost: London's trees hold into late November
+  and Kyoto's maples into December; Warsaw and Kyiv are no longer painted white all winter
 
 ## v0.3.2 — 2026-10-15
 

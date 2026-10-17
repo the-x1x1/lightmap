@@ -109,7 +109,12 @@ export function leafSeason(
   // jumping back at New Year.
   const start = up - 60;
   const t = ((((d - start) % 365.25) + 365.25) % 365.25) + start;
-  const leafOn = smooth(up - 14, up + 14, t) * (1 - smooth(peak + 2, peak + 26, t));
+  // Without hard frost the leaves come down slowly: a maritime autumn (London's planes in leaf
+  // into late November) and southern Japan's (Kyoto's maples into mid-December) take weeks
+  // longer to strip than a continental one, where the first frosts bring them down together.
+  const mild = Math.max(climate.maritime, climate.lateAutumnDays >= 20 ? 0.6 : 0);
+  const leafOn =
+    smooth(up - 14, up + 14, t) * (1 - smooth(peak + 2 + 8 * mild, peak + 26 + 14 * mild, t));
   // The leaves turn over the month before the peak; once they are down it no longer matters.
   const autumn = smooth(peak - 32, peak - 3, t) * (t > up + 20 ? 1 : 0);
   // Grass greens a little before the trees leaf out and browns a little after they drop.
