@@ -251,7 +251,10 @@ export function MapShell() {
   useEffect(() => {
     if (!previewExpanded) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') usePlannerStore.getState().setPreviewExpanded(false);
+      // A dialog over the preview (the field view) takes its own Escape first.
+      if (e.key !== 'Escape' || e.defaultPrevented || document.querySelector('[role="dialog"]'))
+        return;
+      usePlannerStore.getState().setPreviewExpanded(false);
     };
     window.addEventListener('keydown', onKey);
     return () => {

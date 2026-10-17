@@ -116,7 +116,13 @@ internal sealed class ServerProcess : IDisposable
                 // Build the server's services now, while the window loads the page (the first
                 // /api/health took 3-7 s and used to hold the window back).
                 _ = Http.GetAsync(BaseUrl + "/api/health")
-                    .ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
+                    .ContinueWith(t =>
+                    {
+                        // Usually cut off by the 3 s timeout on a cold start; the server has
+                        // begun building its services by then, which is the point.
+                        if (t.IsCompletedSuccessfully) t.Result.Dispose();
+                        else _ = t.Exception;
+                    }, TaskScheduler.Default);
                 return BaseUrl;
             }
             if (_node.HasExited)
