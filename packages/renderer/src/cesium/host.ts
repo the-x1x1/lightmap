@@ -291,6 +291,11 @@ export interface SceneHost {
    * when the host cannot tell (3D Tiles buildings, or the tile not read yet).
    */
   hasBuildingAt?(point: GeoPoint): boolean | null;
+  /**
+   * Whether the terrain carries vertex normals (lit by Cesium's vertex lighting, with its 0.3
+   * ambient share) rather than the ellipsoid's day/night shading (full light at map heights).
+   */
+  terrainHasNormals?(): boolean;
   requestRender(): void;
   stats(): HostStats;
   /** The ground under a canvas point (CSS px from its top left), or null for the sky. */

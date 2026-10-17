@@ -2325,6 +2325,11 @@ export class CesiumSceneHost implements SceneHost {
     await job;
   }
 
+  terrainHasNormals(): boolean {
+    const tp = this.scene.terrainProvider;
+    return !(tp instanceof this.C.EllipsoidTerrainProvider) && tp.hasVertexNormals !== false;
+  }
+
   async setTerrain(t: TerrainDescriptor): Promise<void> {
     const C = this.C;
     const job = (async () => {

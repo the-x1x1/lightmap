@@ -196,7 +196,7 @@ export class SceneController {
       intensity: lighting.sunIntensity,
     });
     this.host.setAtmosphere({ ...lighting.atmosphere, fogDensity: lighting.fogDensity });
-    const shading = globeShadingFor(scene, lighting);
+    const shading = globeShadingFor(scene, lighting, this.host.terrainHasNormals?.() ?? true);
     const shadingKey = `${shading.lit}|${shading.basemapBrightness.toFixed(2)}`;
     if (shadingKey !== this.lastShadingKey) {
       this.lastShadingKey = shadingKey;
@@ -606,6 +606,7 @@ export function globeShadingFor(
   scene: Pick<SceneState, 'camera' | 'solar'>,
   lighting: Pick<LightingParameters, 'sunIntensity'> &
     Partial<Pick<LightingParameters, 'sunColor'>>,
+  terrainHasNormals = true,
 ): HostGlobeShading {
   if (scene.camera.mode === 'viewpoint') return { lit: true, basemapBrightness: 1 };
   const el = scene.solar.elevationDegrees;
@@ -613,12 +614,14 @@ export function globeShadingFor(
   // −0.833° → 0.9, −18° and below → 0.45.
   const t = Math.min(1, Math.max(0, (-0.833 - el) / (18 - 0.833)));
   const night = 0.9 - 0.45 * t;
-  // At the switch the lit globe under a Sun at the horizon showed level ground at about its
-  // ambient share (Cesium's vertex shadow darkness, 0.3) of the light's colour and strength: the
-  // flat chart starts there and opens to its night brightness over the next 2.5 deg, instead of
-  // jumping three or four times brighter as the Sun sets.
+  // At the switch the lit globe under a Sun at the horizon showed level ground at its ambient
+  // share of the light's colour and strength - 0.3 on terrain with vertex normals (Cesium's
+  // vertex shadow darkness), all of it on the ellipsoid (its day/night shading is faded out at
+  // map heights): the flat chart starts there and opens to its night brightness over the next
+  // 2.5 deg, instead of jumping several times brighter as the Sun sets.
   const [r, g, b] = lighting.sunColor ?? [1, 1, 1];
-  const litLevel = 0.3 * lighting.sunIntensity * (0.2126 * r + 0.7152 * g + 0.0722 * b);
+  const share = terrainHasNormals ? 0.3 : 1;
+  const litLevel = share * lighting.sunIntensity * (0.2126 * r + 0.7152 * g + 0.0722 * b);
   const from = Math.max(0.15, Math.min(night, litLevel));
   const u = Math.min(1, Math.max(0, (-0.833 - el) / 2.5));
   if (u >= 1) return { lit: false, basemapBrightness: night };

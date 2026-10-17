@@ -514,6 +514,16 @@ describe('globeShadingFor (the map stays a readable chart at night)', () => {
       expect(Math.abs(lit(el - 0.1).basemapBrightness - lit(el).basemapBrightness)).toBeLessThan(
         0.05,
       );
+    // On the ellipsoid (no vertex normals) the lit globe showed the light's full strength.
+    const flat = globeShadingFor(
+      {
+        camera: { mode: 'map' } as SceneState['camera'],
+        solar: { elevationDegrees: -0.9 } as SceneState['solar'],
+      },
+      { sunIntensity: 0.6, sunColor: warm },
+      false,
+    );
+    expect(flat.basemapBrightness).toBeCloseTo(0.6 * (0.2126 + 0.7152 * 0.7 + 0.0722 * 0.5), 2);
   });
   it('the controller tells the host once per change, not every tick', () => {
     const { host, calls } = fakeHost();

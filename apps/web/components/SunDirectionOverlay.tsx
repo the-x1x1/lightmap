@@ -10,6 +10,7 @@ import { rangeWidthDeg, type SceneState } from '@lightmap/scene';
 import { compassLabel } from '@lightmap/geospatial';
 import { planetPositions, sunPosition } from '@lightmap/astronomy';
 import { visiblePlanets } from '@/features/planner/planets-line';
+import { quantizeDeg } from '@/features/planner/quantize';
 import { useMemo } from 'react';
 import { useSeasonalEnvelope } from '@/features/planner/use-seasonal';
 
@@ -101,7 +102,8 @@ export function SunDirectionOverlay({ scene, compact }: { scene: SceneState; com
   // rule the 3D sky and the details line use (`planetPointInSky`).
   const planetMinute = Math.floor(scene.utc.getTime() / 60_000);
   const planetSunEl = Math.round(el * 4) / 4;
-  const { latitude: plat, longitude: plon } = scene.location.point;
+  const plat = quantizeDeg(scene.location.point.latitude);
+  const plon = quantizeDeg(scene.location.point.longitude);
   const moonPlanning = Boolean(scene.lunar);
   const planets = useMemo(
     () =>
