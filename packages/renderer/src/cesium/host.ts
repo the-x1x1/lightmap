@@ -184,6 +184,20 @@ export interface HostStats {
   cesiumSunDirectionEcef: Vec3 | null;
 }
 
+/** The Moon as the viewpoint sees it (`setMoonDisc`). */
+export interface HostMoonDisc {
+  /** Unit vector from the eye toward the Moon (topocentric), ECEF. */
+  directionEcef: Vec3;
+  /** Unit vector toward the Sun, ECEF: the bright limb faces it. */
+  towardSunEcef: Vec3;
+  /** 0 new … 1 full. */
+  illuminatedFraction: number;
+  /** Apparent diameter, degrees. */
+  diameterDeg: number;
+  /** 0–1: paler by day, full at night. */
+  opacity: number;
+}
+
 export interface SceneHost {
   setTime(utc: Date): void;
   setLight(light: HostLight): void;
@@ -212,6 +226,8 @@ export interface SceneHost {
   loadLandCoverAround(p: GeoPoint): Promise<LandCoverReading | null>;
   /** Sun disc / moon / stars in the sky (viewpoint mode; stars only when dark). */
   setCelestialBodies(v: { sun: boolean; moon: boolean; stars: boolean }): void;
+  /** The Moon drawn in the viewpoint's sky with its phase and size; null hides it. */
+  setMoonDisc?(m: HostMoonDisc | null): void;
   /** Screen position (0..1) of a world direction from the camera, or null when behind. */
   sunScreenPosition(directionTowardSunEcef: Vec3): [number, number] | null;
   /**

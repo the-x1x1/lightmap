@@ -77,6 +77,7 @@ import {
   type ImagerySeason,
 } from '../imagery-season.ts';
 import { FrameBudgetQueue } from '../frame-budget.ts';
+import { drawMoonPhase } from '../moon-disc.ts';
 import type { Vec3 } from '../sun-vector.ts';
 import type {
   HostAtmosphere,
@@ -85,6 +86,7 @@ import type {
   HostGradeUniforms,
   HostGroundTexture,
   HostLight,
+  HostMoonDisc,
   HostOrbitCamera,
   HostOverlay,
   HostQuality,
@@ -161,6 +163,11 @@ const GRADE_GLIDE_KEYS = [
   'u_sunElevation',
   'u_time',
 ] as const;
+
+/** The Moon's phase image, pixels square. */
+const MOON_IMAGE_PX = 128;
+/** How far out along its direction the Moon's disc is placed, metres (ridges nearer hide it). */
+const MOON_DISC_RANGE_M = 40_000;
 
 /** Clock steps longer than this (seconds) land at once instead of gliding. */
 const CLOCK_GLIDE_MAX_S = 600;
@@ -304,6 +311,11 @@ export class CesiumSceneHost implements SceneHost {
   /** When the eye last settled toward its height, and how far above it the ground lifts it. */
   private eyeSettleAt = 0;
   private eyeLiftM = 0;
+  /** The planner's Moon in the viewpoint's sky (`setMoonDisc`). */
+  private moonDisc: HostMoonDisc | null = null;
+  private moonBillboards: Cesium.BillboardCollection | null = null;
+  private moonBillboard: Cesium.Billboard | null = null;
+  private moonPhaseDrawn = -1;
   private eyeWantedM: number | null = null;
   /** The light's glide (`setLight`): the direction it is heading for, and how fast. */
   private lightGoal: Cesium.Cartesian3 | null = null;
@@ -502,6 +514,7 @@ export class CesiumSceneHost implements SceneHost {
       this.glideEye();
       this.glideLight();
       this.keepEyeAboveGlobe();
+      this.placeMoonDisc();
       const m = this.groundMaterial;
       if (!m) return;
       const cam = scene.camera.positionWC;
@@ -2294,6 +2307,85 @@ export class CesiumSceneHost implements SceneHost {
     if (s.sun) s.sun.show = v.sun;
     if (s.moon) s.moon.show = v.moon;
     if (s.skyBox) s.skyBox.show = v.stars;
+  }
+
+  setMoonDisc(m: HostMoonDisc | null): void {
+    this.moonDisc = m;
+    const C = this.C;
+    if (!m) {
+      if (this.moonBillboard) this.moonBillboard.show = false;
+      return;
+    }
+    if (!this.moonBillboards) {
+      this.moonBillboards = this.scene.primitives.add(
+        new C.BillboardCollection({ scene: this.scene }),
+      ) as Cesium.BillboardCollection;
+    }
+    // The phase is redrawn when it moves a visible step.
+    const phase = Math.round(m.illuminatedFraction * 100) / 100;
+    if (!this.moonBillboard || phase !== this.moonPhaseDrawn) {
+      this.moonPhaseDrawn = phase;
+      const canvas = document.createElement('canvas');
+      canvas.width = MOON_IMAGE_PX;
+      canvas.height = MOON_IMAGE_PX;
+      const ctx = canvas.getContext('2d');
+      if (ctx) drawMoonPhase(ctx, MOON_IMAGE_PX, phase);
+      if (this.moonBillboard) this.moonBillboard.image = canvas;
+      else
+        this.moonBillboard = this.moonBillboards.add({
+          image: canvas,
+          position: new C.Cartesian3(),
+          sizeInMeters: true,
+          width: 1,
+          height: 1,
+        });
+    }
+    this.moonBillboard.show = true;
+    this.moonBillboard.color = C.Color.WHITE.withAlpha(Math.max(0, Math.min(1, m.opacity)));
+    this.placeMoonDisc();
+    this.scene.requestRender();
+  }
+
+  /**
+   * The Moon's billboard this frame: MOON_DISC_RANGE_M from the eye along its direction (near
+   * enough that a ridge closer than that hides it, as the real Moon is hidden), as wide in metres
+   * as its apparent diameter there, and turned so its lit limb faces the Sun on the screen.
+   */
+  private placeMoonDisc(): void {
+    const m = this.moonDisc;
+    const b = this.moonBillboard;
+    if (!m || !b || !b.show) return;
+    const C = this.C;
+    const cam = this.scene.camera;
+    const dir = new C.Cartesian3(m.directionEcef.x, m.directionEcef.y, m.directionEcef.z);
+    C.Cartesian3.normalize(dir, dir);
+    const at = C.Cartesian3.add(
+      cam.positionWC,
+      C.Cartesian3.multiplyByScalar(dir, MOON_DISC_RANGE_M, new C.Cartesian3()),
+      new C.Cartesian3(),
+    );
+    b.position = at;
+    const size = 2 * MOON_DISC_RANGE_M * Math.tan(((m.diameterDeg / 2) * Math.PI) / 180);
+    b.width = size;
+    b.height = size;
+    // The bright limb's direction on screen: from the Moon toward the Sun, across the sky.
+    const sun = new C.Cartesian3(m.towardSunEcef.x, m.towardSunEcef.y, m.towardSunEcef.z);
+    const across = C.Cartesian3.subtract(
+      sun,
+      C.Cartesian3.multiplyByScalar(dir, C.Cartesian3.dot(sun, dir), new C.Cartesian3()),
+      new C.Cartesian3(),
+    );
+    if (C.Cartesian3.magnitude(across) < 1e-9) return;
+    C.Cartesian3.normalize(across, across);
+    const toward = C.Cartesian3.add(
+      at,
+      C.Cartesian3.multiplyByScalar(across, size, new C.Cartesian3()),
+      new C.Cartesian3(),
+    );
+    const p0 = C.SceneTransforms.worldToWindowCoordinates(this.scene, at);
+    const p1 = C.SceneTransforms.worldToWindowCoordinates(this.scene, toward);
+    // Window y runs down; a billboard's rotation is counter-clockwise on the screen.
+    if (p0 && p1) b.rotation = Math.atan2(-(p1.y - p0.y), p1.x - p0.x);
   }
 
   sunScreenPosition(toward: Vec3): [number, number] | null {

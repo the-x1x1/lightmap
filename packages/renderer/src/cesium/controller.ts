@@ -3,7 +3,7 @@
  * camera) apply immediately on every scrub tick; expensive things (terrain detail, shadow map
  * size, provider swaps) are debounced and diffed (plan §4 "debounce expensive visual refresh").
  */
-import { localDayBounds, sunPosition } from '@lightmap/astronomy';
+import { localDayBounds, moonApparentDiameterDeg, sunPosition } from '@lightmap/astronomy';
 import {
   aboveTerrain,
   coreTrackPosition,
@@ -26,6 +26,7 @@ import {
 } from '../ground-texture.ts';
 import { lightingFromScene, type LightingParameters } from '../lighting.ts';
 import { enuTowardSun, enuToEcef } from '../sun-vector.ts';
+import { moonDiscOpacity } from '../moon-disc.ts';
 import { seaProbePoints, seaSurfaceFromSamples } from '../geoid.ts';
 import type {
   HostCamera,
@@ -277,12 +278,34 @@ export class SceneController {
       this.lastCelestial = celestialKey;
       this.host.setCelestialBodies({
         sun: viewpoint && scene.solar.elevationDegrees > -1,
-        // Cesium's Moon mesh is lit by Cesium's own Sun, so at night it renders as a black disc;
-        // the moonlit atmosphere lobe (lighting.ts) marks the Moon's position instead. v0.1: off.
+        // Cesium's Moon mesh is lit by Cesium's own Sun, so at night it renders as a black disc:
+        // the planner's own Moon is drawn instead (`setMoonDisc` below).
         moon: false,
         stars: viewpoint && lighting.starsVisible,
       });
     }
+
+    // The Moon in the viewpoint's sky: its phase, size and direction from the planner's Moon.
+    const moon = scene.lunar;
+    if (viewpoint && moon && moon.elevationDegrees > -1) {
+      const lat = scene.location.point.latitude;
+      const lon = scene.location.point.longitude;
+      this.host.setMoonDisc?.({
+        directionEcef: enuToEcef(
+          enuTowardSun(moon.azimuthDegrees, moon.elevationDegrees),
+          lat,
+          lon,
+        ),
+        towardSunEcef: toward,
+        illuminatedFraction: moon.illuminatedFraction,
+        diameterDeg: moonApparentDiameterDeg(moon.distanceKm, Math.max(0, moon.elevationDegrees)),
+        // The cloud decks are painted over the sky behind the scene, not over the disc: the
+        // cloud's own share of the direct light dims it instead (gone under overcast).
+        opacity:
+          moonDiscOpacity(scene.solar.elevationDegrees) *
+          Math.max(0, Math.min(1, scene.atmosphere.parameters.sunTransmittance)),
+      });
+    } else this.host.setMoonDisc?.(null);
 
     // --- expensive, debounced -------------------------------------------------------------
     const msaa = scene.render.msaaSamples ?? 4;
