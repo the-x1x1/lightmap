@@ -146,14 +146,15 @@ export interface MilkyWayWindow {
 }
 
 export type MilkyWayWindowsReason =
-  'none' | 'no-astronomical-night' | 'core-never-up' | 'moon' | 'too-short';
+  'none' | 'no-astronomical-night' | 'core-never-up' | 'behind-terrain' | 'moon' | 'too-short';
 
 export interface MilkyWayWindows {
   windows: MilkyWayWindow[];
   /**
    * When there are none, the first thing that rules every night out, in verdict order: no
-   * astronomical night at all; the core never 10° up in the dark; the Moon over every dark hour
-   * the core is up; or the core shootable only in runs shorter than the minimum.
+   * astronomical night at all; the core never 10° up in the dark; the core behind the terrain
+   * whenever it is (with a horizon); the Moon over every dark hour the core is up; or the core
+   * shootable only in runs shorter than the minimum.
    */
   reason: MilkyWayWindowsReason;
   /** The scan's extent. */
@@ -168,13 +169,21 @@ export interface MilkyWayWindows {
  * cut by the scan's edges is reported as far as the scan saw it). The scan takes the Sun first
  * (cheap) and asks for the Moon only inside astronomical night with the core high enough, so 45
  * nights cost a few thousand Sun positions and a few hundred Moon positions.
+ *
+ * With `horizonDeg` (the skyline's elevation at an azimuth, e.g. a sampled terrain horizon) the
+ * core must also stand above the skyline: from a valley floor the 10° rule alone lists hours the
+ * core spends behind the ridge.
  */
 export function milkyWayWindows(
   from: Date,
   days: number,
   latitudeDeg: number,
   longitudeDeg: number,
-  opts: { stepMinutes?: number; minMinutes?: number } = {},
+  opts: {
+    stepMinutes?: number;
+    minMinutes?: number;
+    horizonDeg?: ((azimuthDeg: number) => number) | null;
+  } = {},
 ): MilkyWayWindows {
   const MINUTE = 60_000;
   const stepMs = (opts.stepMinutes ?? 10) * MINUTE;
@@ -183,6 +192,8 @@ export function milkyWayWindows(
   const t1 = t0 + days * 86_400_000;
   let anyNight = false;
   let anyCoreUp = false;
+  let anyClear = false;
+  const horizon = opts.horizonDeg ?? null;
   let anyVisible = false;
   const visibleAt = (t: number): { ok: boolean; core: number; moonUp: boolean } => {
     const d = new Date(t);
@@ -193,6 +204,9 @@ export function milkyWayWindows(
     if (core.elevationDeg < MILKY_WAY_LOW_ELEVATION_DEG)
       return { ok: false, core: core.elevationDeg, moonUp: false };
     anyCoreUp = true;
+    if (horizon && core.elevationDeg < horizon(core.azimuthDeg))
+      return { ok: false, core: core.elevationDeg, moonUp: false };
+    anyClear = true;
     const moon = moonPosition(d, latitudeDeg, longitudeDeg);
     const moonUp = moon.elevationDeg > moonHorizonThresholdDeg(moon.distanceKm);
     const ok = !(moonUp && moon.illuminatedFraction > MILKY_WAY_MOON_LIMIT);
@@ -250,9 +264,11 @@ export function milkyWayWindows(
       ? 'no-astronomical-night'
       : !anyCoreUp
         ? 'core-never-up'
-        : !anyVisible
-          ? 'moon'
-          : 'too-short';
+        : !anyClear
+          ? 'behind-terrain'
+          : !anyVisible
+            ? 'moon'
+            : 'too-short';
   return { windows, reason, from, days };
 }
 
@@ -277,6 +293,8 @@ export function describeMilkyWayWindows(r: MilkyWayWindows, zone: string, show =
         return `No astronomical night here in the next ${nights}`;
       case 'core-never-up':
         return `The core never stands ${MILKY_WAY_LOW_ELEVATION_DEG}° up in the dark here in the next ${nights}`;
+      case 'behind-terrain':
+        return `The core stays behind the skyline here whenever it is ${MILKY_WAY_LOW_ELEVATION_DEG}° up in the dark in the next ${nights}`;
       case 'moon':
         return `The Moon lights every dark hour the core is up in the next ${nights}`;
       case 'too-short':

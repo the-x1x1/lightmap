@@ -4,6 +4,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Dark windows over the skyline**: with a sampled terrain horizon, the dark windows ahead, the
+  timeline's dark-sky band, the week ahead and the planning card count only the hours the
+  Milky Way core stands above the skyline, not merely 10° up; from a valley floor the hours it
+  spends behind the ridge are gone, and a core that never clears it says so.
 - **Moonlit white balance**: where the Moon lights the scene, the colour temperature line (Sun &
   Moon details, planning card) adds the moonlit ground's ~4,100 K beside the sky's ~11,000 K,
   which is the wrong white balance for moonlit land.

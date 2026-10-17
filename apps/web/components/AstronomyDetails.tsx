@@ -4,6 +4,7 @@ import {
   describeExposure,
   describeLightKelvin,
   profileCaveat,
+  skylineOf,
   describeSeasonalEnvelope,
   estimateExposure,
   circleOfConfusionMm,
@@ -78,9 +79,15 @@ function DarkWindows({
   // From the selected day's noon, so the scan starts with the night that begins that evening
   // and no night is split by its edges; the day settles first (the year slider is continuous).
   const from = useSettled(scene.dayEvents.dayStart.getTime() + 12 * 3_600_000, 300);
+  // Over a sampled skyline the core must clear it, not just 10° (a valley floor loses the hours
+  // it spends behind the ridge).
+  const profile = scene.terrainHorizon?.profile ?? null;
   const result = useMemo(
-    () => milkyWayWindows(new Date(from), DARK_WINDOW_NIGHTS, lat, lng),
-    [from, lat, lng],
+    () =>
+      milkyWayWindows(new Date(from), DARK_WINDOW_NIGHTS, lat, lng, {
+        horizonDeg: skylineOf(profile),
+      }),
+    [from, lat, lng, profile],
   );
   // A Free plan sees the nights inside its date window and an honest count beyond it (plan §38:
   // explain, never leak the Pro answer). The window is civil dates in the place's own zone, the

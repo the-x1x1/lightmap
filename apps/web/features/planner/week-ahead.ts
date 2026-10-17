@@ -50,12 +50,16 @@ export function darkNights(
   place: { latitude: number; longitude: number },
   timeZone: string,
   from: { year: number; month: number; day: number },
+  /** The skyline (a sampled terrain horizon): the core must clear it. */
+  horizonDeg: ((azimuthDeg: number) => number) | null = null,
 ): Map<string, { start: Date; end: Date }> {
   const noon = new Date(
     computeDayEvents({ ...place, timeZone, date: from }).dayStart.getTime() + 12 * 3_600_000,
   );
   const out = new Map<string, { start: Date; end: Date }>();
-  for (const w of milkyWayWindows(noon, WEEK_AHEAD_DAYS, place.latitude, place.longitude).windows) {
+  for (const w of milkyWayWindows(noon, WEEK_AHEAD_DAYS, place.latitude, place.longitude, {
+    horizonDeg,
+  }).windows) {
     // A window after midnight belongs to the evening before it.
     const wall = utcToWallClock(w.start, timeZone);
     const civil = wall.hour < 12 ? addCivilDays(wall, -1) : wall;

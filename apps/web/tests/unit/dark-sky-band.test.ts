@@ -34,4 +34,14 @@ describe('dark-sky band on the timeline', () => {
     expect(darkSkySpells(full, KAILUA.latitude, KAILUA.longitude)).toEqual([]);
     expect(darkSkyBand(full, [])).toBeNull();
   });
+
+  it('over a skyline marks only the hours the core is above it', () => {
+    const ev = computeDayEvents({ ...KAILUA, date: { year: 2026, month: 6, day: 15 } });
+    const open = darkSkySpells(ev, KAILUA.latitude, KAILUA.longitude);
+    const ridge = (az: number) => (az >= 150 && az <= 280 ? 30 : 0);
+    const valley = darkSkySpells(ev, KAILUA.latitude, KAILUA.longitude, ridge);
+    const total = (s: typeof open) => s.reduce((n, x) => n + x.to.getTime() - x.from.getTime(), 0);
+    expect(total(valley)).toBeLessThan(total(open) - 60 * 60_000);
+    expect(darkSkySpells(ev, KAILUA.latitude, KAILUA.longitude, () => 45)).toEqual([]);
+  });
 });

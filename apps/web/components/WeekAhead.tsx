@@ -15,7 +15,7 @@ import {
   wallClockToUtc,
 } from '@lightmap/astronomy';
 import type { EntitlementDecision } from '@lightmap/entitlements';
-import type { SceneState } from '@lightmap/scene';
+import { skylineOf, type SceneState } from '@lightmap/scene';
 import { decideWeatherMode, type WeatherFrame, type WindowVerdict } from '@lightmap/weather';
 import { usePlannerStore } from '@/features/planner/store';
 import { useCapabilities } from '@/features/planner/use-scene';
@@ -64,12 +64,13 @@ export function WeekAhead({
   const dates = useMemo(() => (from ? weekAheadDates(from) : []), [from]);
   // The nights with a Milky Way window (with moon planning): one scan per week, place and zone.
   const hasLunar = scene.lunar !== null;
+  const profile = scene.terrainHorizon?.profile ?? null;
   const dark = useMemo(
     () =>
       from && hasLunar
-        ? darkNights({ latitude: lat, longitude: lng }, tz, from)
+        ? darkNights({ latitude: lat, longitude: lng }, tz, from, skylineOf(profile))
         : new Map<string, { start: Date; end: Date }>(),
-    [from, hasLunar, lat, lng, tz],
+    [from, hasLunar, lat, lng, tz, profile],
   );
   const weatherCaps = caps.data?.weather ?? null;
   // Only days the forecast covers are asked for — the route's own horizon rule, probed at local

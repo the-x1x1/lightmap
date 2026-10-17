@@ -127,6 +127,29 @@ describe('Galactic Centre (Milky Way core)', () => {
     );
   });
 
+  it('with a skyline, keeps only the hours the core stands above it', () => {
+    const kailua = [21.397, -157.727] as const;
+    const from = new Date('2026-06-15T22:00:00Z');
+    const open = milkyWayWindows(from, 3, ...kailua);
+    // A ridge 30° high to the south and west (where the core rises to 40° and sets): the
+    // evenings start the same, but each night ends when the core sinks behind the ridge.
+    const ridge = (az: number) => (az >= 150 && az <= 280 ? 30 : 0);
+    const valley = milkyWayWindows(from, 3, ...kailua, { horizonDeg: ridge });
+    expect(valley.windows).toHaveLength(open.windows.length);
+    for (const [i, w] of valley.windows.entries()) {
+      const o = open.windows[i]!;
+      expect(w.end.getTime()).toBeLessThan(o.end.getTime() - 60 * 60_000);
+      const core = galacticCentrePosition(w.end, ...kailua);
+      expect(core.elevationDeg).toBeGreaterThanOrEqual(ridge(core.azimuthDeg) - 0.5);
+    }
+    // A skyline higher than the core ever climbs: no window, and the line says why.
+    const pit = milkyWayWindows(from, 3, ...kailua, { horizonDeg: () => 45 });
+    expect(pit.reason).toBe('behind-terrain');
+    expect(describeMilkyWayWindows(pit, 'Pacific/Honolulu')).toBe(
+      'The core stays behind the skyline here whenever it is 10° up in the dark in the next 3 nights',
+    );
+  });
+
   it('says why there is no window: no astronomical night, or a core that never clears 10°', () => {
     const london = [51.5, -0.12] as const;
     const june = milkyWayWindows(new Date('2026-06-01T00:00:00Z'), 45, ...london);

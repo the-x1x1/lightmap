@@ -20,13 +20,15 @@ export function darkSkySpells(
   ev: Pick<DayEvents, 'dayStart' | 'dayEnd'>,
   latitude: number,
   longitude: number,
+  /** The skyline (a sampled terrain horizon): the core must clear it. */
+  horizonDeg: ((azimuthDeg: number) => number) | null = null,
 ): Spell[] {
   const HALF_DAY = 12 * 3_600_000;
   const start = ev.dayStart.getTime();
   const end = ev.dayEnd.getTime();
   const from = new Date(start - HALF_DAY);
   const days = (end + HALF_DAY - from.getTime()) / 86_400_000;
-  return milkyWayWindows(from, days, latitude, longitude)
+  return milkyWayWindows(from, days, latitude, longitude, { horizonDeg })
     .windows.map((w) => ({
       from: new Date(Math.max(w.start.getTime(), start)),
       to: new Date(Math.min(w.end.getTime(), end)),

@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { brand, isEnabled } from '@lightmap/config';
 import { addCivilDays, civilDateString, parseCivilDate, utcToWallClock } from '@lightmap/astronomy';
-import { DEFAULT_RENDER_SETTINGS, horizonShortCaveat } from '@lightmap/scene';
+import { DEFAULT_RENDER_SETTINGS, horizonShortCaveat, skylineOf } from '@lightmap/scene';
 import { effectiveTimeZone, usePlannerStore } from '@/features/planner/store';
 import { useScene } from '@/features/planner/use-scene';
 import { useTerrainHorizon } from '@/features/planner/use-terrain-horizon';
@@ -168,7 +168,9 @@ export function MapShell() {
       s ? s.split(',').map((x) => new Date(Number(x))) : [];
     return { clears: dates(c), drops: dates(d) };
   }, [moonTerrainKey]);
-  // Dark-sky spells of the civil day (night planning) for the timeline band: per place and day.
+  // Dark-sky spells of the civil day (night planning) for the timeline band: per place and day,
+  // the core clear of the sampled skyline.
+  const skylineProfile = scene?.terrainHorizon?.profile ?? null;
   const darkSky = useMemo(
     () =>
       hasLunar && location && dayStartMs !== null && dayEndMs !== null
@@ -176,9 +178,10 @@ export function MapShell() {
             { dayStart: new Date(dayStartMs), dayEnd: new Date(dayEndMs) },
             location.point.latitude,
             location.point.longitude,
+            skylineOf(skylineProfile),
           )
         : null,
-    [hasLunar, location, dayStartMs, dayEndMs],
+    [hasLunar, location, dayStartMs, dayEndMs, skylineProfile],
   );
   // Terrain horizon around the pin (sampled through the renderer; nothing on the ellipsoid).
   useTerrainHorizon({

@@ -109,6 +109,16 @@ export function profileCaveat(
   );
 }
 
+/**
+ * The skyline as a function of azimuth for a scan that asks "is it above the horizon here"
+ * (`milkyWayWindows`' `horizonDeg`); null without a profile.
+ */
+export function skylineOf(
+  profile: Pick<HorizonProfile, 'stepDeg' | 'elevationDeg'> | null | undefined,
+): ((azimuthDeg: number) => number) | null {
+  return profile ? (az) => horizonElevationAt(profile, az) : null;
+}
+
 /** The short form for a marker or a card line: what the profile is made of. */
 export function horizonShortCaveat(profile: Pick<HorizonProfile, 'buildingsReachM'>): string {
   return profile.buildingsReachM
