@@ -31,6 +31,10 @@ export function ConfidencePanel({ scene }: { scene: SceneState }) {
       ? `${Math.round(t.profile.maxDistanceM / 1609.344)} mi`
       : `${Math.round(t.profile.maxDistanceM / 1000)} km`
     : '';
+  // With mapped buildings in the profile its highest point is usually a wall, not a ridge.
+  const top = t
+    ? `${t.profile.buildingsReachM ? 'skyline up to' : 'highest ridge'} ${formatDeg(t.profile.maxElevationDeg)}°`
+    : '';
   const rows: Array<[string, string, string]> = [
     ['Astronomy', c.astronomy, c.notes.astronomy],
     [
@@ -38,7 +42,7 @@ export function ConfidencePanel({ scene }: { scene: SceneState }) {
       c.terrain,
       c.terrain === 'HIGH'
         ? t
-          ? `Real elevation data; terrain horizon sampled to ${sampledTo} (highest ridge ${formatDeg(t.profile.maxElevationDeg)}°). ${profileCaveat(t.profile, units)}`
+          ? `Real elevation data; terrain horizon sampled to ${sampledTo} (${top}). ${profileCaveat(t.profile, units)}`
           : 'Real elevation data'
         : 'Flat ground assumed',
     ],
