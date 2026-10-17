@@ -148,7 +148,7 @@ export function buildPlanningCard(
     },
     {
       label: 'Light',
-      value: `${s.phase.replace('-', ' ')} · ${describeLightKelvin(a.colorTemperatureK, exposure)}`,
+      value: `${s.phase.replace('-', ' ')} · ${describeLightKelvin(a.colorTemperatureK, exposure, scene.terrainHorizon?.moonAboveTerrain ?? null)}`,
     },
     {
       // Incident-light model (clear-sky curve × the scenario's direct share; Moon and stars at

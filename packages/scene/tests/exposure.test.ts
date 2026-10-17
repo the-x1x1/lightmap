@@ -147,6 +147,9 @@ describe('the light’s colour line', () => {
     });
     expect(full.basis).toBe('moon');
     expect(describeLightKelvin(11000, full)).toBe('11000 K · moonlit ground ~4100 K');
+    // Behind the sampled skyline the ground is in the ridge's shadow: the sky's figure only.
+    expect(describeLightKelvin(11000, full, false)).toBe('11000 K');
+    expect(describeLightKelvin(11000, full, true)).toBe('11000 K · moonlit ground ~4100 K');
     // A moonless night and the day keep the sky's figure alone.
     expect(describeLightKelvin(11000, estimateExposure({ ...night, moon: null }))).toBe('11000 K');
     expect(

@@ -148,6 +148,16 @@ describe('Galactic Centre (Milky Way core)', () => {
     expect(describeMilkyWayWindows(pit, 'Pacific/Honolulu')).toBe(
       'The core stays behind the skyline here whenever it is 10° up in the dark in the next 3 nights',
     );
+    expect(pit.skylineCut).toBe(true);
+    expect(open.skylineCut).toBe(false);
+    // Seen through a notch in it, for minutes only: the line names the skyline, not just 10°.
+    const notch = milkyWayWindows(from, 3, ...kailua, {
+      horizonDeg: (az) => (az >= 180 && az <= 182 ? 0 : 45),
+    });
+    expect(notch.reason).toBe('too-short');
+    expect(describeMilkyWayWindows(notch, 'Pacific/Honolulu')).toBe(
+      'The core clears 10° and the skyline in the dark only for minutes at a time in the next 3 nights',
+    );
   });
 
   it('says why there is no window: no astronomical night, or a core that never clears 10°', () => {

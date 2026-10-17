@@ -173,11 +173,18 @@ export const MOONLIGHT_KELVIN = 4100;
 
 /**
  * The light's colour line: the sky's colour temperature, and the moonlit ground's when the Moon
- * is what lights the scene ("11000 K · moonlit ground ~4100 K").
+ * is what lights the scene ("11000 K · moonlit ground ~4100 K") - not when it is behind the
+ * sampled skyline (`moonAboveTerrain` false), which leaves the ground in the ridge's shadow.
  */
-export function describeLightKelvin(skyKelvin: number, e: Pick<ExposureEstimate, 'basis'>): string {
+export function describeLightKelvin(
+  skyKelvin: number,
+  e: Pick<ExposureEstimate, 'basis'>,
+  moonAboveTerrain: boolean | null = null,
+): string {
   const sky = `${Math.round(skyKelvin)} K`;
-  return e.basis === 'moon' ? `${sky} · moonlit ground ~${MOONLIGHT_KELVIN} K` : sky;
+  return e.basis === 'moon' && moonAboveTerrain !== false
+    ? `${sky} · moonlit ground ~${MOONLIGHT_KELVIN} K`
+    : sky;
 }
 
 /** "EV 14.8 · 1/500 s f/8 ISO 100". */

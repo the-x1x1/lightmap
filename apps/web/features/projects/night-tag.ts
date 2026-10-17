@@ -1,7 +1,8 @@
 /**
  * The night line on a saved viewpoint card (night planning): for a shot planned after civil
  * dusk, where the Milky Way core stands at that instant and whether the sky can show it — the
- * same verdict the planner shows, computed from the saved place and instant alone. Pure.
+ * planner's verdict from the saved place and instant alone - without the sampled skyline, so a
+ * core the planner calls behind the ridge reads by the sky alone here. Pure.
  */
 import { milkyWayCore, type MilkyWayVerdict } from '@lightmap/astronomy';
 import { compassLabel } from '@lightmap/geospatial';

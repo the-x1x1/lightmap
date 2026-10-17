@@ -559,7 +559,11 @@ export function AstronomyDetails({
         <Row label="Solar time" value={hoursMinutes(Math.round(s.solarTime * 60))} />
         <Row
           label="Colour temp."
-          value={describeLightKelvin(scene.atmosphere.colorTemperatureK, exposure)}
+          value={describeLightKelvin(
+            scene.atmosphere.colorTemperatureK,
+            exposure,
+            scene.terrainHorizon?.moonAboveTerrain ?? null,
+          )}
         />
         <Row
           label="Exposure (est.)"

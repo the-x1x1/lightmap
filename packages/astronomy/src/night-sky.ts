@@ -157,6 +157,8 @@ export interface MilkyWayWindows {
    * shootable only in runs shorter than the minimum.
    */
   reason: MilkyWayWindowsReason;
+  /** A skyline was given and hid the core at some moment it was otherwise shootable. */
+  skylineCut: boolean;
   /** The scan's extent. */
   from: Date;
   days: number;
@@ -193,6 +195,7 @@ export function milkyWayWindows(
   let anyNight = false;
   let anyCoreUp = false;
   let anyClear = false;
+  let skylineCut = false;
   const horizon = opts.horizonDeg ?? null;
   let anyVisible = false;
   const visibleAt = (t: number): { ok: boolean; core: number; moonUp: boolean } => {
@@ -204,8 +207,10 @@ export function milkyWayWindows(
     if (core.elevationDeg < MILKY_WAY_LOW_ELEVATION_DEG)
       return { ok: false, core: core.elevationDeg, moonUp: false };
     anyCoreUp = true;
-    if (horizon && core.elevationDeg < horizon(core.azimuthDeg))
+    if (horizon && core.elevationDeg < horizon(core.azimuthDeg)) {
+      skylineCut = true;
       return { ok: false, core: core.elevationDeg, moonUp: false };
+    }
     anyClear = true;
     const moon = moonPosition(d, latitudeDeg, longitudeDeg);
     const moonUp = moon.elevationDeg > moonHorizonThresholdDeg(moon.distanceKm);
@@ -269,7 +274,7 @@ export function milkyWayWindows(
           : !anyVisible
             ? 'moon'
             : 'too-short';
-  return { windows, reason, from, days };
+  return { windows, reason, skylineCut, from, days };
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -298,7 +303,9 @@ export function describeMilkyWayWindows(r: MilkyWayWindows, zone: string, show =
       case 'moon':
         return `The Moon lights every dark hour the core is up in the next ${nights}`;
       case 'too-short':
-        return `The core clears ${MILKY_WAY_LOW_ELEVATION_DEG}° in the dark only for minutes at a time in the next ${nights}`;
+        return r.skylineCut
+          ? `The core clears ${MILKY_WAY_LOW_ELEVATION_DEG}° and the skyline in the dark only for minutes at a time in the next ${nights}`
+          : `The core clears ${MILKY_WAY_LOW_ELEVATION_DEG}° in the dark only for minutes at a time in the next ${nights}`;
       case 'none':
         return `No dark window in the next ${nights}`;
     }
