@@ -32,7 +32,7 @@ import {
 import { lightingFromScene, type LightingParameters } from '../lighting.ts';
 import { enuTowardSun, enuToEcef } from '../sun-vector.ts';
 import { moonDiscOpacity } from '../moon-disc.ts';
-import { planetPoint } from '../planet-points.ts';
+import { planetPointInSky } from '../planet-points.ts';
 import { seaProbePoints, seaSurfaceFromSamples } from '../geoid.ts';
 import type {
   HostCamera,
@@ -319,7 +319,7 @@ export class SceneController {
       const sunEl = scene.solar.elevationDegrees;
       this.host.setPlanets(
         planetPositions(scene.utc, lat, lon).map((p) => {
-          const point = p.elevationDeg > -2 ? planetPoint(p.magnitude, sunEl) : null;
+          const point = planetPointInSky(p, sunEl);
           return point
             ? {
                 directionEcef: enuToEcef(enuTowardSun(p.azimuthDeg, p.elevationDeg), lat, lon),

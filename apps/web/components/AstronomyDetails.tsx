@@ -38,7 +38,7 @@ import {
 import { useMemo, useState } from 'react';
 import { usePlannerStore } from '@/features/planner/store';
 import { quantizeDeg } from '@/features/planner/quantize';
-import { describePlanets, visiblePlanets } from '@/features/planner/planets-line';
+import { describePlanets } from '@/features/planner/planets-line';
 import { useSettled } from '@/lib/use-settled';
 import {
   DARK_WINDOW_NIGHTS,
@@ -53,8 +53,8 @@ import { useSeasonalEnvelope } from '@/features/planner/use-seasonal';
 import { useSkyGlow } from '@/features/planner/use-sky-glow';
 import {
   describeSkyGlow,
+  planetPointInSky,
   skyBrightnessRatio,
-  skyLimitingMagnitude,
   type SkyGlowGrade,
 } from '@lightmap/renderer';
 import { describeLightWindows } from '@/features/planner/light-windows';
@@ -352,11 +352,9 @@ function MoonDetails({
   const planets = useMemo(
     () =>
       describePlanets(
-        visiblePlanets(
-          planetPositions(new Date(planetMinute * 60_000), planetLat, planetLon),
-          sunEl,
-          skyLimitingMagnitude,
-        ),
+        planetPositions(new Date(planetMinute * 60_000), planetLat, planetLon),
+        sunEl,
+        planetPointInSky,
       ),
     [planetMinute, planetLat, planetLon, sunEl],
   );
@@ -450,8 +448,12 @@ function MoonDetails({
           Milky Way core: {describeMilkyWay(scene.nightSky)}
         </p>
       ) : null}
-      <p className="mt-1 text-xs text-[var(--lm-text-muted)]" data-testid="planets">
-        Planets: {planets ?? 'none in sight'}
+      <p
+        className="mt-1 text-xs text-[var(--lm-text-muted)]"
+        data-testid="planets"
+        title="For a clear sky: the naked-eye planets above the horizon, clear of the Sun's glare and bright enough for the sky at this hour. Cloud is not counted."
+      >
+        Planets: {planets}
       </p>
       {scene.nightSky && glow ? (
         <p

@@ -149,10 +149,12 @@ star-sized point's light back out until −15° (`starFieldVisibility`: none of 
 the clock's glide (it had switched on whole at −8°). The star field has no planets: the grade
 draws Mercury, Venus, Mars, Jupiter and Saturn as points on the clear dome (`planetPositions`,
 `planetPoint`), as bright as each one's magnitude against what the twilight shows
-(`skyLimitingMagnitude`: Venus faintly by day, Jupiter from about −3°, Saturn from about −5°),
-under the cloud decks and behind the ridges, gliding with the clock like the Sun. Cesium turns
-the field by Greenwich sidereal time for the scene's instant (`czm_temeToPseudoFixed`; the host
-sets the clock to the planned UTC) — so the Milky Way's band in the 3D preview stands where the planner's own Galactic Centre says, within the
+(`skyLimitingMagnitude`: Venus faintly by day and plainly at sunset, Jupiter from about −1.5°,
+Saturn from about −5°), dimmed low in the air (0.25 mag an air mass, `extinctionMag`) and lost
+within 10° of the Sun, under the cloud decks and behind the ridges, gliding with the clock like
+the Sun. Cesium turns the field by Greenwich sidereal time for the scene's instant
+(`czm_temeToPseudoFixed`; the host sets the clock to the planned UTC) — so the Milky Way's band
+in the 3D preview stands where the planner's own Galactic Centre says, within the
 precession and nutation Cesium leaves out (≈ 0.4° in 2026; the planner's `milkyWayCore` applies
 Meeus precession, ≈ 0.1°). The "Milky Way core" line, the rose star, the dark windows and the
 map view's violet track are the authority where the two disagree. The star field is a texture:

@@ -149,8 +149,10 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
   await expect(page.getByTestId('timeline-time')).toHaveText('22:10');
   await expect(page.getByTestId('milky-way')).toHaveAttribute('data-verdict', 'visible');
   // The planets line: at 22:10 on 3 Jun 2026 Venus and Jupiter have set in the west (they stand
-  // there after sunset), so none is in sight.
-  await expect(page.getByTestId('planets')).toHaveText('Planets: none in sight');
+  // there after sunset) and the others are not up yet.
+  await expect(page.getByTestId('planets')).toHaveText(
+    'Planets: none visible (all below the horizon)',
+  );
   // City glow from the bundled urban areas: Honolulu's, to the southwest over the Koʻolau.
   await expect(page.getByTestId('sky-glow')).toHaveAttribute('data-grade', 'horizon');
   await expect(page.getByTestId('sky-glow')).toContainText(
