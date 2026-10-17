@@ -19,7 +19,7 @@ the shadow probe (a 20 m tower at Sun 11°, shadow measured against `h / tan(el)
 
 - World globe with real terrain; tap, search a place, paste coordinates or use device location.
   A place opens in the Viewpoint, standing there: drag to look, click the ground to walk there,
-  W A S D to step. OpenStreetMap's buildings (lit and shadow-casting), streets, parks and woods
+  hold W A S D to walk. OpenStreetMap's buildings (lit and shadow-casting), streets, parks and woods
   are drawn around you, over Sentinel-2 imagery — no key or account needed.
 - On Windows, an installed app (`apps/desktop`) with silent updates.
 - Date and continuous timeline with sunrise, golden hour, solar noon, sunset, blue hour and night

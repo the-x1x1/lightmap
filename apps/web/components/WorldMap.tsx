@@ -43,6 +43,11 @@ export interface WorldMapProps {
   className?: string;
 }
 
+/** Walking speed from the viewpoint, metres a second (a brisk walk; Shift: five times). */
+const WALK_MPS = 6;
+/** The walk's step interval; the renderer glides the eye between steps. */
+const WALK_TICK_MS = 100;
+
 export function WorldMap({ scene, capabilities, onRendererInfo, className }: WorldMapProps) {
   const container = useRef<HTMLDivElement | null>(null);
   const credits = useRef<HTMLDivElement | null>(null);
@@ -291,12 +296,23 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
     const store = usePlannerStore.getState();
     store.setFov(store.camera.fovDeg * (e.deltaY > 0 ? 1.08 : 0.92));
   };
-  // W A S D walk from the viewpoint (2 m a step, 20 m with Shift): the eye moves at once and the
-  // place (name, zone, height) is looked up when the steps stop.
+  // W A S D walk from the viewpoint while held (WALK_MPS, five times that with Shift), in steps
+  // of a tenth of a second that the renderer glides between, so the walk does not wait for the
+  // keyboard's repeat delay or hop at its rate; the place (name, zone, height) is looked up when
+  // the steps stop.
   const walkTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const held = useRef(new Set<string>());
+  const walkLoop = useRef<ReturnType<typeof setInterval> | null>(null);
+  const shiftHeld = useRef(false);
+  const stopWalking = () => {
+    held.current.clear();
+    if (walkLoop.current) clearInterval(walkLoop.current);
+    walkLoop.current = null;
+  };
   useEffect(
     () => () => {
       if (walkTimer.current) clearTimeout(walkTimer.current);
+      if (walkLoop.current) clearInterval(walkLoop.current);
     },
     [],
   );
@@ -320,17 +336,33 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
     if (walkTimer.current) clearTimeout(walkTimer.current);
     walkTimer.current = setTimeout(() => void moveTo({ ...point, viaTerrain: true }), 600);
   };
+  const walkTick = () => {
+    const keys = held.current;
+    const stride = (shiftHeld.current ? 5 : 1) * WALK_MPS * (WALK_TICK_MS / 1000);
+    const forward = (keys.has('w') ? 1 : 0) - (keys.has('s') ? 1 : 0);
+    const right = (keys.has('d') ? 1 : 0) - (keys.has('a') ? 1 : 0);
+    if (forward === 0 && right === 0) return;
+    // Diagonals at the same speed as straight lines.
+    const n = Math.hypot(forward, right);
+    walk((forward / n) * stride, (right / n) * stride);
+  };
+  const onKeyUp = (e: React.KeyboardEvent) => {
+    shiftHeld.current = e.shiftKey;
+    held.current.delete(e.key.toLowerCase());
+    if (held.current.size === 0) stopWalking();
+  };
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (!looking) return;
-    const stride = e.shiftKey ? 20 : 2;
     const k = e.key.toLowerCase();
+    shiftHeld.current = e.shiftKey;
     if (k === 'w' || k === 's' || k === 'a' || k === 'd') {
-      walked();
-      if (k === 'w') walk(stride, 0);
-      else if (k === 's') walk(-stride, 0);
-      else if (k === 'a') walk(0, -stride);
-      else walk(0, stride);
       e.preventDefault();
+      // The keyboard's own repeats are ignored: the loop walks while the key is down.
+      if (e.repeat || held.current.has(k)) return;
+      walked();
+      held.current.add(k);
+      walkTick();
+      walkLoop.current ??= setInterval(walkTick, WALK_TICK_MS);
       return;
     }
     const step = e.shiftKey ? 15 : 3;
@@ -365,7 +397,7 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
         role={looking ? 'application' : 'img'}
         aria-label={
           looking
-            ? 'Viewpoint. Drag or use arrow keys to look around (Shift for larger steps); click the ground to walk there, or W A S D to step.'
+            ? 'Viewpoint. Drag or use arrow keys to look around (Shift for larger steps); click the ground to walk there, or hold W A S D to walk (Shift to run).'
             : 'World map. Click or tap to place the pin, or use the search box.'
         }
         tabIndex={0}
@@ -375,6 +407,8 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
         onPointerCancel={onPointerCancel}
         onWheel={onWheel}
         onKeyDown={onKeyDown}
+        onKeyUp={onKeyUp}
+        onBlur={stopWalking}
       />
       {overlayMode && !location ? (
         <div className="absolute inset-0 flex items-center justify-center p-6">
@@ -402,7 +436,7 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
           className="pointer-events-none absolute bottom-24 left-1/2 z-10 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-full bg-black/65 px-3 py-1.5 text-center text-xs text-[var(--lm-text)] lg:bottom-8"
           data-testid="walk-hint"
         >
-          Drag to look · click the ground to walk there · W A S D to step
+          Drag to look · click the ground to walk there · hold W A S D to walk
         </p>
       ) : null}
       {showLevelGuide && camera.mode === 'viewpoint' && !overlayMode && location ? (
