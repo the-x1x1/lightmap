@@ -355,7 +355,10 @@ export class SceneController {
   }
 
   private applyOverlay(scene: SceneState): void {
-    const dayKey = `${scene.dayEvents.date}|${scene.location.point.latitude}|${scene.location.point.longitude}`;
+    // The paths are directions from the pin, the same within ~100 m: keyed to a thousandth of a
+    // degree, a walk's steps do not resample the day, the night and the year at each step.
+    const at = `${scene.location.point.latitude.toFixed(3)}|${scene.location.point.longitude.toFixed(3)}`;
+    const dayKey = `${scene.dayEvents.date}|${at}`;
     const profile = scene.terrainHorizon?.profile ?? null;
     let sunPath: HostOverlay['sunPath'] = this.cachedSunPath ?? [];
     if (
@@ -374,7 +377,7 @@ export class SceneController {
       this.lastNightKey = nightKey;
       this.cachedNightPaths = nightPathsForDay(scene);
     }
-    const yearKey = `${scene.dayEvents.date.slice(0, 4)}|${scene.location.point.latitude}|${scene.location.point.longitude}`;
+    const yearKey = `${scene.dayEvents.date.slice(0, 4)}|${at}`;
     if (yearKey !== this.lastYearKey || this.cachedSeasonPaths === null) {
       this.lastYearKey = yearKey;
       this.cachedSeasonPaths = seasonPathsForYear(scene);
