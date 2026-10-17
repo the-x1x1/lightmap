@@ -26,6 +26,8 @@ export interface CapabilitiesResponse {
    * (`/api/desktop/signin`), and account requests are forwarded there.
    */
   desktopAccounts?: { origin: string };
+  /** Served by a desktop app's own local server (the shell sets its data folder). */
+  desktopApp?: boolean;
 }
 
 export interface WeatherResponse {

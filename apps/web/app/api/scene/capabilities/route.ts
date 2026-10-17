@@ -30,6 +30,7 @@ export async function GET() {
     ...(s.env.LIGHTMAP_ACCOUNT_ORIGIN
       ? { desktopAccounts: { origin: s.env.LIGHTMAP_ACCOUNT_ORIGIN } }
       : {}),
+    ...(s.env.LIGHTMAP_DATA_DIR ? { desktopApp: true } : {}),
   };
   return json(body, { headers: { 'Cache-Control': 'private, max-age=300' } });
 }

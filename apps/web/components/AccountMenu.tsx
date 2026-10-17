@@ -240,9 +240,11 @@ export function SignInPrompt({ reason }: { reason?: string }) {
   if (caps.data?.desktopAccounts) return <DesktopSignIn reason={reason} />;
   if (!methods || (!methods.email && !methods.google && !methods.devLogin)) {
     return (
-      <p className="text-sm text-[var(--lm-text-muted)]">
-        Accounts are not available on this server (no database configured). Exploring the map still
-        works.
+      <p className="text-sm text-[var(--lm-text-muted)]" data-testid="accounts-unavailable">
+        {caps.data?.desktopApp
+          ? // A desktop app with no hosted service to sign in to yet: not a server fault.
+            'Signing in and saved projects come to the app once the LightMap service opens. Planning works fully here meanwhile.'
+          : 'Accounts are not available on this server (no database configured). Exploring the map still works.'}
       </p>
     );
   }
