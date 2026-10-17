@@ -143,6 +143,9 @@ const LABEL_PICK_INTERVAL_MS = 200;
  */
 const DETAIL_REANCHOR_M = 200_000;
 
+/** New place labels per frame (each rasterises its text). */
+const LABELS_ADDED_PER_FRAME = 24;
+
 /** The season must hold this long (ms) before the imagery is refetched in it. */
 const SEASON_SWAP_SETTLE_MS = 250;
 
@@ -1838,9 +1841,18 @@ export class CesiumSceneHost implements SceneHost {
     const keep = new Set(
       visibleLabelIndices(this.labelEntries, { x: cam.x, y: cam.y, z: cam.z }, PLACE_LABELS_MAX),
     );
+    // Each new label rasterises its text into the glyph atlas: a whole region's worth at once
+    // (arriving over a country) held a frame. A few a frame; the rest on the frames after.
+    let added = 0;
+    let more = false;
     this.labelEntries.forEach((e, i) => {
       if (keep.has(i)) {
         if (e.label) return;
+        if (added >= LABELS_ADDED_PER_FRAME) {
+          more = true;
+          return;
+        }
+        added++;
         e.label = labels.add({
           text: e.text,
           position: new C.Cartesian3(e.at.x, e.at.y, e.at.z),
@@ -1862,6 +1874,12 @@ export class CesiumSceneHost implements SceneHost {
         e.label = null;
       }
     });
+    if (more) {
+      // Not done: pick again next frame, whether or not the camera moves.
+      last.x = Number.NaN;
+      this.labelPickAt = 0;
+      this.scene.requestRender();
+    }
   }
 
   private setLabelsForCamera(kind: HostCamera['kind']): void {
