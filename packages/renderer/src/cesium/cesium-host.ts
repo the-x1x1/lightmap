@@ -291,8 +291,9 @@ export class CesiumSceneHost implements SceneHost {
   private eyeGlideStart = 0;
   private eyeGlideMs = 0;
   private eyeStepAt = 0;
-  /** When the eye last settled toward its height (`keepEyeAboveGlobe`). */
+  /** When the eye last settled toward its height, and how far above it the ground lifts it. */
   private eyeSettleAt = 0;
+  private eyeLiftM = 0;
   /** The light's glide (`setLight`): the direction it is heading for, and how fast. */
   private lightGoal: Cesium.Cartesian3 | null = null;
   private lightTauMs = 100;
@@ -618,6 +619,7 @@ export class CesiumSceneHost implements SceneHost {
     if (stepS > CLOCK_GLIDE_MAX_S || prefersReducedMotion()) {
       clock.currentTime = target;
       this.clockGoal = null;
+      this.scene.requestRender();
     } else {
       this.clockFrom = C.JulianDate.clone(clock.currentTime);
       this.clockGoal = target;
@@ -1057,24 +1059,31 @@ export class CesiumSceneHost implements SceneHost {
     const cam = this.scene.camera;
     const carto = cam.positionCartographic;
     const surface = (this.scene.globe as Cesium.Globe | undefined)?.getHeight(carto);
-    // Back down to the measured height once the drawn ground no longer covers it.
-    let target = wanted;
-    if (surface !== undefined && Number.isFinite(surface) && wanted < surface + 0.5)
-      target = surface + 1.7;
-    if (Math.abs(carto.height - target) < 0.05) return;
+    // The lift above the measured height that the drawn ground asks for (none once it no longer
+    // covers the eye). Kept as a lift over the wanted height rather than as a camera height, so
+    // a walk's glide, which sets the camera to the wanted height every frame, does not undo it.
+    const needed =
+      surface !== undefined && Number.isFinite(surface) && wanted < surface + 0.5
+        ? surface + 1.7 - wanted
+        : 0;
     // Up at once (the eye must never sink into the drawn ground), down gently: as finer terrain
     // tiles replace coarse ones the surface under the eye drops by a metre or two, and snapping
     // down with it jolted the view while walking.
     const t = performance.now();
-    const dt = Math.min(100, Math.max(0, t - this.eyeSettleAt));
+    const gap = t - this.eyeSettleAt;
+    // After a pause (the scene draws on demand) count one ordinary frame, not the whole pause.
+    const dt = gap > 50 ? 16 : Math.max(0, gap);
     this.eyeSettleAt = t;
-    let height = target;
-    if (target < carto.height) {
+    let lift = needed;
+    if (needed < this.eyeLiftM) {
       const k = 1 - Math.exp(-dt / EYE_SETTLE_TAU_MS);
-      height = carto.height + (target - carto.height) * k;
-      if (carto.height - height > 0.05 && target < height - 0.05) this.scene.requestRender();
-      else height = target;
+      lift = this.eyeLiftM + (needed - this.eyeLiftM) * k;
+      if (lift - needed > 0.05) this.scene.requestRender();
+      else lift = needed;
     }
+    this.eyeLiftM = lift;
+    const height = wanted + lift;
+    if (Math.abs(carto.height - height) < 0.01) return;
     const C = this.C;
     cam.setView({
       destination: C.Cartesian3.fromRadians(carto.longitude, carto.latitude, height),
@@ -1133,6 +1142,7 @@ export class CesiumSceneHost implements SceneHost {
         this.eyeFrom = null;
         this.eyeGoal = null;
         this.eyeStepAt = t;
+        this.eyeLiftM = 0;
       }
       const at = this.eyeNow ?? goal;
       cam.setView({

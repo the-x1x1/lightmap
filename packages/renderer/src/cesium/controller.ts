@@ -377,7 +377,8 @@ export class SceneController {
       this.lastNightKey = nightKey;
       this.cachedNightPaths = nightPathsForDay(scene);
     }
-    const yearKey = `${scene.dayEvents.date.slice(0, 4)}|${at}`;
+    // The zone too: the year's paths are laid out on its civil days.
+    const yearKey = `${scene.dayEvents.date.slice(0, 4)}|${at}|${scene.location.timeZone}`;
     if (yearKey !== this.lastYearKey || this.cachedSeasonPaths === null) {
       this.lastYearKey = yearKey;
       this.cachedSeasonPaths = seasonPathsForYear(scene);

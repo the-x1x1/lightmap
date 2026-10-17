@@ -315,7 +315,7 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
     // By how far the wheel or trackpad moved, not per event (`wheelZoomFactor`).
     store.setFov(store.camera.fovDeg * wheelZoomFactor(e));
   };
-  // W A S D walk from the viewpoint while held (WALK_MPS, five times that with Shift), in steps
+  // W A S D walk from the viewpoint while held (`walkStep`: 6 m/s, 30 with Shift), in steps
   // of a tenth of a second that the renderer glides between, so the walk does not wait for the
   // keyboard's repeat delay or hop at its rate; the place (name, zone, height) is looked up when
   // the steps stop.
