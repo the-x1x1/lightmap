@@ -361,6 +361,8 @@ export class CesiumSceneHost implements SceneHost {
   private moonBillboards: Cesium.BillboardCollection | null = null;
   private moonBillboard: Cesium.Billboard | null = null;
   private moonPhaseDrawn = -1;
+  /** The Moon's direction, gliding with the clock (`setMoonDisc`). */
+  private moonGlide = new StepGlide<Vec3Like>(nlerpDir);
   private eyeWantedM: number | null = null;
   /** The light's glide (`setLight`): the direction it is heading for, and how fast. */
   private lightGoal: Cesium.Cartesian3 | null = null;
@@ -723,6 +725,7 @@ export class CesiumSceneHost implements SceneHost {
     this.glideGrade(t);
     this.sunGlare.step(t);
     for (const g of this.planetGlides) g.step(t);
+    this.moonGlide.step(t);
     this.overlaySun.step(t);
     this.overlayShadow.step(t);
     if (t >= 1) {
@@ -2444,6 +2447,12 @@ export class CesiumSceneHost implements SceneHost {
   }
 
   setMoonDisc(m: HostMoonDisc | null): void {
+    // The Moon glides with the clock like the Sun and the planets; one just risen (or first
+    // shown) lands where it is.
+    if (m) {
+      const d = m.directionEcef;
+      this.moonGlide.set({ x: d.x, y: d.y, z: d.z }, this.moonDisc ? this.clockStepId : null);
+    }
     this.moonDisc = m;
     const C = this.C;
     if (!m) {
@@ -2499,7 +2508,8 @@ export class CesiumSceneHost implements SceneHost {
     if (!m || !b || !b.show) return;
     const C = this.C;
     const cam = this.scene.camera;
-    const dir = new C.Cartesian3(m.directionEcef.x, m.directionEcef.y, m.directionEcef.z);
+    const d = this.moonGlide.shown ?? m.directionEcef;
+    const dir = new C.Cartesian3(d.x, d.y, d.z);
     C.Cartesian3.normalize(dir, dir);
     const at = C.Cartesian3.add(
       cam.positionWC,
