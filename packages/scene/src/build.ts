@@ -297,7 +297,12 @@ export function deriveAtmosphere(
           ? 'Observed conditions not loaded'
           : decision.mode === 'SCENARIO' && caps
             ? 'Forecast unavailable this far ahead'
-            : 'No forecast';
+            : decision.fetchWorthwhile && inputs.weather.frames.length === 0
+              ? // Inside the forecast's reach with nothing back yet: it is on its way.
+                'Forecast loading'
+              : decision.fetchWorthwhile
+                ? 'No forecast for this hour'
+                : 'No forecast';
   return {
     mode: 'SCENARIO',
     scenario: s.id,

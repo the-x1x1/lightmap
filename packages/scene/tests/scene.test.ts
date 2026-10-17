@@ -173,6 +173,12 @@ describe('buildSceneState — Kailua Beach, 31 May 2026, 12:30 (acceptance case)
     expect(s.confidence.notes.weather).toContain('unavailable');
   });
 
+  it('says the forecast is loading inside its reach before the frames arrive (V&V)', () => {
+    const s = buildSceneState(inputs({ now: new Date('2026-05-30T00:00:00Z') }));
+    expect(s.atmosphere.mode).toBe('SCENARIO');
+    expect(s.atmosphere.summary).toBe('Forecast loading — scenario: Partly Cloudy');
+  });
+
   it('scenario changes visibly change the parameters', () => {
     const clear = buildSceneState(inputs({ scenario: 'clear' })).atmosphere.parameters;
     const overcast = buildSceneState(inputs({ scenario: 'overcast' })).atmosphere.parameters;
