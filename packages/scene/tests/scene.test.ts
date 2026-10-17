@@ -289,6 +289,14 @@ describe('buildSceneState — Kailua Beach, 31 May 2026, 12:30 (acceptance case)
     expect(dawn.solar.isAboveHorizon).toBe(true);
     expect(dawn.terrainHorizon!.sunAboveTerrain).toBe(false);
     expect(dawn.terrainHorizon!.horizonAtSunDeg).toBeGreaterThan(10);
+    // The why panel says the pin is in the ridge's shadow, with no direct light.
+    const why = explainScene(dawn);
+    expect(why.find((l) => l.label === 'Direct light reaching the ground')!.value).toMatch(
+      /^none here — the Sun is behind the terrain \(the sky lets \d+ % through\)$/,
+    );
+    expect(why.find((l) => l.label === 'Shadows fall')!.value).toMatch(
+      /; the pin itself is in the shadow of the terrain$/,
+    );
     const ev = dawn.terrainHorizon!.sunEvents;
     expect(ev.differsFromAstronomical).toBe(true);
     // First light over the ridge comes more than an hour after the 05:48 sunrise; last light is

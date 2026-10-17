@@ -19,6 +19,9 @@ export interface ExplanationLine {
 export function explainScene(s: SceneState): ExplanationLine[] {
   const lines: ExplanationLine[] = [];
   const el = s.solar.elevationDegrees;
+  // Up, but behind the sampled skyline: the pin itself is in the ridge's shadow.
+  const shaded =
+    s.terrainHorizon !== null && s.solar.isAboveHorizon && !s.terrainHorizon.sunAboveTerrain;
   lines.push({
     label: 'Sun',
     value:
@@ -35,7 +38,7 @@ export function explainScene(s: SceneState): ExplanationLine[] {
   if (el > -0.833) {
     lines.push({
       label: 'Shadows fall',
-      value: `toward the ${compassLabel((s.solar.azimuthDegrees + 180) % 360)}, ${shadowLengthText(el)}`,
+      value: `toward the ${compassLabel((s.solar.azimuthDegrees + 180) % 360)}, ${shadowLengthText(el)}${shaded ? '; the pin itself is in the shadow of the terrain' : ''}`,
       basis: 'astronomy',
     });
     lines.push({
@@ -89,7 +92,9 @@ export function explainScene(s: SceneState): ExplanationLine[] {
   });
   lines.push({
     label: 'Direct light reaching the ground',
-    value: `${Math.round(s.atmosphere.parameters.sunTransmittance * 100)} %`,
+    value: shaded
+      ? `none here — the Sun is behind the terrain (the sky lets ${Math.round(s.atmosphere.parameters.sunTransmittance * 100)} % through)`
+      : `${Math.round(s.atmosphere.parameters.sunTransmittance * 100)} %`,
     basis: 'weather',
   });
   lines.push({
