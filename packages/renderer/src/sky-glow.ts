@@ -106,15 +106,21 @@ export function skyGlowAt(
     if (d > SKY_GLOW_REACH_KM) continue;
     const g = area * Math.max(d, 2) ** -2.5;
     index += g;
+    // The glow's direction is the town's middle (its centroid), where the dome stands highest,
+    // not the nearest edge: from Kailua, Honolulu's glow is to the SW over the Koolau, though
+    // its nearest suburb lies due S.
+    const [mx, my] = ringCentroid(ring);
+    const m = Math.hypot(mx, my);
+    const [ux, uy] = m > 0.5 ? [mx / m, my / m] : d > 0 ? [cx / d, cy / d] : [0, 0];
     if (contains) insideAreaKm2 = Math.max(insideAreaKm2, area);
-    else if (d > 0) {
-      sumX += (g * cx) / d;
-      sumY += (g * cy) / d;
+    else {
+      sumX += g * ux;
+      sumY += g * uy;
     }
     if (g > best) {
       best = g;
       distanceKm = d;
-      bearingDeg = contains ? null : (Math.atan2(cx, cy) / RAD + 360) % 360;
+      bearingDeg = contains ? null : (Math.atan2(ux, uy) / RAD + 360) % 360;
     }
   }
   // Inside a large built-up area, or one in a bright metro, the sky is a city's; inside a small
@@ -178,6 +184,31 @@ export function describeSkyGlow(g: SkyGlow): string {
     case 'dark':
       return 'no mapped town lights the sky';
   }
+}
+
+/** A ring's area centroid in the local plane (its vertex mean if degenerate). */
+function ringCentroid(ring: readonly (readonly [number, number])[]): [number, number] {
+  let a = 0;
+  let x = 0;
+  let y = 0;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [x0, y0] = ring[j] as readonly [number, number];
+    const [x1, y1] = ring[i] as readonly [number, number];
+    const c = x0 * y1 - x1 * y0;
+    a += c;
+    x += (x0 + x1) * c;
+    y += (y0 + y1) * c;
+  }
+  if (Math.abs(a) < 1e-9) {
+    let sx = 0;
+    let sy = 0;
+    for (const [px, py] of ring) {
+      sx += px;
+      sy += py;
+    }
+    return [sx / ring.length, sy / ring.length];
+  }
+  return [x / (3 * a), y / (3 * a)];
 }
 
 /** Shoelace area of a ring in the local plane (km^2, signed). */

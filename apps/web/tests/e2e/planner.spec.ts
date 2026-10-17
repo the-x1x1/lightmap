@@ -146,10 +146,10 @@ test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async (
   await expect(page.getByTestId('date-input')).toHaveValue('2026-06-03');
   await expect(page.getByTestId('timeline-time')).toHaveText('22:10');
   await expect(page.getByTestId('milky-way')).toHaveAttribute('data-verdict', 'visible');
-  // City glow from the bundled urban areas: Honolulu's, 10 km to the south over the Koʻolau.
+  // City glow from the bundled urban areas: Honolulu's, to the southwest over the Koʻolau.
   await expect(page.getByTestId('sky-glow')).toHaveAttribute('data-grade', 'horizon');
   await expect(page.getByTestId('sky-glow')).toContainText(
-    'City glow (estimate): a glow on the horizon to the S',
+    'City glow (estimate): a glow on the horizon to the SW',
   );
   // …the rose marks the core on that dark sky (absent by day), and the timeline track carries
   // the night's dark-sky band (none on the full-Moon day of 31 May).
