@@ -19,6 +19,7 @@ import { LevelGuide } from './LevelGuide';
 import { EmptyState } from './states/EmptyState';
 import { cx } from '@lightmap/ui';
 import { provisionalTimeZone, samePoint } from '@/features/planner/provisional-zone';
+import { WALK_TICK_MS, walkStep, wheelZoomFactor } from '@/features/map/view-input';
 
 export interface RendererInfo {
   mode: '3D' | 'OVERLAY' | 'loading';
@@ -43,10 +44,6 @@ export interface WorldMapProps {
   className?: string;
 }
 
-/** Walking speed from the viewpoint, metres a second (a brisk walk; Shift: five times). */
-const WALK_MPS = 6;
-/** The walk's step interval; the renderer glides the eye between steps. */
-const WALK_TICK_MS = 100;
 /** A held arrow key turns the view this fast (degrees a second; Shift: three times). */
 const TURN_DEG_PER_S = 45;
 /** How long an arrow key is held before the smooth turn takes over from the single step. */
@@ -315,20 +312,8 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
   const onWheel = (e: React.WheelEvent) => {
     if (!looking) return;
     const store = usePlannerStore.getState();
-    // By how far the wheel or trackpad moved, not per event: a trackpad sends dozens of small
-    // deltas a second (each zoomed 8% before, racing through the lenses), a wheel notch ~100 px.
-    // macOS reports a mouse-wheel notch as a multiple of 4.000244140625 px (a trackpad never is):
-    // count it as a full notch, or a wheel would barely zoom there.
-    const notch = e.deltaMode === 0 && e.deltaY !== 0 && e.deltaY % 4.000244140625 === 0;
-    const px = notch
-      ? Math.sign(e.deltaY) * 100
-      : e.deltaMode === 1
-        ? e.deltaY * 33
-        : e.deltaMode === 2
-          ? e.deltaY * 400
-          : e.deltaY;
-    const factor = Math.exp(Math.max(-0.3, Math.min(0.3, px * 0.0008)));
-    store.setFov(store.camera.fovDeg * factor);
+    // By how far the wheel or trackpad moved, not per event (`wheelZoomFactor`).
+    store.setFov(store.camera.fovDeg * wheelZoomFactor(e));
   };
   // W A S D walk from the viewpoint while held (WALK_MPS, five times that with Shift), in steps
   // of a tenth of a second that the renderer glides between, so the walk does not wait for the
@@ -394,14 +379,8 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
     walkTimer.current = setTimeout(() => void moveTo({ ...point, viaTerrain: true }), 600);
   };
   const walkTick = () => {
-    const keys = held.current;
-    const stride = (shiftHeld.current ? 5 : 1) * WALK_MPS * (WALK_TICK_MS / 1000);
-    const forward = (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0);
-    const right = (keys.has('KeyD') ? 1 : 0) - (keys.has('KeyA') ? 1 : 0);
-    if (forward === 0 && right === 0) return;
-    // Diagonals at the same speed as straight lines.
-    const n = Math.hypot(forward, right);
-    walk((forward / n) * stride, (right / n) * stride);
+    const step = walkStep(held.current, shiftHeld.current);
+    if (step) walk(step.forwardM, step.rightM);
   };
   // Keys by their physical place (e.code), so Shift, Option or a keyboard layout does not change
   // which key-up ends the walk.
