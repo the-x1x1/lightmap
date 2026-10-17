@@ -30,6 +30,11 @@ export interface SkyGlow {
   index: number;
   /** Bearing (degrees from true north) of the strongest glow, null when there is none. */
   bearingDeg: number | null;
+  /**
+   * Where a darker sky lies: the bearing away from the glow's sum over every town (null inside a
+   * city, with no glow, or when it comes from all round so that no one way is darker).
+   */
+  darkerBearingDeg: number | null;
   /** Distance to the edge of the town that glows most, km (0 inside it); null with none. */
   distanceKm: number | null;
 }
@@ -68,6 +73,9 @@ export function skyGlowAt(
   let bearingDeg: number | null = null;
   let distanceKm: number | null = null;
   let inside = false;
+  // The glow as a vector: each town pulls toward itself by what it adds.
+  let sumX = 0;
+  let sumY = 0;
   for (const poly of polygons) {
     const outer = poly[0];
     if (!outer || outer.length < 3) continue;
@@ -95,6 +103,10 @@ export function skyGlowAt(
     const g = area * Math.max(d, 2) ** -2.5;
     index += g;
     if (contains) inside = true;
+    else if (d > 0) {
+      sumX += (g * cx) / d;
+      sumY += (g * cy) / d;
+    }
     if (g > best) {
       best = g;
       distanceKm = d;
@@ -110,8 +122,14 @@ export function skyGlowAt(
         : index >= FAINT
           ? 'faint'
           : 'dark';
-  if (grade === 'dark') return { grade, index, bearingDeg: null, distanceKm: null };
-  return { grade, index, bearingDeg, distanceKm };
+  if (grade === 'dark')
+    return { grade, index, bearingDeg: null, darkerBearingDeg: null, distanceKm: null };
+  // One way is darker only when the glow leans clearly to one side (its sum is at least half of
+  // what all the towns add).
+  const lean = Math.hypot(sumX, sumY);
+  const darkerBearingDeg =
+    grade === 'city' || lean < 0.5 * index ? null : (Math.atan2(-sumX, -sumY) / RAD + 360) % 360;
+  return { grade, index, bearingDeg, darkerBearingDeg, distanceKm };
 }
 
 /**
@@ -131,9 +149,9 @@ export function describeSkyGlow(g: SkyGlow): string {
   const off = g.distanceKm === null ? '' : ` (built-up area ${Math.round(g.distanceKm)} km off)`;
   // Where to drive for a darker sky: away from the glow.
   const away =
-    g.bearingDeg === null
+    g.darkerBearingDeg === null
       ? ''
-      : `; darker away to the ${COMPASS[Math.round(((g.bearingDeg + 180) % 360) / 45) % 8]}`;
+      : `; darker away to the ${COMPASS[Math.round(g.darkerBearingDeg / 45) % 8]}`;
   switch (g.grade) {
     case 'city':
       return 'city sky - inside a built-up area the core is washed out';

@@ -244,7 +244,13 @@ describe('planning card — depth of field', () => {
     const nightScene = scene({
       utc: localSelectionToUtc({ year: 2026, month: 6, day: 15 }, 2 * 60, kailua.timeZone),
     });
-    const glow = { grade: 'horizon' as const, index: 0.44, bearingDeg: 185, distanceKm: 10 };
+    const glow = {
+      grade: 'horizon' as const,
+      index: 0.44,
+      bearingDeg: 185,
+      darkerBearingDeg: 5,
+      distanceKm: 10,
+    };
     const generatedAt = new Date('2026-05-30T20:00:00Z');
     const withGlow = buildPlanningCard(nightScene, { generatedAt, skyGlow: glow });
     const without = buildPlanningCard(nightScene, { generatedAt });

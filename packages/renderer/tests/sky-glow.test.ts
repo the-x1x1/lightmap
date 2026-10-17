@@ -33,7 +33,13 @@ function polygonsAround(lat: number, lon: number): UrbanPolygon[] {
 describe('sky glow from the urban areas (Walker’s law)', () => {
   it('nothing around: a dark sky, no direction', () => {
     const g = skyGlowAt(30, -100, []);
-    expect(g).toEqual({ grade: 'dark', index: 0, bearingDeg: null, distanceKm: null });
+    expect(g).toEqual({
+      grade: 'dark',
+      index: 0,
+      bearingDeg: null,
+      darkerBearingDeg: null,
+      distanceKm: null,
+    });
     expect(describeSkyGlow(g)).toBe('no mapped town lights the sky');
   });
 
@@ -66,7 +72,13 @@ describe('sky glow from the urban areas (Walker’s law)', () => {
   it('the sky brightness ratio: 1 when dark, ~7 at the suburban mark, 60 in a city', () => {
     expect(skyBrightnessRatio(skyGlowAt(30, -100, []))).toBe(1);
     const at = (index: number) =>
-      skyBrightnessRatio({ grade: 'suburban', index, bearingDeg: 0, distanceKm: 5 });
+      skyBrightnessRatio({
+        grade: 'suburban',
+        index,
+        bearingDeg: 0,
+        darkerBearingDeg: 180,
+        distanceKm: 5,
+      });
     expect(at(1)).toBeCloseTo(7, 9);
     expect(at(1000)).toBe(60);
     expect(skyBrightnessRatio(skyGlowAt(30, -100, [town(30, -100, 0, 0, 10)]))).toBe(60);
@@ -78,6 +90,13 @@ describe('sky glow from the urban areas (Walker’s law)', () => {
     expect(describeSkyGlow(g)).toBe(
       'bright suburban sky to the S (built-up area 2 km off): the core faint at best; darker away to the N',
     );
+  });
+
+  it('between two towns no one way is darker', () => {
+    const g = skyGlowAt(30, -100, [town(30, -100, 0, -12, 20), town(30, -100, 0, 12, 20)]);
+    expect(g.grade).toBe('suburban');
+    expect(g.darkerBearingDeg).toBeNull();
+    expect(describeSkyGlow(g)).not.toMatch(/darker away/);
   });
 
   it('beyond the reach a town adds nothing', () => {
