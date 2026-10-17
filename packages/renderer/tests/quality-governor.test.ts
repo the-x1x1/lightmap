@@ -54,3 +54,20 @@ describe('QualityGovernor (ported from WorldView PerformanceGovernor)', () => {
     expect(() => new QualityGovernor({ ladder: [] })).toThrow();
   });
 });
+
+describe('QualityGovernor.cancelClimb', () => {
+  it('takes back an unapplied climb with no failure against the rung climbed to', () => {
+    const g = new QualityGovernor({ initialRung: 2, fastSamples: 1, climbPenalty: 4 });
+    g.sample({ fps: 60 });
+    expect(g.rungIndex).toBe(1);
+    g.cancelClimb(2);
+    expect(g.rungIndex).toBe(2);
+    // No failure was recorded at rung 1: one fast second climbs again.
+    g.sample({ fps: 60 });
+    expect(g.rungIndex).toBe(1);
+    // Never past the ceiling, never "back" to a better rung.
+    g.cancelClimb(0);
+    expect(g.rungIndex).toBe(1);
+    expect(g.floor).toBe(24);
+  });
+});

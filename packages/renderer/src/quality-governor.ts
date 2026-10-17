@@ -169,6 +169,24 @@ export class QualityGovernor {
     return this.lastFps;
   }
 
+  /** The frame rate at or below which a sample counts as slow. */
+  get floor(): number {
+    return this.floorFps;
+  }
+
+  /**
+   * Takes back a climb that was never applied (the caller holds climbs until the camera rests,
+   * and the old rung turned slow meanwhile): back to `rung`, no failure recorded against the
+   * rung it climbed to, the runs restarted.
+   */
+  cancelClimb(rung: number): void {
+    const back = clampRung(rung, this.ladder.length);
+    if (back <= this.rung) return;
+    this.rung = Math.max(this.ceiling, back);
+    this.slowRun = 0;
+    this.fastRun = 0;
+  }
+
   setCeiling(rung: number): void {
     this.ceiling = clampRung(rung, this.ladder.length);
     if (this.rung < this.ceiling) this.rung = this.ceiling;

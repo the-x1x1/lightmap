@@ -46,4 +46,25 @@ describe('the finder with a planet', () => {
     // visible instants are kept.
     expect(all.matches.some((m) => m.sky === 'daylight')).toBe(true);
   });
+
+  it('says an instant is low when the air near the horizon hides a planet in a dark sky', () => {
+    // Jupiter sets at about 22:00 HST in early June 2026, the Sun 20 deg down: at 0.3 deg up the
+    // air dims it by about 8 magnitudes, past the naked-eye limit.
+    const r = findDirectionMatches({
+      ...kailua,
+      from: { year: 2026, month: 6, day: 1 },
+      to: { year: 2026, month: 6, day: 2 },
+      body: 'jupiter',
+      darkSkyOnly: false,
+      minElevationDegrees: 0,
+      target: {
+        azimuthDegrees: 293,
+        azimuthToleranceDegrees: 10,
+        elevationDegrees: 0.3,
+        elevationToleranceDegrees: 0.2,
+      },
+    });
+    expect(r.matches.length).toBeGreaterThan(0);
+    expect(r.matches.every((m) => m.sky === 'low')).toBe(true);
+  });
 });

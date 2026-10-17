@@ -159,12 +159,22 @@ export function useRenderer(opts: UseRendererOptions): RendererHandle {
           setState((s) => ({ ...s, qualityLabel: q.label }));
         };
         emitQuality();
+        // Where the governor's rung stands against the applied one: worse applies at once, better
+        // waits for the camera to rest, the same cancels a waiting climb.
+        const settle = () => {
+          if (governor.rungIndex > appliedRung) emitQuality();
+          else if (governor.rungIndex < appliedRung) {
+            climbTimer ??= setTimeout(emitQuality, CLIMB_AT_REST_MS);
+          } else if (climbTimer) {
+            clearTimeout(climbTimer);
+            climbTimer = null;
+          }
+        };
         // Battery and Save-Data move the ceiling while the app runs (Phase 4 adaptation).
         disposers.push(
           watchDeviceConditions((conditions) => {
-            const before = governor.rungIndex;
             governor.setCeiling(effectiveCeiling(caps, conditions, QUALITY_LADDER));
-            if (governor.rungIndex !== before) emitQuality();
+            settle();
           }),
         );
         disposers.push(
@@ -183,13 +193,17 @@ export function useRenderer(opts: UseRendererOptions): RendererHandle {
             // governor as the new one's; the wait restarts with each (the camera still moving).
             if (climbTimer) {
               clearTimeout(climbTimer);
-              climbTimer = setTimeout(emitQuality, CLIMB_AT_REST_MS);
-              return;
+              climbTimer = null;
+              if (fps > governor.floor) {
+                climbTimer = setTimeout(emitQuality, CLIMB_AT_REST_MS);
+                return;
+              }
+              // The rung in use turned slow while the climb waited: the climb is off, and the
+              // sample is judged at the rung actually drawing (a step down still applies at once).
+              governor.cancelClimb(appliedRung);
             }
             governor.sample({ fps });
-            if (governor.rungIndex > appliedRung) emitQuality();
-            else if (governor.rungIndex < appliedRung)
-              climbTimer = setTimeout(emitQuality, CLIMB_AT_REST_MS);
+            settle();
           }),
         );
         disposers.push(() => {
