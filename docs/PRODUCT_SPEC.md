@@ -282,7 +282,7 @@ share (overcast noon ≈ 18 klx, EV 12.8; storm ≈ 9 klx); at night a full Moon
 (EV −10.3). EV = log2(E·ISO/250). It is labelled an estimate everywhere and the card's notes and
 the shot list's footer say it is not a meter reading. In the planner the night floor is raised by
 the estimated city glow (up to 60x the natural sky in a city, up to three times more under
-cloud); the card and the shot list leave it out. The shot
+cloud), and a night card names it; the shot list and saved viewpoints leave it out. The shot
 list adds a "Now:" line with the forecast around the shot when the planner already holds that
 day's frames (read at export time, never fetched for the list). The shot
 list uses the saved scenario's cloud, or for a viewpoint saved on a forecast or observed day the
