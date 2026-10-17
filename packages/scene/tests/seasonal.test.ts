@@ -74,6 +74,12 @@ describe('seasonal envelope (plan §1 "seasonal path")', () => {
     expect(sg).toHaveLength(2);
     expect(sg[0]).toMatch(/^2026-03-2\d$/);
     expect(sg[1]).toMatch(/^2026-09-[12]\d$/);
+    // Copacabana: the southern summer's two crossings straddle New Year, both inside 2025.
+    expect(at(-22.97, -43.18, 'America/Sao_Paulo').length).toBe(2);
+    expect(
+      seasonalEnvelope({ latitude: -22.97, longitude: -43.18 }, 'America/Sao_Paulo', 2025)
+        .overheadDates,
+    ).toEqual(['2025-01-01', '2025-12-10']);
     // Aswan, just north of the Tropic of Cancer: never overhead, noon tops out under 90°.
     expect(at(24.09, 32.9, 'Africa/Cairo')).toEqual([]);
     expect(

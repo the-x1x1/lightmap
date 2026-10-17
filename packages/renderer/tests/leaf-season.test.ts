@@ -67,6 +67,10 @@ describe('leaf season', () => {
       [43.3, 5.37], // Marseille
       [43.51, 16.44], // Split
       [36.9, 30.7], // Antalya
+      [35.9, 14.51], // Valletta
+      [35.17, 33.36], // Nicosia
+      [32.89, 13.19], // Tripoli
+      [35.37, -119.02], // Bakersfield
     ] as const)
       expect(deciduousShare(lat, lon)).toBe(0.5);
     for (const [lat, lon] of [

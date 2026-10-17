@@ -84,8 +84,8 @@ export function deciduousShare(latitudeDeg: number, longitudeDeg: number | null)
 /**
  * Mediterranean-climate lowlands, [south, north, west, east] degrees: Iberia, the Maghreb, the
  * French and Italian coasts and islands, the Adriatic's east shore, Greece, Turkey's Aegean and
- * southern coasts, the Levant, and California west of the Sierra. Rough boxes: the interiors
- * (the Balkans, Anatolia's plateau, the Great Basin) are left out.
+ * southern coasts, the Levant, Malta, Cyprus, Libya's coast, and California west of the Sierra.
+ * Rough boxes: the interiors (the Balkans, Anatolia's plateau, the Great Basin) are left out.
  */
 const MEDITERRANEAN: readonly (readonly [number, number, number, number])[] = [
   [30, 42.5, -10, 3.5], // Iberia south of the Pyrenees, Morocco
@@ -97,8 +97,13 @@ const MEDITERRANEAN: readonly (readonly [number, number, number, number])[] = [
   [36, 41, 26, 29], // Turkey's Aegean coast
   [36, 38.5, 29, 36.5], // Turkey's southern coast
   [31, 37, 34, 36.6], // the Levant
+  [35.7, 36.1, 14.1, 14.7], // Malta
+  [34.5, 35.8, 32.2, 34.7], // Cyprus
+  [30.5, 33.2, 10.5, 25], // Libya's coast
+  [41, 42.2, 19, 20], // Albania's coast north of Greece
   [37.5, 40, -124.5, -120.3], // California north of Yosemite, west of the Sierra
   [35, 37.5, -124.5, -119.2],
+  [35, 36, -119.2, -118.3], // the San Joaquin's south end (Bakersfield)
   [32, 35, -121, -116.5], // southern California
 ];
 
