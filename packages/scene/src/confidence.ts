@@ -36,6 +36,12 @@ export function environmentConfidence(env: EnvironmentState): ConfidenceLevel {
   return 'LOW';
 }
 
+const BASEMAP_NOTE: Record<EnvironmentState['basemapDetail'], string> = {
+  coarse: 'coarse basemap',
+  regional: 'regional imagery, not street detail',
+  street: 'street-level imagery',
+};
+
 export function deriveConfidence(input: ConfidenceInput): ConfidenceState {
   const astronomy: ConfidenceLevel = input.astronomyInputsValid ? 'HIGH' : 'LOW';
   const terrain = terrainConfidence(input.environment);
@@ -58,7 +64,7 @@ export function deriveConfidence(input: ConfidenceInput): ConfidenceState {
     (environment === 'HIGH'
       ? 'Real terrain with detailed imagery and OSM buildings where mapped'
       : terrain === 'HIGH'
-        ? `Real terrain; ${input.environment.basemapDetail === 'coarse' ? 'coarse basemap, no buildings' : 'imagery without 3D buildings'}`
+        ? `Real terrain; ${BASEMAP_NOTE[input.environment.basemapDetail]}${input.environment.buildingsAvailable ? ', OSM buildings where mapped' : ', no 3D buildings'}`
         : 'No terrain data here — flat ground assumed') + ground;
   const weatherNote = input.weatherProviderFailed
     ? 'Live forecast unavailable — showing your selected scenario'
@@ -74,7 +80,7 @@ export function deriveConfidence(input: ConfidenceInput): ConfidenceState {
     notes: {
       astronomy:
         astronomy === 'HIGH'
-          ? 'Sun and moon positions computed from ephemeris (±0.01° sun, ±0.3° moon)'
+          ? 'Sun and moon positions computed from ephemeris (±0.01° sun, ±0.02° moon)'
           : 'Waiting for a valid location and time zone',
       environment: envNote,
       weather: weatherNote,

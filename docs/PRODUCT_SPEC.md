@@ -387,7 +387,7 @@ one-line, user-facing reason; the scene-detail reason ends by naming what paints
 ```
 Preview basis
 Astronomy       High      Sun and moon positions computed from ephemeris (sun ±0.01° against USNO, moon ±0.02° against Meeus 47.a)
-Terrain         High      Real terrain; imagery without 3D buildings; ground painted by rule, towns from Natural Earth urban areas (no land-cover data)
+Terrain         High      Real terrain; regional imagery, not street detail, OSM buildings where mapped; ground painted by rule, towns from Natural Earth urban areas (no land-cover data)
 Scene detail    Medium
 Weather         Scenario  Forecast unavailable this far ahead (250 days) — compare scenarios
 Real reference  Unavailable   No licensed real photograph available — simulation only

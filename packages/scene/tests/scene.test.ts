@@ -325,6 +325,32 @@ describe('confidence and source mode', () => {
       }).environment,
     ).toBe('LOW');
   });
+  it('says whether OSM buildings are drawn, whatever the imagery (V&V: Kyoto read "without 3D buildings" under them)', () => {
+    const note = (environment: EnvironmentState) =>
+      deriveConfidence({
+        astronomyInputsValid: true,
+        environment,
+        weather: horizon,
+        realReference: false,
+      }).notes.environment;
+    const regional = { ...envGood, basemapDetail: 'regional' as const };
+    expect(note({ ...regional, buildingsAvailable: true })).toMatch(
+      /^Real terrain; regional imagery, not street detail, OSM buildings where mapped/,
+    );
+    expect(note(regional)).toMatch(
+      /^Real terrain; regional imagery, not street detail, no 3D buildings/,
+    );
+    expect(note(envCoarse)).toMatch(/^Real terrain; coarse basemap, no 3D buildings/);
+    expect(
+      deriveConfidence({
+        astronomyInputsValid: true,
+        environment: envGood,
+        weather: horizon,
+        realReference: false,
+      }).notes.astronomy,
+    ).toContain('±0.02° moon');
+  });
+
   it('names the ground texture’s source in the environment note without grading it', () => {
     const note = (environment: typeof envGood) =>
       deriveConfidence({
