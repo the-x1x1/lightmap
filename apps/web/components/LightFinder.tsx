@@ -669,7 +669,14 @@ export function LightFinder({
               }
             />
           ) : null}
-          {matches.length === 0 ? (
+          {matches.length === 0 && result.clipped ? (
+            // The plan cut the range short: say so, not that the direction may be unreachable.
+            <p className="text-sm text-[var(--lm-text-muted)]">
+              Nothing in this range inside your plan’s date window ({result.res.scannedDays} days).
+              Widen the tolerances or drop the elevation match; the {bodyName} may reach that
+              direction later in the year.
+            </p>
+          ) : matches.length === 0 ? (
             <p className="text-sm text-[var(--lm-text-muted)]">
               Nothing in this range. Widen the tolerances, drop the elevation match, or extend the
               dates — the {bodyName} may never reach that direction from this latitude
