@@ -175,6 +175,14 @@ const MOON_DISC_RANGE_M = 5_000_000;
 /** Clock steps longer than this (seconds) land at once instead of gliding. */
 const CLOCK_GLIDE_MAX_S = 600;
 
+/**
+ * The longest a small clock or light step glides, ms. The slowest play pace (2 day-minutes a
+ * second, `PLAY_RATES` in the web app) moves the clock a minute every 500 ms; a glide shorter
+ * than that left the Sun disc, the stars and the sky's colours still for part of every step, a
+ * visible pulse. A little over the cadence keeps that pace one continuous drift.
+ */
+const STEP_GLIDE_MAX_MS = 550;
+
 /** Light steps wider than this (cosine of 2°) land at once instead of gliding. */
 const LIGHT_GLIDE_MAX_COS = Math.cos((2 * Math.PI) / 180);
 
@@ -657,7 +665,7 @@ export class CesiumSceneHost implements SceneHost {
       this.clockFrom = C.JulianDate.clone(clock.currentTime);
       this.clockGoal = target;
       this.clockGlideStart = now;
-      this.clockGlideMs = Math.max(40, Math.min(300, now - this.clockChangedAt));
+      this.clockGlideMs = Math.max(40, Math.min(STEP_GLIDE_MAX_MS, now - this.clockChangedAt));
       this.clockGlideId++;
       this.scene.requestRender();
     }
@@ -705,7 +713,7 @@ export class CesiumSceneHost implements SceneHost {
       const goal = this.lightGoal ?? this.light.direction;
       if (C.Cartesian3.dot(next, goal) < 1 - 1e-12) {
         const interval = now - this.lightChangedAt;
-        this.lightTauMs = Math.max(40, Math.min(300, 0.6 * interval));
+        this.lightTauMs = Math.max(40, Math.min(0.6 * STEP_GLIDE_MAX_MS, 0.6 * interval));
         this.lightChangedAt = now;
         if (!this.lightGoal) this.lightEaseAt = now;
         this.lightGoal = next;

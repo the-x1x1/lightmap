@@ -417,7 +417,9 @@ milliseconds a frame (`buildingsFromTileSteps`, `FrameBudgetQueue`); a camera-on
 (a drag of the look direction) is about a tenth of a millisecond, the Moon's rise and set kept
 per place and day. Motion that the inputs deliver in steps is drawn continuously: the viewpoint
 eye glides between walk steps at the walk's speed, and the Sun's light glides between the
-clock's minute steps while the day plays or is scrubbed; a jump to a new place or a new date
+clock's minute steps while the day plays or is scrubbed (each glide lasts about the time
+between steps, up to 550 ms, so the slowest pace — a minute every half second — drifts without
+pausing); a jump to a new place or a new date
 lands at once, as does everything under "reduce motion". A walk does not resample the terrain
 horizon or rerun the night and season scans at every step: they wait until the pin stays put.
 
