@@ -152,6 +152,18 @@ const LABELS_ADDED_PER_FRAME = 24;
 /** The season must hold this long (ms) before the imagery is refetched in it. */
 const SEASON_SWAP_SETTLE_MS = 250;
 
+/** The grade's values that follow the clock (the rest — the weather's — change at once). */
+const GRADE_GLIDE_KEYS = [
+  'u_saturation',
+  'u_contrast',
+  'u_warmth',
+  'u_skyLuminance',
+  'u_nightFactor',
+  'u_horizonHaze',
+  'u_sunElevation',
+  'u_time',
+] as const;
+
 /** Clock steps longer than this (seconds) land at once instead of gliding. */
 const CLOCK_GLIDE_MAX_S = 600;
 
@@ -299,6 +311,12 @@ export class CesiumSceneHost implements SceneHost {
   private lightTauMs = 100;
   private lightEaseAt = 0;
   private lightChangedAt = 0;
+  /** The sky's values as last shown, and a glide between two applies (`setGrade`). */
+  private gradeShown: Record<string, number> | null = null;
+  private gradeFrom: Record<string, number> | null = null;
+  private gradeTo: Record<string, number> | null = null;
+  private gradeGlideId = 0;
+  private clockGlideId = 0;
   /** The clock's glide (`setTime`). */
   private clockGoal: Cesium.JulianDate | null = null;
   private clockFrom: Cesium.JulianDate | null = null;
@@ -625,6 +643,7 @@ export class CesiumSceneHost implements SceneHost {
       this.clockGoal = target;
       this.clockGlideStart = now;
       this.clockGlideMs = Math.max(40, Math.min(300, now - this.clockChangedAt));
+      this.clockGlideId++;
       this.scene.requestRender();
     }
     this.clockChangedAt = now;
@@ -638,6 +657,7 @@ export class CesiumSceneHost implements SceneHost {
     const C = this.C;
     const t = Math.min(1, (performance.now() - this.clockGlideStart) / this.clockGlideMs);
     const clock = this.widget.clock;
+    this.glideGrade(t);
     if (t >= 1) {
       clock.currentTime = goal;
       this.clockGoal = null;
@@ -1004,7 +1024,64 @@ export class CesiumSceneHost implements SceneHost {
     const target = this.grade.uniforms as Record<string, unknown>;
     // Function uniforms (evaluated per frame) become read-only properties once the stage holds
     // them; only the values are written through.
-    for (const key of Object.keys(g)) if (typeof g[key] !== 'function') target[key] = g[key];
+    // While the clock glides a minute step (`setTime`), the sky's time-driven values glide with
+    // it from what is shown now, so the dome, the twilight colours and the drifting clouds do
+    // not step a minute at a time either.
+    const shown = this.gradeShown;
+    if (this.clockGoal && shown && this.clockGlideId !== this.gradeGlideId) {
+      // A new step began this apply: glide from what is on screen to the new values.
+      this.gradeGlideId = this.clockGlideId;
+      const from: Record<string, number> = {};
+      const to: Record<string, number> = {};
+      for (const key of GRADE_GLIDE_KEYS) {
+        const a = shown[key];
+        const b = g[key];
+        if (typeof a === 'number' && typeof b === 'number') {
+          from[key] = a;
+          to[key] = b;
+        }
+      }
+      this.gradeFrom = from;
+      this.gradeTo = to;
+    } else if (this.clockGoal && this.gradeFrom && this.gradeTo) {
+      // The same step re-applied (a drag while the day plays): only its end may move.
+      for (const key of Object.keys(this.gradeTo)) {
+        const b = g[key];
+        if (typeof b === 'number') this.gradeTo[key] = b;
+      }
+    } else this.gradeFrom = null;
+    for (const key of Object.keys(g)) {
+      if (typeof g[key] === 'function') continue;
+      // Gliding values stay as shown; the glide (after each frame) moves them on.
+      if (this.gradeFrom && key in this.gradeFrom) continue;
+      target[key] = g[key];
+    }
+    if (this.groundMaterial && this.gradeFrom)
+      (this.groundMaterial.uniforms as Record<string, number>)['u_cloudTime'] =
+        shown?.['u_time'] ?? u.u_time;
+    this.gradeShown = Object.fromEntries(
+      Object.entries(target).filter(([, v]) => typeof v === 'number'),
+    ) as Record<string, number>;
+  }
+
+  /** The sky's glide, at the clock glide's own fraction `t` (0-1). */
+  private glideGrade(t: number): void {
+    const from = this.gradeFrom;
+    const to = this.gradeTo;
+    if (!from || !to) return;
+    const target = this.grade.uniforms as Record<string, unknown>;
+    const shown = this.gradeShown ?? {};
+    for (const key of Object.keys(from)) {
+      const a = from[key] as number;
+      const b = to[key] as number;
+      const v = a + (b - a) * t;
+      target[key] = v;
+      shown[key] = v;
+      if (key === 'u_time' && this.groundMaterial)
+        (this.groundMaterial.uniforms as Record<string, number>)['u_cloudTime'] = v;
+    }
+    this.gradeShown = shown;
+    if (t >= 1) this.gradeFrom = null;
   }
 
   /**
