@@ -10,6 +10,7 @@ import { useCapabilities } from '@/features/planner/use-scene';
 import { usePlannerStore } from '@/features/planner/store';
 import { useInstallPrompt, type InstallState } from '@/features/pwa/use-install-prompt';
 import { Button, cx } from '@lightmap/ui';
+import { PLANS } from '@lightmap/entitlements';
 import { SubscriptionStatus } from './SubscriptionStatus';
 import { Paywall } from './Paywall';
 import { Preferences } from './Preferences';
@@ -243,7 +244,7 @@ export function SignInPrompt({ reason }: { reason?: string }) {
       <p className="text-sm text-[var(--lm-text-muted)]" data-testid="accounts-unavailable">
         {caps.data?.desktopApp
           ? // A desktop app with no hosted service to sign in to yet: not a server fault.
-            'Signing in and saved projects come to the app once the LightMap service opens. Planning works fully here meanwhile.'
+            `Signing in and saved projects come to the app once the LightMap service opens. Meanwhile it plans on the free plan: anywhere, up to ${PLANS.free.limits.futureDateWindowDays ?? 14} days ahead.`
           : 'Accounts are not available on this server (no database configured). Exploring the map still works.'}
       </p>
     );
