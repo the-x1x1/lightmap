@@ -270,8 +270,11 @@ export class CesiumSceneHost implements SceneHost {
       maximumRenderTimeChange: Number.POSITIVE_INFINITY,
       shadows: true,
       terrainShadows: C.ShadowMode.ENABLED,
+      // No preserveDrawingBuffer: keeping the drawn frame costs the GPU a copy every frame (it
+      // cannot swap buffers), the one place that reads the canvas (captureThumbnail) renders and
+      // reads it in the same task, before the frame is composited and cleared.
       contextOptions: {
-        webgl: { preserveDrawingBuffer: true, powerPreference: 'high-performance' },
+        webgl: { powerPreference: 'high-performance' },
       },
       shouldAnimate: false,
       // No modal "An error occurred while rendering" panel over the app (it swallowed every
