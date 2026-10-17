@@ -289,7 +289,8 @@ latitude, the day of the year, the height and a regional rule for maritime clima
   45°, and peak colour about late October at 40°, early October at 45° and late September at
   60° (the classic phenology records); spring comes later and autumn earlier with height (about a
   month per 1 200–1 500 m). The west coasts in the westerlies (Europe west of about 15° E, the
-  Pacific coast of North America, New Zealand, southern Chile) are about three weeks earlier in
+  Pacific coast of North America, New Zealand, southern Chile, and in part southern Australia
+  and Tasmania) are about three weeks earlier in
   spring and later in autumn, and their grass stays greener through winter; southern Japan's
   maples turn about three weeks late. The leaves come down over about three weeks after the
   peak where frost strips them, and over five or six where autumn has none (the maritime west,
