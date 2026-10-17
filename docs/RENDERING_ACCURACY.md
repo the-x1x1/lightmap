@@ -385,7 +385,8 @@ land cover as OpenStreetMap has them (see Shadows); street widths are by class, 
 The overhead map is a chart, not a photograph. Once the Sun is under the horizon and nothing
 else lights the ground, real lighting would leave the chart black, so the map view shows the
 basemap flat and dimmed — 90 % brightness just after sunset down to 45 % in astronomical night
-(`globeShadingFor()`, tested) — while the sun overlay, the sky backdrop and the night-sky
+(`globeShadingFor()`, tested), opening to it over the first 2.5° from about what the lit globe
+showed at sunset, so a played sunset does not flash the chart three times brighter — while the sun overlay, the sky backdrop and the night-sky
 markers carry the hour. Nothing about the light is claimed by this: the viewpoint view keeps
 true lighting at every hour, and the planning card and the preview facts come from the scene,
 not from the chart's brightness.

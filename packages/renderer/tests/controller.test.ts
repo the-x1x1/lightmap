@@ -495,6 +495,26 @@ describe('globeShadingFor (the map stays a readable chart at night)', () => {
       6,
     );
   });
+  it('opens the night chart from what the lit globe showed at sunset, not in one jump', () => {
+    // Just past the switch the chart is about as dark as the lit globe was (ambient share of a
+    // weak, warm light), and opens to its night brightness over the next 2.5 deg.
+    const warm: [number, number, number] = [1, 0.7, 0.5];
+    const lit = (el: number) =>
+      globeShadingFor(
+        {
+          camera: { mode: 'map' } as SceneState['camera'],
+          solar: { elevationDegrees: el } as SceneState['solar'],
+        },
+        { sunIntensity: 0.6, sunColor: warm },
+      );
+    expect(lit(-0.9).basemapBrightness).toBeLessThan(0.25);
+    expect(lit(-2).basemapBrightness).toBeGreaterThan(lit(-0.9).basemapBrightness);
+    expect(lit(-3.4).basemapBrightness).toBeCloseTo(0.9 - 0.45 * ((3.4 - 0.833) / (18 - 0.833)), 6);
+    for (let el = -0.9; el > -3.4; el -= 0.1)
+      expect(Math.abs(lit(el - 0.1).basemapBrightness - lit(el).basemapBrightness)).toBeLessThan(
+        0.05,
+      );
+  });
   it('the controller tells the host once per change, not every tick', () => {
     const { host, calls } = fakeHost();
     const c = new SceneController(host, { setTimeoutImpl: () => 0, clearTimeoutImpl: () => {} });

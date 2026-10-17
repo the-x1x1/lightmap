@@ -604,14 +604,25 @@ export class SceneController {
  */
 export function globeShadingFor(
   scene: Pick<SceneState, 'camera' | 'solar'>,
-  lighting: Pick<LightingParameters, 'sunIntensity'>,
+  lighting: Pick<LightingParameters, 'sunIntensity'> &
+    Partial<Pick<LightingParameters, 'sunColor'>>,
 ): HostGlobeShading {
   if (scene.camera.mode === 'viewpoint') return { lit: true, basemapBrightness: 1 };
   const el = scene.solar.elevationDegrees;
   if (el > -0.833 && lighting.sunIntensity > 0.05) return { lit: true, basemapBrightness: 1 };
   // −0.833° → 0.9, −18° and below → 0.45.
   const t = Math.min(1, Math.max(0, (-0.833 - el) / (18 - 0.833)));
-  return { lit: false, basemapBrightness: 0.9 - 0.45 * t };
+  const night = 0.9 - 0.45 * t;
+  // At the switch the lit globe under a Sun at the horizon showed level ground at about its
+  // ambient share (Cesium's vertex shadow darkness, 0.3) of the light's colour and strength: the
+  // flat chart starts there and opens to its night brightness over the next 2.5 deg, instead of
+  // jumping three or four times brighter as the Sun sets.
+  const [r, g, b] = lighting.sunColor ?? [1, 1, 1];
+  const litLevel = 0.3 * lighting.sunIntensity * (0.2126 * r + 0.7152 * g + 0.0722 * b);
+  const from = Math.max(0.15, Math.min(night, litLevel));
+  const u = Math.min(1, Math.max(0, (-0.833 - el) / 2.5));
+  if (u >= 1) return { lit: false, basemapBrightness: night };
+  return { lit: false, basemapBrightness: from + (night - from) * u * u * (3 - 2 * u) };
 }
 
 /** Sun positions through the civil day, every 10 minutes while above the horizon. */
