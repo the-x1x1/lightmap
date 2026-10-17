@@ -2,6 +2,7 @@
 import type { SceneState } from '@lightmap/scene';
 import {
   describeExposure,
+  profileCaveat,
   describeSeasonalEnvelope,
   estimateExposure,
   circleOfConfusionMm,
@@ -454,6 +455,7 @@ export function AstronomyDetails({
 }: AstronomyDetailsProps) {
   const s = scene.solar;
   const tz = scene.timeZone;
+  const units = usePlannerStore((st) => st.units);
   const seasons = useSeasonalEnvelope(scene);
   // Sampled over the day (a few ms): once per place, day and zone, never per scrub tick.
   const lat = scene.location.point.latitude;
@@ -572,7 +574,7 @@ export function AstronomyDetails({
       ) : null}
       {scene.terrainHorizon ? (
         <p className="text-xs text-[var(--lm-text-muted)]" data-testid="terrain-caveat">
-          {scene.terrainHorizon.profile.caveat}
+          {profileCaveat(scene.terrainHorizon.profile, units)}
         </p>
       ) : null}
       <p className="text-xs text-[var(--lm-text-muted)]" data-testid="seasonal-envelope">

@@ -23,6 +23,7 @@ import {
 import {
   MOON_SEMIDIAMETER_DEG,
   aboveTerrain,
+  profileCaveat,
   ridgeContactElevationDeg,
   type SceneState,
 } from '@lightmap/scene';
@@ -124,6 +125,8 @@ export function LightFinder({
         ? (scene.nightSky?.elevationDeg ?? null)
         : scene.solar.elevationDegrees;
   const profile = scene.terrainHorizon?.profile ?? null;
+  const units = usePlannerStore((s) => s.units);
+  const caveat = profile ? profileCaveat(profile, units) : undefined;
   // "Where it is now" with the Moon or the core under the horizon: no photograph has it there.
   // The Sun under it is a twilight depth worth matching - down to astronomical night, below which
   // every night is the same. V&V: the Moon at -65 deg searched and found nothing.
@@ -666,7 +669,7 @@ export function LightFinder({
             data-testid="finder-hide-terrain"
           />
           Hide moments when the {bodyName} is behind the terrain
-          <span className="sr-only">. {profile.caveat}</span>
+          <span className="sr-only">. {caveat}</span>
         </label>
       ) : null}
       {result ? (
@@ -724,7 +727,7 @@ export function LightFinder({
                           : '';
                       })()}
                       {mode !== 'ridge' && behindTerrain(m) ? (
-                        <span className="ml-1 text-[color:#ffd27a]" title={profile?.caveat}>
+                        <span className="ml-1 text-[color:#ffd27a]" title={caveat}>
                           · behind terrain
                         </span>
                       ) : null}

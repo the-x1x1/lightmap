@@ -7,6 +7,7 @@ import {
   horizonProfileFromSamples,
   horizonRingDistances,
   horizonSamplePoints,
+  profileCaveat,
   ridgeContactElevationDeg,
   seaHorizonDipDeg,
   terrainSunEvents,
@@ -96,6 +97,20 @@ describe('terrain horizon profile', () => {
       /^The pin is on a mapped building, so the horizon is read from its roof/,
     );
     expect(roof.caveat).toContain('Terrain and mapped buildings');
+  });
+
+  it('names the sampled reach in miles for imperial units, the stored caveat unchanged', () => {
+    const p = horizonProfileFromSamples(origin, 0, 1.6, ridgeSamples(), source, {
+      buildingsReachM: 2500,
+    });
+    expect(profileCaveat(p, 'metric')).toBe(p.caveat);
+    expect(profileCaveat(p, 'imperial')).toContain(
+      'Buildings beyond 1.6 mi and terrain beyond 25 mi were not sampled.',
+    );
+    const plain = horizonProfileFromSamples(origin, 0, 1.6, ridgeSamples(), source);
+    expect(profileCaveat(plain, 'imperial')).toMatch(
+      /^Terrain only.*Terrain beyond 25 mi was not sampled\.$/,
+    );
   });
 
   it('ignores missing samples and reports coverage', () => {

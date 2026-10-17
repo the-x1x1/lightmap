@@ -66,6 +66,13 @@ export const HORIZON_CAVEAT =
 export const HORIZON_WITH_BUILDINGS_CAVEAT =
   'Terrain and mapped buildings: trees and cloud on the ridge are not in the model, buildings are as OpenStreetMap has them (heights often estimated or missing), and a sharp edge can sit between samples.';
 
+/** A sampled reach for the caveat: "1.5 km" / "40 km", or "0.9 mi" / "25 mi" in imperial units. */
+function reach(m: number, units: 'metric' | 'imperial'): string {
+  const v = units === 'imperial' ? m / 1609.344 : m / 1000;
+  const n = v < 10 ? v.toFixed(1).replace(/\.0$/, '') : String(Math.round(v));
+  return `${n} ${units === 'imperial' ? 'mi' : 'km'}`;
+}
+
 /**
  * The caveat with the sampled reach, so "no terrain effect" is never read as "no terrain"; with
  * `buildingsReachM`, the buildings were sampled out to that distance.
@@ -74,12 +81,29 @@ export function horizonCaveat(
   maxDistanceM: number,
   buildingsReachM: number | null = null,
   onRoof = false,
+  units: 'metric' | 'imperial' = 'metric',
 ): string {
+  const terrain =
+    units === 'metric' ? `${Math.round(maxDistanceM / 1000)} km` : reach(maxDistanceM, units);
   const base =
     buildingsReachM !== null
-      ? `${HORIZON_WITH_BUILDINGS_CAVEAT} Buildings beyond ${(buildingsReachM / 1000).toFixed(1).replace(/\.0$/, '')} km and terrain beyond ${Math.round(maxDistanceM / 1000)} km were not sampled.`
-      : `${HORIZON_CAVEAT} Terrain beyond ${Math.round(maxDistanceM / 1000)} km was not sampled.`;
+      ? `${HORIZON_WITH_BUILDINGS_CAVEAT} Buildings beyond ${reach(buildingsReachM, units)} and terrain beyond ${terrain} were not sampled.`
+      : `${HORIZON_CAVEAT} Terrain beyond ${terrain} was not sampled.`;
   return onRoof ? `${ROOF_CAVEAT} ${base}` : base;
+}
+
+/** A profile's caveat in the reader's units (the stored `caveat` is metric). */
+export function profileCaveat(
+  profile: Pick<HorizonProfile, 'maxDistanceM' | 'buildingsReachM' | 'onRoof' | 'caveat'>,
+  units: 'metric' | 'imperial',
+): string {
+  if (units === 'metric') return profile.caveat;
+  return horizonCaveat(
+    profile.maxDistanceM,
+    profile.buildingsReachM ?? null,
+    profile.onRoof ?? false,
+    units,
+  );
 }
 
 /** The short form for a marker or a card line: what the profile is made of. */

@@ -1,5 +1,7 @@
+'use client';
 import type { SceneState } from '@lightmap/scene';
-import { SOURCE_MODE_DESCRIPTION, formatDeg } from '@lightmap/scene';
+import { SOURCE_MODE_DESCRIPTION, formatDeg, profileCaveat } from '@lightmap/scene';
+import { usePlannerStore } from '@/features/planner/store';
 import { PreviewSourceBadge } from './PreviewSourceBadge';
 
 const LEVEL_GLYPH: Record<string, string> = {
@@ -22,14 +24,21 @@ const LEVEL_TEXT: Record<string, string> = {
 /** "Preview basis" (plan §11): independent dimensions, no invented percentage. */
 export function ConfidencePanel({ scene }: { scene: SceneState }) {
   const c = scene.confidence;
+  const units = usePlannerStore((st) => st.units);
+  const t = scene.terrainHorizon;
+  const sampledTo = t
+    ? units === 'imperial'
+      ? `${Math.round(t.profile.maxDistanceM / 1609.344)} mi`
+      : `${Math.round(t.profile.maxDistanceM / 1000)} km`
+    : '';
   const rows: Array<[string, string, string]> = [
     ['Astronomy', c.astronomy, c.notes.astronomy],
     [
       'Terrain',
       c.terrain,
       c.terrain === 'HIGH'
-        ? scene.terrainHorizon
-          ? `Real elevation data; terrain horizon sampled to ${Math.round(scene.terrainHorizon.profile.maxDistanceM / 1000)} km (highest ridge ${formatDeg(scene.terrainHorizon.profile.maxElevationDeg)}°). ${scene.terrainHorizon.profile.caveat}`
+        ? t
+          ? `Real elevation data; terrain horizon sampled to ${sampledTo} (highest ridge ${formatDeg(t.profile.maxElevationDeg)}°). ${profileCaveat(t.profile, units)}`
           : 'Real elevation data'
         : 'Flat ground assumed',
     ],
