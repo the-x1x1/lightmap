@@ -32,6 +32,7 @@ import {
   clearOrbitPitch,
   eyeDistanceM,
   eyeGlideDurationMs,
+  eyeLift,
   glideEyeAt,
   orbitSightLine,
   steeperPitches,
@@ -142,9 +143,6 @@ const LABEL_PICK_INTERVAL_MS = 200;
  * rare: with a pin the frame stays at the pin (zooming in and out never moves it).
  */
 const DETAIL_REANCHOR_M = 200_000;
-
-/** The eye settles down to its height with this time constant (ms) when the ground drops. */
-const EYE_SETTLE_TAU_MS = 120;
 
 /** New place labels per frame (each rasterises its text). */
 const LABELS_ADDED_PER_FRAME = 24;
@@ -1145,34 +1143,24 @@ export class CesiumSceneHost implements SceneHost {
     const cam = this.scene.camera;
     const carto = cam.positionCartographic;
     const surface = (this.scene.globe as Cesium.Globe | undefined)?.getHeight(carto);
-    // The lift above the measured height that the drawn ground asks for (none once it no longer
-    // covers the eye). Kept as a lift over the wanted height rather than as a camera height, so
-    // a walk's glide, which sets the camera to the wanted height every frame, does not undo it.
-    const needed =
-      surface !== undefined && Number.isFinite(surface) && wanted < surface + 0.5
-        ? surface + 1.7 - wanted
-        : 0;
-    // Up at once (the eye must never sink into the drawn ground), down gently: as finer terrain
-    // tiles replace coarse ones the surface under the eye drops by a metre or two, and snapping
-    // down with it jolted the view while walking.
+    // The ground's lift over the wanted height (`eyeLift`), kept as a lift rather than a camera
+    // height so a walk's glide, which sets the camera to the wanted height every frame, does not
+    // undo it.
     const t = performance.now();
     const gap = t - this.eyeSettleAt;
     // After a pause (the scene draws on demand) count one ordinary frame, not the whole pause.
     const dt = gap > 50 ? 16 : Math.max(0, gap);
     this.eyeSettleAt = t;
-    // A rise of the wanted height (the terrain look-up catching up) comes off the lift at once,
-    // or the eased lift would carry the eye past where it should stand.
-    if (this.eyeWantedM !== null && wanted > this.eyeWantedM)
-      this.eyeLiftM = Math.max(needed, this.eyeLiftM - (wanted - this.eyeWantedM));
+    const next = eyeLift(
+      { liftM: this.eyeLiftM, wantedM: this.eyeWantedM },
+      wanted,
+      surface !== undefined && Number.isFinite(surface) ? surface : null,
+      dt,
+    );
+    this.eyeLiftM = next.liftM;
     this.eyeWantedM = wanted;
-    let lift = needed;
-    if (needed < this.eyeLiftM) {
-      const k = 1 - Math.exp(-dt / EYE_SETTLE_TAU_MS);
-      lift = this.eyeLiftM + (needed - this.eyeLiftM) * k;
-      if (lift - needed > 0.05) this.scene.requestRender();
-      else lift = needed;
-    }
-    this.eyeLiftM = lift;
+    if (next.settling) this.scene.requestRender();
+    const lift = next.liftM;
     const height = wanted + lift;
     if (Math.abs(carto.height - height) < 0.01) return;
     const C = this.C;

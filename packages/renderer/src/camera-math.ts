@@ -177,3 +177,35 @@ export function glideEyeAt(
     done: false,
   };
 }
+
+/** The eye settles down onto lower ground with this time constant (ms). */
+export const EYE_SETTLE_TAU_MS = 120;
+
+/**
+ * The lift the drawn ground gives a viewpoint eye over the height it should stand at: up at once
+ * (the eye must never sink into the drawn ground), down gently as finer terrain lowers the
+ * surface (snapping down jolted the view while walking), and a rise of the wanted height (a
+ * terrain look-up catching up) taken off the lift at once so the eye never overshoots.
+ * `surfaceM` is the drawn ground under the eye (null if unknown); `settling` while it eases.
+ */
+export function eyeLift(
+  prev: { liftM: number; wantedM: number | null },
+  wantedM: number,
+  surfaceM: number | null,
+  dtMs: number,
+  tauMs = EYE_SETTLE_TAU_MS,
+): { liftM: number; settling: boolean } {
+  const needed =
+    surfaceM !== null && Number.isFinite(surfaceM) && wantedM < surfaceM + 0.5
+      ? surfaceM + 1.7 - wantedM
+      : 0;
+  let held = prev.liftM;
+  if (prev.wantedM !== null && wantedM > prev.wantedM)
+    held = Math.max(needed, held - (wantedM - prev.wantedM));
+  if (needed >= held) return { liftM: needed, settling: false };
+  const k = 1 - Math.exp(-Math.max(0, dtMs) / tauMs);
+  const lift = held + (needed - held) * k;
+  return lift - needed > 0.05
+    ? { liftM: lift, settling: true }
+    : { liftM: needed, settling: false };
+}

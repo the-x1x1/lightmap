@@ -6,6 +6,7 @@ import {
   clearOrbitPitch,
   eyeDistanceM,
   eyeGlideDurationMs,
+  eyeLift,
   glideEyeAt,
   normalizeHeadingDegrees,
   orbitSightLine,
@@ -112,5 +113,35 @@ describe('the viewpoint eye glides between steps', () => {
     expect(eyeGlideDurationMs(5_000)).toBe(250);
     expect(eyeGlideDurationMs(5)).toBe(40);
     expect(glideEyeAt(at, ahead(2), 0, 0)).toEqual({ eye: ahead(2), done: true });
+  });
+});
+
+describe('the ground lifts the eye', () => {
+  it('up at once when the drawn ground covers it, down gently when it drops', () => {
+    // Wanted 100 m; the coarse ground at 102 m: lifted to 103.7 at once.
+    const up = eyeLift({ liftM: 0, wantedM: 100 }, 100, 102, 16);
+    expect(up.liftM).toBeCloseTo(3.7, 9);
+    expect(up.settling).toBe(false);
+    // A finer tile drops the ground to 99 m: the lift eases down over several frames.
+    let s = { liftM: up.liftM, wantedM: 100 as number | null };
+    let frames = 0;
+    for (;;) {
+      const n = eyeLift(s, 100, 99, 16);
+      frames++;
+      expect(n.liftM).toBeLessThanOrEqual(s.liftM);
+      s = { liftM: n.liftM, wantedM: 100 };
+      if (!n.settling) break;
+    }
+    expect(s.liftM).toBe(0);
+    expect(frames).toBeGreaterThan(5);
+  });
+
+  it('takes a rise of the wanted height off the lift at once: no overshoot', () => {
+    // Held 31.7 m over a stale 70 m; the look-up raises the wanted height to 100 (ground 98).
+    const n = eyeLift({ liftM: 31.7, wantedM: 70 }, 100, 98, 16);
+    // Drawn no higher than before (70 + 31.7), and settling the last 1.7 m down from there.
+    expect(100 + n.liftM).toBeLessThanOrEqual(101.7 + 1e-9);
+    expect(n.liftM).toBeLessThan(1.7);
+    expect(n.settling).toBe(true);
   });
 });
