@@ -688,14 +688,14 @@ export class OsmBuildingsLayer {
       const steps = buildingsFromTileSteps(data, BUILDING_TILE_ZOOM, state.x, state.y);
       let all: BuildingFootprint[] | null = null;
       while (!all) {
+        // Every slice in its turn, the first too: a burst of tiles landing together must not
+        // decode one slice each in the same frame.
+        await this.nextSlot();
+        if (state.cancelled || this.destroyed) return;
         const started = performance.now();
         let step = steps.next();
         while (!step.done && performance.now() - started < SLICE_BUDGET_MS) step = steps.next();
         if (step.done) all = step.value;
-        else {
-          await this.nextSlot();
-          if (state.cancelled || this.destroyed) return;
-        }
       }
       const buildings = state.near ? all : all.filter((b) => b.heightM >= FAR_MIN_HEIGHT_M);
       state.footprints = buildings;

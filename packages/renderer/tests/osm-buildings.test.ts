@@ -250,5 +250,14 @@ describe('decoding a dense tile in steps', () => {
     expect(yields).toBe(Math.floor((feats.length - 1) / BUILDINGS_PER_STEP));
     expect(r.value).toEqual(buildingsFromTile(t, 14, 8000, 5000));
     expect(r.value).toHaveLength(feats.length);
+    // The per-row latitude and the linear longitude agree with the tile maths, vertex by vertex.
+    const first = r.value[0]!;
+    const [lon, lat] = tilePointToLonLat(14, 8000, 5000, 4096, 20, 20);
+    expect(first.outer[0]![0]).toBeCloseTo(lon, 10);
+    expect(first.outer[0]![1]).toBeCloseTo(lat, 10);
+    const last = r.value[r.value.length - 1]!;
+    const [lon2, lat2] = tilePointToLonLat(14, 8000, 5000, 4096, 20 + 39 * 100 + 40, 20 + 29 * 130);
+    expect(last.outer[1]![0]).toBeCloseTo(lon2, 10);
+    expect(last.outer[1]![1]).toBeCloseTo(lat2, 10);
   });
 });

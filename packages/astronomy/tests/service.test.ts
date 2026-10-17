@@ -150,3 +150,22 @@ describe('utcToLocalSelection', () => {
     });
   });
 });
+
+describe('moonrise and moonset are kept per place and day', () => {
+  it('answers a second ask for the same day, or a place a few metres off, from the first', () => {
+    const svc = new MeeusAstronomyService();
+    const input = {
+      latitude: 21.397,
+      longitude: -157.727,
+      timeZone: 'Pacific/Honolulu',
+      timestampUtc: new Date('2026-06-03T08:00:00Z'),
+    };
+    const a = svc.getLunarState(input);
+    const later = svc.getLunarState({ ...input, timestampUtc: new Date('2026-06-03T09:30:00Z') });
+    const stepped = svc.getLunarState({ ...input, latitude: 21.39705 });
+    expect(later.moonrise).toBe(a.moonrise);
+    expect(stepped.moonrise).toBe(a.moonrise);
+    // The position still follows the instant.
+    expect(later.elevationDegrees).not.toBe(a.elevationDegrees);
+  });
+});

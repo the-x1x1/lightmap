@@ -134,10 +134,11 @@ export interface EyePosition {
   heightM: number;
 }
 
-/** A move this far or farther (metres) is a jump to a new place, not a step: no easing. */
+/** A move this far or farther (metres) is a jump to a new place, not a step: no glide. */
 export const EYE_EASE_MAX_M = 250;
-/** The eye eases toward a step's end with this time constant (ms): ~3τ to arrive. */
-export const EYE_EASE_TAU_MS = 70;
+/** A glide lasts the time since the step before (so a held key walks at a steady speed), within these bounds. */
+export const EYE_GLIDE_MIN_MS = 40;
+export const EYE_GLIDE_MAX_MS = 250;
 
 /** Metres between two eye positions (flat-earth, ample under EYE_EASE_MAX_M). */
 export function eyeDistanceM(a: EyePosition, b: EyePosition): number {
@@ -149,25 +150,29 @@ export function eyeDistanceM(a: EyePosition, b: EyePosition): number {
   );
 }
 
+/** How long a glide to a new step takes: the interval since the last step, clamped. */
+export function eyeGlideDurationMs(sinceLastStepMs: number): number {
+  return Math.max(EYE_GLIDE_MIN_MS, Math.min(EYE_GLIDE_MAX_MS, sinceLastStepMs));
+}
+
 /**
- * One frame of the eye's glide toward `target`: exponential, so a run of W-key steps or the
- * height a terrain look-up settles on reads as one smooth move instead of a hop per step. A jump
- * (EYE_EASE_MAX_M or more) lands at once; within 2 cm it snaps. `done` once it is there.
+ * Where the eye is `elapsedMs` into a glide of `durationMs` from `from` to `to`: at a constant
+ * speed, so steps that arrive one glide apart (a held W key) join into one steady walk, and the
+ * eye is where the step put it when the next one comes. `done` at the end.
  */
-export function easeEye(
-  current: EyePosition,
-  target: EyePosition,
-  dtMs: number,
-  tauMs = EYE_EASE_TAU_MS,
+export function glideEyeAt(
+  from: EyePosition,
+  to: EyePosition,
+  elapsedMs: number,
+  durationMs: number,
 ): { eye: EyePosition; done: boolean } {
-  const d = eyeDistanceM(current, target);
-  if (d >= EYE_EASE_MAX_M || d < 0.02 || tauMs <= 0) return { eye: { ...target }, done: true };
-  const k = 1 - Math.exp(-Math.max(0, dtMs) / tauMs);
+  const t = durationMs > 0 ? Math.max(0, elapsedMs) / durationMs : 1;
+  if (t >= 1) return { eye: { ...to }, done: true };
   return {
     eye: {
-      longitude: current.longitude + (target.longitude - current.longitude) * k,
-      latitude: current.latitude + (target.latitude - current.latitude) * k,
-      heightM: current.heightM + (target.heightM - current.heightM) * k,
+      longitude: from.longitude + (to.longitude - from.longitude) * t,
+      latitude: from.latitude + (to.latitude - from.latitude) * t,
+      heightM: from.heightM + (to.heightM - from.heightM) * t,
     },
     done: false,
   };

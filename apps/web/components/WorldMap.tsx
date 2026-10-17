@@ -316,6 +316,23 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
     },
     [],
   );
+  // A key-up can go missing (the window loses focus, a context menu takes it, macOS drops the
+  // letter's key-up under Cmd): stop then, and whenever the view stops being the viewpoint.
+  useEffect(() => {
+    if (!looking) stopWalking();
+    const stop = () => stopWalking();
+    const hidden = () => {
+      if (document.visibilityState !== 'visible') stopWalking();
+    };
+    window.addEventListener('blur', stop);
+    document.addEventListener('visibilitychange', hidden);
+    return () => {
+      window.removeEventListener('blur', stop);
+      document.removeEventListener('visibilitychange', hidden);
+    };
+    // stopWalking only touches refs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [looking]);
   const walk = (forwardM: number, rightM: number) => {
     const s = usePlannerStore.getState();
     const loc = s.location;
@@ -339,30 +356,40 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
   const walkTick = () => {
     const keys = held.current;
     const stride = (shiftHeld.current ? 5 : 1) * WALK_MPS * (WALK_TICK_MS / 1000);
-    const forward = (keys.has('w') ? 1 : 0) - (keys.has('s') ? 1 : 0);
-    const right = (keys.has('d') ? 1 : 0) - (keys.has('a') ? 1 : 0);
+    const forward = (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0);
+    const right = (keys.has('KeyD') ? 1 : 0) - (keys.has('KeyA') ? 1 : 0);
     if (forward === 0 && right === 0) return;
     // Diagonals at the same speed as straight lines.
     const n = Math.hypot(forward, right);
     walk((forward / n) * stride, (right / n) * stride);
   };
+  // Keys by their physical place (e.code), so Shift, Option or a keyboard layout does not change
+  // which key-up ends the walk.
   const onKeyUp = (e: React.KeyboardEvent) => {
     shiftHeld.current = e.shiftKey;
-    held.current.delete(e.key.toLowerCase());
+    held.current.delete(e.code);
     if (held.current.size === 0) stopWalking();
   };
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (!looking) return;
-    const k = e.key.toLowerCase();
     shiftHeld.current = e.shiftKey;
-    if (k === 'w' || k === 's' || k === 'a' || k === 'd') {
+    // A shortcut (Cmd/Ctrl with a letter) is not a step, and its letter's key-up may never come.
+    if (e.metaKey || e.ctrlKey) {
+      stopWalking();
+      return;
+    }
+    const k = e.code;
+    if (k === 'KeyW' || k === 'KeyS' || k === 'KeyA' || k === 'KeyD') {
       e.preventDefault();
       // The keyboard's own repeats are ignored: the loop walks while the key is down.
       if (e.repeat || held.current.has(k)) return;
       walked();
       held.current.add(k);
-      walkTick();
-      walkLoop.current ??= setInterval(walkTick, WALK_TICK_MS);
+      // The first step at once (a tap still moves); the loop takes over from there.
+      if (!walkLoop.current) {
+        walkTick();
+        walkLoop.current = setInterval(walkTick, WALK_TICK_MS);
+      }
       return;
     }
     const step = e.shiftKey ? 15 : 3;
@@ -409,6 +436,7 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
         onKeyDown={onKeyDown}
         onKeyUp={onKeyUp}
         onBlur={stopWalking}
+        onContextMenu={stopWalking}
       />
       {overlayMode && !location ? (
         <div className="absolute inset-0 flex items-center justify-center p-6">

@@ -30,8 +30,9 @@ import { GLOBE_MASK_SAMPLE_LINE, patchGlobeFragmentSource } from '../water-mask.
 import {
   EYE_EASE_MAX_M,
   clearOrbitPitch,
-  easeEye,
   eyeDistanceM,
+  eyeGlideDurationMs,
+  glideEyeAt,
   orbitSightLine,
   steeperPitches,
   type EyePosition,
@@ -267,10 +268,13 @@ export class CesiumSceneHost implements SceneHost {
   private preRenderGroundRemover: (() => void) | null = null;
   /** A viewpoint's measured eye height (kept above the drawn globe until that catches up). */
   private viewpointHeightM: number | null = null;
-  /** The viewpoint eye's glide (`easeEye`): where it is drawn now and where it is going. */
+  /** The viewpoint eye's glide (`glideEyeAt`): where it is drawn, where from and where to. */
   private eyeNow: EyePosition | null = null;
+  private eyeFrom: EyePosition | null = null;
   private eyeGoal: EyePosition | null = null;
-  private eyeEaseAt = 0;
+  private eyeGlideStart = 0;
+  private eyeGlideMs = 0;
+  private eyeStepAt = 0;
   /** The light's glide (`setLight`): the direction it is heading for, and how fast. */
   private lightGoal: Cesium.Cartesian3 | null = null;
   private lightTauMs = 100;
@@ -592,14 +596,20 @@ export class CesiumSceneHost implements SceneHost {
     if (cos < LIGHT_GLIDE_MAX_COS || prefersReducedMotion()) {
       C.Cartesian3.clone(next, this.light.direction);
       this.lightGoal = null;
-    } else if (cos < 1 - 1e-12) {
-      const interval = now - this.lightChangedAt;
-      this.lightTauMs = Math.max(40, Math.min(300, 0.6 * interval));
-      if (!this.lightGoal) this.lightEaseAt = now;
-      this.lightGoal = next;
-      this.scene.requestRender();
+      this.lightChangedAt = now;
+    } else {
+      // Only a new direction counts as a step: the controller sets the light on every apply (a
+      // drag, a walk step) with the same Sun, which must not shorten the glide.
+      const goal = this.lightGoal ?? this.light.direction;
+      if (C.Cartesian3.dot(next, goal) < 1 - 1e-12) {
+        const interval = now - this.lightChangedAt;
+        this.lightTauMs = Math.max(40, Math.min(300, 0.6 * interval));
+        this.lightChangedAt = now;
+        if (!this.lightGoal) this.lightEaseAt = now;
+        this.lightGoal = next;
+        this.scene.requestRender();
+      }
     }
-    this.lightChangedAt = now;
     this.light.color = new C.Color(light.color[0], light.color[1], light.color[2], 1);
     this.light.intensity = light.intensity;
   }
@@ -911,13 +921,10 @@ export class CesiumSceneHost implements SceneHost {
 
   /** One frame of the viewpoint eye's glide toward its goal; keeps frames coming until there. */
   private glideEye(): void {
-    const now = this.eyeNow;
+    const from = this.eyeFrom;
     const goal = this.eyeGoal;
-    if (!now || !goal) return;
-    const t = performance.now();
-    const dt = Math.min(100, t - this.eyeEaseAt);
-    this.eyeEaseAt = t;
-    const step = easeEye(now, goal, dt);
+    if (!from || !goal) return;
+    const step = glideEyeAt(from, goal, performance.now() - this.eyeGlideStart, this.eyeGlideMs);
     this.eyeNow = step.eye;
     if (step.done) this.eyeGoal = null;
     else this.scene.requestRender();
@@ -984,13 +991,24 @@ export class CesiumSceneHost implements SceneHost {
         wasViewpoint &&
         !prefersReducedMotion() &&
         eyeDistanceM(from, goal) < EYE_EASE_MAX_M;
-      if (glide) {
-        if (!this.eyeGoal) this.eyeEaseAt = performance.now();
+      const t = performance.now();
+      // The same eye with a new look direction (a drag) is not a step: a glide under way goes on.
+      const sameGoal = eyeDistanceM(this.eyeGoal ?? from ?? goal, goal) < 0.01;
+      if (glide && sameGoal) {
+        if (this.eyeGoal) this.viewpointHeightM = from.heightM;
+      } else if (glide) {
+        // From where it is drawn now, taking as long as the steps are coming apart.
+        this.eyeFrom = from;
         this.eyeGoal = goal;
+        this.eyeGlideStart = t;
+        this.eyeGlideMs = eyeGlideDurationMs(t - this.eyeStepAt);
         this.viewpointHeightM = from.heightM;
+        this.eyeStepAt = t;
       } else {
         this.eyeNow = goal;
+        this.eyeFrom = null;
         this.eyeGoal = null;
+        this.eyeStepAt = t;
       }
       const at = this.eyeNow ?? goal;
       cam.setView({
@@ -1000,6 +1018,7 @@ export class CesiumSceneHost implements SceneHost {
       this.scene.requestRender();
     } else {
       this.eyeNow = null;
+      this.eyeFrom = null;
       this.eyeGoal = null;
       ssc.enableInputs = true;
       ssc.enableTranslate = true;
@@ -1294,7 +1313,8 @@ export class CesiumSceneHost implements SceneHost {
     // MSAA off, FXAA keeps the edges from stair-stepping at a fraction of the cost.
     const msaa = q.msaaSamples ?? 4;
     if (this.scene.msaaSamples !== msaa) this.scene.msaaSamples = msaa;
-    this.scene.postProcessStages.fxaa.enabled = msaa <= 1;
+    // What the context granted (WebGL 1 has no MSAA at all): FXAA wherever it is off.
+    this.scene.postProcessStages.fxaa.enabled = this.scene.msaaSamples <= 1;
     this.scene.requestRender();
   }
 
@@ -2437,7 +2457,10 @@ export class CesiumSceneHost implements SceneHost {
 
   async captureThumbnail(maxWidth: number): Promise<string | null> {
     try {
-      this.scene.render();
+      // Render-on-demand skips a frame nobody asked for, and without a preserved drawing buffer
+      // an idle canvas reads back empty: ask for one, at the planned time (not the wall clock).
+      this.scene.requestRender();
+      this.scene.render(this.widget.clock.currentTime);
       const src = this.widget.canvas;
       const scale = Math.min(1, maxWidth / src.width);
       const out = document.createElement('canvas');

@@ -4,8 +4,9 @@ import {
   altitudeToZoom,
   clampOrbit,
   clearOrbitPitch,
-  easeEye,
   eyeDistanceM,
+  eyeGlideDurationMs,
+  glideEyeAt,
   normalizeHeadingDegrees,
   orbitSightLine,
   steeperPitches,
@@ -93,29 +94,23 @@ describe('the viewpoint eye glides between steps', () => {
   const at = { longitude: 7.9, latitude: 46.5, heightM: 1000 };
   const ahead = (m: number) => ({ ...at, latitude: at.latitude + m / 110_540 });
 
-  it('arrives over a few frames, never overshooting, and lands exactly', () => {
-    let eye = at;
-    const goal = ahead(2); // a W-key step
-    let frames = 0;
-    let last = eyeDistanceM(eye, goal);
-    for (;;) {
-      const s = easeEye(eye, goal, 16.7);
-      frames++;
-      eye = s.eye;
-      const d = eyeDistanceM(eye, goal);
-      expect(d).toBeLessThanOrEqual(last);
-      last = d;
-      if (s.done) break;
-    }
-    expect(eye).toEqual(goal);
-    // ~3 time constants of 70 ms at 60 fps: about a fifth of a second.
-    expect(frames).toBeGreaterThan(5);
-    expect(frames).toBeLessThan(30);
+  it('moves at a steady speed and is at the step when the glide ends', () => {
+    const goal = ahead(0.6); // a 100 ms walk step at 6 m/s
+    const ms = eyeGlideDurationMs(100);
+    expect(ms).toBe(100);
+    const d = (t: number) => eyeDistanceM(at, glideEyeAt(at, goal, t, ms).eye);
+    // Equal distances in equal times: no surge and stop each step.
+    expect(d(25)).toBeCloseTo(0.15, 3);
+    expect(d(50)).toBeCloseTo(0.3, 3);
+    expect(d(75)).toBeCloseTo(0.45, 3);
+    const end = glideEyeAt(at, goal, 100, ms);
+    expect(end.done).toBe(true);
+    expect(end.eye).toEqual(goal);
   });
 
-  it('jumps to a new place, and a slow frame does not overshoot', () => {
-    expect(easeEye(at, ahead(400), 16.7)).toEqual({ eye: ahead(400), done: true });
-    const s = easeEye(at, ahead(10), 10_000);
-    expect(eyeDistanceM(s.eye, ahead(10))).toBeLessThan(0.01);
+  it('bounds the glide: a lone step takes a quarter second, rapid ones at least 40 ms', () => {
+    expect(eyeGlideDurationMs(5_000)).toBe(250);
+    expect(eyeGlideDurationMs(5)).toBe(40);
+    expect(glideEyeAt(at, ahead(2), 0, 0)).toEqual({ eye: ahead(2), done: true });
   });
 });

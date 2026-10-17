@@ -184,7 +184,11 @@ function cachedMoonRiseSet(
   latitude: number,
   longitude: number,
 ): ReturnType<typeof moonRiseSet> {
-  const key = `${start.getTime()}|${end.getTime()}|${latitude}|${longitude}`;
+  // Kept per hundredth of a degree (about a kilometre, a few seconds of moonrise): a walk moves
+  // the place every tenth of a second and would otherwise miss every time.
+  const lat = Math.round(latitude * 100) / 100;
+  const lon = Math.round(longitude * 100) / 100;
+  const key = `${start.getTime()}|${end.getTime()}|${lat}|${lon}`;
   const hit = riseSetCache.get(key);
   if (hit) {
     // Most recently used last.
@@ -192,7 +196,7 @@ function cachedMoonRiseSet(
     riseSetCache.set(key, hit);
     return hit;
   }
-  const rs = moonRiseSet(start, end, latitude, longitude);
+  const rs = moonRiseSet(start, end, lat, lon);
   riseSetCache.set(key, rs);
   if (riseSetCache.size > RISE_SET_CACHE_SIZE) {
     const oldest = riseSetCache.keys().next().value;
