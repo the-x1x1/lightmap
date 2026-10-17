@@ -11,6 +11,7 @@ import {
   SceneController,
   detectCapabilities,
   effectiveCeiling,
+  startingRung,
   resolveRenderMode,
   watchDeviceConditions,
   type HostStats,
@@ -131,6 +132,7 @@ export function useRenderer(opts: UseRendererOptions): RendererHandle {
         controllerRef.current = controller;
         const governor = new QualityGovernor({
           ceilingRung: effectiveCeiling(caps, { saveData: false }, QUALITY_LADDER),
+          initialRung: startingRung(caps, QUALITY_LADDER),
         });
         const emitQuality = () => {
           const q = governor.quality;

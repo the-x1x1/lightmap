@@ -100,6 +100,27 @@ export function qualityCeiling(caps: RendererCapabilities, ladder: readonly Qual
   return 0;
 }
 
+/**
+ * An integrated GPU from its WebGL renderer string (ANGLE's on Windows: "ANGLE (Intel, Intel(R)
+ * UHD Graphics 620 Direct3D11 …)"): Intel's HD, UHD and Iris, AMD's APU "Radeon Graphics" and
+ * Vega, Qualcomm's Adreno. Apple's M-series are left out: they hold High.
+ */
+export function isIntegratedGpu(gpu: string | undefined): boolean {
+  return /Intel\(R\) (UHD|HD|Iris)|Intel (UHD|HD|Iris)|Radeon\(TM\) Graphics|Radeon Graphics|Radeon Vega|Vega \d+ Graphics|Adreno/i.test(
+    gpu ?? '',
+  );
+}
+
+/**
+ * The rung the governor starts on: High, or Balanced on an integrated GPU, where High's soft
+ * 2048 shadows and 4x MSAA stutter for the seconds the governor takes to measure and step down;
+ * it climbs from there if the machine has headroom. Never above the ceiling.
+ */
+export function startingRung(caps: RendererCapabilities, ladder: readonly QualityRung[]): number {
+  const wanted = isIntegratedGpu(caps.gpu) ? 2 : 1;
+  return Math.min(ladder.length - 1, Math.max(wanted, qualityCeiling(caps, ladder)));
+}
+
 function defaultEnvironment(): CapabilityProbeEnvironment {
   if (typeof document === 'undefined') return {};
   const nav = navigator as Navigator & { deviceMemory?: number; gpu?: unknown };
