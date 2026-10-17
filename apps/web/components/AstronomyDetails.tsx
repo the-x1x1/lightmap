@@ -310,6 +310,7 @@ function MoonDetails({
   exportAllowed: boolean;
 }) {
   const tz = scene.timeZone;
+  const units = usePlannerStore((s) => s.units);
   const [moonOpen, setMoonOpen] = useState(false);
   // The next four principal phases from the selected day (night planning): per settled civil
   // day (a few milliseconds each; the year slider is continuous).
@@ -384,7 +385,11 @@ function MoonDetails({
         />
         <Row
           label="Distance"
-          value={`${Math.round(lunar.distanceKm).toLocaleString('en-US')} km · ${describeMoonSize(moonSizeVsMean(lunar.distanceKm))}`}
+          value={`${
+            units === 'imperial'
+              ? `${Math.round(lunar.distanceKm / 1.609344).toLocaleString('en-US')} mi`
+              : `${Math.round(lunar.distanceKm).toLocaleString('en-US')} km`
+          } · ${describeMoonSize(moonSizeVsMean(lunar.distanceKm))}`}
           testId="moon-distance"
         />
       </dl>
