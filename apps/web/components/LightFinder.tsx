@@ -124,10 +124,10 @@ export function LightFinder({
         ? (scene.nightSky?.elevationDeg ?? null)
         : scene.solar.elevationDegrees;
   const profile = scene.terrainHorizon?.profile ?? null;
-  // "Where it is now" with the Moon or the core under the horizon: no photograph has it there
-  // (the Sun under it is a twilight depth worth matching). V&V: the Moon at -65 deg searched and
-  // found nothing.
-  const currentBelow = body !== 'sun' && mode === 'current' && nowEl !== null && nowEl < -1;
+  // "Where it is now" with the Moon or the core under the horizon: no photograph has it there.
+  // The Sun under it is a twilight depth worth matching - down to astronomical night, below which
+  // every night is the same. V&V: the Moon at -65 deg searched and found nothing.
+  const currentBelow = mode === 'current' && nowEl !== null && nowEl < (body === 'sun' ? -18 : -1);
   // A new place clears the sampled horizon; ridge mode cannot outlive it.
   useEffect(() => {
     if (mode === 'ridge' && !profile) setMode('frame');
@@ -405,8 +405,9 @@ export function LightFinder({
         ) : null}
         {currentBelow ? (
           <p className="text-xs text-[var(--lm-text-muted)]" data-testid="finder-current-below">
-            The {bodyName} is below the horizon now ({nowEl?.toFixed(0)}°): move the time to when it
-            is up, or choose a direction another way.
+            {body === 'sun'
+              ? `The sun is ${Math.abs(nowEl ?? 0).toFixed(0)}° below the horizon now: full night, the same every night.`
+              : `The ${bodyName} is below the horizon now (${(nowEl ?? 0).toFixed(0)}°): move the time to when it is up, or choose a direction another way.`}
           </p>
         ) : null}
         <div className="grid grid-cols-2 gap-2">
