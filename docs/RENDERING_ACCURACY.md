@@ -427,7 +427,9 @@ Save-Data). Conditions can take the view down to the Battery rung; only measured
 take it to Minimal, where terrain shadows are off. Anti-aliasing steps with the rungs: 4x MSAA on
 Ultra and High, 2x on Balanced, and FXAA alone on Battery and Minimal. The governor starts on
 High, or on Balanced where the WebGL renderer names an integrated GPU (Intel HD/UHD/Iris, AMD's
-APU graphics, Adreno), and climbs if the machine has headroom.
+APU graphics, Adreno), and climbs if the machine has headroom. A step down applies at once; a
+climb (which rebuilds the shadow map and the multisample buffers) waits until the camera has
+rested 1.5 s, so it never stutters a drag that is going well.
 
 ### Smoothness
 

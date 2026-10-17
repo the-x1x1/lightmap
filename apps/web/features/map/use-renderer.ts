@@ -58,6 +58,12 @@ export interface UseRendererOptions {
   ionToken?: string | undefined;
 }
 
+/**
+ * A better quality rung is applied only once the camera has rested this long (ms): longer than
+ * the frame sampler's one-second interval, so a continuous drag never counts as rest.
+ */
+const CLIMB_AT_REST_MS = 1500;
+
 export function useRenderer(opts: UseRendererOptions): RendererHandle {
   const [state, setState] = useState<RendererHandle>({
     mode: 'loading',
@@ -134,7 +140,13 @@ export function useRenderer(opts: UseRendererOptions): RendererHandle {
           ceilingRung: effectiveCeiling(caps, { saveData: false }, QUALITY_LADDER),
           initialRung: startingRung(caps, QUALITY_LADDER),
         });
+        // The rung last handed to the scene: a climb waits for the camera to rest (below).
+        let appliedRung = governor.rungIndex;
+        let climbTimer: ReturnType<typeof setTimeout> | null = null;
         const emitQuality = () => {
+          if (climbTimer) clearTimeout(climbTimer);
+          climbTimer = null;
+          appliedRung = governor.rungIndex;
           const q = governor.quality;
           onQualityRef.current({
             shadowMapSize: q.shadowMapSize,
@@ -160,12 +172,29 @@ export function useRenderer(opts: UseRendererOptions): RendererHandle {
             void onPickRef.current(p);
           }),
         );
+        // Frames are only sampled while the camera moves, so every rung change comes mid-motion.
+        // A step down applies at once (the frames are already slow); a climb rebuilds the
+        // shadow map, the multisample buffers and the resolution, a hitch in a drag that is going
+        // well - so it waits until no sample has come for CLIMB_AT_REST_MS (the camera at rest).
         disposers.push(
           host.onFrameSample((fps) => {
             // Governor only; stats are polled by the perf panel so a sample never re-renders React.
-            if (governor.sample({ fps })) emitQuality();
+            // While a climb waits, the frames are still the old rung's: they are not fed to the
+            // governor as the new one's; the wait restarts with each (the camera still moving).
+            if (climbTimer) {
+              clearTimeout(climbTimer);
+              climbTimer = setTimeout(emitQuality, CLIMB_AT_REST_MS);
+              return;
+            }
+            governor.sample({ fps });
+            if (governor.rungIndex > appliedRung) emitQuality();
+            else if (governor.rungIndex < appliedRung)
+              climbTimer = setTimeout(emitQuality, CLIMB_AT_REST_MS);
           }),
         );
+        disposers.push(() => {
+          if (climbTimer) clearTimeout(climbTimer);
+        });
         const ro = new ResizeObserver(() => host.resize());
         ro.observe(opts.container.current);
         disposers.push(() => ro.disconnect());
