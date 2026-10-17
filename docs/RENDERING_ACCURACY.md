@@ -152,7 +152,10 @@ draws Mercury, Venus, Mars, Jupiter and Saturn as points on the clear dome (`pla
 (`skyLimitingMagnitude`: Venus faintly by day and plainly at sunset, Jupiter from about −1.5°,
 Saturn from about −5°), dimmed low in the air (0.25 mag an air mass, `extinctionMag`) and lost
 within 10° of the Sun, under the cloud decks and behind the ridges, gliding with the clock like
-the Sun. Cesium turns the field by Greenwich sidereal time for the scene's instant
+the Sun. A bright Moon lights the haze round it (the grade's aureole, `moonGlowStrength`: by phase
+and only in a dark sky; a tight glow and a wide one, stronger in haze and far stronger through
+cirrus or thin altostratus, muffled under thick low cloud) - a look, not a photometric model.
+Cesium turns the field by Greenwich sidereal time for the scene's instant
 (`czm_temeToPseudoFixed`; the host sets the clock to the planned UTC) — so the Milky Way's band
 in the 3D preview stands where the planner's own Galactic Centre says, within the
 precession and nutation Cesium leaves out (≈ 0.4° in 2026; the planner's `milkyWayCore` applies
@@ -429,11 +432,10 @@ per place and day. Motion that the inputs deliver in steps is drawn continuously
 eye glides between walk steps at the walk's speed, and the Sun's light glides between the
 clock's minute steps while the day plays or is scrubbed (steps arriving up to 550 ms apart
 glide over the time between them, so the slowest pace — a minute every half second — drifts
-without pausing; a step on its own glides a quarter of a second). The sky, the clouds, the Sun's glare and the map's sun marker, ray and shadow line glide
-with the same clock; the glare is placed on screen every frame from that gliding direction, so it
-stays on the Sun disc while the eye glides or the map turns, and the day's, the year's and the
-night's paths are laid out as geometry only when they change (a new day, year or pin); a jump to a new place or a new date
-lands at once, as does everything under "reduce motion". A walk does not resample the terrain
+without pausing; a step on its own glides a quarter of a second). The sky, the clouds, the
+Moon, the planets and the map's sun marker, ray and shadow line glide with the same clock, and the
+day's, the year's and the night's paths are laid out as geometry only when they change (a new
+day, year or pin); a jump to a new place or a new date lands at once, as does everything under "reduce motion". A walk does not resample the terrain
 horizon or rerun the night and season scans at every step: they wait until the pin stays put.
 
 ## How to verify

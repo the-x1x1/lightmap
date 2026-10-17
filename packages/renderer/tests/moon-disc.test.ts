@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   drawMoonPhase,
+  moonBrightnessVsFull,
   moonDiscOpacity,
+  moonGlowStrength,
   terminatorHalfWidth,
   type PhaseContext,
 } from '../src/moon-disc.ts';
@@ -52,5 +54,23 @@ describe('the Moon disc', () => {
     expect(moonDiscOpacity(30)).toBe(0.55);
     expect(moonDiscOpacity(-6)).toBeCloseTo(0.775, 9);
     expect(moonDiscOpacity(-20)).toBe(1);
+  });
+});
+
+describe('the Moon glow', () => {
+  it('a quarter Moon is about a tenth of a full one, a thin crescent far less', () => {
+    expect(moonBrightnessVsFull(1)).toBeCloseTo(1, 6);
+    const quarter = moonBrightnessVsFull(0.5);
+    expect(quarter).toBeGreaterThan(0.07);
+    expect(quarter).toBeLessThan(0.13);
+    expect(moonBrightnessVsFull(0.1)).toBeLessThan(0.02);
+  });
+
+  it('glows only in a dark enough sky', () => {
+    expect(moonGlowStrength(1, 5)).toBe(0);
+    expect(moonGlowStrength(1, -2)).toBe(0);
+    expect(moonGlowStrength(1, -6)).toBeGreaterThan(0.3);
+    expect(moonGlowStrength(1, -6)).toBeLessThan(0.7);
+    expect(moonGlowStrength(1, -20)).toBeCloseTo(1, 6);
   });
 });

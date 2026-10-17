@@ -534,6 +534,8 @@ export class CesiumSceneHost implements SceneHost {
       u_sunScreen: new C.Cartesian2(-1, -1),
       u_sunVisible: 0,
       u_starField: 0,
+      u_moonDirEC: new C.Cartesian3(0, 0, -1),
+      u_moonGlow: 0,
       ...Object.fromEntries(PLANET_SLOTS.map((name) => [name, new C.Cartesian4(-10, -10, 0, 1)])),
       // Evaluated every frame (a function uniform): where "up" is in the view, and how high the
       // camera is — the grade tells sky from ground by the view ray, not by the depth buffer.
@@ -2455,6 +2457,7 @@ export class CesiumSceneHost implements SceneHost {
     }
     this.moonDisc = m;
     const C = this.C;
+    this.setGradeValue('u_moonGlow', m?.glow ?? 0);
     if (!m) {
       if (this.moonBillboard?.show) {
         this.moonBillboard.show = false;
@@ -2517,6 +2520,11 @@ export class CesiumSceneHost implements SceneHost {
       new C.Cartesian3(),
     );
     b.position = at;
+    // The aureole's centre for the grade: the same direction in eye coordinates.
+    const dirEC = this.gradeUniforms['u_moonDirEC'] as Cesium.Cartesian3;
+    C.Matrix4.multiplyByPointAsVector(cam.viewMatrix, dir, dirEC);
+    C.Cartesian3.normalize(dirEC, dirEC);
+    (this.grade.uniforms as Record<string, unknown>)['u_moonDirEC'] = dirEC;
     const size = 2 * MOON_DISC_RANGE_M * Math.tan(((m.diameterDeg / 2) * Math.PI) / 180);
     b.width = size;
     b.height = size;
@@ -2538,6 +2546,13 @@ export class CesiumSceneHost implements SceneHost {
     const p1 = C.SceneTransforms.worldToWindowCoordinates(this.scene, toward);
     // Window y runs down; a billboard's rotation is counter-clockwise on the screen.
     if (p0 && p1) b.rotation = Math.atan2(-(p1.y - p0.y), p1.x - p0.x);
+  }
+
+  /** One of the grade's plain uniforms, written through to the stage and the on-screen record. */
+  private setGradeValue(name: string, value: number): void {
+    this.gradeUniforms[name] = value;
+    (this.grade.uniforms as Record<string, unknown>)[name] = value;
+    if (this.gradeShown) this.gradeShown[name] = value;
   }
 
   setSunGlare(glare: HostSunGlare | null): void {
@@ -2583,9 +2598,10 @@ export class CesiumSceneHost implements SceneHost {
   }
 
   /**
-   * The grade's sun glare, placed on screen each frame from the gliding Sun direction and the
-   * camera as it is drawn: projected once per apply, it hopped a minute at a time while the Sun
-   * disc glided, and stood where the Sun had been while the eye glided or the map turned.
+   * The grade's sun-glare uniforms, placed on screen each frame from the gliding Sun direction
+   * and the camera as it is drawn. The grade does not draw a glare of its own today (the glow
+   * round the Sun is Cesium's Sun and its sky's Mie scattering); the uniforms are kept true for
+   * the shader that reads them, rather than a minute and a camera move behind.
    */
   private placeSunGlare(): void {
     const dir = this.sunGlare.shown;

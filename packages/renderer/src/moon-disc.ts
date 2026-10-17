@@ -65,3 +65,26 @@ export function drawMoonPhase(ctx: PhaseContext, size: number, illuminatedFracti
   ctx.closePath();
   ctx.fill();
 }
+
+/**
+ * The Moon's brightness against the full Moon's, from its illuminated fraction: the phase angle
+ * from the fraction (k = (1 + cos psi) / 2), then the Astronomical Almanac's lunar magnitude
+ * (-12.73 + 0.026 |psi| + 4e-9 psi^4). A quarter Moon is about a tenth of a full one.
+ */
+export function moonBrightnessVsFull(illuminatedFraction: number): number {
+  const k = Math.max(0, Math.min(1, illuminatedFraction));
+  const psi = (Math.acos(2 * k - 1) * 180) / Math.PI;
+  const dm = 0.026 * psi + 4e-9 * psi ** 4;
+  return 10 ** (-0.4 * dm);
+}
+
+/**
+ * How strongly the Moon lights the haze and thin cloud around it (the grade's aureole), 0-1:
+ * its brightness against the full Moon's, in a sky dark enough for moonlight to tell (none with
+ * the Sun up, all of it from 10 deg down).
+ */
+export function moonGlowStrength(illuminatedFraction: number, sunElevationDeg: number): number {
+  const t = Math.max(0, Math.min(1, (-2 - sunElevationDeg) / 8));
+  const dark = t * t * (3 - 2 * t);
+  return moonBrightnessVsFull(illuminatedFraction) * dark;
+}

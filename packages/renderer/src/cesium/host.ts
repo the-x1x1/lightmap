@@ -196,6 +196,8 @@ export interface HostMoonDisc {
   diameterDeg: number;
   /** 0–1: paler by day, full at night. */
   opacity: number;
+  /** How strongly it lights the haze and thin cloud around it, 0-1 (`moonGlowStrength`). */
+  glow?: number;
 }
 
 /** A planet as the viewpoint's sky draws it (`setPlanets`, `planet-points.ts`). */

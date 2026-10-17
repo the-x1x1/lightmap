@@ -7,6 +7,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 - **The Moon in the viewpoint's sky**: drawn where the planner's Moon stands, at its size for
   the day, with its phase and the lit limb toward the Sun; pale by day, under the cloud decks,
   hidden by the ridges in front of it. Cesium's own Moon (a black disc, lit by Cesium's Sun) stays off.
+- **The Moon's glow**: a bright Moon now lights the haze around it, and far more a veil of cirrus
+  or thin altostratus (the halo a night shot is framed on, or waits out), muffled under thick low
+  cloud; by its phase (a quarter Moon about a tenth of a full one) and only once the sky is dark.
+  Cesium's sky scatters no moonlight, so the Moon had sat in a black sky however hazy the night.
 - **Planets in the viewpoint's sky**: Mercury, Venus, Mars, Jupiter and Saturn drawn where they
   stand (JPL's approximate elements, checked against Venus's 2023 and 2025 greatest elongations,
   the 2020 Jupiter-Saturn and 2023 Venus-Jupiter conjunctions and three oppositions), each as
@@ -21,8 +25,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   stalling one; anti-aliasing steps down with the quality rungs; no preserved drawing buffer;
   the Sun and the shadows glide through a played or scrubbed day instead of stepping a minute at
   a time, at the slowest play pace too (it had paused for a fifth of a second every minute);
-  the Sun's glare follows the Sun disc and the turning camera frame by frame, and the map's sun
-  marker, ray and shadow line glide with it, as does the Moon in the viewpoint's sky (the day's paths are no longer rebuilt every minute);
+  the map's sun marker, ray and shadow line glide with the clock, as does the Moon in the
+  viewpoint's sky (the day's paths are no longer rebuilt every minute);
   the stars come out through the twilight (from −4° to −15°) instead of switching on together
   at −8°; the wheel's zoom from the viewpoint eases over a few frames instead of jumping a notch at a
   time; integrated GPUs start on Balanced; scenes rebuild ~17x faster on a drag.

@@ -31,7 +31,7 @@ import {
 } from '../ground-texture.ts';
 import { lightingFromScene, type LightingParameters } from '../lighting.ts';
 import { enuTowardSun, enuToEcef } from '../sun-vector.ts';
-import { moonDiscOpacity } from '../moon-disc.ts';
+import { moonDiscOpacity, moonGlowStrength } from '../moon-disc.ts';
 import { planetPointInSky } from '../planet-points.ts';
 import { seaProbePoints, seaSurfaceFromSamples } from '../geoid.ts';
 import type {
@@ -308,6 +308,8 @@ export class SceneController {
         diameterDeg: moonApparentDiameterDeg(moon.distanceKm, Math.max(0, moon.elevationDegrees)),
         // The grade's cloud decks are painted over it where there is cloud.
         opacity: moonDiscOpacity(scene.solar.elevationDegrees),
+        // Its aureole in the haze and thin cloud (the grade), by its phase and the sky's dark.
+        glow: moonGlowStrength(moon.illuminatedFraction, scene.solar.elevationDegrees),
       });
     } else this.host.setMoonDisc?.(null);
 

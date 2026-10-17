@@ -47,6 +47,8 @@ uniform vec4 u_planet1;
 uniform vec4 u_planet2;
 uniform vec4 u_planet3;
 uniform vec4 u_planet4;
+uniform vec3 u_moonDirEC;       // toward the Moon, eye coordinates (per frame)
+uniform float u_moonGlow;       // the Moon's aureole, 0 none - 1 a full Moon in a dark sky
 
 // --- value noise / fbm -------------------------------------------------------------------
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
@@ -260,6 +262,20 @@ void main() {
       cloudCol *= deckLum * mix(1.0, 0.15, u_nightFactor * (1.0 - sunUp));
       sky = mix(sky, cloudCol, cloud * (0.75 + 0.25 * thickness));
     }
+    // The Moon's aureole: moonlight scattered forward by the haze and by thin cloud around it -
+    // a tight glow and a wide one, both stronger in haze and far stronger through cirrus or a
+    // thin altostratus sheet (the halo a night photographer frames, or waits out), and muffled
+    // under a thick low deck. Cesium's sky scatters no moonlight, so without this the Moon sat
+    // in a black sky however hazy the night.
+    if (u_moonGlow > 0.0) {
+      float a = degrees(acos(clamp(dot(rayEC, u_moonDirEC), -1.0, 1.0)));
+      float thin = clamp(covHigh * 0.9 + covMid * 0.5, 0.0, 1.0);
+      float hazy = clamp(u_haze, 0.0, 1.0);
+      float near = exp(-a / 2.5) * (0.05 + 0.10 * hazy + 0.30 * thin);
+      float wide = exp(-a / 18.0) * (0.012 + 0.035 * hazy + 0.05 * thin);
+      float muffled = 1.0 - 0.8 * covLow * clamp(u_cloudDensity, 0.0, 1.0);
+      sky += vec3(1.0, 0.96, 0.9) * u_moonGlow * (near + wide) * muffled;
+    }
     color = mix(dome, sky, underDecks);
   } else {
     // Aerial perspective: lift toward the sky colour with the real distance through the air
@@ -340,4 +356,6 @@ export const GRADE_UNIFORM_NAMES = [
   'u_planet2',
   'u_planet3',
   'u_planet4',
+  'u_moonDirEC',
+  'u_moonGlow',
 ] as const;
