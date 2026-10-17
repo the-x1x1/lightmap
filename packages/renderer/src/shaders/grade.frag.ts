@@ -217,6 +217,10 @@ void main() {
     float covHigh = clamp(u_cloudHigh, 0.0, 1.0);
     float covMid  = clamp(u_cloudMid, 0.0, 1.0);
     float covLow  = clamp(max(u_cloudLow, u_cloudCoverage * noBands), 0.0, 1.0);
+    // What each deck lays over this pixel (the Moon's aureole reads them below).
+    float veilHere = 0.0;
+    float sheetHere = 0.0;
+    float lowHere = 0.0;
 
     // High deck: cirrus. Fibrous, stretched along the wind; thin, so it brightens more than it hides.
     if (covHigh > 0.005) {
@@ -230,6 +234,7 @@ void main() {
       cirrus = mix(shade * 0.6, cirrus, highLit);
       cirrus *= deckLum * mix(1.0, 0.25, u_nightFactor * (1.0 - highLit));
       sky = mix(sky, cirrus, veil * (0.5 + 0.35 * covHigh));
+      veilHere = veil;
     }
 
     // Mid deck: altostratus / altocumulus. A smoother grey-white sheet; the Sun shows through as a disc.
@@ -242,6 +247,7 @@ void main() {
       alto = mix(shade * 0.5, alto, midLit);
       alto *= deckLum * mix(1.0, 0.2, u_nightFactor * (1.0 - midLit));
       sky = mix(sky, alto, sheet * (0.55 + 0.35 * covMid));
+      sheetHere = sheet;
     }
 
     // Low deck: stratus / cumulus with dark bases; thickness from the scenario density.
@@ -261,6 +267,7 @@ void main() {
       cloudCol = mix(shade * 0.45, cloudCol, sunUp);
       cloudCol *= deckLum * mix(1.0, 0.15, u_nightFactor * (1.0 - sunUp));
       sky = mix(sky, cloudCol, cloud * (0.75 + 0.25 * thickness));
+      lowHere = cloud * thickness;
     }
     // The Moon's aureole: moonlight scattered forward by the haze and by thin cloud around it -
     // a tight glow and a wide one, both stronger in haze and far stronger through cirrus or a
@@ -269,11 +276,13 @@ void main() {
     // in a black sky however hazy the night.
     if (u_moonGlow > 0.0) {
       float a = degrees(acos(clamp(dot(rayEC, u_moonDirEC), -1.0, 1.0)));
-      float thin = clamp(covHigh * 0.9 + covMid * 0.5, 0.0, 1.0);
+      // The cloud at this pixel, not the deck's cover: the gaps between cirrus fibres glow as
+      // the haze does; a mid sheet scatters as a thin veil while sparse, and muffles once dense.
+      float thin = clamp(veilHere * 0.9 + sheetHere * 0.5 * (1.0 - 0.7 * covMid), 0.0, 1.0);
       float hazy = clamp(u_haze, 0.0, 1.0);
       float near = exp(-a / 2.5) * (0.05 + 0.10 * hazy + 0.30 * thin);
       float wide = exp(-a / 18.0) * (0.012 + 0.035 * hazy + 0.05 * thin);
-      float muffled = 1.0 - 0.8 * covLow * clamp(u_cloudDensity, 0.0, 1.0);
+      float muffled = (1.0 - 0.8 * lowHere) * (1.0 - 0.6 * sheetHere * covMid);
       sky += vec3(1.0, 0.96, 0.9) * u_moonGlow * (near + wide) * muffled;
     }
     color = mix(dome, sky, underDecks);

@@ -73,4 +73,10 @@ describe('the Moon glow', () => {
     expect(moonGlowStrength(1, -6)).toBeLessThan(0.7);
     expect(moonGlowStrength(1, -20)).toBeCloseTo(1, 6);
   });
+
+  it('a low Moon lights little of the sky (the air dims it), fading to nothing at the horizon', () => {
+    expect(moonGlowStrength(1, -20, 60)).toBeGreaterThan(0.95);
+    expect(moonGlowStrength(1, -20, 5)).toBeLessThan(0.5);
+    expect(moonGlowStrength(1, -20, 0)).toBeLessThan(0.001);
+  });
 });

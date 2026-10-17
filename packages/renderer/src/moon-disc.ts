@@ -4,6 +4,7 @@
  * sky. Cesium's own Moon is lit by Cesium's Sun, not the planner's, and drew a black disc; this
  * one is drawn from the planner's Moon. Pure apart from the 2D context it is handed.
  */
+import { extinctionMag } from './planet-points.ts';
 
 /** The terminator's half-width as a share of the radius: 1 at new and full, 0 at the quarters. */
 export function terminatorHalfWidth(illuminatedFraction: number): number {
@@ -80,11 +81,17 @@ export function moonBrightnessVsFull(illuminatedFraction: number): number {
 
 /**
  * How strongly the Moon lights the haze and thin cloud around it (the grade's aureole), 0-1:
- * its brightness against the full Moon's, in a sky dark enough for moonlight to tell (none with
- * the Sun up, all of it from 10 deg down).
+ * its brightness against the full Moon's, in a sky dark enough for moonlight to tell (none until
+ * the Sun is 2 deg down, all of it from 10 deg down), dimmed by the air when the Moon is low
+ * (`extinctionMag`, as for the planets: a Moon on the horizon lights little of the sky).
  */
-export function moonGlowStrength(illuminatedFraction: number, sunElevationDeg: number): number {
+export function moonGlowStrength(
+  illuminatedFraction: number,
+  sunElevationDeg: number,
+  moonElevationDeg = 90,
+): number {
   const t = Math.max(0, Math.min(1, (-2 - sunElevationDeg) / 8));
   const dark = t * t * (3 - 2 * t);
-  return moonBrightnessVsFull(illuminatedFraction) * dark;
+  const air = 10 ** (-0.4 * extinctionMag(moonElevationDeg));
+  return moonBrightnessVsFull(illuminatedFraction) * dark * air;
 }

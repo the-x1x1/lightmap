@@ -309,7 +309,11 @@ export class SceneController {
         // The grade's cloud decks are painted over it where there is cloud.
         opacity: moonDiscOpacity(scene.solar.elevationDegrees),
         // Its aureole in the haze and thin cloud (the grade), by its phase and the sky's dark.
-        glow: moonGlowStrength(moon.illuminatedFraction, scene.solar.elevationDegrees),
+        glow: moonGlowStrength(
+          moon.illuminatedFraction,
+          scene.solar.elevationDegrees,
+          moon.elevationDegrees,
+        ),
       });
     } else this.host.setMoonDisc?.(null);
 

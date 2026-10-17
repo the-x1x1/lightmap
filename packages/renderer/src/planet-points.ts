@@ -62,7 +62,7 @@ export function planetPoint(magnitude: number, sunElevationDeg: number): PlanetP
 export function extinctionMag(elevationDeg: number): number {
   const h = Math.max(-0.5, elevationDeg);
   const airMass = 1 / (Math.sin(h * (Math.PI / 180)) + 0.50572 * (h + 6.07995) ** -1.6364);
-  return 0.25 * (airMass - 1);
+  return Math.max(0, 0.25 * (airMass - 1));
 }
 
 /** Planets this close to the Sun are lost in its glare, whatever their brightness. */

@@ -154,7 +154,8 @@ Saturn from about −5°), dimmed low in the air (0.25 mag an air mass, `extinct
 within 10° of the Sun, under the cloud decks and behind the ridges, gliding with the clock like
 the Sun. A bright Moon lights the haze round it (the grade's aureole, `moonGlowStrength`: by phase
 and only in a dark sky; a tight glow and a wide one, stronger in haze and far stronger through
-cirrus or thin altostratus, muffled under thick low cloud) - a look, not a photometric model.
+cirrus or thin altostratus, muffled under thick cloud, dimmed by the air when the Moon is low) - a
+look, not a photometric model.
 Cesium turns the field by Greenwich sidereal time for the scene's instant
 (`czm_temeToPseudoFixed`; the host sets the clock to the planned UTC) — so the Milky Way's band
 in the 3D preview stands where the planner's own Galactic Centre says, within the
