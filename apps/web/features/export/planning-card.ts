@@ -286,10 +286,15 @@ export function buildPlanningCard(
         : 'Estimated preview: imagery or geometry is incomplete here; light direction is exact, the scene is approximate.',
   );
   if (!isForecast && !isPast)
-    notes.push('Weather shown is a chosen scenario. No forecast exists this far ahead.');
+    notes.push(
+      // Only far ahead is there no forecast; nearer, a scenario is a comparison the user chose.
+      a.summary.startsWith('Forecast unavailable this far ahead')
+        ? 'Weather shown is a chosen scenario. No forecast exists this far ahead.'
+        : 'Weather shown is a chosen scenario, not the forecast.',
+    );
   for (const l of field) if (l.note) notes.push(`${l.label}: ${l.note}.`);
   notes.push(
-    'Exposure is an incident-light estimate (clear-sky model, the scenario or forecast cloud, moonlight and starlight; no light pollution) — meter the scene.',
+    `Exposure is an incident-light estimate (clear-sky model, the scenario or forecast cloud, moonlight and starlight${opts.skyGlow ? ', and the estimated city glow' : '; no city glow'}) — meter the scene.`,
   );
   if (scene.environment.fixtureMode)
     notes.push('Development fixture data was active when this card was made.');
