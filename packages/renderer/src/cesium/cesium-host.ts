@@ -142,6 +142,9 @@ const LABEL_PICK_INTERVAL_MS = 200;
  */
 const DETAIL_REANCHOR_M = 200_000;
 
+/** Light steps wider than this (cosine of 2°) land at once instead of gliding. */
+const LIGHT_GLIDE_MAX_COS = Math.cos((2 * Math.PI) / 180);
+
 /** The reader's "reduce motion" setting (false where it cannot be read). */
 function prefersReducedMotion(): boolean {
   try {
@@ -268,6 +271,11 @@ export class CesiumSceneHost implements SceneHost {
   private eyeNow: EyePosition | null = null;
   private eyeGoal: EyePosition | null = null;
   private eyeEaseAt = 0;
+  /** The light's glide (`setLight`): the direction it is heading for, and how fast. */
+  private lightGoal: Cesium.Cartesian3 | null = null;
+  private lightTauMs = 100;
+  private lightEaseAt = 0;
+  private lightChangedAt = 0;
 
   constructor(C: CesiumModule, options: CesiumHostOptions) {
     this.C = C;
@@ -446,6 +454,7 @@ export class CesiumSceneHost implements SceneHost {
     if (options.placeLabelsUrl) void this.loadPlaceLabels(options.placeLabelsUrl);
     this.preRenderGroundRemover = scene.preRender.addEventListener(() => {
       this.glideEye();
+      this.glideLight();
       this.keepEyeAboveGlobe();
       const m = this.groundMaterial;
       if (!m) return;
@@ -573,7 +582,24 @@ export class CesiumSceneHost implements SceneHost {
   setLight(light: HostLight): void {
     const C = this.C;
     const d = light.directionEcef;
-    C.Cartesian3.normalize(new C.Cartesian3(d.x, d.y, d.z), this.light.direction);
+    const next = C.Cartesian3.normalize(new C.Cartesian3(d.x, d.y, d.z), new C.Cartesian3());
+    // The clock moves in whole minutes (the play button, a scrub), so the Sun and every shadow
+    // stepped a quarter of a degree at a time, ten times a second at the default pace and twice
+    // a second at the slowest. A small step now glides, over about the time between steps; a
+    // jump (a new date, a long scrub) lands at once.
+    const cos = C.Cartesian3.dot(next, this.light.direction);
+    const now = performance.now();
+    if (cos < LIGHT_GLIDE_MAX_COS || prefersReducedMotion()) {
+      C.Cartesian3.clone(next, this.light.direction);
+      this.lightGoal = null;
+    } else if (cos < 1 - 1e-12) {
+      const interval = now - this.lightChangedAt;
+      this.lightTauMs = Math.max(40, Math.min(300, 0.6 * interval));
+      if (!this.lightGoal) this.lightEaseAt = now;
+      this.lightGoal = next;
+      this.scene.requestRender();
+    }
+    this.lightChangedAt = now;
     this.light.color = new C.Color(light.color[0], light.color[1], light.color[2], 1);
     this.light.intensity = light.intensity;
   }
@@ -864,6 +890,25 @@ export class CesiumSceneHost implements SceneHost {
    * ground drawn (V&V: Moab, 1 250 m above the last place, ten seconds of terrain seen from
    * below). Until then the eye stands on the globe as drawn.
    */
+  /** One frame of the light's glide toward the Sun's latest direction (`setLight`). */
+  private glideLight(): void {
+    const goal = this.lightGoal;
+    if (!goal) return;
+    const C = this.C;
+    const t = performance.now();
+    const dt = Math.min(100, t - this.lightEaseAt);
+    this.lightEaseAt = t;
+    const k = 1 - Math.exp(-dt / this.lightTauMs);
+    const dir = this.light.direction;
+    C.Cartesian3.lerp(dir, goal, k, dir);
+    C.Cartesian3.normalize(dir, dir);
+    if (C.Cartesian3.dot(dir, goal) > 1 - 1.5e-8) {
+      // Within ~0.01°: there.
+      C.Cartesian3.clone(goal, dir);
+      this.lightGoal = null;
+    } else this.scene.requestRender();
+  }
+
   /** One frame of the viewpoint eye's glide toward its goal; keeps frames coming until there. */
   private glideEye(): void {
     const now = this.eyeNow;

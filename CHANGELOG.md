@@ -7,7 +7,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 - **Smoother walking and rendering**: hold W A S D to walk from the viewpoint (Shift to run),
   the eye gliding between steps instead of hopping at the keyboard's repeat rate; building tiles
   and seasonal imagery tiles are decoded and recoloured a few milliseconds a frame instead of
-  stalling one; anti-aliasing steps down with the quality rungs; no preserved drawing buffer.
+  stalling one; anti-aliasing steps down with the quality rungs; no preserved drawing buffer;
+  the Sun and the shadows glide through a played or scrubbed day instead of stepping a minute at
+  a time; integrated GPUs start on Balanced; scenes rebuild ~17x faster on a drag.
 - **Noon between the tropics**: the year's noon height there now runs to 90° and names the two
   days the Sun passes overhead (Kailua's "Lahaina noons", 27 May and 15 July); the solstices
   bound only its lowest noon, which the line had given as its highest (Kailua's 88°).
