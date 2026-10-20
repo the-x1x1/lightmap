@@ -14,6 +14,7 @@ check against real CesiumJS.
 
 ```sh
 pnpm install                                            # for playwright
+pnpm exec playwright install chromium                   # unless CHROMIUM_PATH is set
 node --experimental-strip-types tools/grade-preview/run.mjs          # every scene
 node --experimental-strip-types tools/grade-preview/run.mjs sunset-sun-1deg
 ```
@@ -22,3 +23,8 @@ Output goes to `tools/grade-preview/out/` (git-ignored). `CHROMIUM_PATH` picks a
 otherwise playwright's own. It runs on SwiftShader (software GL) here, so colours are exact and
 speed is not. Scenes are defined at the top of `run.mjs`: the Sun's elevation, the night factor,
 haze, high cloud, the planets' places and points, the Moon's place and glow.
+
+What the synthetic frame does not model: Cesium's real dome (a Moon-lit dome is a flat blue
+gradient here, `moonlit-quarter`), the Moon's phase and earthshine (the disc is always full), and
+the star cube's own texels (the stars are drawn points of about Tycho's size at this lens).
+Findings about those need `tools/renderer-smoke` or the app.

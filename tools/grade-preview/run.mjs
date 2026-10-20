@@ -64,12 +64,24 @@ const scenes = {
     starField: 1,
     milkyWay: true,
   },
+  // A quarter Moon lights the dome (the scene's light is then the Moon's): it must stay dark.
+  'moonlit-quarter': {
+    sunEl: -25,
+    night: 1,
+    stars: true,
+    starField: 1,
+    moon: [10, 20, 0.09],
+    moonlit: true,
+    skyTop: [30, 50, 110],
+    skyHor: [60, 80, 130],
+  },
   'night-moon-clear': {
     sunEl: -25,
     night: 1,
     stars: true,
     starField: 1,
     moon: [10, 20, 1.0],
+    moonlit: true,
     haze: 0.1,
   },
   'night-moon-cirrus': {
@@ -78,6 +90,7 @@ const scenes = {
     stars: true,
     starField: 1,
     moon: [10, 20, 1.0],
+    moonlit: true,
     haze: 0.3,
     cloudHigh: 0.6,
   },
@@ -100,8 +113,8 @@ window.renderScene = (sc) => {
   // --- the synthetic frame Cesium would hand the grade ---
   const cv = document.createElement('canvas'); cv.width=W; cv.height=H;
   const g = cv.getContext('2d');
-  const top = sc.night >= 1 ? [4,6,14] : sc.night > 0.5 ? [12,20,48] : sc.night > 0 ? [40,60,110] : sc.sunEl > 5 ? [70,120,200] : [90,110,170];
-  const hor = sc.night >= 1 ? [12,14,24] : sc.night > 0.5 ? [60,60,90] : sc.night > 0 ? [170,120,110] : sc.sunEl > 5 ? [170,200,235] : [240,170,110];
+  const top = sc.skyTop ?? (sc.night >= 1 ? [4,6,14] : sc.night > 0.5 ? [12,20,48] : sc.night > 0 ? [40,60,110] : sc.sunEl > 5 ? [70,120,200] : [90,110,170]);
+  const hor = sc.skyHor ?? (sc.night >= 1 ? [12,14,24] : sc.night > 0.5 ? [60,60,90] : sc.night > 0 ? [170,120,110] : sc.sunEl > 5 ? [170,200,235] : [240,170,110]);
   const gr = g.createLinearGradient(0,0,0,H/2);
   gr.addColorStop(0,'rgb('+top+')'); gr.addColorStop(1,'rgb('+hor+')');
   g.fillStyle=gr; g.fillRect(0,0,W,H/2+2);
@@ -151,8 +164,9 @@ window.renderScene = (sc) => {
   f1('u_skyLuminance',1); f1('u_nightFactor',sc.night); f1('u_precipitation',0); f1('u_horizonHaze',0.1);
   f1('u_sunElevation',sc.sunEl); f1('u_time',30); gl.uniform2f(U('u_sunScreen'),-1,-1); f1('u_sunVisible',0);
   gl.uniform3f(U('u_eyeUpEC'),0,1,0); f1('u_eyeHeightM',2); f1('u_starField',sc.starField ?? 0);
+  f1('u_atmosphereDark', sc.sunEl <= -18 && !sc.moonlit ? 1 : 0);
   for (let i=0;i<5;i++) { const p=(sc.planets??[])[i]; if(p){ const [u,v]=toUv(dir(p[0],p[1])); gl.uniform4f(U('u_planet'+i),u,v,p[2],p[3]); } else gl.uniform4f(U('u_planet'+i),-10,-10,0,1); }
-  if (sc.moon) { gl.uniform3f(U('u_moonDirEC'),...dir(sc.moon[0],sc.moon[1])); f1('u_moonGlow',sc.moon[2]); f1('u_moonRadiusDeg', 9*0.0991); } else { f1('u_moonGlow',0); f1('u_moonRadiusDeg',0); }
+  if (sc.moon) { gl.uniform3f(U('u_moonDirEC'),...dir(sc.moon[0],sc.moon[1])); f1('u_moonGlow',sc.moon[2]); f1('u_moonRadiusDeg', 9*FOVY/H); } else { f1('u_moonGlow',0); f1('u_moonRadiusDeg',0); }
   gl.viewport(0,0,W,H); gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
   return { err: gl.getError(), input: cv.toDataURL() };
 };

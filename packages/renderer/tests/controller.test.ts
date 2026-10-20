@@ -141,6 +141,25 @@ describe('SceneController', () => {
     expect(grade.u_cloudOpacity).toBeLessThan(0.1);
   });
 
+  it('tells the grade the atmosphere is dark only past -18 deg with no Moon lighting it', () => {
+    const at = (minutes: number, day: number, includeLunar: boolean) => {
+      const { host, calls } = fakeHost();
+      const c = new SceneController(host, { setTimeoutImpl: () => 0, clearTimeoutImpl: () => {} });
+      c.apply(
+        scene({
+          utc: localSelectionToUtc({ year: 2026, month: 6, day }, minutes, kailua.timeZone),
+          includeLunar,
+        }),
+      );
+      return (calls['setGrade']![0]![0] as { u_atmosphereDark: number }).u_atmosphereDark;
+    };
+    // 1 Jun 2026 01:00 at Kailua: the Sun far down, the day-old full Moon high.
+    expect(at(60, 1, false)).toBe(1);
+    expect(at(60, 1, true)).toBe(0);
+    // 1 Jun 19:50, the Sun about 10 deg down: the light is still held at the horizon.
+    expect(at(19 * 60 + 50, 1, false)).toBe(0);
+  });
+
   it('paints the ground texture once per place and season, and only clears it when turned off', () => {
     const { host, calls } = fakeHost();
     const c = new SceneController(host, {

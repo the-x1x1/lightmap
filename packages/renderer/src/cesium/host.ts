@@ -77,6 +77,12 @@ export interface HostGradeUniforms {
   u_time: number;
   u_sunScreen: [number, number];
   u_sunVisible: number;
+  /**
+   * 1 when Cesium's atmosphere is dark of itself: the scene's light let go below -18 deg and no
+   * Moon lighting the sky (`lighting.moonlit`). Set with the light, never glided, so the grade
+   * lets the Milky Way out only over a sky that is really dark.
+   */
+  u_atmosphereDark: number;
 }
 
 export interface HostViewpointCamera {

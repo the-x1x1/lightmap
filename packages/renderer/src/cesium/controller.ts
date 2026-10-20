@@ -229,6 +229,9 @@ export class SceneController {
       u_time: (scene.utc.getTime() / 60_000) % 100_000,
       u_sunScreen: sunScreen ?? [-1, -1],
       u_sunVisible: sunScreen && lighting.directLightPresent ? 1 : 0,
+      // The light is held at the horizon until -18 deg (lighting.ts) and a Moon lights the dome
+      // again: only outside both is the atmosphere dark of itself.
+      u_atmosphereDark: !lighting.moonlit && scene.solar.elevationDegrees <= -18 ? 1 : 0,
     };
     this.host.setGrade(uniforms);
     this.host.setSunGlare?.({

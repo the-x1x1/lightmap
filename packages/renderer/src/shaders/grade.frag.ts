@@ -40,6 +40,7 @@ uniform float u_time;
 uniform vec2  u_sunScreen;      // sun position in 0..1 screen space (may be off-screen)
 uniform float u_sunVisible;     // 1 when the sun is above the horizon and not blocked by cloud
 uniform float u_starField;      // 1 while the star field is drawn (the host's skybox)
+uniform float u_atmosphereDark; // 1 when the atmosphere is dark of itself (no held light, no Moon)
 // The naked-eye planets (Mercury, Venus, Mars, Jupiter, Saturn): screen xy (0..1), the point's
 // peak brightness (0: not drawn) and its Gaussian radius in CSS pixels (planet-points.ts).
 uniform vec4 u_planet0;
@@ -160,12 +161,11 @@ void main() {
           1.5 * 0.001534 * czm_projection[1][1] * czm_viewport.w * 0.5 / (cosAxis * cosAxis),
           3.0, 32.0);
       vec2 px = reach / czm_viewport.zw;
-      vec3 behind = ringMin(uv, px);
       vec3 lumW = vec3(0.2126, 0.7152, 0.0722);
       float lumHere = dot(color, lumW);
       float lumOuter = dot(ringMax(uv, px * 2.0), lumW);
       if (lumHere > lumOuter * 1.1 + 0.01) {
-        starLight = max(color - behind, vec3(0.0));
+        starLight = max(color - ringMin(uv, px), vec3(0.0));
         color -= starLight;
       }
     }
@@ -176,7 +176,13 @@ void main() {
     vec3 moonColour = src.rgb;
     if (u_moonRadiusDeg > 0.0) {
       float am = degrees(acos(clamp(dot(rayEC, u_moonDirEC), -1.0, 1.0)));
-      moonDisc = 1.0 - smoothstep(u_moonRadiusDeg * 0.92, u_moonRadiusDeg * 1.08 + 0.01, am);
+      // A pixel and a half beyond the limb as well (a few-pixel Moon at a wide lens is all limb).
+      float pixelDeg = degrees(2.0 / (czm_projection[1][1] * czm_viewport.w));
+      moonDisc = 1.0 - smoothstep(u_moonRadiusDeg * 0.92,
+          u_moonRadiusDeg * 1.08 + 0.01 + 1.5 * pixelDeg, am);
+      // Only the lit part: a crescent's dark side is a faint earthshine over the sky, and kept
+      // ungraded it stood out as a pale ghost of the full disc.
+      moonDisc *= smoothstep(0.15, 0.4, dot(src.rgb, vec3(0.2126, 0.7152, 0.0722)));
     }
     // The clear dome first (Cesium's single-scattering sky, corrected for twilight), then the
     // decks composite over it - a cloud's colour comes from how *it* is lit, not from the dome.
@@ -190,10 +196,11 @@ void main() {
     // atmosphere is dark of itself, and what is left on the dome is the star field's own glow -
     // the Milky Way. The darkening and the cooling let go of it over the next 2 deg, so the band
     // comes out at astronomical night instead of being cut to a sixteenth.
-    // A bright Moon lights the atmosphere again (the scene's light is then the Moon's), and
-    // washes the band out as it does the real one: the darkening stays under a full Moon.
-    float trueNight = (1.0 - smoothstep(-20.0, -18.0, u_sunElevation))
-        * (1.0 - smoothstep(0.02, 0.3, u_moonGlow));
+    // Only while the controller says so (u_atmosphereDark: set with the light, not glided, so a
+    // scrub up across -18 deg never lets go of a dome lit again): a Moon lighting the sky - the
+    // scene's light is then the Moon's, at any phase - keeps the darkening, and washes the band
+    // out as it does the real one.
+    float trueNight = u_atmosphereDark * (1.0 - smoothstep(-20.0, -18.0, u_sunElevation));
     dome = mix(dome, dome * vec3(0.55, 0.68, 1.05), twilight * 0.8 * (1.0 - 0.7 * trueNight));
     // Blue hour proper (sun -6 deg...0 deg): the dome is lit only by multiple scattering, which the
     // single-scattering sky model cannot produce - restore the deep, saturated blue and a little
@@ -421,6 +428,7 @@ export const GRADE_UNIFORM_NAMES = [
   'u_eyeUpEC',
   'u_eyeHeightM',
   'u_starField',
+  'u_atmosphereDark',
   'u_planet0',
   'u_planet1',
   'u_planet2',

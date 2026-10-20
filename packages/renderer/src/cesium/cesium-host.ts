@@ -535,6 +535,7 @@ export class CesiumSceneHost implements SceneHost {
       u_sunScreen: new C.Cartesian2(-1, -1),
       u_sunVisible: 0,
       u_starField: 0,
+      u_atmosphereDark: 0,
       u_sunDirEC: new C.Cartesian3(0, 0, -1),
       u_sunTint: new C.Cartesian3(1, 1, 1),
       u_moonDirEC: new C.Cartesian3(0, 0, -1),
