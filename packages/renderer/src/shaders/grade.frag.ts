@@ -51,6 +51,7 @@ uniform vec3 u_sunDirEC;        // toward the Sun, eye coordinates (per frame, g
 uniform vec3 u_sunTint;         // the colour of the Sun's direct light at its elevation
 uniform vec3 u_moonDirEC;       // toward the Moon, eye coordinates (per frame)
 uniform float u_moonGlow;       // the Moon's aureole, 0 none - 1 a full Moon in a dark sky
+uniform float u_moonRadiusDeg;  // the Moon's disc radius as drawn, degrees (0: no disc)
 
 // --- value noise / fbm -------------------------------------------------------------------
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
@@ -68,6 +69,28 @@ float fbm(vec2 p) {
 vec3 saturate3(vec3 c, float s) {
   float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
   return mix(vec3(l), c, s);
+}
+
+/** The dimmest and the brightest of eight samples on a ring px (in uv) round uv. */
+vec3 ringMin(vec2 uv, vec2 px) {
+  vec3 m = texture(colorTexture, uv + vec2(px.x, 0.0)).rgb;
+  m = min(m, texture(colorTexture, uv - vec2(px.x, 0.0)).rgb);
+  m = min(m, texture(colorTexture, uv + vec2(0.0, px.y)).rgb);
+  m = min(m, texture(colorTexture, uv - vec2(0.0, px.y)).rgb);
+  m = min(m, texture(colorTexture, uv + px * 0.7071).rgb);
+  m = min(m, texture(colorTexture, uv - px * 0.7071).rgb);
+  m = min(m, texture(colorTexture, uv + vec2(px.x, -px.y) * 0.7071).rgb);
+  return min(m, texture(colorTexture, uv + vec2(-px.x, px.y) * 0.7071).rgb);
+}
+vec3 ringMax(vec2 uv, vec2 px) {
+  vec3 m = texture(colorTexture, uv + vec2(px.x, 0.0)).rgb;
+  m = max(m, texture(colorTexture, uv - vec2(px.x, 0.0)).rgb);
+  m = max(m, texture(colorTexture, uv + vec2(0.0, px.y)).rgb);
+  m = max(m, texture(colorTexture, uv - vec2(0.0, px.y)).rgb);
+  m = max(m, texture(colorTexture, uv + px * 0.7071).rgb);
+  m = max(m, texture(colorTexture, uv - px * 0.7071).rgb);
+  m = max(m, texture(colorTexture, uv + vec2(px.x, -px.y) * 0.7071).rgb);
+  return max(m, texture(colorTexture, uv + vec2(-px.x, px.y) * 0.7071).rgb);
 }
 
 /** A planet's point on the dome at this pixel. */
@@ -121,25 +144,39 @@ void main() {
     // a neighbour about as bright on their inside, so they keep their light; the cloud decks are
     // composited after this, so their edges are never touched.
     float starFade = 1.0 - smoothstep(-15.0, -4.0, u_sunElevation);
-    if (starFade < 1.0 && u_starField > 0.5) {
+    // The stars' own light, taken out of the sky before it is graded and put back after: the
+    // grading below is for the atmosphere (darkened and cooled through the twilight, when Cesium
+    // still lights it from a Sun held at the horizon), and it had turned the stars blue and
+    // crushed the fainter ones to nothing at night.
+    vec3 starLight = vec3(0.0);
+    if (u_starField > 0.5) {
+      // A star-width out (1.5 texels of the 1024-px star cube, as drawn along this ray, at
+      // least 3 px): the dimmest of a ring there is the sky behind; and the pixel must stand
+      // clearly above everything on a ring twice as far for it to be a point at all. A pixel on a star's skirt sees sky
+      // in both rings, so the whole star separates (one ring tested both, and left the skirts
+      // in the sky to be tinted blue); the Moon's disc, wider than the outer ring, never does.
       float cosAxis = max(-rayEC.z, 0.2);
       float reach = clamp(
           1.5 * 0.001534 * czm_projection[1][1] * czm_viewport.w * 0.5 / (cosAxis * cosAxis),
-          2.0, 48.0);
+          3.0, 32.0);
       vec2 px = reach / czm_viewport.zw;
-      vec3 around = texture(colorTexture, uv + vec2(px.x, 0.0)).rgb;
-      around = max(around, texture(colorTexture, uv - vec2(px.x, 0.0)).rgb);
-      around = max(around, texture(colorTexture, uv + vec2(0.0, px.y)).rgb);
-      around = max(around, texture(colorTexture, uv - vec2(0.0, px.y)).rgb);
-      around = max(around, texture(colorTexture, uv + px * 0.7071).rgb);
-      around = max(around, texture(colorTexture, uv - px * 0.7071).rgb);
-      around = max(around, texture(colorTexture, uv + vec2(px.x, -px.y) * 0.7071).rgb);
-      around = max(around, texture(colorTexture, uv + vec2(-px.x, px.y) * 0.7071).rgb);
-      // A small disc (the Moon at a wide lens, a few pixels across) lights its neighbours more
-      // than half as much as its centre; a star does not.
+      vec3 behind = ringMin(uv, px);
       vec3 lumW = vec3(0.2126, 0.7152, 0.0722);
-      if (dot(around, lumW) < 0.5 * dot(color, lumW))
-        color -= max(color - around, vec3(0.0)) * (1.0 - starFade);
+      float lumHere = dot(color, lumW);
+      float lumOuter = dot(ringMax(uv, px * 2.0), lumW);
+      if (lumHere > lumOuter * 1.1 + 0.01) {
+        starLight = max(color - behind, vec3(0.0));
+        color -= starLight;
+      }
+    }
+    // The Moon's disc keeps the colour it was drawn in (its phase, and the low Moon's orange):
+    // it is translucent so the decks can cover it, which also put it through the sky's grading
+    // and turned it pale blue at night.
+    float moonDisc = 0.0;
+    vec3 moonColour = src.rgb;
+    if (u_moonRadiusDeg > 0.0) {
+      float am = degrees(acos(clamp(dot(rayEC, u_moonDirEC), -1.0, 1.0)));
+      moonDisc = 1.0 - smoothstep(u_moonRadiusDeg * 0.92, u_moonRadiusDeg * 1.08 + 0.01, am);
     }
     // The clear dome first (Cesium's single-scattering sky, corrected for twilight), then the
     // decks composite over it - a cloud's colour comes from how *it* is lit, not from the dome.
@@ -149,7 +186,15 @@ void main() {
     // cool the sky here as the real Sun sinks. Blue hour keeps ~65 % luminance with a blue cast;
     // astronomical night ends near black.
     float twilight = smoothstep(0.0, 1.0, u_nightFactor);
-    dome = mix(dome, dome * vec3(0.55, 0.68, 1.05), twilight * 0.8);
+    // Below -18 deg the scene's light is no longer held at the horizon (lighting.ts): Cesium's
+    // atmosphere is dark of itself, and what is left on the dome is the star field's own glow -
+    // the Milky Way. The darkening and the cooling let go of it over the next 2 deg, so the band
+    // comes out at astronomical night instead of being cut to a sixteenth.
+    // A bright Moon lights the atmosphere again (the scene's light is then the Moon's), and
+    // washes the band out as it does the real one: the darkening stays under a full Moon.
+    float trueNight = (1.0 - smoothstep(-20.0, -18.0, u_sunElevation))
+        * (1.0 - smoothstep(0.02, 0.3, u_moonGlow));
+    dome = mix(dome, dome * vec3(0.55, 0.68, 1.05), twilight * 0.8 * (1.0 - 0.7 * trueNight));
     // Blue hour proper (sun -6 deg...0 deg): the dome is lit only by multiple scattering, which the
     // single-scattering sky model cannot produce - restore the deep, saturated blue and a little
     // of the luminance it loses. Peaks around -4 deg, gone by -12 deg (nautical twilight is dark).
@@ -172,14 +217,17 @@ void main() {
     {
       float a = degrees(acos(clamp(dot(rayEC, u_sunDirEC), -1.0, 1.0)));
       // Only while the disc is up: under the horizon the glow's colour is the block above's.
-      float nearSun = (1.0 - smoothstep(0.4, 3.5, a)) * underDecks
+      float nearSun = (1.0 - smoothstep(0.5, 6.0, a)) * underDecks
           * smoothstep(-1.5, -0.5, u_sunElevation);
       dome = mix(dome, dome * u_sunTint, nearSun);
     }
     // Darken the atmospheric glow but keep bright point sources (stars, moon) readable.
     float domeLum = dot(dome, vec3(0.2126, 0.7152, 0.0722));
     float keep = smoothstep(0.12, 0.5, domeLum);
-    dome = mix(dome * mix(1.0, 0.06, twilight), dome, keep);
+    dome = mix(dome * mix(1.0, 0.06, twilight * (1.0 - trueNight)), dome, keep);
+    // The stars back, neutral, as much of them as the twilight shows; the Moon as drawn.
+    dome += starLight * starFade;
+    dome = mix(dome, moonColour, moonDisc);
     // Opposite a low Sun: the single-scattering dome leaves the eastern sky at sunset (the
     // western at sunrise) a dull dark teal, where a photographer finds the Earth's shadow, a
     // blue-grey band rising from the horizon as the Sun sinks, under the pink Belt of Venus,
@@ -382,4 +430,5 @@ export const GRADE_UNIFORM_NAMES = [
   'u_sunTint',
   'u_moonDirEC',
   'u_moonGlow',
+  'u_moonRadiusDeg',
 ] as const;

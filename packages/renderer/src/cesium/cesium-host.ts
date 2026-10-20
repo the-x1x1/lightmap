@@ -539,6 +539,7 @@ export class CesiumSceneHost implements SceneHost {
       u_sunTint: new C.Cartesian3(1, 1, 1),
       u_moonDirEC: new C.Cartesian3(0, 0, -1),
       u_moonGlow: 0,
+      u_moonRadiusDeg: 0,
       ...Object.fromEntries(PLANET_SLOTS.map((name) => [name, new C.Cartesian4(-10, -10, 0, 1)])),
       // Evaluated every frame (a function uniform): where "up" is in the view, and how high the
       // camera is — the grade tells sky from ground by the view ray, not by the depth buffer.
@@ -2466,6 +2467,7 @@ export class CesiumSceneHost implements SceneHost {
     this.moonDisc = m;
     const C = this.C;
     this.setGradeValue('u_moonGlow', m?.glow ?? 0);
+    this.setGradeValue('u_moonRadiusDeg', m ? m.diameterDeg / 2 : 0);
     if (!m) {
       if (this.moonBillboard?.show) {
         this.moonBillboard.show = false;

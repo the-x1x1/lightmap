@@ -142,32 +142,38 @@ ground is lifted toward the sky colour by depth, more strongly at low Sun (`hori
 by the light's colour. The light direction and terrain shading are untouched by either. Verified in
 `tools/renderer-smoke` (contact sheet `docs/media/renderer-smoke-2026-09-24c.png`).
 
-**Night sky.** In viewpoint mode, below a Sun elevation of −4°, the dome shows Cesium's star
-field (its J2000 star cube), coming out through the twilight: the grade takes part of each
-star-sized point's light back out until −15° (`starFieldVisibility`: none of the faint stars at
-−4°, a third of the field at −8°, all of it from −15°; the brightest come out first), following
-the clock's glide (it had switched on whole at −8°). The star field has no planets: the grade
-draws Mercury, Venus, Mars, Jupiter and Saturn as points on the clear dome (`planetPositions`,
-`planetPoint`), as bright as each one's magnitude against what the twilight shows
-(`skyLimitingMagnitude`: Venus faintly by day and plainly at sunset, Jupiter from about −1.5°,
-Saturn from about −5°), dimmed low in the air (0.25 mag an air mass, `extinctionMag`) and lost
-within 10° of the Sun, under the cloud decks and behind the ridges, gliding with the clock like
-the Sun. A bright Moon lights the haze round it (the grade's aureole, `moonGlowStrength`: by phase
-and only in a dark sky; a tight glow and a wide one, stronger in haze and far stronger through
+**Night sky.** The grade's twilight treatment (darkening and cooling the dome while Cesium still
+lights its atmosphere from a Sun held at the horizon) is for the atmosphere only: the stars' light
+is separated out first (a pixel standing clear above a ring two star-widths out, its sky from a ring
+one star-width out) and put back neutral after, the Moon's disc keeps the colour it was drawn in,
+and below −18° — when the held light is let go and the atmosphere is dark of itself — the darkening
+lets go of the Milky Way over 2°, unless a bright Moon lights the sky again. (Before this the stars
+turned blue in the blue hour, the fainter ones and the Milky Way's band were cut to a sixteenth at
+night, and the Moon was pale blue; seen in `tools/grade-preview`.) In viewpoint mode, below a Sun
+elevation of −4°, the dome shows Cesium's star field (its J2000 star cube), coming out through the
+twilight: the grade takes part of each star-sized point's light back out until −15°
+(`starFieldVisibility`: none of the faint stars at −4°, a third of the field at −8°, all of it from
+−15°; the brightest come out first), following the clock's glide (it had switched on whole at −8°).
+The star field has no planets: the grade draws Mercury, Venus, Mars, Jupiter and Saturn as points on
+the clear dome (`planetPositions`, `planetPoint`), as bright as each one's magnitude against what
+the twilight shows (`skyLimitingMagnitude`: Venus faintly by day and plainly at sunset, Jupiter from
+about −1.5°, Saturn from about −5°), dimmed low in the air (0.25 mag an air mass, `extinctionMag`)
+and lost within 10° of the Sun, under the cloud decks and behind the ridges, gliding with the clock
+like the Sun. A bright Moon lights the haze round it (the grade's aureole, `moonGlowStrength`: by
+phase and only in a dark sky; a tight glow and a wide one, stronger in haze and far stronger through
 cirrus or thin altostratus, muffled under thick cloud, dimmed by the air when the Moon is low) - a
 look, not a photometric model. The disc takes the low Sun's colour low down (`moonDiscTint`: the
-direct-light curve, 2,900 K on the horizon, neutral from 20°) and is dimmed by the air, to no
-less than about half. The Sun's own disc and glow (Cesium's, one white-yellow at any height) are
-tinted by the grade within a few degrees of it by `discTint` for its elevation: the same curve,
-deepened under 6° (the disc is the beam alone, redder than the light the scene gets), to about
-2,000 K on the horizon; the Moon's disc likewise.
-Cesium turns the field by Greenwich sidereal time for the scene's instant
-(`czm_temeToPseudoFixed`; the host sets the clock to the planned UTC) — so the Milky Way's band
-in the 3D preview stands where the planner's own Galactic Centre says, within the
-precession and nutation Cesium leaves out (≈ 0.4° in 2026; the planner's `milkyWayCore` applies
-Meeus precession, ≈ 0.1°). The "Milky Way core" line, the rose star, the dark windows and the
-map view's violet track are the authority where the two disagree. The star field is a texture:
-no sky-brightness or airglow model, and it is faint under software GL (`README.md` "Known
+direct-light curve, 2,900 K on the horizon, neutral from 20°) and is dimmed by the air, to no less
+than about half. The Sun's own disc and glow (Cesium's, one white-yellow at any height) are tinted
+by the grade within a few degrees of it by `discTint` for its elevation: the same curve, deepened
+under 6° (the disc is the beam alone, redder than the light the scene gets), to about 2,000 K on the
+horizon; the Moon's disc likewise. Cesium turns the field by Greenwich sidereal time for the scene's
+instant (`czm_temeToPseudoFixed`; the host sets the clock to the planned UTC) — so the Milky Way's
+band in the 3D preview stands where the planner's own Galactic Centre says, within the precession
+and nutation Cesium leaves out (≈ 0.4° in 2026; the planner's `milkyWayCore` applies Meeus
+precession, ≈ 0.1°). The "Milky Way core" line, the rose star, the dark windows and the map view's
+violet track are the authority where the two disagree. The star field is a texture: no
+sky-brightness or airglow model, and it is faint under software GL (`README.md` "Known
 limitations").
 
 **The Moon.** In viewpoint mode the Moon is drawn where the planner's own Moon stands (its

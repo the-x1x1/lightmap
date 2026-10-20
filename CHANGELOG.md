@@ -7,6 +7,12 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 - **The Moon in the viewpoint's sky**: drawn where the planner's Moon stands, at its size for
   the day, with its phase and the lit limb toward the Sun; pale by day, under the cloud decks,
   hidden by the ridges in front of it. Cesium's own Moon (a black disc, lit by Cesium's Sun) stays off.
+- **A night sky with its stars and its Milky Way**: the grade's twilight treatment of the sky was
+  applied to everything in it, so the stars turned blue in the blue hour, the fainter ones and the
+  Milky Way's band were cut to a sixteenth at night, and the Moon was drawn pale blue. The stars'
+  light is now taken out before the sky is graded and put back neutral; the Moon keeps the colour
+  it was drawn in; and once the Sun is 18° down the Milky Way comes out (unless a bright Moon
+  washes it out, as it does the real one). Checked by eye in a new grade preview.
 - **The Moon's glow**: a bright Moon now lights the haze around it, and far more a veil of cirrus
   or thin altostratus (the halo a night shot is framed on, or waits out), muffled under thick low
   cloud; by its phase (a quarter Moon about a tenth of a full one) and only once the sky is dark.
