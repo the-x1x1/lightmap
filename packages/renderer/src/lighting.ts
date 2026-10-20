@@ -10,18 +10,19 @@ import { BETA_MIE, clearSkyStops, mieScaleForHaze, type SkyStops } from './sky-m
 /**
  * The Sun elevation below which the star field is drawn, degrees. It is drawn faint at first
  * (`starFieldVisibility`, applied by the grade shader), so the stars come out through the
- * twilight instead of switching on together.
+ * twilight instead of switching on together. Not before -8 deg: the star cube's faint texels are
+ * too dense for the grade to tell from the sky, and drawn into a brighter blue hour they grained
+ * the whole dome (seen in tools/renderer-smoke); the planets carry the early twilight.
  */
-export const STAR_FIELD_FROM_DEG = -4;
+export const STAR_FIELD_FROM_DEG = -8;
 
 /**
- * How much of the star field shows at a Sun elevation, 0-1: none from −4° (the brightest stars,
- * which the grade cannot take wholly out, come out first, about the end of civil twilight), about a third at −8°, all of it from −15° (most of
- * the naked-eye stars by the middle of nautical twilight, on the way to astronomical night). The
- * grade shader's `starFade` is the same curve.
+ * How much of the star field's light shows at a Sun elevation, 0-1: none at -8 deg, where it is
+ * first drawn, half at -12 (the end of nautical twilight), all of it from -16. The grade
+ * shader's `starFade` is the same curve.
  */
 export function starFieldVisibility(sunElevationDeg: number): number {
-  const t = Math.max(0, Math.min(1, (sunElevationDeg + 15) / 11));
+  const t = Math.max(0, Math.min(1, (sunElevationDeg + 16) / 8));
   return 1 - t * t * (3 - 2 * t);
 }
 

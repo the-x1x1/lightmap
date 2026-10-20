@@ -72,7 +72,7 @@ vec3 saturate3(vec3 c, float s) {
   return mix(vec3(l), c, s);
 }
 
-/** The dimmest and the brightest of eight samples on a ring px (in uv) round uv. */
+// The dimmest and the brightest of eight samples on a ring px (in uv) round uv.
 vec3 ringMin(vec2 uv, vec2 px) {
   vec3 m = texture(colorTexture, uv + vec2(px.x, 0.0)).rgb;
   m = min(m, texture(colorTexture, uv - vec2(px.x, 0.0)).rgb);
@@ -94,7 +94,7 @@ vec3 ringMax(vec2 uv, vec2 px) {
   return max(m, texture(colorTexture, uv + vec2(-px.x, px.y) * 0.7071).rgb);
 }
 
-/** A planet's point on the dome at this pixel. */
+// A planet's point on the dome at this pixel.
 vec3 planetLight(vec4 p, vec3 tint) {
   if (p.z <= 0.0) return vec3(0.0);
   vec2 d = (v_textureCoordinates - p.xy) * czm_viewport.zw;
@@ -135,16 +135,15 @@ void main() {
   if (isSky) {
     vec2 uv = v_textureCoordinates;
     // The star field comes out through the twilight (lighting.ts \`starFieldVisibility\`): it is
-    // drawn from a Sun at -4 deg, and until -15 deg part of each star's light is taken back out
-    // (the faint stars' all of it, the brightest - blurred discs in the cube - the peak above
-    // their skirt, so they come out first). Gated on the host's own skybox switch, not on the
-    // gliding elevation, so a step across -4 deg never shows the field whole for a frame.
+    // drawn from a Sun at -8 deg, and until -16 deg part of each star's light is held back - none
+    // of it shows at -8, half at -12. Gated on the host's own skybox switch, not on the gliding
+    // elevation, so a step across -8 deg never shows the field whole for a frame.
     // A star is a point brighter than every pixel a star's width away: 1.5 texels of the
     // 1024-px star cube (0.088 deg), as drawn along this ray (a gnomonic view magnifies by
     // 1/cos^2 off its axis): a few pixels, dozens zoomed in. The Moon's limb and a crescent have
     // a neighbour about as bright on their inside, so they keep their light; the cloud decks are
     // composited after this, so their edges are never touched.
-    float starFade = 1.0 - smoothstep(-15.0, -4.0, u_sunElevation);
+    float starFade = 1.0 - smoothstep(-16.0, -8.0, u_sunElevation);
     // The stars' own light, taken out of the sky before it is graded and put back after: the
     // grading below is for the atmosphere (darkened and cooled through the twilight, when Cesium
     // still lights it from a Sun held at the horizon), and it had turned the stars blue and
@@ -164,7 +163,7 @@ void main() {
       vec3 lumW = vec3(0.2126, 0.7152, 0.0722);
       float lumHere = dot(color, lumW);
       float lumOuter = dot(ringMax(uv, px * 2.0), lumW);
-      if (lumHere > lumOuter * 1.1 + 0.01) {
+      if (lumHere > lumOuter * 1.05 + 0.002) {
         starLight = max(color - ringMin(uv, px), vec3(0.0));
         color -= starLight;
       }

@@ -7,6 +7,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 - **The Moon in the viewpoint's sky**: drawn where the planner's Moon stands, at its size for
   the day, with its phase and the lit limb toward the Sun; pale by day, under the cloud decks,
   hidden by the ridges in front of it. Cesium's own Moon (a black disc, lit by Cesium's Sun) stays off.
+- **The renderer builds again in real CesiumJS**: two one-line \`/** */\` comments in the grade
+  shader (with the planets, unreleased) made Cesium's shader preprocessor throw - it counts the
+  newlines in such a comment - so the grade, and with it the 3D view, failed to build. Found by
+  running tools/renderer-smoke against CesiumJS 1.146; a test now keeps them out of every shader.
 - **A night sky with its stars and its Milky Way**: the grade's twilight treatment of the sky was
   applied to everything in it, so the stars turned blue in the blue hour, the fainter ones and the
   Milky Way's band were cut to a sixteenth at night, and the Moon was drawn pale blue. The stars'
@@ -41,7 +45,7 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   a time, at the slowest play pace too (it had paused for a fifth of a second every minute);
   the map's sun marker, ray and shadow line glide with the clock, as does the Moon in the
   viewpoint's sky (the day's paths are no longer rebuilt every minute);
-  the stars come out through the twilight (from −4° to −15°) instead of switching on together
+  the stars come out through the twilight (from −8° to −16°) instead of switching on together
   at −8°; the wheel's zoom from the viewpoint eases over a few frames instead of jumping a notch at a
   time; the map no longer flashes brighter as the Sun sets (the night chart opens from the
   dusk's brightness over 2.5°); integrated GPUs start on Balanced, and a better quality rung waits for the camera to rest

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GRADE_FRAGMENT_SHADER, GRADE_UNIFORM_NAMES } from '../src/shaders/grade.frag.ts';
 import { GROUND_MATERIAL_SOURCE } from '../src/shaders/ground.frag.ts';
+import { LIT_INSTANCE_FS, treeFragmentShader } from '../src/cesium/osm-buildings-layer.ts';
 
 /**
  * GLSL ES allows only ASCII, comments included; a stray "≈" or em dash from prose-style
@@ -25,4 +26,23 @@ describe('the grade shader and its uniform list', () => {
       .filter((n) => n !== 'colorTexture' && n !== 'depthTexture');
     expect([...declared].sort()).toEqual([...GRADE_UNIFORM_NAMES].sort());
   });
+});
+
+describe("shader sources and Cesium's preprocessor", () => {
+  // Cesium's ShaderSource strips a /** ... */ comment by counting the newlines in it
+  // (match(/\n/gm).length) and throws on one without any: a one-line doc comment in GLSL stops
+  // the program from building and the renderer with it (seen in tools/renderer-smoke).
+  for (const [name, src] of [
+    ['ground material', GROUND_MATERIAL_SOURCE],
+    ['grade', GRADE_FRAGMENT_SHADER],
+    ['lit instances', LIT_INSTANCE_FS],
+    ['trees', treeFragmentShader(0.5, 0.5, 0.5, 1000, 0.5)],
+  ] as const) {
+    it(`${name} has no one-line /** */ comment`, () => {
+      const oneLine = [...src.matchAll(/\/\*\*[\s\S]*?\*\//g)]
+        .map((m) => m[0])
+        .filter((c) => !c.includes('\n'));
+      expect(oneLine).toEqual([]);
+    });
+  }
 });

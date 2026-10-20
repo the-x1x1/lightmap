@@ -153,8 +153,8 @@ describe('lightingFromScene', () => {
     expect(night.grade.nightFactor).toBeCloseTo(1, 3);
     expect(night.sunIntensity).toBe(0);
     expect(night.starsVisible).toBe(true);
-    // At −5° the star field is drawn but barely shows (it fades in through the twilight).
-    expect(blue.starsVisible).toBe(true);
+    // At −5° the star field is not drawn yet (from −8°, fading in to −16°).
+    expect(blue.starsVisible).toBe(false);
     expect(golden.starsVisible).toBe(false);
     // Blue hour keeps a dim, cool ambient and lifts the atmosphere light to a grazing angle.
     expect(blue.sunIntensity).toBeGreaterThan(0.1);
@@ -252,15 +252,14 @@ describe('visibility and fog', () => {
 });
 
 describe('starFieldVisibility', () => {
-  it('fades the stars in from −4° to −15°, monotonically', () => {
+  it('fades the stars in from −8° to −16°, monotonically', () => {
     expect(starFieldVisibility(-3)).toBe(0);
     expect(starFieldVisibility(STAR_FIELD_FROM_DEG)).toBe(0);
-    expect(starFieldVisibility(-8)).toBeGreaterThan(0.25);
-    expect(starFieldVisibility(-8)).toBeLessThan(0.4);
-    expect(starFieldVisibility(-15)).toBe(1);
+    expect(starFieldVisibility(-12)).toBeCloseTo(0.5, 6);
+    expect(starFieldVisibility(-16)).toBe(1);
     expect(starFieldVisibility(-40)).toBe(1);
     let prev = 0;
-    for (let el = -4; el >= -16; el -= 0.5) {
+    for (let el = -8; el >= -17; el -= 0.5) {
       const v = starFieldVisibility(el);
       expect(v).toBeGreaterThanOrEqual(prev);
       prev = v;

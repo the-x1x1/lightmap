@@ -150,10 +150,11 @@ and below −18° — when the held light is let go and the atmosphere is dark o
 lets go of the Milky Way over 2°, unless a bright Moon lights the sky again. (Before this the stars
 turned blue in the blue hour, the fainter ones and the Milky Way's band were cut to a sixteenth at
 night, and the Moon was pale blue; seen in `tools/grade-preview`.) In viewpoint mode, below a Sun
-elevation of −4°, the dome shows Cesium's star field (its J2000 star cube), coming out through the
-twilight: the grade takes part of each star-sized point's light back out until −15°
-(`starFieldVisibility`: none of the faint stars at −4°, a third of the field at −8°, all of it from
-−15°; the brightest come out first), following the clock's glide (it had switched on whole at −8°).
+elevation of −8°, the dome shows Cesium's star field (its J2000 star cube), coming out through the
+twilight: the grade holds back part of each star-sized point's light until −16°
+(`starFieldVisibility`: none at −8°, half at −12°, all of it from −16°), following the clock's
+glide (it had switched on whole at −8°). Not earlier: the cube's faint texels are too dense to tell
+from the sky, and in a brighter blue hour they grained the whole dome (`tools/renderer-smoke`).
 The star field has no planets: the grade draws Mercury, Venus, Mars, Jupiter and Saturn as points on
 the clear dome (`planetPositions`, `planetPoint`), as bright as each one's magnitude against what
 the twilight shows (`skyLimitingMagnitude`: Venus faintly by day and plainly at sunset, Jupiter from
