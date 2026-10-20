@@ -50,13 +50,13 @@ page.on('pageerror', (e) => consoleLines.push('pageerror: ' + e.message));
 await page.goto('http://127.0.0.1:8765/index.html', { waitUntil: 'load', timeout: 120000 });
 const shots = {};
 const start = Date.now();
-while (Date.now() - start < 180000) {
+while (Date.now() - start < 900000) {
   const state = await page.evaluate(() => ({
     done: window.__smoke.done,
     shot: window.__smoke.shot,
   }));
   if (state.shot && !shots[state.shot]) {
-    await page.screenshot({ path: `shot-${state.shot}.png` });
+    await page.screenshot({ path: `shot-${state.shot}.png`, timeout: 240000 });
     shots[state.shot] = true;
     await page.evaluate(() => {
       window.__smoke.shot = null;

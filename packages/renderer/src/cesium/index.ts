@@ -5,3 +5,10 @@ export {
   type CesiumHostOptions,
   type CesiumModule,
 } from './cesium-host.ts';
+export {
+  anchorGroundFrame,
+  groundMaterialUniforms,
+  newGroundFrame,
+  updateGroundOffsets,
+  type GroundFrame,
+} from './ground-material.ts';

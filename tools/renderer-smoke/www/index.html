@@ -124,7 +124,7 @@
                 resolve();
               }
             };
-            const host_scene_postRender_remove = host.__scene.postRender.addEventListener(h);
+            const host_scene_postRender_remove = host.scene.postRender.addEventListener(h);
           });
         window.__smoke.phase = 'noon-clear';
         await wait(6000);
@@ -338,6 +338,14 @@
         controller.apply(shadowScene);
         controller.setOrbit({ headingDeg: 0, pitchDeg: -89, rangeM: 420 });
         await wait(3000);
+        // The switch from the viewpoint is a camera flight, and on software GL it can outlast the
+        // wait: measure only once the camera stands over the tower (a capture mid-flight read
+        // the sky over the Earth's limb, and the probe failed for no fault in the shadow).
+        for (let i = 0; i < 60; i++) {
+          const cam = cesiumScene.camera;
+          if (!cam._currentFlight && Math.abs(cam.positionCartographic.height - 420) < 40) break;
+          await wait(500);
+        }
         const el = shadowScene.solar.elevationDegrees;
         const az = shadowScene.solar.azimuthDegrees;
         const shadowAz = (az + 180) % 360;
@@ -462,17 +470,30 @@
         const {
           GROUND_COVER_BOUNDS_UNIFORM,
           GROUND_COVER_IMAGE_UNIFORM,
-          GROUND_DETAIL_IMAGE_UNIFORMS,
+          GROUND_DETAIL_UNIFORM,
           GROUND_MATERIAL_SOURCE,
-          createDetailTextures,
-          GROUND_UNIFORM_DEFAULTS,
+          GROUND_NOISE_UNIFORM,
+          NOISE_TEXTURE_SIZE,
+          createDetailTexture,
+          createNoiseTexture,
           groundTextureFor,
+          makeNoiseTexture,
         } = await import('@lightmap/renderer');
+        // The material's uniforms and its per-frame frame are the host's own (ground-material.ts),
+        // so this probe draws what the globe draws.
+        const { anchorGroundFrame, groundMaterialUniforms, newGroundFrame, updateGroundOffsets } =
+          await import('@lightmap/renderer/cesium');
         const probeParams = groundTextureFor(s1);
         const atlasImage = new Image();
         atlasImage.src = 'textures/ground-detail.png';
         await atlasImage.decode();
-        const detailTextures = createDetailTextures(Cesium, host.__scene.context, atlasImage) ?? {};
+        const detailTexture = createDetailTexture(Cesium, host.scene.context, atlasImage);
+        const noiseTexture = createNoiseTexture(
+          Cesium,
+          host.scene.context,
+          makeNoiseTexture(NOISE_TEXTURE_SIZE),
+          NOISE_TEXTURE_SIZE,
+        );
         // A synthetic cover map over the probe rectangle (forest NW, crop NE, built SW, bare SE
         // and an ice patch), packed as `packCover` does, so the cover branch runs for real:
         // the shot must show the quadrants in place (forest at the north-west corner).
@@ -503,66 +524,48 @@
           fabric: {
             type: 'LightMapGroundProbe',
             uniforms: {
-              ...GROUND_UNIFORM_DEFAULTS,
+              ...groundMaterialUniforms(Cesium, 1),
               u_snowlineM: probeParams ? probeParams.snowlineM : 3000,
               u_treelineM: probeParams ? probeParams.treelineM : 2100,
               u_aridity: probeParams ? probeParams.aridity : 0.25,
               u_ice: probeParams ? probeParams.ice : 0,
-              u_cameraCell: new Cesium.Cartesian3(0, 0, 0),
-              u_cameraFrac: new Cesium.Cartesian3(0, 0, 0),
               u_poleward: probeParams ? probeParams.poleward : 1,
               // The cover map as the host declares it: a vec4 of bounds and an image uniform,
               // here the synthetic map above, switched on (the one-frame default-white read
-              // before the upload is harmless in a probe); the detail atlas stays default and
-              // off (the probe is 2.5 km from the camera, beyond the atlas's reach anyway).
+              // before the upload is harmless in a probe).
               [GROUND_COVER_BOUNDS_UNIFORM]: coverBounds,
               [GROUND_COVER_IMAGE_UNIFORM]: coverCanvas,
               u_coverOn: 1,
-              // The detail tiles as the host builds them from the app's atlas (four wrapping
-              // textures), switched on; the probe's own ENU frame and camera offsets are kept
-              // up each frame below, as the host does for the globe.
-              ...detailTextures,
-              u_detailOn: 1,
-              u_eastWC: new Cesium.Cartesian3(1, 0, 0),
-              u_northWC: new Cesium.Cartesian3(0, 1, 0),
-              u_upWC: new Cesium.Cartesian3(0, 0, 1),
-              u_detailOffset: new Cesium.Cartesian3(0, 0, 0),
-              u_detailOffset1: new Cesium.Cartesian3(0, 0, 0),
             },
             source: GROUND_MATERIAL_SOURCE,
           },
           translucent: false,
-          minificationFilter: Cesium.TextureMinificationFilter.LINEAR_MIPMAP_LINEAR,
+          // As the host's: the cover map has no mip chain, and a mipmapped filter samples black.
+          minificationFilter: Cesium.TextureMinificationFilter.LINEAR,
+          magnificationFilter: Cesium.TextureMagnificationFilter.LINEAR,
         });
+        // The detail tiles and the noise as the host builds them from the app's atlas, given to
+        // the material once it exists, as the host does (Cesium types fabric uniforms by value
+        // and has no type for a texture object).
+        if (detailTexture) {
+          probeMaterial.uniforms[GROUND_DETAIL_UNIFORM] = detailTexture;
+          probeMaterial.uniforms.u_detailOn = 1;
+        }
+        probeMaterial.uniforms[GROUND_NOISE_UNIFORM] = noiseTexture;
         {
-          // The atlas frame: east/north/up at the probe's centre, the camera's offset along them
-          // in tile periods each frame (the host's preRender does the same for the globe).
+          // The ground frame anchored at the probe's centre, the camera's place along it kept up
+          // each frame - the host's own code for the globe.
           const centre = Cesium.Cartesian3.fromDegrees(
             (probeRect.west + probeRect.east) / 2,
             (probeRect.south + probeRect.north) / 2,
           );
-          const up = Cesium.Ellipsoid.WGS84.geodeticSurfaceNormal(centre, new Cesium.Cartesian3());
-          const h = Math.hypot(centre.x, centre.y);
-          const east = new Cesium.Cartesian3(-centre.y / h, centre.x / h, 0);
-          const north = Cesium.Cartesian3.cross(up, east, new Cesium.Cartesian3());
-          const u = probeMaterial.uniforms;
-          Cesium.Cartesian3.clone(east, u.u_eastWC);
-          Cesium.Cartesian3.clone(north, u.u_northWC);
-          Cesium.Cartesian3.clone(up, u.u_upWC);
-          host.__scene.preRender.addEventListener(() => {
-            const cam = host.__scene.camera.positionWC;
-            const f = (v) => v - Math.floor(v);
-            for (const [name, period] of [
-              ['u_detailOffset', 2.5],
-              ['u_detailOffset1', 6.7],
-            ]) {
-              u[name].x = f(Cesium.Cartesian3.dot(cam, east) / period);
-              u[name].y = f(Cesium.Cartesian3.dot(cam, north) / period);
-              u[name].z = f(Cesium.Cartesian3.dot(cam, up) / period);
-            }
-          });
+          const frame = newGroundFrame(Cesium);
+          anchorGroundFrame(Cesium, frame, centre, probeMaterial.uniforms);
+          host.scene.preRender.addEventListener(() =>
+            updateGroundOffsets(Cesium, frame, host.scene.camera.positionWC, probeMaterial.uniforms),
+          );
         }
-        host.__scene.primitives.add(
+        host.scene.primitives.add(
           new Cesium.Primitive({
             geometryInstances: new Cesium.GeometryInstance({
               geometry: new Cesium.RectangleGeometry({
@@ -596,7 +599,7 @@
         // and linked on the scene's own GL context. Anything but 'ok' fails the run.
         let globeProgram = 'unavailable';
         try {
-          const ctx = host.__scene.context;
+          const ctx = host.scene.context;
           const gl = ctx._gl;
           const defines = [
             'APPLY_MATERIAL',
@@ -615,6 +618,9 @@
                 Cesium._shadersGroundAtmosphere,
                 GROUND_MATERIAL_SOURCE,
                 Cesium._shadersGlobeFS,
+                // GlobeSurfaceShaderSet writes this one per imagery-layer count; one plain layer
+                // stands in for it here.
+                'vec4 computeDayColor(vec4 initialColor, vec3 textureCoordinates, float nightBlend)\n{\n    return initialColor;\n}\n',
               ],
               defines,
             }).createCombinedFragmentShader(ctx);
@@ -623,6 +629,10 @@
                 Cesium._shadersAtmosphereCommon,
                 Cesium._shadersGroundAtmosphere,
                 Cesium._shadersGlobeVS,
+                // GlobeSurfaceShaderSet writes these two by scene mode and projection; the 3D,
+                // geographic ones stand in for them here.
+                'vec4 getPosition(vec3 position, float height, vec2 textureCoordinates) { return getPosition3DMode(position, height, textureCoordinates); }\n',
+                'float get2DYPositionFraction(vec2 textureCoordinates) { return get2DGeographicYPositionFraction(textureCoordinates); }\n',
               ],
               defines,
             }).createCombinedVertexShader(ctx);

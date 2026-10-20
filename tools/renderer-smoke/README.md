@@ -24,6 +24,17 @@ ln -s ../../../node_modules/cesium/Build/Cesium www/cesium-build
 node run.mjs
 ```
 
+Without a package install, the CesiumJS release archive works as the build: unzip
+`Build/Cesium` from `Cesium-1.146.zip` (GitHub releases) and link it as `www/cesium-build`. On
+software GL a run takes several minutes; the runner allows fifteen, and each shot four.
+
+The ground probe's material uniforms and its per-frame frame are the host's own
+(`groundMaterialUniforms`, `anchorGroundFrame`, `updateGroundOffsets` from
+`@lightmap/renderer/cesium`), so the probe draws what the globe draws; it had drifted from the
+host and stopped before drawing. `docs/media/renderer-smoke-2026-10-19.png` is the contact sheet of
+the last full run (CesiumJS 1.146, SwiftShader): fifteen shots, no errors, the globe program
+compiled and linked, the shadow probe and the terrain horizon passing.
+
 `www/index.html` uses an import map so the emitted packages and Cesium load as native ES modules;
 nothing is bundled. The `cesium` meta-package is a **devDependency only**, used for its prebuilt
 `Build/Cesium` bundle here; application code imports `@cesium/engine` (ADR-0002).

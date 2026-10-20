@@ -52,14 +52,10 @@ import {
   GROUND_COVER_IMAGE_UNIFORM,
   GROUND_ROAD_BOUNDS_UNIFORM,
   GROUND_ROAD_IMAGE_UNIFORM,
-  GROUND_DETAIL_TIERS,
   GROUND_DETAIL_UNIFORM,
   GROUND_MATERIAL_SOURCE,
   GROUND_NOISE_UNIFORM,
-  GROUND_NOISE_WRAP_M,
-  GROUND_TOWN_GRID,
   GROUND_MATERIAL_TYPE,
-  GROUND_UNIFORM_DEFAULTS,
 } from '../shaders/ground.frag.ts';
 import { coverMapFromPixels, coverMosaicFor, packCover, tileUrl } from '../land-cover.ts';
 import {
@@ -78,6 +74,13 @@ import {
 } from '../imagery-season.ts';
 import { FrameBudgetQueue } from '../frame-budget.ts';
 import { drawMoonPhase } from '../moon-disc.ts';
+import {
+  anchorGroundFrame,
+  groundMaterialUniforms,
+  newGroundFrame,
+  updateGroundOffsets,
+  type GroundFrame,
+} from './ground-material.ts';
 import { StepGlide, lerpVec3, nlerpDir, type Vec3Like } from '../step-glide.ts';
 import type { Vec3 } from '../sun-vector.ts';
 import type {
@@ -252,13 +255,7 @@ export class CesiumSceneHost implements SceneHost {
   private readonly geoidCells = new Map<string, Promise<ArrayBuffer | null>>();
   private urbanIndex: Promise<Set<string> | null> | null = null;
   private readonly urbanCells = new Map<string, Promise<UrbanPolygon[]>>();
-  private readonly enuScratch: {
-    east: Cesium.Cartesian3;
-    north: Cesium.Cartesian3;
-    up: Cesium.Cartesian3;
-    anchor: Cesium.Cartesian3;
-    anchored: boolean;
-  };
+  private readonly enuScratch: GroundFrame;
   /** The detail atlas once its image has loaded; the material takes it then, never a URL. */
   private detailAtlas: HTMLImageElement | null = null;
   /** The detail tiles' texture once handed to the material (which destroys it with itself). */
@@ -391,13 +388,7 @@ export class CesiumSceneHost implements SceneHost {
     this.urbanAreasUrl = options.urbanAreasUrl?.replace(/\/$/, '');
     this.geoidUrl = options.geoidUrl?.replace(/\/$/, '');
     this.eyeUpScratch = new C.Cartesian3();
-    this.enuScratch = {
-      east: new C.Cartesian3(),
-      north: new C.Cartesian3(),
-      up: new C.Cartesian3(),
-      anchor: new C.Cartesian3(),
-      anchored: false,
-    };
+    this.enuScratch = newGroundFrame(C);
     if (options.ionToken) C.Ion.defaultAccessToken = options.ionToken;
 
     this.widget = new C.CesiumWidget(options.container, {
@@ -597,7 +588,6 @@ export class CesiumSceneHost implements SceneHost {
       // modulo the noise's wrap, and as fractions of each detail period and the town grid, all
       // computed here in double. A frame that followed the camera would drag the pattern with it.
       const anchor = this.enuScratch.anchor;
-      const { east, north, up } = this.enuScratch;
       // Anchor at the pin when there is one (the orbit's target, the viewpoint's eye), so the
       // frame never moves while zooming; otherwise at the point under the camera, kept until
       // that has travelled far.
@@ -613,49 +603,8 @@ export class CesiumSceneHost implements SceneHost {
         )
           want = under;
       }
-      if (want) {
-        const n = C.Ellipsoid.WGS84.geodeticSurfaceNormal(want, up);
-        const h = Math.hypot(want.x, want.y);
-        if (n && h >= 1) {
-          east.x = -want.y / h;
-          east.y = want.x / h;
-          east.z = 0;
-          C.Cartesian3.cross(up, east, north);
-          C.Cartesian3.clone(want, anchor);
-          this.enuScratch.anchored = true;
-          C.Cartesian3.clone(east, u['u_eastWC'] as Cesium.Cartesian3);
-          C.Cartesian3.clone(north, u['u_northWC'] as Cesium.Cartesian3);
-          C.Cartesian3.clone(up, u['u_upWC'] as Cesium.Cartesian3);
-        }
-      }
-      if (this.enuScratch.anchored) {
-        const f = (v: number) => v - Math.floor(v);
-        const ce = C.Cartesian3.dot(cam, east);
-        const cn = C.Cartesian3.dot(cam, north);
-        const cu = C.Cartesian3.dot(cam, up);
-        const wrap = (v: number) => v - Math.floor(v / GROUND_NOISE_WRAP_M) * GROUND_NOISE_WRAP_M;
-        const camMod = u['u_camMod'] as Cesium.Cartesian3;
-        camMod.x = wrap(ce);
-        camMod.y = wrap(cn);
-        camMod.z = wrap(cu);
-        for (const tier of GROUND_DETAIL_TIERS) {
-          const off = u[tier.offsetUniform] as Cesium.Cartesian3;
-          off.x = f(ce / tier.periodM);
-          off.y = f(cn / tier.periodM);
-          off.z = f(cu / tier.periodM);
-        }
-        const cellU = u[GROUND_TOWN_GRID.cellUniform] as Cesium.Cartesian3;
-        const fracU = u[GROUND_TOWN_GRID.fracUniform] as Cesium.Cartesian3;
-        const x = ce / GROUND_TOWN_GRID.cellM;
-        const y = cn / GROUND_TOWN_GRID.cellM;
-        const z = cu / GROUND_TOWN_GRID.cellM;
-        cellU.x = Math.floor(x);
-        cellU.y = Math.floor(y);
-        cellU.z = Math.floor(z);
-        fracU.x = x - cellU.x;
-        fracU.y = y - cellU.y;
-        fracU.z = z - cellU.z;
-      }
+      if (want) anchorGroundFrame(C, this.enuScratch, want, u);
+      updateGroundOffsets(C, this.enuScratch, cam, u);
     });
     this.preRenderRemover = scene.postRender.addEventListener(() => {
       // Only frames drawn back to back while the camera moves say what the machine can do: the
@@ -817,26 +766,7 @@ export class CesiumSceneHost implements SceneHost {
       this.groundMaterial = new C.Material({
         fabric: {
           type: GROUND_MATERIAL_TYPE,
-          uniforms: {
-            ...GROUND_UNIFORM_DEFAULTS,
-            [GROUND_COVER_BOUNDS_UNIFORM]: new C.Cartesian4(0, 0, 0, 0),
-            [GROUND_COVER_IMAGE_UNIFORM]: C.Material.DefaultImageId,
-            [GROUND_ROAD_BOUNDS_UNIFORM]: new C.Cartesian4(0, 0, 0, 0),
-            [GROUND_ROAD_IMAGE_UNIFORM]: C.Material.DefaultImageId,
-            [GROUND_DETAIL_UNIFORM]: C.Material.DefaultImageId,
-            [GROUND_NOISE_UNIFORM]: C.Material.DefaultImageId,
-            u_detailOn: 0,
-            u_coarseBasemap: this.coarseBasemap,
-            u_eastWC: new C.Cartesian3(1, 0, 0),
-            u_northWC: new C.Cartesian3(0, 1, 0),
-            u_upWC: new C.Cartesian3(0, 0, 1),
-            ...Object.fromEntries(
-              GROUND_DETAIL_TIERS.map((t) => [t.offsetUniform, new C.Cartesian3(0, 0, 0)]),
-            ),
-            u_camMod: new C.Cartesian3(0, 0, 0),
-            [GROUND_TOWN_GRID.cellUniform]: new C.Cartesian3(0, 0, 0),
-            [GROUND_TOWN_GRID.fracUniform]: new C.Cartesian3(0, 0, 0),
-          },
+          uniforms: groundMaterialUniforms(C, this.coarseBasemap),
           source: GROUND_MATERIAL_SOURCE,
         },
         translucent: false,
