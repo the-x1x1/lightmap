@@ -7,7 +7,7 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 - **The Moon in the viewpoint's sky**: drawn where the planner's Moon stands, at its size for
   the day, with its phase and the lit limb toward the Sun; pale by day, under the cloud decks,
   hidden by the ridges in front of it. Cesium's own Moon (a black disc, lit by Cesium's Sun) stays off.
-- **The renderer builds again in real CesiumJS**: two one-line \`/** */\` comments in the grade
+- **The renderer builds again in real CesiumJS**: two one-line `/** */` comments in the grade
   shader (with the planets, unreleased) made Cesium's shader preprocessor throw - it counts the
   newlines in such a comment - so the grade, and with it the 3D view, failed to build. Found by
   running tools/renderer-smoke against CesiumJS 1.146; a test now keeps them out of every shader.
