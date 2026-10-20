@@ -562,7 +562,12 @@
           const frame = newGroundFrame(Cesium);
           anchorGroundFrame(Cesium, frame, centre, probeMaterial.uniforms);
           host.scene.preRender.addEventListener(() =>
-            updateGroundOffsets(Cesium, frame, host.scene.camera.positionWC, probeMaterial.uniforms),
+            updateGroundOffsets(
+              Cesium,
+              frame,
+              host.scene.camera.positionWC,
+              probeMaterial.uniforms,
+            ),
           );
         }
         host.scene.primitives.add(
