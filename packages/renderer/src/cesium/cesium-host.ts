@@ -2614,11 +2614,16 @@ export class CesiumSceneHost implements SceneHost {
       const rect = provider.tilingScheme.tileXYToRectangle(xy.x, xy.y, level);
       const w = provider.tileWidth;
       const h = provider.tileHeight;
-      const canvas =
-        typeof OffscreenCanvas !== 'undefined'
-          ? new OffscreenCanvas(w, h)
-          : Object.assign(document.createElement('canvas'), { width: w, height: h });
-      const ctx = canvas.getContext('2d');
+      // Each canvas's own 2D context: through a union of the two canvases, getContext('2d')
+      // does not resolve to a 2D context for the type checker.
+      let ctx: OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D | null;
+      if (typeof OffscreenCanvas !== 'undefined') ctx = new OffscreenCanvas(w, h).getContext('2d');
+      else {
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        ctx = canvas.getContext('2d');
+      }
       if (!ctx) return null;
       // Cesium decodes tiles for texture upload, which on browsers with ImageBitmap options
       // means flipped vertically; an HTMLImageElement comes as drawn. Undo the flip so a row

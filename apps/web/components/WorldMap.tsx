@@ -398,8 +398,6 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
       window.removeEventListener('blur', stop);
       document.removeEventListener('visibilitychange', hidden);
     };
-    // stopWalking only touches refs.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [looking]);
   const walk = (forwardM: number, rightM: number) => {
     const s = usePlannerStore.getState();
