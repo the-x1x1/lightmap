@@ -61,7 +61,7 @@
       "vitest": "^4.1.11",
       "sharp@<0.35.5": "^0.35.5",
       "source-map-js@<1.2.2": "^1.2.2",
-      "vite@>=7.0.0 <7.3.7": ">=7.3.7"
+      "vite@>=7.0.0 <7.3.7": "^7.3.7"
     },
     "peerDependencyRules": {
       "allowedVersions": {
