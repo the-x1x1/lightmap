@@ -14,7 +14,7 @@ function fakeGl() {
     fenceSync: () => {
       const id = next++;
       live.add(id);
-      return id as unknown as WebGLSync;
+      return id;
     },
     getSyncParameter: (sync) => (signalled.has(sync as unknown as number) ? 0x9119 : 0x9118),
     deleteSync: (sync) => {
