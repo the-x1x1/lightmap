@@ -330,7 +330,10 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
       stopZoom();
       return;
     }
-    const step = easeFovToward(st.camera.fovDeg, goal, Math.min(50, Math.max(0, t - last)));
+    // The loop's frames come back to back, so the gap is a frame's time: counted in full (up
+    // to a quarter second) a slow machine lands the zoom in as much time as a fast one, where
+    // a 50 ms cap took it as many frames - many seconds on a software renderer.
+    const step = easeFovToward(st.camera.fovDeg, goal, Math.min(250, Math.max(0, t - last)));
     st.setFov(step.fovDeg);
     zoomShown.current = usePlannerStore.getState().camera.fovDeg;
     if (step.done) stopZoom();

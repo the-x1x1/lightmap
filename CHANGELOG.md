@@ -4,6 +4,16 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **No GPU backlog on slow machines**: the render loop now waits while two drawn frames are still
+  on the GPU (WebGL2 fences). Where the browser did not hold its frames back - headless Chromium
+  on SwiftShader, which is what CI's end-to-end tests run on - a quarter-second glide queued a
+  dozen frames 15 ms apart, a dozen seconds of GPU work for one minute's step, and the page
+  stalled behind it (the mobile E2E tests timed out). The light, the eye's settle, the ground
+  detail and the wheel zoom ease by the time that passed, so a slow machine lands them as fast as
+  a quick one instead of in as many frames. And the grade has a day version without the night
+  sky's parts (the stars' separation, the planets, the Moon's aureole), drawn while none of them
+  shows: on a software renderer, which pays for every line however it branches, the planets alone
+  had doubled the grade's cost at noon.
 - **The Moon in the viewpoint's sky**: drawn where the planner's Moon stands, at its size for
   the day, with its phase and the lit limb toward the Sun; pale by day, under the cloud decks,
   hidden by the ridges in front of it. Cesium's own Moon (a black disc, lit by Cesium's Sun) stays off.

@@ -18,7 +18,7 @@ import type {
   LandCoverDescriptor,
   TerrainDescriptor,
 } from '@lightmap/geospatial';
-import { GRADE_FRAGMENT_SHADER } from '../shaders/grade.frag.ts';
+import { GRADE_DAY_FRAGMENT_SHADER, GRADE_FRAGMENT_SHADER } from '../shaders/grade.frag.ts';
 import { OsmBuildingsLayer, PRIMITIVE_NORMAL_SHADING_SMOOTH } from './osm-buildings-layer.ts';
 import { coverShapesFromTile, streetLinesFromTile } from '../vector-cover.ts';
 import { lonLatToTile, tilePointToLonLat } from '../vector-tile.ts';
@@ -82,6 +82,7 @@ import {
   type GroundFrame,
 } from './ground-material.ts';
 import { StepGlide, lerpVec3, nlerpDir, type Vec3Like } from '../step-glide.ts';
+import { FramePacer } from './frame-pacer.ts';
 import type { Vec3 } from '../sun-vector.ts';
 import type {
   HostAtmosphere,
@@ -215,6 +216,19 @@ export class CesiumSceneHost implements SceneHost {
   private readonly scene: Cesium.Scene;
   private readonly light: Cesium.DirectionalLight;
   private readonly grade: Cesium.PostProcessStage;
+  /**
+   * The grade without the night sky's parts (`GRADE_DAY_FRAGMENT_SHADER`), drawn instead of
+   * `grade` while no star, planet or aureole is shown: the two share one uniforms object.
+   */
+  private readonly gradeDay: Cesium.PostProcessStage;
+  /**
+   * Where a grade value is written: both stages' uniforms. A stage copies its uniforms into its
+   * own on its first draw (values set afterwards reach it only through its setters), so each
+   * write goes to both, the one not drawing as well, ready for when it is.
+   */
+  private readonly gradeTarget: Record<string, unknown>;
+  /** Holds the render loop's ticks back while two drawn frames are still on the GPU. */
+  private readonly pacer: FramePacer;
   private readonly gradeUniforms: Record<string, unknown>;
   private groundMaterial: Cesium.Material | null = null;
   private buildings: Cesium.Cesium3DTileset | null = null;
@@ -268,6 +282,8 @@ export class CesiumSceneHost implements SceneHost {
   /** The quality rung's ground detail level, which `u_detail` eases toward. */
   private detailTarget: number | null = null;
   private detailEaseAt = 0;
+  /** The last frame eased the detail level, so the gap since is a frame's, not a pause. */
+  private detailEasing = false;
   /** Where the detail tiles' ground frame is anchored: the pin, from the camera request. */
   private detailAnchorTarget: Cesium.Cartesian3 | null = null;
   /** Place and country names on the globe (orbit only), with their ECEF positions for the horizon test. */
@@ -353,6 +369,8 @@ export class CesiumSceneHost implements SceneHost {
   private eyeStepAt = 0;
   /** When the eye last settled toward its height, and how far above it the ground lifts it. */
   private eyeSettleAt = 0;
+  /** The last frame was settling the eye, so the gap since is a frame's, not a pause. */
+  private eyeSettling = false;
   private eyeLiftM = 0;
   /** The planner's Moon in the viewpoint's sky (`setMoonDisc`). */
   private moonDisc: HostMoonDisc | null = null;
@@ -549,7 +567,25 @@ export class CesiumSceneHost implements SceneHost {
       uniforms: this.gradeUniforms,
       name: 'lightmap-grade',
     });
+    this.gradeDay = new C.PostProcessStage({
+      fragmentShader: GRADE_DAY_FRAGMENT_SHADER,
+      uniforms: this.gradeUniforms,
+      name: 'lightmap-grade-day',
+    });
+    this.grade.enabled = false;
+    const stages = [this.grade, this.gradeDay];
+    this.gradeTarget = new Proxy<Record<string, unknown>>(
+      {},
+      {
+        get: (_, key) => (this.grade.uniforms as Record<string | symbol, unknown>)[key],
+        set: (_, key, value) => {
+          for (const st of stages) (st.uniforms as Record<string | symbol, unknown>)[key] = value;
+          return true;
+        },
+      },
+    );
     scene.postProcessStages.add(this.grade);
+    scene.postProcessStages.add(this.gradeDay);
 
     // Frame-rate sampling for the quality governor (`frame-sampler.ts`): only frames drawn
     // back to back while the camera moves.
@@ -564,16 +600,23 @@ export class CesiumSceneHost implements SceneHost {
       this.placeMoonDisc();
       this.placeSunGlare();
       this.placePlanets();
+      this.chooseGrade();
       const m = this.groundMaterial;
       if (!m) return;
       const cam = scene.camera.positionWC;
       const u = m.uniforms as Record<string, unknown>;
       // Ease the detail level toward the rung's, two levels per second.
       const now = performance.now();
-      const dt = Math.min(0.1, Math.max(0, (now - this.detailEaseAt) / 1000));
+      // A gap after a frame that eased is that frame's own time and counts in full (up to a
+      // second): counted as a tenth of a second, a slow machine's frame - a second and more on a
+      // software renderer - eased a tenth as fast and kept it drawing for many times as long.
+      // After a pause (the scene draws on demand) it is one ordinary step.
+      const gap = Math.max(0, (now - this.detailEaseAt) / 1000);
+      const dt = Math.min(this.detailEasing ? 1 : 0.1, gap);
       this.detailEaseAt = now;
       const target = this.detailTarget;
       const current = u['u_detail'] as number;
+      this.detailEasing = target !== null && current !== target;
       if (target !== null && current !== target) {
         const step = 2 * dt;
         u['u_detail'] =
@@ -621,7 +664,18 @@ export class CesiumSceneHost implements SceneHost {
         this.lastFps = fps;
         for (const l of this.frameListeners) l(fps);
       }
+      this.pacer.drawn(performance.now());
     });
+    // The render loop's tick (not a frame drawn on purpose, as a capture's) skips while the
+    // GPU is two frames behind (`FramePacer`); what it would have drawn is drawn at the next
+    // tick that finds it caught up - a request, a moved camera, stay pending until then.
+    this.pacer = FramePacer.forContext(
+      (scene as unknown as { context?: { _gl?: unknown } }).context?._gl,
+    );
+    const tick = this.widget.render.bind(this.widget);
+    this.widget.render = () => {
+      if (!this.pacer.behind(performance.now())) tick();
+    };
 
     scene.renderError.addEventListener((_s: unknown, error: unknown) => {
       // The widget stops its render loop on an error. A globe material that fails to compile
@@ -1028,7 +1082,7 @@ export class CesiumSceneHost implements SceneHost {
     (g['u_sunScreen'] as Cesium.Cartesian2).y = u.u_sunScreen[1];
     g['u_sunVisible'] = u.u_sunVisible;
     // PostProcessStage copies uniform values on assignment; write them through.
-    const target = this.grade.uniforms as Record<string, unknown>;
+    const target = this.gradeTarget;
     // Function uniforms (evaluated per frame) become read-only properties once the stage holds
     // them; only the values are written through.
     // While the clock glides a minute step (`setTime`), the sky's time-driven values glide with
@@ -1084,7 +1138,7 @@ export class CesiumSceneHost implements SceneHost {
     const from = this.gradeFrom;
     const to = this.gradeTo;
     if (!from || !to) return;
-    const target = this.grade.uniforms as Record<string, unknown>;
+    const target = this.gradeTarget;
     const shown = this.gradeShown ?? {};
     for (const key of Object.keys(from)) {
       const a = from[key] as number;
@@ -1111,7 +1165,11 @@ export class CesiumSceneHost implements SceneHost {
     if (!goal) return;
     const C = this.C;
     const t = performance.now();
-    const dt = Math.min(100, t - this.lightEaseAt);
+    // The time since the last frame of this glide, in full: the glide's frames come back to
+    // back, so this is a frame's time, and capping it (it was at a tenth of a second) made a
+    // slow machine take many frames - a second and more each on a software renderer - to land a
+    // one-minute step, drawing all the while.
+    const dt = Math.min(2000, Math.max(0, t - this.lightEaseAt));
     this.lightEaseAt = t;
     const k = 1 - Math.exp(-dt / this.lightTauMs);
     const dir = this.light.direction;
@@ -1156,8 +1214,14 @@ export class CesiumSceneHost implements SceneHost {
     // undo it.
     const t = performance.now();
     const gap = t - this.eyeSettleAt;
-    // After a pause (the scene draws on demand) count one ordinary frame, not the whole pause.
-    const dt = gap > 50 ? 16 : Math.max(0, gap);
+    // After a pause (the scene draws on demand) count one ordinary frame, not the whole pause;
+    // after a frame that was settling, the gap is that frame's time and counts in full (up to a
+    // second), so a slow machine settles in as much time as a fast one, not in as many frames.
+    const dt = this.eyeSettling
+      ? Math.min(1000, Math.max(0, gap))
+      : gap > 50
+        ? 16
+        : Math.max(0, gap);
     this.eyeSettleAt = t;
     const next = eyeLift(
       { liftM: this.eyeLiftM, wantedM: this.eyeWantedM },
@@ -1167,6 +1231,7 @@ export class CesiumSceneHost implements SceneHost {
     );
     this.eyeLiftM = next.liftM;
     this.eyeWantedM = wanted;
+    this.eyeSettling = next.settling;
     if (next.settling) this.scene.requestRender();
     const lift = next.liftM;
     const height = wanted + lift;
@@ -2384,7 +2449,7 @@ export class CesiumSceneHost implements SceneHost {
     // The grade fades the field in through the twilight while it is drawn.
     const starField = s.skyBox && v.stars ? 1 : 0;
     this.gradeUniforms['u_starField'] = starField;
-    (this.grade.uniforms as Record<string, unknown>)['u_starField'] = starField;
+    this.gradeTarget['u_starField'] = starField;
     s.requestRender();
   }
 
@@ -2466,7 +2531,7 @@ export class CesiumSceneHost implements SceneHost {
     const dirEC = this.gradeUniforms['u_moonDirEC'] as Cesium.Cartesian3;
     C.Matrix4.multiplyByPointAsVector(cam.viewMatrix, dir, dirEC);
     C.Cartesian3.normalize(dirEC, dirEC);
-    (this.grade.uniforms as Record<string, unknown>)['u_moonDirEC'] = dirEC;
+    this.gradeTarget['u_moonDirEC'] = dirEC;
     const size = 2 * MOON_DISC_RANGE_M * Math.tan(((m.diameterDeg / 2) * Math.PI) / 180);
     b.width = size;
     b.height = size;
@@ -2490,10 +2555,25 @@ export class CesiumSceneHost implements SceneHost {
     if (p0 && p1) b.rotation = Math.atan2(-(p1.y - p0.y), p1.x - p0.x);
   }
 
+  /**
+   * The night grade while the frame shows a star, a planet or the Moon's aureole, the day grade
+   * otherwise (the same picture without them, at about half the cost on a software renderer).
+   * Picked each frame from the uniforms about to be drawn, so the two never disagree.
+   */
+  private chooseGrade(): void {
+    const u = this.gradeUniforms;
+    let night = (u['u_starField'] as number) > 0.5 || (u['u_moonGlow'] as number) > 0;
+    for (const name of PLANET_SLOTS) if ((u[name] as Cesium.Cartesian4).z > 0) night = true;
+    if (this.grade.enabled !== night) {
+      this.grade.enabled = night;
+      this.gradeDay.enabled = !night;
+    }
+  }
+
   /** One of the grade's plain uniforms, written through to the stage and the on-screen record. */
   private setGradeValue(name: string, value: number): void {
     this.gradeUniforms[name] = value;
-    (this.grade.uniforms as Record<string, unknown>)[name] = value;
+    this.gradeTarget[name] = value;
     if (this.gradeShown) this.gradeShown[name] = value;
   }
 
@@ -2506,7 +2586,7 @@ export class CesiumSceneHost implements SceneHost {
     this.sunGlareLit = glare.lit;
     const tint = this.gradeUniforms['u_sunTint'] as Cesium.Cartesian3;
     [tint.x, tint.y, tint.z] = glare.tint ?? [1, 1, 1];
-    (this.grade.uniforms as Record<string, unknown>)['u_sunTint'] = tint;
+    this.gradeTarget['u_sunTint'] = tint;
     const d = glare.towardEcef;
     this.sunGlare.set({ x: d.x, y: d.y, z: d.z }, this.clockStepId);
   }
@@ -2528,7 +2608,7 @@ export class CesiumSceneHost implements SceneHost {
   /** The planets' points placed on screen each frame, like the glare (`placeSunGlare`). */
   private placePlanets(): void {
     const g = this.gradeUniforms;
-    const target = this.grade.uniforms as Record<string, unknown>;
+    const target = this.gradeTarget;
     PLANET_SLOTS.forEach((name, i) => {
       const u = g[name] as Cesium.Cartesian4;
       const p = this.planetPoints[i];
@@ -2558,7 +2638,7 @@ export class CesiumSceneHost implements SceneHost {
     screen.y = pos ? pos[1] : -1;
     const visible = pos && this.sunGlareLit ? 1 : 0;
     g['u_sunVisible'] = visible;
-    const target = this.grade.uniforms as Record<string, unknown>;
+    const target = this.gradeTarget;
     target['u_sunScreen'] = screen;
     target['u_sunVisible'] = visible;
     // The same gliding direction in eye coordinates, for the disc's tint.
@@ -3000,6 +3080,7 @@ export class CesiumSceneHost implements SceneHost {
     this.destroyed = true;
     this.preRenderRemover?.();
     this.preRenderGroundRemover?.();
+    this.pacer.dispose();
     this.buildings = null;
     this.osmBuildings?.destroy();
     this.osmBuildings = null;

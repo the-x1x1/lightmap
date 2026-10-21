@@ -12,7 +12,11 @@ export {
   sunPathForDay,
   type ControllerOptions,
 } from './cesium/controller.ts';
-export { GRADE_FRAGMENT_SHADER, GRADE_UNIFORM_NAMES } from './shaders/grade.frag.ts';
+export {
+  GRADE_FRAGMENT_SHADER,
+  GRADE_DAY_FRAGMENT_SHADER,
+  GRADE_UNIFORM_NAMES,
+} from './shaders/grade.frag.ts';
 export {
   GROUND_COVER_BOUNDS_UNIFORM,
   GROUND_COVER_IMAGE_UNIFORM,

@@ -13,7 +13,7 @@
  * Exported as a string because Cesium's PostProcessStage takes GLSL source. Cesium supplies
  * `colorTexture`, `depthTexture` and `v_textureCoordinates`; we add our uniforms.
  */
-export const GRADE_FRAGMENT_SHADER = /* glsl */ `
+const GRADE_SOURCE = /* glsl */ `
 uniform sampler2D colorTexture;
 uniform sampler2D depthTexture;
 in vec2 v_textureCoordinates;
@@ -149,6 +149,7 @@ void main() {
     // still lights it from a Sun held at the horizon), and it had turned the stars blue and
     // crushed the fainter ones to nothing at night.
     vec3 starLight = vec3(0.0);
+#ifdef LM_NIGHT
     if (u_starField > 0.5) {
       // A star-width out (1.5 texels of the 1024-px star cube, as drawn along this ray, at
       // least 3 px): the dimmest of a ring there is the sky behind; and the pixel must stand
@@ -168,6 +169,7 @@ void main() {
         color -= starLight;
       }
     }
+#endif
     // The Moon's disc keeps the colour it was drawn in (its phase, and the low Moon's orange):
     // it is translucent so the decks can cover it, which also put it through the sky's grading
     // and turned it pale blue at night.
@@ -232,7 +234,9 @@ void main() {
     float keep = smoothstep(0.12, 0.5, domeLum);
     dome = mix(dome * mix(1.0, 0.06, twilight * (1.0 - trueNight)), dome, keep);
     // The stars back, neutral, as much of them as the twilight shows; the Moon as drawn.
+#ifdef LM_NIGHT
     dome += starLight * starFade;
+#endif
     dome = mix(dome, moonColour, moonDisc);
     // Opposite a low Sun: the single-scattering dome leaves the eastern sky at sunset (the
     // western at sunrise) a dull dark teal, where a photographer finds the Earth's shadow, a
@@ -257,11 +261,13 @@ void main() {
     }
     // The planets: points on the clear dome after the stars have faded and the twilight is
     // graded, before the decks, so cloud covers them and a ridge (not sky) hides them.
+#ifdef LM_NIGHT
     dome += planetLight(u_planet0, vec3(1.0, 0.93, 0.82))
         + planetLight(u_planet1, vec3(1.0, 0.98, 0.92))
         + planetLight(u_planet2, vec3(1.0, 0.70, 0.50))
         + planetLight(u_planet3, vec3(1.0, 0.95, 0.86))
         + planetLight(u_planet4, vec3(1.0, 0.91, 0.72));
+#endif
     vec3 sky = dome;
     // Clouds share the scene's sky-luminance dimming (overcast decks are darker than fair ones).
     float deckLum = mix(1.0, u_skyLuminance, 0.6);
@@ -341,6 +347,7 @@ void main() {
     // thin altostratus sheet (the halo a night photographer frames, or waits out), and muffled
     // under a thick low deck. Cesium's sky scatters no moonlight, so without this the Moon sat
     // in a black sky however hazy the night.
+#ifdef LM_NIGHT
     if (u_moonGlow > 0.0) {
       float a = degrees(acos(clamp(dot(rayEC, u_moonDirEC), -1.0, 1.0)));
       // The cloud at this pixel, not the deck's cover: the gaps between cirrus fibres glow as
@@ -352,6 +359,7 @@ void main() {
       float muffled = (1.0 - 0.8 * lowHere) * (1.0 - 0.6 * sheetHere * covMid);
       sky += vec3(1.0, 0.96, 0.9) * u_moonGlow * (near + wide) * muffled;
     }
+#endif
     color = mix(dome, sky, underDecks);
   } else {
     // Aerial perspective: lift toward the sky colour with the real distance through the air
@@ -403,6 +411,21 @@ void main() {
   out_FragColor = vec4(clamp(color, 0.0, 1.0), src.a);
 }
 `;
+
+/**
+ * The grade with everything the night sky needs (the stars' light kept out of the grading, the
+ * planets, the Moon's aureole): the host draws it while the star field, a planet or the aureole
+ * is shown.
+ */
+export const GRADE_FRAGMENT_SHADER = `#define LM_NIGHT\n${GRADE_SOURCE}`;
+
+/**
+ * The grade without the night sky's parts, drawn the rest of the time. A GPU skips a branch the
+ * whole of a block of pixels takes, but a software renderer (SwiftShader: CI's browsers, a
+ * machine with no usable GPU) pays for every line however it branches: there the planets alone
+ * doubled the cost of the grade at noon, when none can be up.
+ */
+export const GRADE_DAY_FRAGMENT_SHADER = GRADE_SOURCE;
 
 export const GRADE_UNIFORM_NAMES = [
   'u_saturation',
