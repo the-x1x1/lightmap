@@ -47,6 +47,11 @@ export interface LightingParameters {
   sunIntensity: number;
   /** Whether the Sun is far enough above the horizon to light anything directly. */
   directLightPresent: boolean;
+  /**
+   * How the globe splits the light between the light's direction and the sky (`globeLightSplit`):
+   * Cesium shades terrain as `lambert · cos + ambient`, 0.9 and 0.3 by default whatever the sky.
+   */
+  globeLight: GlobeLightSplit;
   /** Shadow map darkness 0..1 as Cesium defines it: 0 = black shadows, 1 = no visible shadow. */
   shadowDarkness: number;
   shadowsEnabled: boolean;
@@ -94,6 +99,38 @@ export interface LightingParameters {
   seaSky: SeaSky;
   /** The sky at the horizon (`horizonSkyFor`), what the grade's aerial perspective fades toward. */
   horizonSky: SeaSky;
+}
+
+/**
+ * Cesium shades the globe's terrain as `light · clamp(lambert · cos θ + ambient, 0, 1)`, θ the
+ * angle to the light. Its defaults (0.9, 0.3) model a clear day whatever the sky does, so under
+ * an overcast the slopes kept the relief of a low sunny day and in twilight - the light held at
+ * the horizon - a slope facing it stood out three times brighter than level ground lit by the
+ * same sky. Real light under a diffuse sky has little direction.
+ */
+export interface GlobeLightSplit {
+  lambert: number;
+  ambient: number;
+}
+
+/**
+ * The split for a scene: the directional share falls with the sky's diffuse fraction (a quarter
+ * left under a full overcast) and goes as the Sun's direct beam goes, to a sixth of the clear
+ * day's (the afterglow's side of the sky is still the brighter); the ambient share takes up what
+ * level ground loses, so level ground is exactly as bright as under the defaults (they are what
+ * the exposure and the twilight levels were set against) and only the relief changes.
+ */
+export function globeLightSplit(
+  lightElevationDeg: number,
+  sunElevationDeg: number,
+  diffuseFraction: number,
+): GlobeLightSplit {
+  const d = clamp01(diffuseFraction);
+  const direct = smooth(-0.833, 3, sunElevationDeg);
+  const lambert = 0.9 * (direct * (1 - 0.75 * d) + (1 - direct) * 0.17);
+  const sinEl = Math.max(0, Math.sin((lightElevationDeg * Math.PI) / 180));
+  const ambient = 0.3 + (0.9 - lambert) * sinEl;
+  return { lambert: Math.round(lambert * 1000) / 1000, ambient: Math.round(ambient * 1000) / 1000 };
 }
 
 /**
@@ -202,6 +239,13 @@ export function lightingFromScene(s: SceneState): LightingParameters {
   const fogDensity = 2 / visibilityM;
 
   const skyGradient = skyGradientFor(el, p.cloudOpacity, atmosphere.warmth, p.skyLuminance, p.haze);
+  const lightEl = moonlit && el < -12 && moon ? Math.max(moon.elevationDegrees, 2) : lightElevation;
+  // Moonlight is a point source too: by moonlight the split is a clear day's, by its own sky.
+  const globeLight = globeLightSplit(
+    lightEl,
+    moonlit && el < -12 && moon ? lightEl : el,
+    p.diffuseFraction,
+  );
   const seaSky = seaSkyFor(el, p.cloudOpacity, atmosphere.warmth, p.skyLuminance, p.haze);
   const horizonSky = horizonSkyFor(el, p.cloudOpacity, atmosphere.warmth, p.skyLuminance, p.haze);
 
@@ -231,6 +275,7 @@ export function lightingFromScene(s: SceneState): LightingParameters {
     sunColor,
     sunIntensity,
     directLightPresent,
+    globeLight,
     shadowDarkness,
     shadowsEnabled,
     atmosphere: {

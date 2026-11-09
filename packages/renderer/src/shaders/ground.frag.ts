@@ -52,6 +52,9 @@ export const GROUND_UNIFORM_DEFAULTS = {
   u_cloudTime: 0,
   /** How wet the ground is, 0–1 (the scenario's precipitation): wet ground is darker and duller. */
   u_wet: 0,
+  /** The globe's directional and sky shares of the light (globeLightSplit), which the reflections divide out. */
+  u_lambertMul: 0.9,
+  u_ambientShare: 0.3,
   /** Broad-leaf canopy in leaf, 0 bare – 1 full (`leafSeason`). */
   u_leafOn: 1,
   /** How far the broad leaves have turned, 0 green – 1 full autumn colour. */
@@ -164,6 +167,8 @@ uniform float u_cloudShadow;
 uniform float u_cloudTime;
 uniform float u_detail;
 uniform float u_wet;
+uniform float u_lambertMul;
+uniform float u_ambientShare;
 uniform float u_leafOn;
 uniform float u_autumn;
 uniform float u_grassGreen;
@@ -205,16 +210,17 @@ vec3 lmSeasonCanopy(vec3 summer, float crownValue)
 }
 
 // What the material must put out for the globe to show the target after its own lighting. The
-// globe multiplies every fragment by the light's colour and a Lambert term (Cesium's defaults,
-// which the host keeps: 0.9 x the cosine + 0.3), right for ground but not for a reflection,
-// which is the sky's own light: so the reflection is divided out of it here. The factor is
+// globe multiplies every fragment by the light's colour and a Lambert term (a share of the
+// cosine plus a share of sky light, globeLightSplit), right for ground but not for a reflection,
+// which is the sky's own light: so the reflection is divided out of it here (the host keeps the
+// two shares in step with the globe's, u_lambertMul and u_ambientShare). The factor is
 // floored, so a reflection under a faint light (the Moon's) comes out dimmer, never brighter,
 // than the sky it mirrors. On the unlit night chart (no lighting) it takes the chart's dimming.
 vec3 lmUnlit(vec3 target, vec3 normalEC)
 {
 #ifdef ENABLE_VERTEX_LIGHTING
     float lambert = clamp(dot(normalEC, czm_lightDirectionEC), 0.0, 1.0);
-    float intensity = clamp(lambert * 0.9 + 0.3, 0.0, 1.0);
+    float intensity = clamp(lambert * u_lambertMul + u_ambientShare, 0.0, 1.0);
     return target / max(czm_lightColor * intensity, vec3(0.01));
 #else
     return target * u_brightness;

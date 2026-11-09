@@ -194,6 +194,8 @@ export class SceneController {
       directionEcef: lighting.lightDirectionEcef,
       color: lighting.sunColor,
       intensity: lighting.sunIntensity,
+      globeLambert: lighting.globeLight.lambert,
+      globeAmbient: lighting.globeLight.ambient,
     });
     this.host.setAtmosphere({ ...lighting.atmosphere, fogDensity: lighting.fogDensity });
     const shading = globeShadingFor(scene, lighting, this.host.terrainHasNormals?.() ?? true);

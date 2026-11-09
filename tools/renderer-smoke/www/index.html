@@ -790,6 +790,9 @@
           controller.apply(sc);
           // The host feeds its own globe material the sky in the water; the probe's material
           // takes the same values here.
+          // (The probe lights itself with Cesium's default split, 0.9 / 0.3 - the material's own
+          // defaults - since a material's uniforms are renamed in its source and the probe's
+          // fragment shader cannot read them.)
           const { seaSky } = lightingFromScene(sc);
           waterMaterial.uniforms.u_seaSkyAway = new Cesium.Cartesian3(...seaSky.away);
           waterMaterial.uniforms.u_seaSkyToward = new Cesium.Cartesian3(...seaSky.toward);

@@ -11,6 +11,7 @@ import { OPEN_METEO_CAPABILITIES, type WeatherScenarioId } from '@lightmap/weath
 import {
   STAR_FIELD_FROM_DEG,
   lightingFromScene,
+  globeLightSplit,
   horizonSkyFor,
   seaSkyFor,
   skyGradientFor,
@@ -230,6 +231,33 @@ describe('lightingFromScene', () => {
     h.toward.forEach((v, i) => expect(v * 255).toBeCloseTo(rgb(horizonCss)[i]!, -0.5)); // within a count
     expect(h.away[0]).toBeLessThan(h.toward[0]);
     expect(lightingFromScene(scene(12, 'clear')).horizonSky.away[2]).toBeGreaterThan(0.8);
+  });
+
+  it('splits the globe light: relief under a clear Sun, little under overcast or in twilight, level ground unchanged', () => {
+    const level = (g: { lambert: number; ambient: number }, el: number) =>
+      g.lambert * Math.max(0, Math.sin((el * Math.PI) / 180)) + g.ambient;
+    const cesium = (el: number) => 0.9 * Math.max(0, Math.sin((el * Math.PI) / 180)) + 0.3;
+    for (const [el, d] of [
+      [60, 0],
+      [60, 1],
+      [20, 0.5],
+      [4, 0],
+      [1, 0.9],
+    ] as const) {
+      const g = globeLightSplit(el, el, d);
+      expect(level(g, el)).toBeCloseTo(cesium(el), 2);
+    }
+    // A clear Sun keeps Cesium's own split; a full overcast keeps a quarter of the relief.
+    expect(globeLightSplit(60, 60, 0)).toEqual({ lambert: 0.9, ambient: 0.3 });
+    expect(globeLightSplit(60, 60, 1).lambert).toBeCloseTo(0.225, 3);
+    // Twilight: the light held at -0.6 deg, the Sun at -4 deg - a sixth of the relief, and level
+    // ground at the 0.3 the twilight levels were set against.
+    const tw = globeLightSplit(-0.6, -4, 0.2);
+    expect(tw.lambert).toBeLessThan(0.16);
+    expect(tw.ambient).toBe(0.3);
+    // The scene carries it.
+    expect(lightingFromScene(scene(12, 'overcast')).globeLight.lambert).toBeLessThan(0.5);
+    expect(lightingFromScene(scene(12, 'clear')).globeLight.lambert).toBeGreaterThan(0.75);
   });
 
   it('the dome Mie coefficient follows haze only behind the physicalSkyDome flag', () => {

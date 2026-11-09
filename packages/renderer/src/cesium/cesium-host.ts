@@ -232,6 +232,8 @@ export class CesiumSceneHost implements SceneHost {
   private readonly pacer: FramePacer;
   private readonly gradeUniforms: Record<string, unknown>;
   private groundMaterial: Cesium.Material | null = null;
+  /** The globe's light split (`setLight`), kept for a material made later. */
+  private globeSplit = { lambert: 0.9, ambient: 0.3 };
   /** The sky the water reflects (`setSeaSky`), kept for a material made later. */
   private seaSky: HostSeaSky | null = null;
   private buildings: Cesium.Cesium3DTileset | null = null;
@@ -784,6 +786,21 @@ export class CesiumSceneHost implements SceneHost {
     }
     this.light.color = new C.Color(light.color[0], light.color[1], light.color[2], 1);
     this.light.intensity = light.intensity;
+    // The terrain's split between the light's direction and the sky; the ground material
+    // divides the same terms out of its reflections, so it is told them too.
+    const globe = this.scene.globe as Cesium.Globe | undefined;
+    const lambert = light.globeLambert ?? 0.9;
+    const ambient = light.globeAmbient ?? 0.3;
+    if (globe) {
+      globe.lambertDiffuseMultiplier = lambert;
+      globe.vertexShadowDarkness = ambient;
+    }
+    if (this.groundMaterial) {
+      const u = this.groundMaterial.uniforms as Record<string, number>;
+      u['u_lambertMul'] = lambert;
+      u['u_ambientShare'] = ambient;
+    }
+    this.globeSplit = { lambert, ambient };
   }
 
   setGlobeShading(shading: HostGlobeShading): void {
@@ -873,6 +890,9 @@ export class CesiumSceneHost implements SceneHost {
       this.applyRoadMap();
       this.applyDetailAtlas();
       if (this.seaSky) this.applySeaSky(this.seaSky);
+      const su = this.groundMaterial.uniforms as Record<string, number>;
+      su['u_lambertMul'] = this.globeSplit.lambert;
+      su['u_ambientShare'] = this.globeSplit.ambient;
     }
     const u = this.groundMaterial.uniforms as Record<string, number>;
     u['u_snowlineM'] = g.snowlineM;

@@ -17,6 +17,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   side, as linear RGB; `SceneHost.setSeaSky`). The smoke harness draws the sea on a probe with
   the globe's own defines and lighting (five shots: noon, toward and away from a setting Sun,
   overcast, night; `WATER_RAW=1` adds a strip shot for reading the material's maths).
+- **Terrain relief follows the sky**: under an overcast the slopes no longer keep a sunny day's
+  relief, and in twilight a slope facing the held light no longer stands out three times brighter
+  than level ground (`globeLightSplit` drives the globe's `lambertDiffuseMultiplier` and
+  `vertexShadowDarkness`; level ground's brightness is unchanged).
 - **Wet streets mirror the sky**: in rain, level ground takes a film's reflection of the same sky
   the water mirrors — up to a third at a grazing view on a mapped street, about a tenth on turf,
   none on slopes (smoke shots `ground-dry`/`ground-wet`).

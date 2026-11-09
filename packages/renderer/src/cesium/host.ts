@@ -17,6 +17,9 @@ export interface HostLight {
   directionEcef: Vec3;
   color: [number, number, number];
   intensity: number;
+  /** The globe's directional and sky shares (`globeLightSplit`); Cesium's 0.9 / 0.3 when left out. */
+  globeLambert?: number;
+  globeAmbient?: number;
 }
 
 /**

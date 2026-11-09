@@ -145,6 +145,18 @@ plain horizon on the other, by each ray's bearing from the Sun's (a fixed pale b
 the light's colour before, which greyed a sunset's far ridges where the sky behind them was warm). The light direction and terrain shading are untouched by either. Verified in
 `tools/renderer-smoke` (contact sheet `docs/media/renderer-smoke-2026-09-24c.png`).
 
+**Terrain shading under a diffuse sky.** Cesium shades terrain as the light times
+`lambert · cos θ + ambient`, 0.9 and 0.3 by default whatever the sky: under an overcast the slopes
+kept a sunny day's relief, and in twilight (the light held at the horizon) a slope facing it stood
+out three times brighter than level ground lit by the same sky. The split now follows the scene
+(`globeLightSplit`): the directional share falls with the sky's diffuse fraction (a quarter of it
+left under a full overcast) and as the Sun's beam goes, to a sixth of a clear day's in twilight;
+the ambient share takes up exactly what level ground loses, so level ground is as bright as
+before (the exposure and twilight levels were set against it) and only the relief changes. A
+moonlit night is split as a clear day by its own light. **Caveat:** one ambient share for every
+face — no sky-view factor, so a gully is as sky-lit as a plain; buildings and trees keep their
+own lighting.
+
 **Night sky.** The grade's twilight treatment (darkening and cooling the dome while Cesium still
 lights its atmosphere from a Sun held at the horizon) is for the atmosphere only: the stars' light
 is separated out first (a pixel standing clear above a ring two star-widths out, its sky from a ring
