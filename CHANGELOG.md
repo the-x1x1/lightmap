@@ -17,6 +17,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   side, as linear RGB; `SceneHost.setSeaSky`). The smoke harness draws the sea on a probe with
   the globe's own defines and lighting (five shots: noon, toward and away from a setting Sun,
   overcast, night; `WATER_RAW=1` adds a strip shot for reading the material's maths).
+- **Wet streets mirror the sky**: in rain, level ground takes a film's reflection of the same sky
+  the water mirrors — up to a third at a grazing view on a mapped street, about a tenth on turf,
+  none on slopes (smoke shots `ground-dry`/`ground-wet`).
 - **Aerial perspective in the sky's colour**: distant ground now fades toward the sky gradient's
   horizon colour behind it — the sunset's glow on the Sun's side of the view and the plain horizon
   on the other, by each ray's bearing — instead of a fixed pale blue half-tinted by the light,

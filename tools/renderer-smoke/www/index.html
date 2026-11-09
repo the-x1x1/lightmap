@@ -851,6 +851,42 @@
           host.setGrade = origSetGrade;
         }
         host.scene.primitives.remove(waterPrimitive);
+        // Wet ground: the same probe with the water mask off, in rain - level wet ground mirrors
+        // the overcast at a grazing view, brightest along the far ground, as a wet street does.
+        const wetPrimitive = host.scene.primitives.add(
+          new Cesium.Primitive({
+            geometryInstances: new Cesium.GeometryInstance({
+              geometry: new Cesium.RectangleGeometry({
+                rectangle: Cesium.Rectangle.fromDegrees(
+                  kailua.point.longitude - 0.12,
+                  kailua.point.latitude - 0.1,
+                  kailua.point.longitude + 0.12,
+                  kailua.point.latitude + 0.1,
+                ),
+                height: 0.5,
+                granularity: Cesium.Math.toRadians(0.01),
+                vertexFormat: Cesium.MaterialAppearance.MaterialSupport.ALL.vertexFormat,
+              }),
+            }),
+            appearance: new Cesium.MaterialAppearance({
+              material: waterMaterial,
+              materialSupport: Cesium.MaterialAppearance.MaterialSupport.ALL,
+              fragmentShaderSource: waterFS.replace(
+                'materialInput.waterMask = 1.0;',
+                'materialInput.waterMask = 0.0;',
+              ),
+            }),
+          }),
+        );
+        for (const [name, scenario, wet] of [
+          ['ground-dry', 'overcast', 0],
+          ['ground-wet', 'storm', 1],
+        ]) {
+          waterMaterial.uniforms.u_wet = wet;
+          waterMaterial.uniforms.u_seaLevelM = -100;
+          await waterShot(name, 12.5, scenario, 290);
+        }
+        host.scene.primitives.remove(wetPrimitive);
         log('water probe drawn');
         const thumb = await host.captureThumbnail(320);
         window.__smoke.thumbnail = thumb

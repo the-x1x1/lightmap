@@ -322,6 +322,8 @@ describe('ground material source', () => {
     expect(GROUND_MATERIAL_SOURCE).toContain('mix(u_seaSkyAway, u_seaSkyToward, glowSide)');
     expect(GROUND_MATERIAL_SOURCE).toContain('#ifdef ENABLE_VERTEX_LIGHTING');
     expect(GROUND_MATERIAL_SOURCE).toContain('lmUnlit(reflected, n)');
+    // Wet level ground mirrors the same sky, as a film (weaker than the sea).
+    expect(GROUND_MATERIAL_SOURCE).toContain('lmUnlit(sky * r, n)');
     // Each tier has its own camera offset (a scaled fine coordinate would jump every 2.5 m).
     for (const t of GROUND_DETAIL_TIERS) {
       expect(GROUND_MATERIAL_SOURCE).toContain(`uniform vec3 ${t.offsetUniform};`);

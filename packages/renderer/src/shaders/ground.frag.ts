@@ -584,6 +584,26 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     }
 
     material.diffuse = ground * u_brightness;
+    // Wet, level ground mirrors the sky at a grazing view: a film of water on a street or a
+    // flat yard takes the overcast's grey (or a low Sun's glow) looking along it, as the sea
+    // does but weaker (a film, not a body of water: a third at grazing, where the sea takes
+    // seven tenths), most on paved streets, little on turf, none on slopes that shed it.
+    if (u_wet > 0.0)
+    {
+        float wetness = u_wet * (1.0 - snowy);
+        vec3 n = materialInput.normalEC;
+        vec3 toEye = normalize(materialInput.positionToEyeEC);
+        float grazing = pow(1.0 - clamp(dot(n, toEye), 0.0, 1.0), 5.0);
+        float level = 1.0 - smoothstep(0.02, 0.08, slope);
+        float film = wetness * level * mix(0.35, 1.0, roadPaint);
+        float r = film * (0.02 + 0.32 * grazing);
+        vec3 lookH = -toEye - n * dot(-toEye, n);
+        vec3 lightH = czm_lightDirectionEC - n * dot(czm_lightDirectionEC, n);
+        float towardLight = dot(lookH, lightH) / max(length(lookH) * length(lightH), 1e-4);
+        float glowSide = clamp(0.5 + 0.5 * towardLight, 0.0, 1.0);
+        vec3 sky = mix(u_seaSkyAway, u_seaSkyToward, glowSide * glowSide);
+        material.diffuse = material.diffuse * (1.0 - r) + lmUnlit(sky * r, n);
+    }
     // Rock and snow are what they are; open ground lets real imagery's own hue through. Over
     // the bundled coarse basemap the paint is all but opaque on land: that map's 500 m pixels
     // put sea and lakes well onto the land near every coast. Over real imagery (Sentinel-2's

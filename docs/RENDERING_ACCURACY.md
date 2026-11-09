@@ -205,8 +205,12 @@ Where the terrain tiles carry a water mask (Cesium World Terrain does; a provide
 renders water as ground), the globe shades sea and lakes with Cesium's water effect: a specular
 glint from the scene light, so a low Sun over the sea glitters from the right direction.
 **Claim:** where the glint falls, and that it goes with the Sun. **Caveat:** a ripple normal map
-only — no swell or wave geometry, no wet-surface effect; the water mask is the provider's, not a
-tide model.
+only — no swell or wave geometry; the water mask is the provider's, not a tide model.
+
+**Wet ground.** In rain the paint darkens and greys the ground, and level ground (under about
+3°) mirrors the same sky the water does as a film: up to a third at a grazing view on a mapped
+street, about a tenth on turf, none on slopes. **Caveat:** no puddles, no ripples from the
+rain, and the mirrored sky is the horizon's colour, not the clouds' shapes.
 
 **The sky in the water.** The painted water mirrors the sky (`shaders/ground.frag.ts`, the water
 branch): the share reflected follows Fresnel's rule for water — 2 % looking straight down, rising
