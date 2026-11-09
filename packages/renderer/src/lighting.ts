@@ -3,7 +3,7 @@
  * tested and the same numbers drive both the Cesium scene and the Quality-0 CSS overlay.
  */
 import type { SceneState } from '@lightmap/scene';
-import { kelvinToRgb } from '@lightmap/weather';
+import { kelvinToRgb, type WeatherScenarioId } from '@lightmap/weather';
 import { shadowOnGround, sunLightDirectionEcef, type Vec3 } from './sun-vector.ts';
 import { BETA_MIE, clearSkyStops, mieScaleForHaze, type SkyStops } from './sky-model.ts';
 
@@ -105,6 +105,30 @@ export interface LightingParameters {
    * none for the light held at the horizon through twilight.
    */
   glitter: number;
+  /**
+   * The sea surface's mean square slope (Cox and Munk 1954: 0.003 + 0.00512 · wind m/s), which
+   * sets how wide the glitter path spreads: a mirror in a calm, a broad band in a breeze.
+   */
+  seaSlopeVariance: number;
+}
+
+/**
+ * The wind the sea is roughened by, m/s at 10 m: the forecast's when there is one, else a typical
+ * wind for the scenario (an assumption, not a forecast: a sea breeze under clear skies, more under
+ * cloud, a gale in a storm).
+ */
+export const SCENARIO_TYPICAL_WIND_MPS: Record<WeatherScenarioId, number> = {
+  clear: 4,
+  'mostly-clear': 4,
+  'partly-cloudy': 5,
+  overcast: 6,
+  storm: 13,
+};
+
+/** Cox and Munk's mean square slope of the sea for a wind, m/s (held to 0–20 m/s). */
+export function seaSlopeVarianceFor(windMps: number): number {
+  const w = Math.max(0, Math.min(20, Number.isFinite(windMps) ? windMps : 5));
+  return Math.round((0.003 + 0.00512 * w) * 10_000) / 10_000;
 }
 
 /**
@@ -258,6 +282,8 @@ export function lightingFromScene(s: SceneState): LightingParameters {
   const throughCloud = clamp01(p.sunTransmittance / 0.6);
   const disc = moonlit && el < -12 ? throughCloud : smooth(-1, 0.5, el) * throughCloud;
   const glitter = Math.round(disc * 100) / 100;
+  const wind = atmosphere.frame?.windSpeed ?? SCENARIO_TYPICAL_WIND_MPS[atmosphere.scenario];
+  const seaSlopeVariance = seaSlopeVarianceFor(wind ?? 5);
 
   return {
     sunDirectionEcef: sunLightDirectionEcef(
@@ -321,6 +347,7 @@ export function lightingFromScene(s: SceneState): LightingParameters {
     seaSky,
     horizonSky,
     glitter,
+    seaSlopeVariance,
   };
 }
 

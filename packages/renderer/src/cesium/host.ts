@@ -185,6 +185,8 @@ export interface HostSeaSky {
   toward: [number, number, number];
   /** How much of the light's own disc the water shows (`LightingParameters.glitter`); none when left out. */
   glitter?: number;
+  /** The sea's mean square slope (`LightingParameters.seaSlopeVariance`); a 5 m/s breeze's when left out. */
+  slope2?: number;
 }
 
 export interface HostQuality {

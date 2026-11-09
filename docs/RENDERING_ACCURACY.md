@@ -229,15 +229,27 @@ rain, and the mirrored sky is the horizon's colour, not the clouds' shapes.
 **The sky in the water.** The painted water mirrors the sky (`shaders/ground.frag.ts`, the water
 branch): the share reflected follows Fresnel's rule for water — 2 % looking straight down, rising
 toward a grazing view to seven tenths (ripples scatter a grazing reflection, so never a mirror's
-whole) — and the rest is the water's own colour. The paint is blended over the imagery by its
+whole) — and the rest is the water's own colour — a deep blue between the
+tropics (clear, low-chlorophyll water), turning grey-green from about 25° to 38° of latitude (the
+richer, more turbid mid- and high-latitude seas; by latitude alone, no ocean-colour data, so a
+clear Mediterranean reads as green as the North Sea). The paint is blended over the imagery by its
 opacity, so the reflection is put in at full strength over it. What it mirrors is the low sky as
 the lighting has it (`seaSkyFor`: two thirds the gradient's horizon stop, a third the mid-sky, as
 the frame's 0–1 colours), on the side away from the Sun the plain horizon and on the Sun's side the
 sunrise or sunset glow when there is one — after sunset the afterglow, orange to about −2°, rose,
 then the twilight's blue by −6° — blended by the view's bearing from the light's. Under it the
-Sun's glitter path, a lobe about the reflected view ray, narrow across it (σ ≈ 2.4°) and long
-toward the viewer (σ ≈ 5.7°), with the Sun's aureole mirrored as a wide soft lobe around it, in the
-light's colour and strongest at a low Sun; only while the light has a disc to mirror
+Sun's glitter path, by Cox and Munk's sea surface (1954): the ripple facets' slopes are spread
+normally with a mean square slope set by the wind, 0.003 + 0.00512 · U (U the wind at 10 m, m/s:
+the forecast's, or a stated typical wind for a scenario — 4 m/s clear, 5 partly cloudy, 6
+overcast, 13 in a storm; `SCENARIO_TYPICAL_WIND_MPS`), and the eye sees the light in a facet whose
+normal is the half-way vector between the two, at Fresnel's reflectance for that facet — a narrow
+bright point in a calm, a long, broad band in a breeze, narrow across the light's bearing and long
+toward the viewer; eased toward 1.5 times the light so a sunset's path keeps its colour. The path is
+made of sparkles: facets sized to the pixel (two octaves of the baked value noise chosen by log₂
+of the ground a pixel covers, so a sparkle stays a pixel or two across at any distance), about 7 %
+of them flashing, scaled so the path's average brightness is the smooth model's; where a pixel
+covers metres of water the sparkles merge into the smooth band, as they do to the eye. The Sun's
+aureole is mirrored as a wide soft lobe round it. Only while the light has a disc to mirror
 (`LightingParameters.glitter`: the Sun's direct beam through the cloud, the Moon by night — not
 the light held at the horizon through twilight). On a moonlit night the same path is the moon
 path, its colour lifted to a floor so a full Moon's disc on the ripples stands out from the night
@@ -248,7 +260,9 @@ light's colour times its Lambert split, and within the shadow map's reach the ma
 terrain by its angle to the light), which is wrong for a reflection, so the material divides those
 terms out of the reflected part (`lmUnlit`) — floored, so under a faint light the reflection comes
 out dimmer than the sky, never brighter; a real shadow on the water (a ridge's) still darkens it;
-the glitter is a smooth lobe over a flat surface, not sparkle; the sky mirrored is the gradient's
+the sparkles are a statistical texture, not the real waves, and the wind is the forecast's at
+10 m or a scenario's typical one (no swell, no fetch: a sheltered lake is roughened as the open
+sea); the sky mirrored is the gradient's
 colour at the horizon, not the dome pixel by pixel, so cloud shapes and the Sun's disc are not in
 the water. The smoke harness draws the sea on a probe with the globe's own defines and lighting
 (`water-*` shots).

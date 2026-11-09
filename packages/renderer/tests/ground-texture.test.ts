@@ -322,17 +322,33 @@ describe('ground material source', () => {
     expect(GROUND_MATERIAL_SOURCE).toContain('mix(u_seaSkyAway, u_seaSkyToward, glowSide)');
     expect(GROUND_MATERIAL_SOURCE).toContain('#ifdef ENABLE_VERTEX_LIGHTING');
     expect(GROUND_MATERIAL_SOURCE).toContain(
-      'lmUnlit(reflected, n, materialInput.positionToEyeEC.z)',
+      'lmUnlit(reflected, floorN, materialInput.positionToEyeEC.z)',
     );
+    // The water's surface is level whatever the sea floor under it does.
+    expect(GROUND_MATERIAL_SOURCE).toContain('vec3 n = normalize(czm_viewRotation * u_upWC);');
+    expect(GROUND_MATERIAL_SOURCE).toContain('body *= litLevel / max(litFloor, 0.05);');
     // Within the shadow map's reach, its terrain normal shading (n.l over 0.3, floored at the
     // darkness) is divided out too, so a low Sun does not dim the reflection to the darkness.
-    expect(GROUND_MATERIAL_SOURCE).toContain('max(clamp(lambert / 0.3, 0.0, 1.0), u_shadowD)');
+    expect(GROUND_MATERIAL_SOURCE).toContain('max(clamp(lambert / 0.020, 0.0, 1.0), u_shadowD)');
     // The reflection is put in at full strength over the imagery the paint is blended onto.
     expect(GROUND_MATERIAL_SOURCE).toContain('/ max(waterAlpha, 0.05)');
-    // The glitter only where the light has a disc to mirror.
-    expect(GROUND_MATERIAL_SOURCE).toContain('* u_glitter;');
+    // The glitter: Cox and Munk's slope density at the half-way vector, by the wind's slope
+    // variance, only where the light has a disc to mirror, with sparkles sized to the pixel.
+    expect(GROUND_MATERIAL_SOURCE).toContain('exp(-tan2 / s2) / (3.14159265 * s2)');
+    expect(GROUND_MATERIAL_SOURCE).toContain(
+      'float glint = lmCoxMunk(czm_lightDirectionEC, toEye, n, u_seaSlope2) * u_glitter;',
+    );
+    // The sea's body colour: tropical blue between the tropics, grey-green beyond.
+    expect(GROUND_MATERIAL_SOURCE).toContain('sea = mix(temperateSea, sea, tropicalSea);');
+    // A wet road glares toward a low Sun, as a rougher film.
+    expect(GROUND_MATERIAL_SOURCE).toContain('lmCoxMunk(czm_lightDirectionEC, toEye, n, 0.08)');
+    expect(GROUND_MATERIAL_SOURCE).toContain(
+      'smoothstep(0.45, 0.6, mix(f0, f1, fract(lv))) / 0.0686',
+    );
     // Wet level ground mirrors the same sky, as a film (weaker than the sea).
-    expect(GROUND_MATERIAL_SOURCE).toContain('lmUnlit(wetSky * wetR, materialInput.normalEC');
+    expect(GROUND_MATERIAL_SOURCE).toContain(
+      'lmUnlit(wetSky * wetR + wetGlare, materialInput.normalEC',
+    );
     // Each tier has its own camera offset (a scaled fine coordinate would jump every 2.5 m).
     for (const t of GROUND_DETAIL_TIERS) {
       expect(GROUND_MATERIAL_SOURCE).toContain(`uniform vec3 ${t.offsetUniform};`);

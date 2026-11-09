@@ -56,6 +56,7 @@ import {
   GROUND_MATERIAL_SOURCE,
   GROUND_NOISE_UNIFORM,
   GROUND_MATERIAL_TYPE,
+  TERRAIN_NORMAL_SHADING_SMOOTH,
 } from '../shaders/ground.frag.ts';
 import { coverMapFromPixels, coverMosaicFor, packCover, tileUrl } from '../land-cover.ts';
 import {
@@ -525,6 +526,11 @@ export class CesiumSceneHost implements SceneHost {
       // The buildings' shader divides out this fade on faces turned from the Sun.
       bias['normalShadingSmooth'] = PRIMITIVE_NORMAL_SHADING_SMOOTH;
     }
+    // The terrain's own fade by its angle to the light, narrowed so level ground at a low Sun is
+    // not sunk to the shadow darkness (TERRAIN_NORMAL_SHADING_SMOOTH says why).
+    const terrainBias = (sm as unknown as { _terrainBias?: Record<string, number | boolean> })
+      ._terrainBias;
+    if (terrainBias) terrainBias['normalShadingSmooth'] = TERRAIN_NORMAL_SHADING_SMOOTH;
 
     const ssc = scene.screenSpaceCameraController;
     ssc.enableCollisionDetection = true;
@@ -841,6 +847,7 @@ export class CesiumSceneHost implements SceneHost {
     if (
       prev &&
       prev.glitter === sky.glitter &&
+      prev.slope2 === sky.slope2 &&
       prev.away.every((v, i) => v === sky.away[i]) &&
       prev.toward.every((v, i) => v === sky.toward[i])
     )
@@ -864,6 +871,7 @@ export class CesiumSceneHost implements SceneHost {
     set('u_seaSkyAway', sky.away);
     set('u_seaSkyToward', sky.toward);
     u['u_glitter'] = sky.glitter ?? 0;
+    u['u_seaSlope2'] = sky.slope2 ?? 0.0286;
   }
 
   setGroundTexture(g: HostGroundTexture | null): void {

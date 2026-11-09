@@ -19,6 +19,15 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   the globe's own defines and lighting (five shots: noon, toward and away from a setting Sun,
   overcast, night, dusk, the Moon; `WATER_RAW=<hour>` adds a strip shot for reading the
   material's maths).
+- **The glitter path, by the wind and in sparkles**: the Sun's (or Moon's) path on the water is
+  now Cox and Munk's sea surface — the facet slopes spread by the wind (0.003 + 0.00512 · U; the
+  forecast's wind, or a stated typical one per scenario), so calm water shows a narrow mirror
+  point and a breeze a long broad band — and it breaks into sparkles sized to the pixel at any
+  distance, merging into a smooth band far out, with the path's average brightness unchanged.
+- **Sea colour by latitude**: the water's body colour is the tropics' deep blue only between the
+  tropics, turning grey-green toward the mid-latitudes (by latitude alone, no ocean-colour data).
+- **Wet roads glare toward a low Sun**: the wet film carries the light's own reflection too, as a
+  rougher surface than the sea (mean square slope 0.08), between showers when the Sun is out.
 - **An overcast is brightest overhead**: a closing low deck takes the CIE standard overcast sky's
   luminance, 1 + 2 sin(elevation), so a storm or overcast sky darkens toward the horizon instead
   of reading as one flat grey.

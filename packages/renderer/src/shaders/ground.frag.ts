@@ -64,6 +64,8 @@ export const GROUND_UNIFORM_DEFAULTS = {
   u_shadowMaxM: 0,
   /** How much of the light's own disc the water can show (the glitter path), 0 when it has none. */
   u_glitter: 0,
+  /** The sea's mean square slope (Cox and Munk, from the wind): how wide the glitter path spreads. */
+  u_seaSlope2: 0.0286,
   /** Broad-leaf canopy in leaf, 0 bare – 1 full (`leafSeason`). */
   u_leafOn: 1,
   /** How far the broad leaves have turned, 0 green – 1 full autumn colour. */
@@ -160,8 +162,20 @@ export const GROUND_ROAD_IMAGE_UNIFORM = 'u_roadMap';
 /** The street map's bounds, as the cover map's. */
 export const GROUND_ROAD_BOUNDS_UNIFORM = 'u_roadBounds';
 
+/**
+ * Cesium's shadow map also fades terrain by its own angle to the light (its terrain bias:
+ * visibility times n.l over this width, floored at the darkness), to hide acne on faces turned
+ * from the light. At its default, 0.3, all level ground within the shadow map's reach sank to
+ * the shadow darkness whenever the Sun was below ~17 deg - every golden hour's near ground nearly
+ * black, with a hard edge where the map's reach ends - on top of the Lambert term that already
+ * dims it. The host sets this narrower width on the terrain bias (level ground fully lit from
+ * about 1 deg up; faces turned away still dark), and the reflections divide out the same term.
+ */
+export const TERRAIN_NORMAL_SHADING_SMOOTH = 0.02;
+
 const P = GROUND_NOISE_PERIODS_M;
 const f = (n: number) => n.toFixed(1);
+const f3 = (n: number) => n.toFixed(3);
 
 export const GROUND_MATERIAL_SOURCE = /* glsl */ `
 uniform float u_snowlineM;
@@ -181,6 +195,7 @@ uniform float u_ambientShare;
 uniform float u_shadowD;
 uniform float u_shadowMaxM;
 uniform float u_glitter;
+uniform float u_seaSlope2;
 uniform float u_leafOn;
 uniform float u_autumn;
 uniform float u_grassGreen;
@@ -234,13 +249,43 @@ vec3 lmUnlit(vec3 target, vec3 normalEC, float depthEC)
     float lambert = clamp(dot(normalEC, czm_lightDirectionEC), 0.0, 1.0);
     float intensity = clamp(lambert * u_lambertMul + u_ambientShare, 0.0, 1.0);
     // Within the shadow map's reach Cesium also fades terrain by its own angle to the light
-    // (its terrain bias: n.l over 0.3, floored at the darkness) - at a low Sun the whole sea -
-    // so that factor is divided out too; a real shadow on the water still darkens it.
-    float shade = depthEC < u_shadowMaxM ? max(clamp(lambert / 0.3, 0.0, 1.0), u_shadowD) : 1.0;
+    // (its terrain bias: n.l over TERRAIN_NORMAL_SHADING_SMOOTH, floored at the darkness), so
+    // that factor is divided out too; a real shadow on the water still darkens it.
+    float shade = depthEC < u_shadowMaxM
+        ? max(clamp(lambert / ${f3(TERRAIN_NORMAL_SHADING_SMOOTH)}, 0.0, 1.0), u_shadowD) : 1.0;
     return target / max(czm_lightColor * intensity * shade, vec3(0.01));
 #else
     return target * u_brightness;
 #endif
+}
+
+// The light seen in a rough water surface, after Cox and Munk: the facets' slopes spread
+// normally with mean square slope s2, the eye seeing the light in a facet whose normal is the
+// half-way vector; Fresnel at that facet times the slope density over 4 cos(view) cos^4(tilt),
+// eased toward 1.5 times the light (a sunset's glare keeps its colour). Zero for a light below the
+// surface's horizon.
+float lmCoxMunk(vec3 L, vec3 V, vec3 n, float s2)
+{
+    vec3 halfV = normalize(L + V);
+    float cosTilt = max(dot(halfV, n), 0.05);
+    float cos2 = cosTilt * cosTilt;
+    float tan2 = (1.0 - cos2) / cos2;
+    float slopePdf = exp(-tan2 / s2) / (3.14159265 * s2);
+    float cosInc = clamp(dot(L, halfV), 0.0, 1.0);
+    float facetFresnel = 0.02 + 0.98 * pow(1.0 - cosInc, 5.0);
+    float cosView = clamp(dot(n, V), 0.03, 1.0);
+    float g = facetFresnel * slopePdf / (4.0 * cosView * cos2 * cos2);
+    // A soft knee rather than a hard cap: a hard one cut the path's bright core into a flat
+    // block where it meets the horizon.
+    return 1.5 * (1.0 - exp(-g / 1.5)) * step(0.0, dot(L, n));
+}
+
+// The light's colour for its image on water: the light's own, lifted to a floor by moonlight
+// (the Moon's disc on the ripples stands far out from the night however dim the light is).
+vec3 lmGlitterColour()
+{
+    float lightLum = dot(czm_lightColor, vec3(0.2126, 0.7152, 0.0722));
+    return czm_lightColor * max(1.0, 0.45 / max(lightLum, 0.02));
 }
 
 // Hash without axis correlation (Hoskins' hash13): one value per cell.
@@ -613,6 +658,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // once the paint's opacity is known, below.
     float wetR = 0.0;
     vec3 wetSky = vec3(0.0);
+    vec3 wetGlare = vec3(0.0);
     if (u_wet > 0.0)
     {
         float wetness = u_wet * (1.0 - snowy);
@@ -627,6 +673,10 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         float towardLight = dot(lookH, lightH) / max(length(lookH) * length(lightH), 1e-4);
         float glowSide = clamp(0.5 + 0.5 * towardLight, 0.0, 1.0);
         wetSky = mix(u_seaSkyAway, u_seaSkyToward, glowSide * glowSide);
+        // Looking toward a low Sun a wet road glares: the light in the film, as in the sea but
+        // rougher (a film over asphalt or turf, mean square slope 0.08 - a broad, soft glare).
+        wetGlare = lmGlitterColour() * lmCoxMunk(czm_lightDirectionEC, toEye, n, 0.08)
+                 * u_glitter * film;
     }
     // Rock and snow are what they are; open ground lets real imagery's own hue through. Over
     // the bundled coarse basemap the paint is all but opaque on land: that map's 500 m pixels
@@ -644,7 +694,8 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // imagery by its opacity, so the reflected light is put in at its full strength over it.
     if (wetR > 0.0)
         material.diffuse = material.diffuse * (1.0 - wetR)
-            + lmUnlit(wetSky * wetR, materialInput.normalEC, materialInput.positionToEyeEC.z) / max(alpha, 0.05);
+            + lmUnlit(wetSky * wetR + wetGlare, materialInput.normalEC, materialInput.positionToEyeEC.z)
+            / max(alpha, 0.05);
 #ifdef HAS_WATER_MASK
     // Water, from the terrain's own mask - which arrives with coarse tiles and is upsampled for
     // finer ones, so its edge runs in 50-100 m stair steps. A water surface in the elevation
@@ -677,6 +728,13 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     if (water > 0.0)
     {
         vec3 sea = mix(vec3(0.05, 0.17, 0.25), vec3(0.08, 0.24, 0.30), patches);
+        // Clear, low-chlorophyll tropical water is deep blue; the mid- and high-latitude seas,
+        // richer in plankton and stirred-up sediment, are greener and greyer (the North Sea, the
+        // Baltic, the Gulf of Maine). By latitude alone: from about 25 deg to 38 deg the body
+        // colour turns from the tropical blue to a grey-green.
+        float tropicalSea = 1.0 - smoothstep(0.42, 0.62, abs(u_upWC.z));
+        vec3 temperateSea = mix(vec3(0.05, 0.13, 0.14), vec3(0.07, 0.17, 0.17), patches);
+        sea = mix(temperateSea, sea, tropicalSea);
         // Shallows: water with land close around it (OpenStreetMap's water near the viewer,
         // read 65 and 180 m out in eight directions) is shallow, its bottom showing - turquoise
         // over the clear sand of the tropics and subtropics, a muted green elsewhere (V&V: all
@@ -706,7 +764,12 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         // across the water takes the colour of the low sky, the sunset's glow on the Sun's side
         // and the plain horizon elsewhere, the grey of an overcast, the dark of night. Ripples
         // scatter a grazing reflection, so it rises to seven tenths, not to a mirror's whole.
-        vec3 n = materialInput.normalEC;
+        // The water's surface is flat whatever the floor under it does (the terrain carries the
+        // sea floor near coasts, shelving away from the beach): its reflection is figured on the
+        // level surface - the pin's up, good to a fraction of a degree across the view - while
+        // the globe has lit the fragment by the floor's normal, which lmUnlit undoes.
+        vec3 floorN = materialInput.normalEC;
+        vec3 n = normalize(czm_viewRotation * u_upWC);
         vec3 toEye = normalize(materialInput.positionToEyeEC);
         float cosView = clamp(dot(n, toEye), 0.0, 1.0);
         float grazing = pow(1.0 - cosView, 5.0);
@@ -718,15 +781,16 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         float glowSide = clamp(0.5 + 0.5 * towardLight, 0.0, 1.0);
         glowSide *= glowSide;
         vec3 sky = mix(u_seaSkyAway, u_seaSkyToward, glowSide);
-        // The Sun's own image on the ripples: the glitter path, a lobe about the mirror
-        // direction that is narrow across it (sigma ~2.4 deg) and long down toward the viewer
-        // (sigma ~5.7 deg; each ripple's facet throws the Sun somewhere along it), in the
-        // light's colour, strongest at a low Sun when a grazing reflection is strong. Measured
-        // about the reflected view ray, so it holds with the Sun overhead and looking straight
-        // down. Only while the light has a disc to mirror (u_glitter: the Sun's direct beam, or
-        // the Moon by night): the light held at the horizon through twilight has none.
+        // The Sun's own image on the ripples, by Cox and Munk's sea surface (lmCoxMunk), the
+        // slopes spread by the wind (u_seaSlope2: 0.003 in a calm, 0.029 in a 5 m/s breeze):
+        // narrow across the Sun's bearing and long toward the viewer, a mirror's point in a calm,
+        // a broad band in a wind, as at sea. Only while the light has a disc to mirror
+        // (u_glitter: the Sun's direct beam, or the Moon by night; the light held at the horizon
+        // through twilight has none).
+        float glint = lmCoxMunk(czm_lightDirectionEC, toEye, n, u_seaSlope2) * u_glitter;
         // In the reflected ray's vertical plane: the angle along it (the light's height in that
-        // plane, which runs past 90 deg for a light behind the viewer) and the angle across it.
+        // plane, which runs past 90 deg for a light behind the viewer) and the angle across it,
+        // for the Sun's aureole mirrored on the water (the bright haze round a low Sun).
         vec3 mirrorRay = reflect(-toEye, n);
         vec3 hR = mirrorRay - n * dot(mirrorRay, n);
         float hLen = length(hR);
@@ -739,22 +803,44 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
             dEl = atan(dot(czm_lightDirectionEC, n), dot(czm_lightDirectionEC, h))
                 - atan(dot(mirrorRay, n), hLen);
         }
-        float glint = exp(-dAz * dAz / 0.0036 - dEl * dEl / 0.02) * (0.2 + 0.8 * grazing) * u_glitter;
+        // The path is made of sparkles: each ripple facet throws the Sun to the eye or not.
+        // Facets sized to the pixel (two octaves of the baked value noise, a product of two
+        // channels, picked by log2 of the ground a pixel covers and blended between, so a
+        // sparkle stays a pixel or two across at any distance); about 7 % of them flash,
+        // scaled by 1/0.0686 (their measured mean) so the path's average is the lobe's. Where
+        // a pixel covers metres of water it holds many facets, and the path goes smooth. They
+        // drift with the clock (3 m a scene minute), so the pattern re-deals as time moves.
+        if (glint > 0.002)
+        {
+            float footprint = max(max(length(gdx), length(gdy)), 1e-4);
+            float lv = clamp(log2(footprint * 96.0), 0.0, 12.0);
+            float s0 = exp2(floor(lv));
+            vec2 sp = g.xy + mod(vec2(2.1, 1.2) * u_cloudTime, ${f(GROUND_NOISE_WRAP_M)});
+            float f0 = lmNoiseTex(sp, s0, gdx, gdy).g * lmNoiseTex(sp.yx, s0, gdx.yx, gdy.yx).a;
+            float f1 = lmNoiseTex(sp, 2.0 * s0, gdx, gdy).g
+                     * lmNoiseTex(sp.yx, 2.0 * s0, gdx.yx, gdy.yx).a;
+            float facets = smoothstep(0.45, 0.6, mix(f0, f1, fract(lv))) / 0.0686;
+            float sparkleShare = 0.85 * (1.0 - smoothstep(0.3, 3.0, footprint));
+            glint *= mix(1.0, facets, sparkleShare);
+        }
         // The Sun's aureole on the water too: the bright haze around a low Sun (forward
         // scattering, which the sky stops keep clear of) mirrored as a wide, soft lobe.
         float aureole = exp(-dAz * dAz / 0.12 - dEl * dEl / 0.12) * grazing * 0.5 * u_glitter;
-        // The glitter is the light's own disc on the ripples, far brighter than the sky round it
-        // however dim the light is overall: by moonlight its colour is lifted to a floor (the
-        // Sun's is already above it), so a full Moon leaves a moon path, not a faint smear.
-        float lightLum = dot(czm_lightColor, vec3(0.2126, 0.7152, 0.0722));
-        vec3 glitterCol = czm_lightColor * max(1.0, 0.45 / max(lightLum, 0.02));
-        vec3 reflected = sky * reflectance + glitterCol * (glint + aureole) * 1.2;
+        // In the light's colour, lifted to a floor by moonlight, so a full Moon leaves a moon path.
+        vec3 reflected = sky * reflectance + lmGlitterColour() * (glint + aureole) * 1.2;
         vec3 body = sea * u_brightness * (1.0 - reflectance);
+#ifdef ENABLE_VERTEX_LIGHTING
+        // The body is lit as a level surface too: the globe's lighting by the floor's normal is
+        // traded for the same lighting by the surface's.
+        float litFloor = clamp(clamp(dot(floorN, czm_lightDirectionEC), 0.0, 1.0) * u_lambertMul + u_ambientShare, 0.0, 1.0);
+        float litLevel = clamp(clamp(dot(n, czm_lightDirectionEC), 0.0, 1.0) * u_lambertMul + u_ambientShare, 0.0, 1.0);
+        body *= litLevel / max(litFloor, 0.05);
+#endif
         // The paint is blended over the imagery's own water by its opacity: the reflection is
         // put in at full strength over that.
         float waterAlpha = 0.85 * u_strength;
         material.diffuse = mix(material.diffuse,
-            body + lmUnlit(reflected, n, materialInput.positionToEyeEC.z) / max(waterAlpha, 0.05), water);
+            body + lmUnlit(reflected, floorN, materialInput.positionToEyeEC.z) / max(waterAlpha, 0.05), water);
         // The paint carries the sky now; a little of the globe's own water shading (its wave
         // highlight and glint) still shows through.
         alpha = mix(alpha, waterAlpha, water);

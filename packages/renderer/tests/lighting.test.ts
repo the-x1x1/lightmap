@@ -13,6 +13,7 @@ import {
   lightingFromScene,
   globeLightSplit,
   horizonSkyFor,
+  seaSlopeVarianceFor,
   seaSkyFor,
   skyGradientFor,
   starFieldVisibility,
@@ -266,6 +267,16 @@ describe('lightingFromScene', () => {
     // The scene carries it.
     expect(lightingFromScene(scene(12, 'overcast')).globeLight.lambert).toBeLessThan(0.5);
     expect(lightingFromScene(scene(12, 'clear')).globeLight.lambert).toBeGreaterThan(0.75);
+  });
+
+  it('roughens the sea by the wind, after Cox and Munk', () => {
+    expect(seaSlopeVarianceFor(0)).toBe(0.003);
+    expect(seaSlopeVarianceFor(5)).toBeCloseTo(0.0286, 4);
+    expect(seaSlopeVarianceFor(100)).toBeCloseTo(0.1054, 4); // held at 20 m/s
+    expect(seaSlopeVarianceFor(Number.NaN)).toBeCloseTo(0.0286, 4);
+    // A scenario's typical wind: a breeze when clear, a gale in a storm.
+    expect(lightingFromScene(scene(12, 'clear')).seaSlopeVariance).toBeCloseTo(0.0235, 4);
+    expect(lightingFromScene(scene(12, 'storm')).seaSlopeVariance).toBeGreaterThan(0.06);
   });
 
   it('the water mirrors the disc of the light only while there is one: the Sun up, or the Moon by night', () => {
