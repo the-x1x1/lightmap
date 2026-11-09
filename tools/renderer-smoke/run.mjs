@@ -54,7 +54,10 @@ if (process.env.WATER_RAW)
 await page.goto('http://127.0.0.1:8765/index.html', { waitUntil: 'load', timeout: 120000 });
 const shots = {};
 const start = Date.now();
-while (Date.now() - start < 900000) {
+// Thirty minutes: on SwiftShader the synthetic terrain's tiles alone take minutes to settle.
+const capMs = Number(process.env.SMOKE_MINUTES || 30) * 60_000;
+let finished = false;
+while (Date.now() - start < capMs) {
   const state = await page.evaluate(() => ({
     done: window.__smoke.done,
     shot: window.__smoke.shot,
@@ -67,11 +70,16 @@ while (Date.now() - start < 900000) {
       if (window.__takeShot) window.__takeShot();
     });
   }
-  if (state.done) break;
+  if (state.done) {
+    finished = true;
+    break;
+  }
   await new Promise((r) => setTimeout(r, 300));
 }
+// A run cut off by the cap is not a clean run, whatever errors the page had logged so far.
+if (!finished) console.log(`SMOKE RUN CUT OFF after ${Math.round(capMs / 60_000)} min`);
 const smoke = await page.evaluate(() => JSON.parse(JSON.stringify(window.__smoke)));
-writeFileSync('result.json', JSON.stringify({ smoke, consoleLines }, null, 2));
+writeFileSync('result.json', JSON.stringify({ smoke, consoleLines, finished }, null, 2));
 console.log(
   JSON.stringify(
     { steps: smoke.steps, errors: smoke.errors, stats: smoke.stats, shots: Object.keys(shots) },

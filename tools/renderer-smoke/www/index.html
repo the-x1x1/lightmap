@@ -793,8 +793,9 @@
           // (The probe lights itself with Cesium's default split, 0.9 / 0.3 - the material's own
           // defaults - since a material's uniforms are renamed in its source and the probe's
           // fragment shader cannot read them.)
-          const { seaSky, glitter } = lightingFromScene(sc);
+          const { seaSky, glitter, seaSlopeVariance } = lightingFromScene(sc);
           waterMaterial.uniforms.u_glitter = glitter;
+          waterMaterial.uniforms.u_seaSlope2 = seaSlopeVariance;
           waterMaterial.uniforms.u_seaSkyAway = new Cesium.Cartesian3(...seaSky.away);
           waterMaterial.uniforms.u_seaSkyToward = new Cesium.Cartesian3(...seaSky.toward);
           await wait(1800);
@@ -887,13 +888,15 @@
             }),
           }),
         );
-        for (const [name, scenario, wet] of [
-          ['ground-dry', 'overcast', 0],
-          ['ground-wet', 'storm', 1],
+        // A wet road toward a low Sun between showers glares (the film's own Cox-Munk light).
+        for (const [name, scenario, wet, hour] of [
+          ['ground-dry', 'overcast', 0, 12.5],
+          ['ground-wet', 'storm', 1, 12.5],
+          ['ground-wet-glare', 'partly-cloudy', 1, 18.5],
         ]) {
           waterMaterial.uniforms.u_wet = wet;
           waterMaterial.uniforms.u_seaLevelM = -100;
-          await waterShot(name, 12.5, scenario, 290);
+          await waterShot(name, hour, scenario, 290);
         }
         host.scene.primitives.remove(wetPrimitive);
         log('water probe drawn');
@@ -1010,10 +1013,29 @@
             includeLunar: true,
             realReference: false,
           });
+        // Settled: the camera has stopped (the map flies to the pin) and the globe says its
+        // tiles are loaded, three checks running; SwiftShader is slow, so up to 45 s.
+        const settle = async () => {
+          const cam = host.scene.camera;
+          let last = cam.positionWC.clone();
+          let still = 0;
+          // A wall-clock deadline: on SwiftShader one frame can take seconds.
+          const deadline = performance.now() + 45_000;
+          while (performance.now() < deadline && still < 3) {
+            await wait(250);
+            host.scene.requestRender();
+            const moved = Cesium.Cartesian3.distance(last, cam.positionWC) > 0.5;
+            last = cam.positionWC.clone();
+            still = !moved && host.scene.globe.tilesLoaded ? still + 1 : 0;
+          }
+          return still >= 3;
+        };
         const synthShot = async (name, hour, scenario, camera, orbit) => {
           controller.apply(beachScene(hour, scenario, camera));
           if (orbit) controller.setOrbit(orbit);
-          await wait(4000);
+          await wait(1500);
+          if (!(await settle())) log(name + ': not settled in 45 s');
+          await wait(500);
           window.__smoke.shot = name;
           await new Promise((r) => {
             window.__takeShot = r;
