@@ -48,9 +48,9 @@ page.on('console', (m) => {
 });
 page.on('pageerror', (e) => consoleLines.push('pageerror: ' + e.message));
 if (process.env.WATER_RAW)
-  await page.addInitScript(() => {
-    window.__waterRaw = true;
-  });
+  await page.addInitScript((hour) => {
+    window.__waterRaw = Number(hour) || 18.75;
+  }, process.env.WATER_RAW);
 await page.goto('http://127.0.0.1:8765/index.html', { waitUntil: 'load', timeout: 120000 });
 const shots = {};
 const start = Date.now();

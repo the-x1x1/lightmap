@@ -165,6 +165,9 @@ window.renderScene = (sc) => {
   f1('u_sunElevation',sc.sunEl); f1('u_time',30); gl.uniform2f(U('u_sunScreen'),-1,-1); f1('u_sunVisible',0);
   gl.uniform3f(U('u_eyeUpEC'),0,1,0); f1('u_eyeHeightM',2); f1('u_starField',sc.starField ?? 0);
   f1('u_atmosphereDark', sc.sunEl <= -18 && !sc.moonlit ? 1 : 0);
+  // The sky at the horizon the haze fades toward (horizonSkyFor): a clear day's pale blue unless
+  // the scene gives its own.
+  gl.uniform3f(U('u_hazeAway'),...(sc.hazeAway ?? [0.72,0.78,0.86])); gl.uniform3f(U('u_hazeToward'),...(sc.hazeToward ?? sc.hazeAway ?? [0.72,0.78,0.86]));
   for (let i=0;i<5;i++) { const p=(sc.planets??[])[i]; if(p){ const [u,v]=toUv(dir(p[0],p[1])); gl.uniform4f(U('u_planet'+i),u,v,p[2],p[3]); } else gl.uniform4f(U('u_planet'+i),-10,-10,0,1); }
   if (sc.moon) { gl.uniform3f(U('u_moonDirEC'),...dir(sc.moon[0],sc.moon[1])); f1('u_moonGlow',sc.moon[2]); f1('u_moonRadiusDeg', 9*FOVY/H); } else { f1('u_moonGlow',0); f1('u_moonRadiusDeg',0); }
   gl.viewport(0,0,W,H); gl.drawArrays(gl.TRIANGLE_STRIP,0,4);

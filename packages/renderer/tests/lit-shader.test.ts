@@ -29,10 +29,14 @@ describe('buildings and trees shader', () => {
     expect(clear).toContain('0.55 * 1.00 * sun');
     expect(clear).toContain('0.55 * (1.0 - 1.00)');
     // An overcast: a fifth of it directional; the rest from the sky, by how much a face looks
-    // up (a roof, sky = 1, gets the whole of it back: 0.55 * sunUp, as its sun term was).
+    // up (a flat roof, sky = 1 and sun = sunUp, gets exactly its 0.55 * sunUp back), and the
+    // ground's bounce under the faces that look down is left as it was.
     const overcast = litInstanceShader(0.2, 8000, true, 0.2);
     expect(overcast).toContain('0.55 * 0.20 * sun');
-    expect(overcast).toContain('sunUp * (0.5 + 0.5 * sky)');
+    expect(overcast).toContain(
+      'float diffuseSun = 0.55 * (1.0 - 0.20) * sunUp * (0.5 + 0.5 * sky);',
+    );
+    expect(overcast).toContain('float bounce = 0.12 * (1.0 - sky) * sunUp;');
     // The trees take the same, the default (no share given) is a clear day's.
     expect(treeFragmentShader(1, 0, 1, 0, 1, 0.3)).toContain('0.55 * 0.30 * sun');
     expect(LIT_INSTANCE_FS).toContain('0.55 * 1.00 * sun');

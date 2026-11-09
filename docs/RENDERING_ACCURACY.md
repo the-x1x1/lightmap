@@ -156,7 +156,8 @@ before (the exposure and twilight levels were set against it) and only the relie
 moonlit night is split as a clear day by its own light. **Caveat:** one ambient share for every
 face — no sky-view factor, so a gully is as sky-lit as a plain. Buildings and trees take the same
 directional share in their own shader (`litInstanceShader`, in tenths), the light it takes from
-the Sun's term coming back from the sky by how much a face looks up, so a roof keeps its level.
+the Sun's term coming back from the sky by how much a face looks up, so a flat roof keeps exactly
+the level it had.
 
 **Night sky.** The grade's twilight treatment (darkening and cooling the dome while Cesium still
 lights its atmosphere from a Sun held at the horizon) is for the atmosphere only: the stars' light
@@ -227,25 +228,30 @@ rain, and the mirrored sky is the horizon's colour, not the clouds' shapes.
 
 **The sky in the water.** The painted water mirrors the sky (`shaders/ground.frag.ts`, the water
 branch): the share reflected follows Fresnel's rule for water — 2 % looking straight down, rising
-toward a grazing view to about three quarters (ripples scatter a grazing reflection, so never a
-mirror's whole) — and the rest is the water's own colour. What it mirrors is the low sky as the
-lighting has it (`seaSkyFor`: two thirds the gradient's horizon stop, a third the mid-sky, in
-linear RGB), on the side away from the Sun the plain horizon and on the Sun's side the sunrise or
-sunset glow when there is one, blended by the view's bearing from the light's; under it the
-Sun's glitter path — a lobe narrow across the Sun's bearing (σ ≈ 3.5°) and long toward the viewer
-(σ ≈ 8°), with the Sun's aureole mirrored as a wide soft lobe around it, in the light's colour and
-strongest at a low Sun. On a moonlit night the scene's light is the Moon, so the same path is the
-moon path, its colour lifted to a floor so a full Moon's disc on the ripples stands out from the
-night sea as it does. **Claim:** the sea goes blue under a blue sky, grey under an overcast,
-dark at night, and warm toward a setting Sun with the glitter under it, and the glitter sits on
-the Sun's bearing. **Caveat:** the globe lights every fragment as ground (the light's colour
-times Cesium's Lambert term), which is wrong for a reflection, so the material divides that term
-out of the reflected part (`lmUnlit`) — floored, so under a faint light (the Moon's) the
-reflection comes out dimmer than the sky, never brighter; a reflection in a ridge's shadow is
-still darkened by the shadow map as ground would be; the glitter is a smooth lobe over a flat
-surface, not sparkle; the sky mirrored is the gradient's colour at the horizon, not the dome
-pixel by pixel, so cloud shapes and the Sun's disc are not in the water. The smoke harness
-draws the sea on a probe with the globe's own defines and lighting (`water-*` shots).
+toward a grazing view to seven tenths (ripples scatter a grazing reflection, so never a mirror's
+whole) — and the rest is the water's own colour. The paint is blended over the imagery by its
+opacity, so the reflection is put in at full strength over it. What it mirrors is the low sky as
+the lighting has it (`seaSkyFor`: two thirds the gradient's horizon stop, a third the mid-sky, as
+the frame's 0–1 colours), on the side away from the Sun the plain horizon and on the Sun's side the
+sunrise or sunset glow when there is one — after sunset the afterglow, orange to about −2°, rose,
+then the twilight's blue by −6° — blended by the view's bearing from the light's. Under it the
+Sun's glitter path, a lobe about the reflected view ray, narrow across it (σ ≈ 2.4°) and long
+toward the viewer (σ ≈ 5.7°), with the Sun's aureole mirrored as a wide soft lobe around it, in the
+light's colour and strongest at a low Sun; only while the light has a disc to mirror
+(`LightingParameters.glitter`: the Sun's direct beam through the cloud, the Moon by night — not
+the light held at the horizon through twilight). On a moonlit night the same path is the moon
+path, its colour lifted to a floor so a full Moon's disc on the ripples stands out from the night
+sea as it does. **Claim:** the sea goes blue under a blue sky, grey under an overcast, dark at
+night, warm toward a setting Sun with the glitter under it and rose under the afterglow, and the
+glitter sits on the light's bearing. **Caveat:** the globe lights every fragment as ground (the
+light's colour times its Lambert split, and within the shadow map's reach the map's own fade of
+terrain by its angle to the light), which is wrong for a reflection, so the material divides those
+terms out of the reflected part (`lmUnlit`) — floored, so under a faint light the reflection comes
+out dimmer than the sky, never brighter; a real shadow on the water (a ridge's) still darkens it;
+the glitter is a smooth lobe over a flat surface, not sparkle; the sky mirrored is the gradient's
+colour at the horizon, not the dome pixel by pixel, so cloud shapes and the Sun's disc are not in
+the water. The smoke harness draws the sea on a probe with the globe's own defines and lighting
+(`water-*` shots).
 
 **The coastline** is that mask read through a small blur and sharpened again (`water-mask.ts`):
 finer tiles reuse a coarse ancestor's mask magnified, and read directly its texels drew every

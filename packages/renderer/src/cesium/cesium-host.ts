@@ -232,8 +232,12 @@ export class CesiumSceneHost implements SceneHost {
   private readonly pacer: FramePacer;
   private readonly gradeUniforms: Record<string, unknown>;
   private groundMaterial: Cesium.Material | null = null;
+  /** The shadow map as the globe receives it (`setShadows`), kept for a material made later. */
+  private groundShadow = { d: 1, maxM: 0 };
   /** The globe's light split (`setLight`), kept for a material made later. */
   private globeSplit = { lambert: 0.9, ambient: 0.3 };
+  /** The split the sky over the pin asks for (`setLight`), before the camera height's blend. */
+  private pinSplit = { lambert: 0.9, ambient: 0.3 };
   /** The sky the water reflects (`setSeaSky`), kept for a material made later. */
   private seaSky: HostSeaSky | null = null;
   private buildings: Cesium.Cesium3DTileset | null = null;
@@ -608,6 +612,7 @@ export class CesiumSceneHost implements SceneHost {
       this.placeSunGlare();
       this.placePlanets();
       this.chooseGrade();
+      this.applyGlobeSplit();
       const m = this.groundMaterial;
       if (!m) return;
       const cam = scene.camera.positionWC;
@@ -786,11 +791,27 @@ export class CesiumSceneHost implements SceneHost {
     }
     this.light.color = new C.Color(light.color[0], light.color[1], light.color[2], 1);
     this.light.intensity = light.intensity;
-    // The terrain's split between the light's direction and the sky; the ground material
-    // divides the same terms out of its reflections, so it is told them too.
+    // The terrain's split between the light's direction and the sky (the sky over the pin).
+    this.pinSplit = { lambert: light.globeLambert ?? 0.9, ambient: light.globeAmbient ?? 0.3 };
+    this.osmBuildings?.setDirectShare(this.pinSplit.lambert / 0.9);
+    this.applyGlobeSplit();
+  }
+
+  /**
+   * The pin's sky decides how the globe splits the light only near it: from high up the globe
+   * shows other skies and the night side, which the pin's overcast must not light, so between
+   * 50 and 300 km of camera height it goes back to Cesium's own split (the paint fades out
+   * above 150 km too). The ground material divides the same terms out of its reflections.
+   */
+  private applyGlobeSplit(): void {
     const globe = this.scene.globe as Cesium.Globe | undefined;
-    const lambert = light.globeLambert ?? 0.9;
-    const ambient = light.globeAmbient ?? 0.3;
+    const h = this.scene.camera.positionCartographic?.height ?? 0;
+    const t = Math.min(1, Math.max(0, (h - 50_000) / 250_000));
+    const k = Math.round(t * t * (3 - 2 * t) * 50) / 50;
+    const lambert = this.pinSplit.lambert + (0.9 - this.pinSplit.lambert) * k;
+    const ambient = this.pinSplit.ambient + (0.3 - this.pinSplit.ambient) * k;
+    if (lambert === this.globeSplit.lambert && ambient === this.globeSplit.ambient) return;
+    this.globeSplit = { lambert, ambient };
     if (globe) {
       globe.lambertDiffuseMultiplier = lambert;
       globe.vertexShadowDarkness = ambient;
@@ -800,8 +821,6 @@ export class CesiumSceneHost implements SceneHost {
       u['u_lambertMul'] = lambert;
       u['u_ambientShare'] = ambient;
     }
-    this.globeSplit = { lambert, ambient };
-    this.osmBuildings?.setDirectShare(lambert / 0.9);
   }
 
   setGlobeShading(shading: HostGlobeShading): void {
@@ -821,6 +840,7 @@ export class CesiumSceneHost implements SceneHost {
     // Unchanged to three decimals (the lighting rounds them): no upload, no render.
     if (
       prev &&
+      prev.glitter === sky.glitter &&
       prev.away.every((v, i) => v === sky.away[i]) &&
       prev.toward.every((v, i) => v === sky.toward[i])
     )
@@ -843,6 +863,7 @@ export class CesiumSceneHost implements SceneHost {
     };
     set('u_seaSkyAway', sky.away);
     set('u_seaSkyToward', sky.toward);
+    u['u_glitter'] = sky.glitter ?? 0;
   }
 
   setGroundTexture(g: HostGroundTexture | null): void {
@@ -894,6 +915,7 @@ export class CesiumSceneHost implements SceneHost {
       const su = this.groundMaterial.uniforms as Record<string, number>;
       su['u_lambertMul'] = this.globeSplit.lambert;
       su['u_ambientShare'] = this.globeSplit.ambient;
+      this.applyGroundShadow();
     }
     const u = this.groundMaterial.uniforms as Record<string, number>;
     u['u_snowlineM'] = g.snowlineM;
@@ -1073,6 +1095,20 @@ export class CesiumSceneHost implements SceneHost {
     if (Math.abs(sm.maximumDistance - s.maximumDistance) > 1)
       sm.maximumDistance = s.maximumDistance;
     this.osmBuildings?.setShadowMap(sm.enabled, sm.darkness, sm.maximumDistance);
+    // The globe receives the shadow map, which fades terrain by its own angle to the light: the
+    // ground material divides that out of its reflections, so it is told the map's terms.
+    this.groundShadow = {
+      d: s.enabled ? s.darkness : 1,
+      maxM: s.enabled ? s.maximumDistance : 0,
+    };
+    this.applyGroundShadow();
+  }
+
+  private applyGroundShadow(): void {
+    if (!this.groundMaterial) return;
+    const u = this.groundMaterial.uniforms as Record<string, number>;
+    u['u_shadowD'] = this.groundShadow.d;
+    u['u_shadowMaxM'] = this.groundShadow.maxM;
   }
 
   setAtmosphere(a: HostAtmosphere): void {
@@ -2359,7 +2395,7 @@ export class CesiumSceneHost implements SceneHost {
         this.osmBuildings.setSeason(this.leaf.leafOn, this.leaf.autumn, this.leaf.deciduous);
         const sm = this.scene.shadowMap;
         this.osmBuildings.setShadowMap(sm.enabled, sm.darkness, sm.maximumDistance);
-        this.osmBuildings.setDirectShare(this.globeSplit.lambert / 0.9);
+        this.osmBuildings.setDirectShare(this.pinSplit.lambert / 0.9);
         this.osmBuildingsCheckAt = 0;
         this.scene.requestRender();
         return;

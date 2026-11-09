@@ -99,6 +99,12 @@ export interface LightingParameters {
   seaSky: SeaSky;
   /** The sky at the horizon (`horizonSkyFor`), what the grade's aerial perspective fades toward. */
   horizonSky: SeaSky;
+  /**
+   * How much of the light's own disc the water can mirror (the glitter path), 0–1: the Sun's
+   * direct beam through the cloud while it is up, the Moon's when the Moon lights the scene,
+   * none for the light held at the horizon through twilight.
+   */
+  glitter: number;
 }
 
 /**
@@ -126,7 +132,8 @@ export function globeLightSplit(
   diffuseFraction: number,
 ): GlobeLightSplit {
   const d = clamp01(diffuseFraction);
-  const direct = smooth(-0.833, 3, sunElevationDeg);
+  // The beam is whole once the Sun's disc is up (the light is held at -0.6 deg below that).
+  const direct = smooth(-1.2, 0.2, sunElevationDeg);
   const lambert = 0.9 * (direct * (1 - 0.75 * d) + (1 - direct) * 0.17);
   const sinEl = Math.max(0, Math.sin((lightElevationDeg * Math.PI) / 180));
   const ambient = 0.3 + (0.9 - lambert) * sinEl;
@@ -248,6 +255,11 @@ export function lightingFromScene(s: SceneState): LightingParameters {
   );
   const seaSky = seaSkyFor(el, p.cloudOpacity, atmosphere.warmth, p.skyLuminance, p.haze);
   const horizonSky = horizonSkyFor(el, p.cloudOpacity, atmosphere.warmth, p.skyLuminance, p.haze);
+  const throughCloud = clamp01(p.sunTransmittance / 0.6);
+  const glitter =
+    Math.round(
+      (moonlit && el < -12 ? throughCloud : smooth(-1, 0.5, el) * throughCloud) * 100,
+    ) / 100;
 
   return {
     sunDirectionEcef: sunLightDirectionEcef(
@@ -310,6 +322,7 @@ export function lightingFromScene(s: SceneState): LightingParameters {
     skyGradient,
     seaSky,
     horizonSky,
+    glitter,
   };
 }
 
@@ -388,8 +401,17 @@ export function skyColoursFor(
     const peak = Math.max(c[0], c[1], c[2], 1);
     return [(c[0] * 255) / peak, (c[1] * 255) / peak, (c[2] * 255) / peak];
   };
-  const glow: Rgb =
+  // The glow on the Sun's side of the horizon. While the Sun is up its hue is the scattering
+  // model's (a warm light warms it; a cool, diffuse one leaves it blue). Once it has set the
+  // light turns cool but the afterglow does not: it stays orange to a couple of degrees down,
+  // goes rose, and gives way to the twilight's dusky blue by about -6 deg - by the Sun's
+  // depression, not the light's colour (which had flipped the glow blue at -2 deg while the
+  // sky the renderer draws still glowed).
+  const dayGlow: Rgb =
     warmth > 0.55 ? (physical ? brighten(physical.glow) : [255, 150, 70]) : [120, 140, 210];
+  const afterglow = mix([240, 130, 105], [255, 150, 70], smooth(-3, -0.5, elevationDeg));
+  const duskGlow = mix([120, 140, 210], afterglow, smooth(-6.5, -1.5, elevationDeg));
+  const glow = mix(duskGlow, dayGlow, smooth(-0.5, 0.5, elevationDeg));
   const build = (clear: Rgb, nightC: Rgb, glowAmount: number): Rgb => {
     let c = mix(clear, overcast, cloudOpacity);
     c = mix(c, nightC, night);

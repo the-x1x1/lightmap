@@ -399,6 +399,10 @@ void main() {
     float glowSide = clamp(0.5 + 0.5 * towardSun, 0.0, 1.0);
     glowSide *= glowSide;
     vec3 hazeCol = mix(u_hazeAway, u_hazeToward, glowSide);
+    // The gradient's twilight and night stops are colours for the chrome, not the dome as the
+    // grade darkens it: through the dusk the haze goes to the night air's dark blue as the dome
+    // does, so a far ridge never stands lighter than the sky over it.
+    hazeCol = mix(hazeCol, vec3(0.05, 0.06, 0.1), u_nightFactor);
     color = mix(color, hazeCol, clamp(dist * 0.85, 0.0, 0.85));
   }
 

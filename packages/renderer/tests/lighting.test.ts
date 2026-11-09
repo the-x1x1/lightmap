@@ -212,6 +212,12 @@ describe('lightingFromScene', () => {
     expect(day.away[2]).toBeGreaterThan(day.away[0]); // blue
     expect(day.away).toEqual(day.toward); // no glow by day
     for (const v of [...day.away, ...day.toward]) expect(v).toBeLessThanOrEqual(1);
+    // After sunset the light turns cool, but the afterglow on the Sun's side stays warm to a few
+    // degrees down (by the Sun's depression, not the light's warmth), and is gone by -7 deg.
+    const after = seaSkyFor(-2, 0, 0.3, 1);
+    expect(after.toward[0]).toBeGreaterThan(after.toward[2]);
+    const late = seaSkyFor(-7, 0, 0, 1);
+    expect(late.toward[2]).toBeGreaterThan(late.toward[0]);
     const sunset = seaSkyFor(-2, 0.05, 0.9, 1);
     expect(sunset.toward[0]).toBeGreaterThan(sunset.toward[2]); // the glow, on the Sun's side
     expect(sunset.toward[0]).toBeGreaterThan(sunset.away[0] + 0.1);
@@ -255,9 +261,18 @@ describe('lightingFromScene', () => {
     const tw = globeLightSplit(-0.6, -4, 0.2);
     expect(tw.lambert).toBeLessThan(0.16);
     expect(tw.ambient).toBe(0.3);
+    // A clear Sun with its disc up keeps the whole beam's relief (a raking sunrise).
+    expect(globeLightSplit(1, 1, 0).lambert).toBe(0.9);
     // The scene carries it.
     expect(lightingFromScene(scene(12, 'overcast')).globeLight.lambert).toBeLessThan(0.5);
     expect(lightingFromScene(scene(12, 'clear')).globeLight.lambert).toBeGreaterThan(0.75);
+  });
+
+  it('the water mirrors the disc of the light only while there is one: the Sun up, or the Moon by night', () => {
+    expect(lightingFromScene(scene(12, 'clear')).glitter).toBe(1);
+    expect(lightingFromScene(scene(12, 'overcast')).glitter).toBeLessThan(0.5);
+    // Kailua, 31 May 2026: sunset ~19:12; at 19:30 the light is held at the horizon, no disc.
+    expect(lightingFromScene(scene(19.5, 'clear')).glitter).toBe(0);
   });
 
   it('the dome Mie coefficient follows haze only behind the physicalSkyDome flag', () => {

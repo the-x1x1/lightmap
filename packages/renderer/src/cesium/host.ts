@@ -183,6 +183,8 @@ export interface HostGroundTexture {
 export interface HostSeaSky {
   away: [number, number, number];
   toward: [number, number, number];
+  /** How much of the light's own disc the water shows (`LightingParameters.glitter`); none when left out. */
+  glitter?: number;
 }
 
 export interface HostQuality {
@@ -253,7 +255,7 @@ export interface SceneHost {
   /** Paint (or clear) the procedural ground texture over the basemap. */
   setGroundTexture(g: HostGroundTexture | null): void;
   /**
-   * The sky the painted water reflects (`SeaSky`, linear RGB), every tick: the sea takes the
+   * The sky the painted water reflects (`SeaSky`, RGB 0–1 as drawn), every tick: the sea takes the
    * horizon's colour on the side away from the Sun and the glow's on its side.
    */
   setSeaSky?(sky: HostSeaSky): void;

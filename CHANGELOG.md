@@ -5,22 +5,30 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 ## Unreleased
 
 - **The sky in the water**: the painted sea and lakes now mirror the sky. Looking out across the
-  water takes the colour of the low sky by Fresnel's rule (2 % looking straight down, three
-  quarters at a grazing view, ripples keeping it from a mirror's whole): a blue sea under a blue
+  water takes the colour of the low sky by Fresnel's rule (2 % looking straight down, seven
+  tenths at a grazing view, ripples keeping it from a mirror's whole): a blue sea under a blue
   sky, a grey one under an overcast, dark water at night, and toward a low Sun the sunrise or
   sunset glow on the water with the Sun's glitter path under it (a lobe narrow across the Sun's
   bearing and long toward the viewer, with the Sun's aureole mirrored around it, in the light's
-  colour) — and, on a moonlit night, the moon path. The globe lights every fragment as ground; a reflection is the sky's own light, so the
-  material divides the globe's Lambert term out of it (`lmUnlit`), floored so a reflection under
-  a faint light comes out dimmer than the sky, never brighter. The lighting hands the renderer
-  the two colours each tick (`seaSkyFor`: the gradient's horizon away from the Sun and on its
-  side, as linear RGB; `SceneHost.setSeaSky`). The smoke harness draws the sea on a probe with
+  colour, only while the light has a disc to mirror) — and, on a moonlit night, the moon path.
+  The globe lights every fragment as ground; a reflection is the sky's own light, so the material
+  divides the globe's Lambert split and the shadow map's terrain fade out of it (`lmUnlit`),
+  floored so a reflection under a faint light comes out dimmer than the sky, never brighter. The
+  lighting hands the renderer the two colours and the glitter each tick (`seaSkyFor`: the
+  gradient's horizon away from the Sun and on its side; `SceneHost.setSeaSky`). The smoke harness draws the sea on a probe with
   the globe's own defines and lighting (five shots: noon, toward and away from a setting Sun,
-  overcast, night; `WATER_RAW=1` adds a strip shot for reading the material's maths).
+  overcast, night, dusk, the Moon; `WATER_RAW=<hour>` adds a strip shot for reading the
+  material's maths).
+- **The afterglow stays warm after sunset**: the sky gradient's horizon glow on the Sun's side
+  follows the Sun's depression once it has set (orange to about −2°, rose, the twilight's blue by
+  −6°) instead of flipping to blue as soon as the light turned cool (−2°), which put a blue
+  glow under the renderer's still-glowing dusk; the chrome, the haze and the water take it.
 - **Terrain relief follows the sky**: under an overcast the slopes no longer keep a sunny day's
   relief, and in twilight a slope facing the held light no longer stands out three times brighter
   than level ground (`globeLightSplit` drives the globe's `lambertDiffuseMultiplier` and
-  `vertexShadowDarkness`; level ground's brightness is unchanged). Buildings and trees take the
+  `vertexShadowDarkness`; level ground's brightness is unchanged; from 50 to 300 km of camera
+  height the globe goes back to Cesium's split, so the pin's overcast never lights the night
+  side). Buildings and trees take the
   same share (`setDirectShare`, in tenths): a sunward wall stands out under a clear Sun and hardly
   under an overcast, the rest of its light coming from the sky, most on faces that look up.
 - **Wet streets mirror the sky**: in rain, level ground takes a film's reflection of the same sky

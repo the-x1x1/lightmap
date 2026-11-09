@@ -321,9 +321,18 @@ describe('ground material source', () => {
     expect(GROUND_MATERIAL_SOURCE).toContain('uniform vec3 u_seaSkyToward;');
     expect(GROUND_MATERIAL_SOURCE).toContain('mix(u_seaSkyAway, u_seaSkyToward, glowSide)');
     expect(GROUND_MATERIAL_SOURCE).toContain('#ifdef ENABLE_VERTEX_LIGHTING');
-    expect(GROUND_MATERIAL_SOURCE).toContain('lmUnlit(reflected, n)');
+    expect(GROUND_MATERIAL_SOURCE).toContain(
+      'lmUnlit(reflected, n, materialInput.positionToEyeEC.z)',
+    );
+    // Within the shadow map's reach, its terrain normal shading (n.l over 0.3, floored at the
+    // darkness) is divided out too, so a low Sun does not dim the reflection to the darkness.
+    expect(GROUND_MATERIAL_SOURCE).toContain('max(clamp(lambert / 0.3, 0.0, 1.0), u_shadowD)');
+    // The reflection is put in at full strength over the imagery the paint is blended onto.
+    expect(GROUND_MATERIAL_SOURCE).toContain('/ max(waterAlpha, 0.05)');
+    // The glitter only where the light has a disc to mirror.
+    expect(GROUND_MATERIAL_SOURCE).toContain('* u_glitter;');
     // Wet level ground mirrors the same sky, as a film (weaker than the sea).
-    expect(GROUND_MATERIAL_SOURCE).toContain('lmUnlit(sky * r, n)');
+    expect(GROUND_MATERIAL_SOURCE).toContain('lmUnlit(wetSky * wetR, materialInput.normalEC');
     // Each tier has its own camera offset (a scaled fine coordinate would jump every 2.5 m).
     for (const t of GROUND_DETAIL_TIERS) {
       expect(GROUND_MATERIAL_SOURCE).toContain(`uniform vec3 ${t.offsetUniform};`);

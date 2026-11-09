@@ -793,7 +793,8 @@
           // (The probe lights itself with Cesium's default split, 0.9 / 0.3 - the material's own
           // defaults - since a material's uniforms are renamed in its source and the probe's
           // fragment shader cannot read them.)
-          const { seaSky } = lightingFromScene(sc);
+          const { seaSky, glitter } = lightingFromScene(sc);
+          waterMaterial.uniforms.u_glitter = glitter;
           waterMaterial.uniforms.u_seaSkyAway = new Cesium.Cartesian3(...seaSky.away);
           waterMaterial.uniforms.u_seaSkyToward = new Cesium.Cartesian3(...seaSky.toward);
           await wait(1800);
@@ -805,12 +806,14 @@
         await waterShot('water-noon', 12.5, 'clear', 290);
         await waterShot('water-golden-toward', 18.75, 'clear', 290);
         await waterShot('water-golden-away', 18.75, 'clear', 110);
+        // After sunset the light is held at the horizon: the glow on the water, no glitter path.
+        await waterShot('water-dusk', 19.4, 'clear', 290);
         await waterShot('water-overcast', 12.5, 'overcast', 290);
         await waterShot('water-night', 23, 'clear', 290);
         // The full Moon of 31 May 2026 low over the sea at 21:00: the scene's light is the
         // Moon's, so the glitter path is the moon path, under it in the Moon's colour.
         await waterShot('water-moon', 21, 'clear', scene(21, 'clear').lunar.azimuthDegrees);
-        // WATER_RAW=1: one more shot of the golden-hour sea in three strips - the light's
+        // WATER_RAW=<hour> (1: 18:45): one more shot of the sea in three strips - the light's
         // colour times the globe's Lambert term, the material's raw output, and the two
         // multiplied (what the globe shows) - with the grade's haze, tint and saturation off,
         // for reading pixel values against the material's maths.
@@ -853,7 +856,7 @@
               u_tint: [1, 1, 1],
               u_warmth: 0,
             });
-          await waterShot('water-raw-golden', 18.75, 'clear', 290);
+          await waterShot('water-raw', window.__waterRaw, 'clear', 290);
           host.setGrade = origSetGrade;
         }
         host.scene.primitives.remove(waterPrimitive);

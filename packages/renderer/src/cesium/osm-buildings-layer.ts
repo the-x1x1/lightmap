@@ -103,8 +103,8 @@ export function litInstanceShader(
   const d = Math.max(0.05, Math.min(1, shadowD)).toFixed(3);
   // The share of the Sun's term that is direct (globeLightSplit's directional share against a
   // clear day's): under an overcast or in twilight the light has little direction, so the rest
-  // comes from the sky - most on faces that look up, as a diffuse sky lights them - and a roof
-  // keeps the level it had.
+  // comes from the sky - most on faces that look up, as a diffuse sky lights them - and a flat
+  // roof keeps exactly the level it had (its Sun term is sunUp, all of which comes back).
   const k = Math.max(0, Math.min(1, directShare)).toFixed(2);
   const maxM = Math.max(0, shadowMaxM).toFixed(1);
   // Buildings: a flat roof is tar, gravel or membrane, a pitched one shingle or tile - darker
@@ -136,8 +136,8 @@ void main()
     float sun = max(dot(normalEC, czm_lightDirectionEC), 0.0);
     float sky = 0.5 + 0.5 * dot(normalEC, upEC);
     float sunUp = clamp(dot(upEC, czm_lightDirectionEC), 0.0, 1.0);
-    float bounce = 0.12 * (1.0 - sky) * sunUp * ${k};
-    float diffuseSun = 0.55 * (1.0 - ${k}) * sunUp * (0.5 + 0.5 * sky) + 0.12 * (1.0 - ${k}) * sunUp * 0.5;
+    float bounce = 0.12 * (1.0 - sky) * sunUp;
+    float diffuseSun = 0.55 * (1.0 - ${k}) * sunUp * (0.5 + 0.5 * sky);
     vec3 light = czm_lightColor * (0.55 * ${k} * sun + 0.16 + 0.14 * sky + bounce + diffuseSun);
     vec3 lit = color.rgb * light;
     // Aerial perspective: a far skyline takes the haze's colour as distant terrain does (the
