@@ -187,6 +187,11 @@ export function createSyntheticTerrain(C, pin) {
           northSkirtHeight: skirt,
           childTileMask: level < MAX_LEVEL ? 15 : 0,
           waterMask,
+          // The data's flags, not inferred from what it carries: without them Cesium meshes the
+          // tile with no normals and lights the globe by its day/night shading, not the vertex
+          // lighting (and the light split) the app's terrain gets.
+          requestVertexNormals: true,
+          requestWaterMask: true,
         }),
       );
     },

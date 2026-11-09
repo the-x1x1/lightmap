@@ -18,6 +18,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:net';
 
 // The app's ground detail atlas, served beside the page so the probe can take it as the host does.
 mkdirSync(fileURLToPath(new URL('./www/textures', import.meta.url)), { recursive: true });
@@ -25,6 +26,17 @@ copyFileSync(
   fileURLToPath(new URL('../../apps/web/public/textures/ground-detail.png', import.meta.url)),
   fileURLToPath(new URL('./www/textures/ground-detail.png', import.meta.url)),
 );
+// One run at a time: a second run on the same port would load the first's page server and both
+// would write the same shot files.
+const portFree = await new Promise((resolve) => {
+  const probe = createServer();
+  probe.once('error', () => resolve(false));
+  probe.listen(8765, '127.0.0.1', () => probe.close(() => resolve(true)));
+});
+if (!portFree) {
+  console.error('Another smoke run holds port 8765: wait for it, or stop it, first.');
+  process.exit(2);
+}
 const server = spawn('python3', ['-m', 'http.server', '8765', '--bind', '127.0.0.1'], {
   cwd: fileURLToPath(new URL('./www', import.meta.url)),
   stdio: 'ignore',
