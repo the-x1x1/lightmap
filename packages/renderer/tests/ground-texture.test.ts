@@ -325,7 +325,9 @@ describe('ground material source', () => {
       'lmUnlit(reflected, floorN, materialInput.positionToEyeEC.z)',
     );
     // The water's surface is level whatever the sea floor under it does.
-    expect(GROUND_MATERIAL_SOURCE).toContain('vec3 n = normalize(czm_viewRotation * u_upWC);');
+    expect(GROUND_MATERIAL_SOURCE).toContain(
+      'vec3 n = normalize(czm_viewRotation * (positionWC * vec3(2.4581e-14, 2.4581e-14, 2.4747e-14)));',
+    );
     expect(GROUND_MATERIAL_SOURCE).toContain('body *= litLevel / max(litFloor, 0.05);');
     // Within the shadow map's reach, its terrain normal shading (n.l over 0.3, floored at the
     // darkness) is divided out too, so a low Sun does not dim the reflection to the darkness.
@@ -341,9 +343,11 @@ describe('ground material source', () => {
     // The sea's body colour: tropical blue between the tropics, grey-green beyond.
     expect(GROUND_MATERIAL_SOURCE).toContain('sea = mix(temperateSea, sea, tropicalSea);');
     // A wet road glares toward a low Sun, as a rougher film.
-    expect(GROUND_MATERIAL_SOURCE).toContain('lmCoxMunk(czm_lightDirectionEC, toEye, n, 0.08)');
     expect(GROUND_MATERIAL_SOURCE).toContain(
-      'smoothstep(0.45, 0.6, mix(f0, f1, fract(lv))) / 0.0686',
+      'wetGlare = czm_lightColor * lmCoxMunk(czm_lightDirectionEC, toEye, n, 0.08)',
+    );
+    expect(GROUND_MATERIAL_SOURCE).toContain(
+      'mix(step(0.93, u0), step(0.93, u1), fract(lv)) / 0.07',
     );
     // Wet level ground mirrors the same sky, as a film (weaker than the sea).
     expect(GROUND_MATERIAL_SOURCE).toContain(

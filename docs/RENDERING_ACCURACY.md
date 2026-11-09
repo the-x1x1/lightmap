@@ -156,7 +156,8 @@ the valley below sinks into its haze; from below, a ridge stands a little crispe
 alone would make it; looking down from the map, the haze is thin until near the ground (held to
 2.5 times the place's own density, for gorges far below it). **Caveat:** the layer follows the
 place's ground, not the terrain under each ray — a high plateau seen from a low coast hazes as
-air at the plateau's height. The light direction and terrain shading are untouched by either. Verified in
+air at the plateau's height, and a pin dropped on a summit takes the forecast's haze at the summit
+(the valley below up to 2.5 times it). The light direction and terrain shading are untouched by either. Verified in
 `tools/renderer-smoke` (contact sheet `docs/media/renderer-smoke-2026-09-24c.png`).
 
 **Terrain shading under a diffuse sky.** Cesium shades terrain as the light times
@@ -173,7 +174,10 @@ rather than a day's 0.3 share: on the smoke harness's synthetic plain at Sun −
 noon shot measures 2.4); with the lift it sits 3.1 under it, short of the full physical ratio
 because the twilight exposure was set by eye against the old split. Buildings and trees lift their
 sky terms with it (`skyLift`), and the map's night chart starts from the globe's own share at the
-switch. A
+switch. The lift fades out between −6° and −12°: a moonless night is back at a day's share, and a
+moonlit one takes the Moon's split from −12° with no jump. In the last 1.2° before the Sun goes the
+shadow map's darkness fades to none, since level ground then faces the light edge-on and Cesium's
+terrain shadows would sink it all to the darkness. A
 moonlit night is split as a clear day by its own light. **Caveat:** one ambient share for every
 face — no sky-view factor, so a gully is as sky-lit as a plain. Buildings and trees take the same
 directional share in their own shader (`litInstanceShader`, in tenths), the light it takes from
@@ -266,9 +270,9 @@ overcast, 13 in a storm; `SCENARIO_TYPICAL_WIND_MPS`), and the eye sees the ligh
 normal is the half-way vector between the two, at Fresnel's reflectance for that facet — a narrow
 bright point in a calm, a long, broad band in a breeze, narrow across the light's bearing and long
 toward the viewer; eased toward 1.5 times the light so a sunset's path keeps its colour. The path is
-made of sparkles: facets sized to the pixel (two octaves of the baked value noise chosen by log₂
-of the ground a pixel covers, so a sparkle stays a pixel or two across at any distance), about 7 %
-of them flashing, scaled so the path's average brightness is the smooth model's; where a pixel
+made of sparkles: facet cells a pixel and a half across at any distance (a hash per cell, two
+cell sizes chosen by log₂ of the ground a pixel covers, each thresholded before the blend), 7 % of
+them flashing, scaled by 1/0.07 so the path's average brightness is the smooth model's; where a pixel
 covers metres of water the sparkles merge into the smooth band, as they do to the eye. The Sun's
 aureole is mirrored as a wide soft lobe round it. Only while the light has a disc to mirror
 (`LightingParameters.glitter`: the Sun's direct beam through the cloud, the Moon by night — not

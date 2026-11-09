@@ -170,7 +170,11 @@ export function globeLightSplit(
   // it, not a day's 0.3 share (the dusk plain sat ~5 stops under the sky; sky-lit ground of
   // albedo 0.2 sits ~2.3 under it; this brings it to ~3.2, near the levels the twilight
   // exposure was set against by eye).
-  const ambient = Math.min(1, dayAmbient + (1 - dayAmbient) * (1 - direct));
+  // Through the twilight only: by -12 deg the sky's own light is gone and a moonless night is
+  // back at a day's share (as it was), and a moonlit one switches to the Moon's split from there
+  // with no jump.
+  const twilight = (1 - direct) * smooth(-12, -6, sunElevationDeg);
+  const ambient = Math.min(1, dayAmbient + (1 - dayAmbient) * twilight);
   const r3 = (v: number) => Math.round(v * 1000) / 1000;
   return { lambert: r3(lambert), ambient: r3(ambient), skyLift: r3(ambient / dayAmbient) };
 }
@@ -255,7 +259,13 @@ export function lightingFromScene(s: SceneState): LightingParameters {
   ];
 
   // Shadows: darkness rises (shadows fade) as diffuse light takes over; off when no direct light.
-  const shadowDarkness = clamp01(0.25 + 0.75 * p.diffuseFraction - 0.15 * smooth(0, 30, el));
+  // In the last 1.2 deg before the Sun goes, level ground faces the light edge-on and Cesium's
+  // terrain shadows sink it to the darkness however narrow the bias (TERRAIN_NORMAL_SHADING_SMOOTH),
+  // with a hard edge where the map's reach ends: the shadows fade out over that last stretch
+  // instead (at the horizon everything is in the shade of the ground and lit by the sky).
+  const shadowDarkness = clamp01(
+    1 - (1 - (0.25 + 0.75 * p.diffuseFraction - 0.15 * smooth(0, 30, el))) * smooth(0, 1.2, el),
+  );
   const shadowsEnabled = s.render.shadows && directLightPresent;
 
   const nightFactor = 1 - smooth(-18, 0, el);

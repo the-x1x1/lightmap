@@ -675,7 +675,8 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         wetSky = mix(u_seaSkyAway, u_seaSkyToward, glowSide * glowSide);
         // Looking toward a low Sun a wet road glares: the light in the film, as in the sea but
         // rougher (a film over asphalt or turf, mean square slope 0.08 - a broad, soft glare).
-        wetGlare = lmGlitterColour() * lmCoxMunk(czm_lightDirectionEC, toEye, n, 0.08)
+        // In the light's own colour: no moonlight floor for a broad film (whole streets went white).
+        wetGlare = czm_lightColor * lmCoxMunk(czm_lightDirectionEC, toEye, n, 0.08)
                  * u_glitter * film;
     }
     // Rock and snow are what they are; open ground lets real imagery's own hue through. Over
@@ -732,7 +733,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         // richer in plankton and stirred-up sediment, are greener and greyer (the North Sea, the
         // Baltic, the Gulf of Maine). By latitude alone: from about 25 deg to 38 deg the body
         // colour turns from the tropical blue to a grey-green.
-        float tropicalSea = 1.0 - smoothstep(0.42, 0.62, abs(u_upWC.z));
+        float tropicalSea = 1.0 - smoothstep(0.42, 0.62, abs(normalize(positionWC).z));
         vec3 temperateSea = mix(vec3(0.05, 0.13, 0.14), vec3(0.07, 0.17, 0.17), patches);
         sea = mix(temperateSea, sea, tropicalSea);
         // Shallows: water with land close around it (OpenStreetMap's water near the viewer,
@@ -766,10 +767,11 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         // scatter a grazing reflection, so it rises to seven tenths, not to a mirror's whole.
         // The water's surface is flat whatever the floor under it does (the terrain carries the
         // sea floor near coasts, shelving away from the beach): its reflection is figured on the
-        // level surface - the pin's up, good to a fraction of a degree across the view - while
+        // level surface - the ellipsoid's normal at the fragment (1/a^2, 1/a^2, 1/b^2 of WGS84),
+        // right across a map view too - while
         // the globe has lit the fragment by the floor's normal, which lmUnlit undoes.
         vec3 floorN = materialInput.normalEC;
-        vec3 n = normalize(czm_viewRotation * u_upWC);
+        vec3 n = normalize(czm_viewRotation * (positionWC * vec3(2.4581e-14, 2.4581e-14, 2.4747e-14)));
         vec3 toEye = normalize(materialInput.positionToEyeEC);
         float cosView = clamp(dot(n, toEye), 0.0, 1.0);
         float grazing = pow(1.0 - cosView, 5.0);
@@ -804,23 +806,24 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
                 - atan(dot(mirrorRay, n), hLen);
         }
         // The path is made of sparkles: each ripple facet throws the Sun to the eye or not.
-        // Facets sized to the pixel (two octaves of the baked value noise, a product of two
-        // channels, picked by log2 of the ground a pixel covers and blended between, so a
-        // sparkle stays a pixel or two across at any distance); about 7 % of them flash,
-        // scaled by 1/0.0686 (their measured mean) so the path's average is the lobe's. As a
+        // Facets sized to the pixel (cells a pixel and a half across at any distance); 7 % of
+        // them flash, scaled by 1/0.07 so the path's average is the lobe's. As a
         // pixel comes to cover metres of water (1 to 40 m) it holds more facets, and the path
         // goes smooth by degrees - toward the horizon, as to the eye. They
-        // drift with the clock (3 m a scene minute), so the pattern re-deals as time moves.
+        // drift with the clock (2.4 m a scene minute), so the pattern re-deals as time moves.
         if (glint > 0.002)
         {
             float footprint = max(max(length(gdx), length(gdy)), 1e-4);
-            float lv = clamp(log2(footprint * 96.0), 0.0, 12.0);
-            float s0 = exp2(floor(lv));
+            // A hash per facet cell, not the noise texture: no mip to blur the flashes (the
+            // texture's cells came out several pixels wide once sampled sharp), cells a pixel and
+            // a half across, and an exact mean - 7 % of cells flash, so dividing by 0.07 keeps
+            // the path's average. Two cell sizes, thresholded each, blended by log2.
+            float lv = clamp(log2(footprint * 1.5), -6.0, 8.0);
+            float c0 = exp2(floor(lv));
             vec2 sp = g.xy + mod(vec2(2.1, 1.2) * u_cloudTime, ${f(GROUND_NOISE_WRAP_M)});
-            float f0 = lmNoiseTex(sp, s0, gdx, gdy).g * lmNoiseTex(sp.yx, s0, gdx.yx, gdy.yx).a;
-            float f1 = lmNoiseTex(sp, 2.0 * s0, gdx, gdy).g
-                     * lmNoiseTex(sp.yx, 2.0 * s0, gdx.yx, gdy.yx).a;
-            float facets = smoothstep(0.45, 0.6, mix(f0, f1, fract(lv))) / 0.0686;
+            float u0 = lmHash(vec3(floor(sp / c0), 3.0));
+            float u1 = lmHash(vec3(floor(sp / (2.0 * c0)), 5.0));
+            float facets = mix(step(0.93, u0), step(0.93, u1), fract(lv)) / 0.07;
             float sparkleShare = 0.85 * (1.0 - smoothstep(1.0, 40.0, footprint));
             glint *= mix(1.0, facets, sparkleShare);
         }

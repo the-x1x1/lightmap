@@ -83,7 +83,7 @@ describe('the grade', () => {
     // The layer: exp(-h / 1200) from the place's ground, averaged between the eye's height and
     // the point's, held to 2.5 times the place's own density.
     for (const src of [GRADE_FRAGMENT_SHADER, GRADE_DAY_FRAGMENT_SHADER]) {
-      expect(src).toContain('float h0 = clamp(u_eyeHeightM - u_hazeBaseM, -1100.0, 20000.0);');
+      expect(src).toContain('float h0 = max(u_eyeHeightM - u_hazeBaseM, -1100.0);');
       expect(src).toContain('1200.0 * (exp(-h1 / 1200.0) - rho0) / (h0 - h1)');
       expect(src).toContain('layer = min(layer, 2.5);');
     }
@@ -99,6 +99,10 @@ describe('the grade', () => {
     expect(layer(2, 800)).toBeGreaterThan(0.7); // up at a ridge from the beach: a little clearer
     expect(layer(2, 800)).toBeLessThan(0.8);
     expect(layer(0, -1000)).toBeLessThan(2.5); // a gorge below the place: hazier, held
+    // From orbit, straight down: thin (an eye clamped at 20 km had averaged the haze over 21 km
+    // and spread it over the whole path, washing whole-Earth views out).
+    expect(layer(300_000, 0) * 300_000).toBeLessThan(1200 * 1.01);
+    expect(layer(50_000, 0) * 50_000).toBeLessThan(1200 * 1.01);
   });
 
   it('gives a closing low deck the CIE overcast profile, brightest overhead', () => {

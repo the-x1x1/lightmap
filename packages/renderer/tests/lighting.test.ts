@@ -263,6 +263,11 @@ describe('lightingFromScene', () => {
     expect(tw.lambert).toBeLessThan(0.16);
     expect(tw.ambient).toBe(1);
     expect(tw.skyLift).toBeCloseTo(3.333, 2);
+    // A moonless night is back at a day's share by -12 deg (no lift), so the Moon's split, which
+    // takes over there, meets it without a jump.
+    expect(globeLightSplit(-0.6, -14, 0).ambient).toBe(0.3);
+    expect(globeLightSplit(-0.6, -9, 0).ambient).toBeGreaterThan(0.3);
+    expect(globeLightSplit(-0.6, -9, 0).ambient).toBeLessThan(1);
     // By day there is no lift: the ambient share only takes up what the relief gives away.
     expect(globeLightSplit(20, 20, 0.5).skyLift).toBe(1);
     // A clear Sun with its disc up keeps the whole beam's relief (a raking sunrise).

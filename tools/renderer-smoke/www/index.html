@@ -1061,6 +1061,45 @@
         await synthShot('synth-golden-ridge', 18.75, 'clear', look(80, 4));
         await synthShot('synth-dusk-ridge', 19.4, 'clear', look(80, 4));
         await synthShot('synth-overcast-ridge', 12.5, 'overcast', look(80, 4));
+        // From the ridge's summit (~817 m) looking west down over the plain and out to sea: the
+        // haze thins with height above the place (u_hazeBaseM, the summit's ground), so the
+        // plain and the sea below sink into it while the sky over the far horizon stays clear.
+        const { syntheticHeight } = await import('/synthetic-terrain.js');
+        const summitPoint = {
+          latitude: beach.point.latitude,
+          longitude:
+            kailua.point.longitude +
+            3500 / (111_320 * Math.cos((kailua.point.latitude * Math.PI) / 180)),
+          elevationM: syntheticHeight(3500, 0),
+        };
+        const summit = { ...beach, point: summitPoint };
+        for (const [name, scenario] of [
+          ['synth-summit-clear', 'clear'],
+          ['synth-summit-partly', 'partly-cloudy'],
+        ]) {
+          controller.apply(
+            buildSceneState({
+              location: summit,
+              utc: localSelectionToUtc({ year: 2026, month: 5, day: 31 }, 16 * 60, summit.timeZone),
+              now: new Date('2026-05-01T00:00:00Z'),
+              camera: { ...defaultCamera(summitPoint, 270), mode: 'viewpoint', pitchDeg: -6 },
+              environment: { ...env, terrainAvailable: true, terrainProviderId: 'synthetic' },
+              scenario,
+              forceScenario: true,
+              weather: { capabilities: OPEN_METEO_CAPABILITIES, frames: [], providerFailed: false },
+              render: DEFAULT_RENDER_SETTINGS,
+              includeLunar: true,
+              realReference: false,
+            }),
+          );
+          await wait(1500);
+          if (!(await settle())) log(name + ': not settled in 45 s');
+          await wait(500);
+          window.__smoke.shot = name;
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+        }
         // SMOKE_DEBUG=water: the map view once more with a material that paints what the globe
         // hands the material - red the water mask, green the height in 10 m bands, blue the
         // slope - to see where the coast's water ends.

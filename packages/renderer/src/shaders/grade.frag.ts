@@ -399,7 +399,8 @@ void main() {
     float visibilityM = 4000.0 * pow(20.0, 1.0 - clamp(u_haze, 0.0, 1.0))
         / (1.0 + 2.0 * max(0.0, u_horizonHaze - u_haze));
     float dh = -dot(rayEC, u_eyeUpEC) * distM;   // how far the path descends, metres
-    float h0 = clamp(u_eyeHeightM - u_hazeBaseM, -1100.0, 20000.0);
+    // Not clamped above: from orbit exp(-h0/H) is ~0 and the average comes out thin, as it is.
+    float h0 = max(u_eyeHeightM - u_hazeBaseM, -1100.0);
     float h1 = max(h0 - dh, -1100.0);
     float rho0 = exp(-h0 / 1200.0);
     float layer = abs(h0 - h1) < 1.0 ? rho0
