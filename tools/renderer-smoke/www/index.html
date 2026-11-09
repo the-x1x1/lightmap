@@ -25,7 +25,7 @@
       }
     </style>
     <script>
-      window.CESIUM_BASE_URL = '/cesium/';
+      window.CESIUM_BASE_URL = '/cesium-build/';
     </script>
     <script type="importmap">
       {
@@ -570,7 +570,7 @@
             ),
           );
         }
-        host.scene.primitives.add(
+        const groundPrimitive = host.scene.primitives.add(
           new Cesium.Primitive({
             geometryInstances: new Cesium.GeometryInstance({
               geometry: new Cesium.RectangleGeometry({
@@ -693,6 +693,165 @@
         await new Promise((r) => {
           window.__takeShot = r;
         });
+        // The ground probe stands 3 m over the pin: out of the way of a viewpoint at the shore.
+        host.scene.primitives.remove(groundPrimitive);
+        // Water probe: the painted sea as the globe draws it. A rectangle of sea at sea level
+        // around the pin takes the same material with the globe's own defines (HAS_WATER_MASK,
+        // ENABLE_VERTEX_LIGHTING) and a fragment shader that does what GlobeFS does with the
+        // material - alpha-blends it over the imagery's sea and lights it by the light's colour
+        // and Cesium's Lambert term - so the shots show the sky in the water: blue at noon,
+        // the glow and the glitter toward a setting Sun, the plain horizon away from it, grey
+        // under an overcast and dark at night.
+        const waterMaterial = new Cesium.Material({
+          fabric: {
+            type: 'LightMapWaterProbe',
+            uniforms: {
+              ...groundMaterialUniforms(Cesium, 1),
+              u_snowlineM: 3000,
+              u_treelineM: 2100,
+            },
+            source:
+              '#define HAS_WATER_MASK\n#define ENABLE_VERTEX_LIGHTING\n' + GROUND_MATERIAL_SOURCE,
+          },
+          translucent: false,
+          minificationFilter: Cesium.TextureMinificationFilter.LINEAR,
+          magnificationFilter: Cesium.TextureMagnificationFilter.LINEAR,
+        });
+        waterMaterial.uniforms[GROUND_NOISE_UNIFORM] = noiseTexture;
+        if (detailTexture) waterMaterial.uniforms[GROUND_DETAIL_UNIFORM] = detailTexture;
+        {
+          const frame = newGroundFrame(Cesium);
+          anchorGroundFrame(
+            Cesium,
+            frame,
+            Cesium.Cartesian3.fromDegrees(kailua.point.longitude, kailua.point.latitude),
+            waterMaterial.uniforms,
+          );
+          host.scene.preRender.addEventListener(() =>
+            updateGroundOffsets(
+              Cesium,
+              frame,
+              host.scene.camera.positionWC,
+              waterMaterial.uniforms,
+            ),
+          );
+        }
+        const waterFS = [
+          'in vec3 v_positionEC;',
+          'in vec3 v_normalEC;',
+          'in vec2 v_st;',
+          'void main()',
+          '{',
+          '    vec3 normalEC = normalize(v_normalEC);',
+          '    czm_materialInput materialInput;',
+          '    materialInput.normalEC = normalEC;',
+          '    materialInput.positionToEyeEC = -v_positionEC;',
+          '    materialInput.st = v_st;',
+          '    materialInput.height = 0.0;',
+          '    materialInput.slope = 0.0;',
+          '    materialInput.aspect = 0.0;',
+          '    materialInput.waterMask = 1.0;',
+          '    czm_material material = czm_getMaterial(materialInput);',
+          '    vec4 imagery = vec4(0.05, 0.10, 0.18, 1.0);',
+          '    vec4 paint = vec4(material.diffuse, material.alpha);',
+          '    vec4 color = paint * vec4(paint.aaa, 1.0) + imagery * (1.0 - paint.a);',
+          '    float diffuseIntensity = clamp(czm_getLambertDiffuse(czm_lightDirectionEC, normalEC) * 0.9 + 0.3, 0.0, 1.0);',
+          '    out_FragColor = vec4(color.rgb * czm_lightColor * diffuseIntensity, 1.0);',
+          '}',
+        ].join('\n');
+        const waterPrimitive = host.scene.primitives.add(
+          new Cesium.Primitive({
+            geometryInstances: new Cesium.GeometryInstance({
+              geometry: new Cesium.RectangleGeometry({
+                rectangle: Cesium.Rectangle.fromDegrees(
+                  kailua.point.longitude - 0.12,
+                  kailua.point.latitude - 0.1,
+                  kailua.point.longitude + 0.12,
+                  kailua.point.latitude + 0.1,
+                ),
+                height: 0.5,
+                granularity: Cesium.Math.toRadians(0.01),
+                vertexFormat: Cesium.MaterialAppearance.MaterialSupport.ALL.vertexFormat,
+              }),
+            }),
+            appearance: new Cesium.MaterialAppearance({
+              material: waterMaterial,
+              materialSupport: Cesium.MaterialAppearance.MaterialSupport.ALL,
+              fragmentShaderSource: waterFS,
+            }),
+          }),
+        );
+        const waterShot = async (name, hour, scenario, headingDeg) => {
+          const sc = scene(hour, scenario, {
+            ...defaultCamera(kailua.point, headingDeg),
+            mode: 'viewpoint',
+            pitchDeg: -3,
+          });
+          controller.apply(sc);
+          // The host feeds its own globe material the sky in the water; the probe's material
+          // takes the same values here.
+          const { seaSky } = lightingFromScene(sc);
+          waterMaterial.uniforms.u_seaSkyAway = new Cesium.Cartesian3(...seaSky.away);
+          waterMaterial.uniforms.u_seaSkyToward = new Cesium.Cartesian3(...seaSky.toward);
+          await wait(1800);
+          window.__smoke.shot = name;
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+        };
+        await waterShot('water-noon', 12.5, 'clear', 290);
+        await waterShot('water-golden-toward', 18.75, 'clear', 290);
+        await waterShot('water-golden-away', 18.75, 'clear', 110);
+        await waterShot('water-overcast', 12.5, 'overcast', 290);
+        await waterShot('water-night', 23, 'clear', 290);
+        // WATER_RAW=1: one more shot of the golden-hour sea in three strips - the light's
+        // colour times the globe's Lambert term, the material's raw output, and the two
+        // multiplied (what the globe shows) - with the grade's haze, tint and saturation off,
+        // for reading pixel values against the material's maths.
+        if (window.__waterRaw) {
+          host.scene.primitives.remove(waterPrimitive);
+          const rawFS = waterFS.replace(
+            'out_FragColor = vec4(color.rgb * czm_lightColor * diffuseIntensity, 1.0);',
+            'out_FragColor = vec4(material.diffuse, 1.0); if (gl_FragCoord.x < 0.33 * czm_viewport.z) out_FragColor = vec4(czm_lightColor * diffuseIntensity, 1.0); if (gl_FragCoord.x > 0.66 * czm_viewport.z) out_FragColor = vec4(material.diffuse * czm_lightColor * diffuseIntensity, 1.0);',
+          );
+          host.scene.primitives.add(
+            new Cesium.Primitive({
+              geometryInstances: new Cesium.GeometryInstance({
+                geometry: new Cesium.RectangleGeometry({
+                  rectangle: Cesium.Rectangle.fromDegrees(
+                    kailua.point.longitude - 0.12,
+                    kailua.point.latitude - 0.1,
+                    kailua.point.longitude + 0.12,
+                    kailua.point.latitude + 0.1,
+                  ),
+                  height: 0.5,
+                  granularity: Cesium.Math.toRadians(0.01),
+                  vertexFormat: Cesium.MaterialAppearance.MaterialSupport.ALL.vertexFormat,
+                }),
+              }),
+              appearance: new Cesium.MaterialAppearance({
+                material: waterMaterial,
+                materialSupport: Cesium.MaterialAppearance.MaterialSupport.ALL,
+                fragmentShaderSource: rawFS,
+              }),
+            }),
+          );
+          const origSetGrade = host.setGrade.bind(host);
+          host.setGrade = (u) =>
+            origSetGrade({
+              ...u,
+              u_horizonHaze: 0,
+              u_haze: 0,
+              u_saturation: 1,
+              u_contrast: 1,
+              u_tint: [1, 1, 1],
+              u_warmth: 0,
+            });
+          await waterShot('water-raw-golden', 18.75, 'clear', 290);
+          host.setGrade = origSetGrade;
+        }
+        host.scene.primitives.remove(waterPrimitive);
+        log('water probe drawn');
         const thumb = await host.captureThumbnail(320);
         window.__smoke.thumbnail = thumb
           ? thumb.slice(0, 40) + '… (' + thumb.length + ' chars)'

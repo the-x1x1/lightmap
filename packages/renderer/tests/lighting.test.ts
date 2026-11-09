@@ -11,6 +11,7 @@ import { OPEN_METEO_CAPABILITIES, type WeatherScenarioId } from '@lightmap/weath
 import {
   STAR_FIELD_FROM_DEG,
   lightingFromScene,
+  seaSkyFor,
   skyGradientFor,
   starFieldVisibility,
   visibilityFromHaze,
@@ -202,6 +203,24 @@ describe('lightingFromScene', () => {
     const clearZ = rgb(skyGradientFor(40, 0, 0.5, 1, 0.1)[0]);
     const hazyZ = rgb(skyGradientFor(40, 0, 0.5, 1, 0.7)[0]);
     expect(hazyZ[2] - hazyZ[0]).toBeLessThan(clearZ[2] - clearZ[0]);
+  });
+
+  it('the sea mirrors the low sky: blue by day, orange toward a setting Sun only, grey under cloud, dark at night', () => {
+    const day = seaSkyFor(45, 0, 0.5, 1);
+    expect(day.away[2]).toBeGreaterThan(day.away[0]); // blue
+    expect(day.away).toEqual(day.toward); // no glow by day
+    for (const v of [...day.away, ...day.toward]) expect(v).toBeLessThanOrEqual(1);
+    const sunset = seaSkyFor(-2, 0.05, 0.9, 1);
+    expect(sunset.toward[0]).toBeGreaterThan(sunset.toward[2]); // the glow, on the Sun's side
+    expect(sunset.toward[0]).toBeGreaterThan(sunset.away[0] + 0.1);
+    expect(sunset.away[2]).toBeGreaterThanOrEqual(sunset.away[0]); // the other side stays cool
+    const overcast = seaSkyFor(45, 0.95, 0.5, 0.85);
+    expect(Math.abs(overcast.away[0] - overcast.away[2])).toBeLessThan(0.08); // a cool grey
+    const night = seaSkyFor(-25, 0, 0.2, 1);
+    expect(Math.max(...night.away)).toBeLessThan(0.05);
+    expect(night.away).toEqual(night.toward);
+    // The scene carries it, in step with the gradient's horizon.
+    expect(lightingFromScene(scene(12, 'clear')).seaSky.away[2]).toBeGreaterThan(0.5);
   });
 
   it('the dome Mie coefficient follows haze only behind the physicalSkyDome flag', () => {

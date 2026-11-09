@@ -285,6 +285,8 @@ export class SceneController {
       this.lastGroundKey = groundKey;
       this.host.setGroundTexture(ground);
     }
+    // The sky in the water moves with the light, every tick.
+    if (ground) this.host.setSeaSky?.(lighting.seaSky);
 
     const viewpoint = scene.camera.mode === 'viewpoint';
     const celestialKey = `${viewpoint}|${lighting.starsVisible}|${scene.lunar?.isAboveHorizon ?? false}`;

@@ -202,8 +202,28 @@ Where the terrain tiles carry a water mask (Cesium World Terrain does; a provide
 renders water as ground), the globe shades sea and lakes with Cesium's water effect: a specular
 glint from the scene light, so a low Sun over the sea glitters from the right direction.
 **Claim:** where the glint falls, and that it goes with the Sun. **Caveat:** a ripple normal map
-only — no swell or wave geometry, no wet-surface effect, no reflection of the sky's colour; the
-water mask is the provider's, not a tide model.
+only — no swell or wave geometry, no wet-surface effect; the water mask is the provider's, not a
+tide model.
+
+**The sky in the water.** The painted water mirrors the sky (`shaders/ground.frag.ts`, the water
+branch): the share reflected follows Fresnel's rule for water — 2 % looking straight down, rising
+toward a grazing view to about three quarters (ripples scatter a grazing reflection, so never a
+mirror's whole) — and the rest is the water's own colour. What it mirrors is the low sky as the
+lighting has it (`seaSkyFor`: two thirds the gradient's horizon stop, a third the mid-sky, in
+linear RGB), on the side away from the Sun the plain horizon and on the Sun's side the sunrise or
+sunset glow when there is one, blended by the view's bearing from the light's; under it the
+Sun's glitter path — a lobe narrow across the Sun's bearing (σ ≈ 3.5°) and long toward the viewer
+(σ ≈ 8°), with the Sun's aureole mirrored as a wide soft lobe around it, in the light's colour and
+strongest at a low Sun. **Claim:** the sea goes blue under a blue sky, grey under an overcast,
+dark at night, and warm toward a setting Sun with the glitter under it, and the glitter sits on
+the Sun's bearing. **Caveat:** the globe lights every fragment as ground (the light's colour
+times Cesium's Lambert term), which is wrong for a reflection, so the material divides that term
+out of the reflected part (`lmUnlit`) — floored, so under a faint light (the Moon's) the
+reflection comes out dimmer than the sky, never brighter; a reflection in a ridge's shadow is
+still darkened by the shadow map as ground would be; the glitter is a smooth lobe over a flat
+surface, not sparkle; the sky mirrored is the gradient's colour at the horizon, not the dome
+pixel by pixel, so cloud shapes and the Sun's disc are not in the water. The smoke harness
+draws the sea on a probe with the globe's own defines and lighting (`water-*` shots).
 
 **The coastline** is that mask read through a small blur and sharpened again (`water-mask.ts`):
 finer tiles reuse a coarse ancestor's mask magnified, and read directly its texels drew every

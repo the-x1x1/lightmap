@@ -37,6 +37,9 @@ export function groundMaterialUniforms(C: C, coarseBasemap: number): Record<stri
     [GROUND_NOISE_UNIFORM]: C.Material.DefaultImageId,
     u_detailOn: 0,
     u_coarseBasemap: coarseBasemap,
+    // The sky in the water: a plain daytime horizon until the lighting sets it (`setSeaSky`).
+    u_seaSkyAway: new C.Cartesian3(0.5, 0.67, 0.83),
+    u_seaSkyToward: new C.Cartesian3(0.5, 0.67, 0.83),
     u_eastWC: new C.Cartesian3(1, 0, 0),
     u_northWC: new C.Cartesian3(0, 1, 0),
     u_upWC: new C.Cartesian3(0, 0, 1),

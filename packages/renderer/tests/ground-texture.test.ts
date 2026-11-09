@@ -315,6 +315,13 @@ describe('ground material source', () => {
     // Two tile scales, each gated by its own size on screen, so no scale pops in with distance.
     expect(GROUND_MATERIAL_SOURCE.match(/lmDetailTier\(q/g)?.length).toBe(2);
     expect(GROUND_MATERIAL_SOURCE).toContain('u_coarseBasemap');
+    // The sky in the water: both sides declared, blended by the view's bearing from the light,
+    // and divided out of the globe's Lambert lighting (a reflection is the sky's own light).
+    expect(GROUND_MATERIAL_SOURCE).toContain('uniform vec3 u_seaSkyAway;');
+    expect(GROUND_MATERIAL_SOURCE).toContain('uniform vec3 u_seaSkyToward;');
+    expect(GROUND_MATERIAL_SOURCE).toContain('mix(u_seaSkyAway, u_seaSkyToward, glowSide)');
+    expect(GROUND_MATERIAL_SOURCE).toContain('#ifdef ENABLE_VERTEX_LIGHTING');
+    expect(GROUND_MATERIAL_SOURCE).toContain('lmUnlit(reflected, n)');
     // Each tier has its own camera offset (a scaled fine coordinate would jump every 2.5 m).
     for (const t of GROUND_DETAIL_TIERS) {
       expect(GROUND_MATERIAL_SOURCE).toContain(`uniform vec3 ${t.offsetUniform};`);

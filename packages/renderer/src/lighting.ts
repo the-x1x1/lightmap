@@ -90,6 +90,19 @@ export interface LightingParameters {
   shadow: { azimuthDeg: number; lengthPerMetre: number | null };
   /** CSS sky gradient stops (top → horizon) for the overlay and preview chrome. */
   skyGradient: [string, string, string];
+  /** The sky a water surface reflects (`seaSkyFor`): linear RGB, away from the Sun and toward it. */
+  seaSky: SeaSky;
+}
+
+/**
+ * What a flat water surface mirrors: the low sky, as linear RGB 0–1, on the side away from the
+ * Sun (the plain horizon) and on the Sun's side (the sunrise/sunset glow when there is one;
+ * the same colour by day and at night). The ground material blends between the two by the
+ * view's bearing from the light's.
+ */
+export interface SeaSky {
+  away: [number, number, number];
+  toward: [number, number, number];
 }
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
@@ -188,6 +201,7 @@ export function lightingFromScene(s: SceneState): LightingParameters {
   const fogDensity = 2 / visibilityM;
 
   const skyGradient = skyGradientFor(el, p.cloudOpacity, atmosphere.warmth, p.skyLuminance, p.haze);
+  const seaSky = seaSkyFor(el, p.cloudOpacity, atmosphere.warmth, p.skyLuminance, p.haze);
 
   return {
     sunDirectionEcef: sunLightDirectionEcef(
@@ -247,6 +261,7 @@ export function lightingFromScene(s: SceneState): LightingParameters {
     },
     shadow: shadowOnGround(solar.azimuthDegrees, el),
     skyGradient,
+    seaSky,
   };
 }
 
@@ -268,20 +283,30 @@ function clearSkyStopsCached(elevationDeg: number, haze: number): SkyStops | nul
   return v;
 }
 
+/** The sky's colours as numbers, sRGB 0–255: the gradient's three stops, and the horizon with and without the Sun's glow. */
+export interface SkyColours {
+  zenith: Rgb;
+  mid: Rgb;
+  /** Just above the horizon, with the sunrise/sunset glow blended in (the gradient's bottom stop). */
+  horizon: Rgb;
+  /** The same stop without the glow: the horizon away from the Sun. */
+  horizonAway: Rgb;
+}
+
 /**
- * Three CSS colours: zenith, mid-sky, horizon. The clear-sky colours come from the
+ * The sky's colours: zenith, mid-sky, horizon. The clear-sky colours come from the
  * single-scattering model (`sky-model.ts`) while the Sun is up — the blue overhead, the pale
  * horizon, the orange glow on the Sun's side as it sets, haze paling all of it — and from the
  * long-standing hand-set twilight/night colours once it is down, where single scattering goes
  * dark but a real sky does not. Cloud greys the result by opacity; `skyLuminance` scales it.
  */
-export function skyGradientFor(
+export function skyColoursFor(
   elevationDeg: number,
   cloudOpacity: number,
   warmth: number,
   skyLuminance: number,
   haze = 0.1,
-): [string, string, string] {
+): SkyColours {
   const day = smooth(-6, 8, elevationDeg);
   const night = 1 - smooth(-18, -6, elevationDeg);
   const horizonGlow = smooth(-8, -1, elevationDeg) * (1 - smooth(1, 12, elevationDeg));
@@ -317,17 +342,61 @@ export function skyGradientFor(
   };
   const glow: Rgb =
     warmth > 0.55 ? (physical ? brighten(physical.glow) : [255, 150, 70]) : [120, 140, 210];
-  const build = (clear: Rgb, nightC: Rgb, glowAmount: number): string => {
+  const build = (clear: Rgb, nightC: Rgb, glowAmount: number): Rgb => {
     let c = mix(clear, overcast, cloudOpacity);
     c = mix(c, nightC, night);
     c = mix(c, nightC, (1 - day) * (1 - night) * 0.5);
     c = mix(c, glow, glowAmount * (1 - cloudOpacity * 0.7));
     const l = 1 - (1 - lum) * (1 - night);
-    return `rgb(${Math.round(c[0] * l)}, ${Math.round(c[1] * l)}, ${Math.round(c[2] * l)})`;
+    return [c[0] * l, c[1] * l, c[2] * l];
   };
-  return [
-    build(zenithClear, nightZenith, 0),
-    build(midClear, mix(nightZenith, nightHorizon, 0.5), horizonGlow * 0.3),
-    build(horizonClear, nightHorizon, horizonGlow),
+  return {
+    zenith: build(zenithClear, nightZenith, 0),
+    mid: build(midClear, mix(nightZenith, nightHorizon, 0.5), horizonGlow * 0.3),
+    horizon: build(horizonClear, nightHorizon, horizonGlow),
+    horizonAway: build(horizonClear, nightHorizon, 0),
+  };
+}
+
+/** Three CSS colours (zenith, mid-sky, horizon) from `skyColoursFor`, for the overlay and preview chrome. */
+export function skyGradientFor(
+  elevationDeg: number,
+  cloudOpacity: number,
+  warmth: number,
+  skyLuminance: number,
+  haze = 0.1,
+): [string, string, string] {
+  const c = skyColoursFor(elevationDeg, cloudOpacity, warmth, skyLuminance, haze);
+  const css = (v: Rgb) => `rgb(${Math.round(v[0])}, ${Math.round(v[1])}, ${Math.round(v[2])})`;
+  return [css(c.zenith), css(c.mid), css(c.horizon)];
+}
+
+/** sRGB 0–255 to linear 0–1 (the ground material works in the globe's linear light). */
+function srgbToLinear(c: Rgb): [number, number, number] {
+  const lin = (v: number) => {
+    const x = Math.max(0, Math.min(1, v / 255));
+    return Math.round((x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4) * 1000) / 1000;
+  };
+  return [lin(c[0]), lin(c[1]), lin(c[2])];
+}
+
+/**
+ * The sky a flat water surface reflects (`SeaSky`): a view across the water toward the horizon
+ * mirrors the low sky, so each side is two thirds the horizon stop and a third the mid-sky —
+ * the glow's side carrying the glow. Linear RGB, as the ground material wants it.
+ */
+export function seaSkyFor(
+  elevationDeg: number,
+  cloudOpacity: number,
+  warmth: number,
+  skyLuminance: number,
+  haze = 0.1,
+): SeaSky {
+  const c = skyColoursFor(elevationDeg, cloudOpacity, warmth, skyLuminance, haze);
+  const low = (h: Rgb): Rgb => [
+    h[0] * 0.67 + c.mid[0] * 0.33,
+    h[1] * 0.67 + c.mid[1] * 0.33,
+    h[2] * 0.67 + c.mid[2] * 0.33,
   ];
+  return { away: srgbToLinear(low(c.horizonAway)), toward: srgbToLinear(low(c.horizon)) };
 }

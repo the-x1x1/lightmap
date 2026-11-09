@@ -74,6 +74,7 @@ function fakeHost() {
     setOverlay: rec('setOverlay'),
     setQuality: rec('setQuality'),
     setGroundTexture: rec('setGroundTexture'),
+    setSeaSky: rec('setSeaSky'),
     setIonToken: rec('setIonToken'),
     setTerrain: async (...a) => {
       rec('setTerrain')(...a);
@@ -189,6 +190,11 @@ describe('SceneController', () => {
     c.apply(scene({ render: { ...DEFAULT_RENDER_SETTINGS, groundTexture: false } }));
     expect(calls['setGroundTexture']).toHaveLength(5);
     expect(calls['setGroundTexture']![4]![0]).toBeNull();
+    // The sky in the water goes with every tick the paint is on, and not once it is off.
+    expect(calls['setSeaSky']).toHaveLength(5);
+    const sea = calls['setSeaSky']![0]![0] as { away: number[]; toward: number[] };
+    expect(sea.away).toHaveLength(3);
+    expect(sea.away[2]).toBeGreaterThan(sea.away[0]);
   });
 
   it('takes sea level from the geoid when the place has no known height above sea level', async () => {

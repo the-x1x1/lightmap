@@ -4,6 +4,21 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **The sky in the water**: the painted sea and lakes now mirror the sky. Looking out across the
+  water takes the colour of the low sky by Fresnel's rule (2 % looking straight down, three
+  quarters at a grazing view, ripples keeping it from a mirror's whole): a blue sea under a blue
+  sky, a grey one under an overcast, dark water at night, and toward a low Sun the sunrise or
+  sunset glow on the water with the Sun's glitter path under it (a lobe narrow across the Sun's
+  bearing and long toward the viewer, with the Sun's aureole mirrored around it, in the light's
+  colour). The globe lights every fragment as ground; a reflection is the sky's own light, so the
+  material divides the globe's Lambert term out of it (`lmUnlit`), floored so a reflection under
+  a faint light comes out dimmer than the sky, never brighter. The lighting hands the renderer
+  the two colours each tick (`seaSkyFor`: the gradient's horizon away from the Sun and on its
+  side, as linear RGB; `SceneHost.setSeaSky`). The smoke harness draws the sea on a probe with
+  the globe's own defines and lighting (five shots: noon, toward and away from a setting Sun,
+  overcast, night; `WATER_RAW=1` adds a strip shot for reading the material's maths).
+- The smoke harness's `CESIUM_BASE_URL` matches where the build is linked, so Workers and Assets
+  load (they had 404'd, which read as a ground-material failure and a black shadow probe).
 - **No GPU backlog on slow machines**: the render loop now waits while two drawn frames are still
   on the GPU (WebGL2 fences). Where the browser did not hold its frames back - headless Chromium
   on SwiftShader, which is what CI's end-to-end tests run on - a quarter-second glide queued a

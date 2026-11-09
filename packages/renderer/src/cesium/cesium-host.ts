@@ -92,6 +92,7 @@ import type {
   HostGroundTexture,
   HostLight,
   HostMoonDisc,
+  HostSeaSky,
   HostSunGlare,
   HostPlanet,
   HostOrbitCamera,
@@ -231,6 +232,8 @@ export class CesiumSceneHost implements SceneHost {
   private readonly pacer: FramePacer;
   private readonly gradeUniforms: Record<string, unknown>;
   private groundMaterial: Cesium.Material | null = null;
+  /** The sky the water reflects (`setSeaSky`), kept for a material made later. */
+  private seaSky: HostSeaSky | null = null;
   private buildings: Cesium.Cesium3DTileset | null = null;
   /** The free OpenStreetMap buildings (vector tiles), loaded around the camera. */
   private osmBuildings: OsmBuildingsLayer | null = null;
@@ -791,6 +794,37 @@ export class CesiumSceneHost implements SceneHost {
     this.applyImagerySeason();
   }
 
+  setSeaSky(sky: HostSeaSky): void {
+    const prev = this.seaSky;
+    this.seaSky = sky;
+    if (!this.groundMaterial) return;
+    // Unchanged to three decimals (the lighting rounds them): no upload, no render.
+    if (
+      prev &&
+      prev.away.every((v, i) => v === sky.away[i]) &&
+      prev.toward.every((v, i) => v === sky.toward[i])
+    )
+      return;
+    this.applySeaSky(sky);
+    this.scene.requestRender();
+  }
+
+  private applySeaSky(sky: HostSeaSky): void {
+    if (!this.groundMaterial) return;
+    const C = this.C;
+    const u = this.groundMaterial.uniforms as Record<string, unknown>;
+    const set = (name: string, v: [number, number, number]) => {
+      const cur = u[name] as Cesium.Cartesian3 | undefined;
+      if (cur && typeof cur === 'object' && 'x' in cur) {
+        cur.x = v[0];
+        cur.y = v[1];
+        cur.z = v[2];
+      } else u[name] = new C.Cartesian3(v[0], v[1], v[2]);
+    };
+    set('u_seaSkyAway', sky.away);
+    set('u_seaSkyToward', sky.toward);
+  }
+
   setGroundTexture(g: HostGroundTexture | null): void {
     const C = this.C;
     const globe = this.scene.globe as Cesium.Globe | undefined;
@@ -836,6 +870,7 @@ export class CesiumSceneHost implements SceneHost {
       this.applyCoverMap();
       this.applyRoadMap();
       this.applyDetailAtlas();
+      if (this.seaSky) this.applySeaSky(this.seaSky);
     }
     const u = this.groundMaterial.uniforms as Record<string, number>;
     u['u_snowlineM'] = g.snowlineM;

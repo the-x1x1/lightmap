@@ -47,6 +47,10 @@ page.on('console', (m) => {
   if (!t.startsWith('[smoke]')) consoleLines.push(`${m.type()}: ${t.slice(0, 300)}`);
 });
 page.on('pageerror', (e) => consoleLines.push('pageerror: ' + e.message));
+if (process.env.WATER_RAW)
+  await page.addInitScript(() => {
+    window.__waterRaw = true;
+  });
 await page.goto('http://127.0.0.1:8765/index.html', { waitUntil: 'load', timeout: 120000 });
 const shots = {};
 const start = Date.now();

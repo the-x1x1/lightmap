@@ -184,6 +184,8 @@ uniform sampler2D u_noise;
 uniform vec3 u_eastWC;
 uniform vec3 u_northWC;
 uniform vec3 u_upWC;
+uniform vec3 u_seaSkyAway;
+uniform vec3 u_seaSkyToward;
 uniform vec3 u_camMod;
 uniform vec3 u_detailOffset;
 uniform vec3 u_detailOffset1;
@@ -200,6 +202,23 @@ vec3 lmSeasonCanopy(vec3 summer, float crownValue)
     vec3 c = mix(summer, fall * (0.85 + 0.3 * fract(h * 5.3)), u_autumn);
     c = mix(vec3(0.34, 0.30, 0.26), c, u_leafOn);
     return mix(c, summer, step(0.66, fract(crownValue * 3.1)));
+}
+
+// What the material must put out for the globe to show the target after its own lighting. The
+// globe multiplies every fragment by the light's colour and a Lambert term (Cesium's defaults,
+// which the host keeps: 0.9 x the cosine + 0.3), right for ground but not for a reflection,
+// which is the sky's own light: so the reflection is divided out of it here. The factor is
+// floored, so a reflection under a faint light (the Moon's) comes out dimmer, never brighter,
+// than the sky it mirrors. On the unlit night chart (no lighting) it takes the chart's dimming.
+vec3 lmUnlit(vec3 target, vec3 normalEC)
+{
+#ifdef ENABLE_VERTEX_LIGHTING
+    float lambert = clamp(dot(normalEC, czm_lightDirectionEC), 0.0, 1.0);
+    float intensity = clamp(lambert * 0.9 + 0.3, 0.0, 1.0);
+    return target / max(czm_lightColor * intensity, vec3(0.01));
+#else
+    return target * u_brightness;
+#endif
 }
 
 // Hash without axis correlation (Hoskins' hash13): one value per cell.
@@ -633,12 +652,41 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
             sea = mix(sea, shoal * (0.9 + 0.2 * patches), shallow);
         }
         sea = mix(sea, vec3(0.10, 0.17, 0.24), smoothstep(2000.0, 40000.0, dist));
-        material.diffuse = mix(material.diffuse, sea * u_brightness, water);
-        // Water seen at a grazing angle is a mirror (Fresnel): toward the horizon the paint
-        // gives way to the globe's own water shading - the sky's light and the Sun's glint.
-        float cosView = clamp(dot(materialInput.normalEC, normalize(materialInput.positionToEyeEC)), 0.0, 1.0);
-        float fresnel = pow(1.0 - cosView, 3.0);
-        alpha = mix(alpha, 0.8 * u_strength * (1.0 - 0.8 * fresnel), water);
+        // The sky in the water. A flat sea is a mirror of the sky: little of it looking straight
+        // down (2 %, Fresnel for water), most of it looking out toward the horizon - a view
+        // across the water takes the colour of the low sky, the sunset's glow on the Sun's side
+        // and the plain horizon elsewhere, the grey of an overcast, the dark of night. Ripples
+        // scatter a grazing reflection, so it rises to three quarters, not to a mirror's whole.
+        vec3 n = materialInput.normalEC;
+        vec3 toEye = normalize(materialInput.positionToEyeEC);
+        float cosView = clamp(dot(n, toEye), 0.0, 1.0);
+        float grazing = pow(1.0 - cosView, 5.0);
+        float reflectance = 0.02 + 0.78 * grazing;
+        // Which way the view looks around the horizon, against the light's bearing.
+        vec3 lookH = -toEye - n * dot(-toEye, n);
+        vec3 lightH = czm_lightDirectionEC - n * dot(czm_lightDirectionEC, n);
+        float towardLight = dot(lookH, lightH) / max(length(lookH) * length(lightH), 1e-4);
+        float glowSide = clamp(0.5 + 0.5 * towardLight, 0.0, 1.0);
+        glowSide *= glowSide;
+        vec3 sky = mix(u_seaSkyAway, u_seaSkyToward, glowSide);
+        // The Sun's own image on the ripples: the glitter path, a lobe about the mirror
+        // direction that is narrow across the Sun's bearing and long down toward the viewer
+        // (each ripple's facet throws the Sun somewhere along it), in the light's colour, and
+        // strongest at a low Sun when a grazing reflection is strong.
+        float dAz = acos(clamp(towardLight, -1.0, 1.0));
+        float dEl = asin(clamp(dot(toEye, n), -1.0, 1.0))
+                  - asin(clamp(dot(czm_lightDirectionEC, n), -1.0, 1.0));
+        float glint = exp(-dAz * dAz / 0.0036 - dEl * dEl / 0.02) * (0.2 + 0.8 * grazing);
+        // The Sun's aureole on the water too: the bright haze around a low Sun (forward
+        // scattering, which the sky stops keep clear of) mirrored as a wide, soft lobe.
+        float aureole = exp(-dAz * dAz / 0.12 - dEl * dEl / 0.12) * grazing * 0.5;
+        glint += aureole;
+        vec3 reflected = sky * reflectance + czm_lightColor * glint * 1.2;
+        vec3 body = sea * u_brightness * (1.0 - reflectance);
+        material.diffuse = mix(material.diffuse, body + lmUnlit(reflected, n), water);
+        // The paint carries the sky now; a little of the globe's own water shading (its wave
+        // highlight and glint) still shows through.
+        alpha = mix(alpha, 0.85 * u_strength, water);
     }
 #endif
     // From orbit the bundled basemap is the better picture of the Earth: the paint fades out

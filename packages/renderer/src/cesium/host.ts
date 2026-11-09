@@ -173,6 +173,12 @@ export interface HostGroundTexture {
   snowCover?: number;
 }
 
+/** What the water mirrors (`lighting.ts` `SeaSky`): linear RGB 0–1 away from the Sun and toward it. */
+export interface HostSeaSky {
+  away: [number, number, number];
+  toward: [number, number, number];
+}
+
 export interface HostQuality {
   terrainScreenSpaceError: number;
   resolutionScale: number;
@@ -240,6 +246,11 @@ export interface SceneHost {
   setQuality(q: HostQuality): void;
   /** Paint (or clear) the procedural ground texture over the basemap. */
   setGroundTexture(g: HostGroundTexture | null): void;
+  /**
+   * The sky the painted water reflects (`SeaSky`, linear RGB), every tick: the sea takes the
+   * horizon's colour on the side away from the Sun and the glow's on its side.
+   */
+  setSeaSky?(sky: HostSeaSky): void;
   /** The public ion token once capabilities arrive (ion terrain, imagery and buildings use it). */
   setIonToken(token: string | undefined): void;
   setTerrain(t: TerrainDescriptor): Promise<void>;
