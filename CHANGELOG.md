@@ -26,7 +26,7 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   distance, merging into a smooth band far out, with the path's average brightness unchanged.
 - **The blue-hour landscape is no longer black**: once the Sun's beam has gone the globe gives
   level ground the whole of the light (it is all sky light), not a day's 0.3 share — the dusk
-  plain had sat ~4.9 stops under the sky, where sky-lit ground sits ~2.3 under it; now ~3.2.
+  plain had sat 5.0 stops under the sky, where sky-lit ground sits ~2.3 under it; now 3.1.
   Buildings, trees and the map's night chart follow.
 - **Haze thins with height**: aerial perspective averages the haze's density along each ray,
   falling with height above the place's ground (1.2 km scale height), so from a summit far peaks

@@ -168,9 +168,9 @@ left under a full overcast) and as the Sun's beam goes, to a sixth of a clear da
 while the beam is there the ambient share takes up exactly what level ground loses, so level
 ground is as bright as before (the exposure was set against it) and only the relief changes.
 Once the beam has gone every bit of the light is sky light, and level ground takes the whole of it
-rather than a day's 0.3 share: on the smoke harness's synthetic plain at Sun −2.4° the ground sat
-4.9 stops under the sky, where sky-lit ground of albedo 0.2 sits about 2.3 under it (the overcast
-noon shot measures 2.3); the lift brings it about 1.7 stops up, short of the full physical ratio
+rather than a day's 0.3 share: on the smoke harness's synthetic plain at Sun −4° the ground sat
+5.0 stops under the sky, where sky-lit ground of albedo 0.2 sits about 2.3 under it (the overcast
+noon shot measures 2.4); with the lift it sits 3.1 under it, short of the full physical ratio
 because the twilight exposure was set by eye against the old split. Buildings and trees lift their
 sky terms with it (`skyLift`), and the map's night chart starts from the globe's own share at the
 switch. A
