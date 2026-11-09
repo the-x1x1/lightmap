@@ -83,6 +83,9 @@ export interface HostGradeUniforms {
    * lets the Milky Way out only over a sky that is really dark.
    */
   u_atmosphereDark: number;
+  /** The sky at the horizon away from the Sun and on its side (`horizonSkyFor`): what distant ground hazes toward. */
+  u_hazeAway: [number, number, number];
+  u_hazeToward: [number, number, number];
 }
 
 export interface HostViewpointCamera {
@@ -173,7 +176,7 @@ export interface HostGroundTexture {
   snowCover?: number;
 }
 
-/** What the water mirrors (`lighting.ts` `SeaSky`): linear RGB 0–1 away from the Sun and toward it. */
+/** What the water mirrors (`lighting.ts` `SeaSky`): RGB 0–1 as drawn, away from the Sun and toward it. */
 export interface HostSeaSky {
   away: [number, number, number];
   toward: [number, number, number];

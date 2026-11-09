@@ -11,6 +11,7 @@ import { OPEN_METEO_CAPABILITIES, type WeatherScenarioId } from '@lightmap/weath
 import {
   STAR_FIELD_FROM_DEG,
   lightingFromScene,
+  horizonSkyFor,
   seaSkyFor,
   skyGradientFor,
   starFieldVisibility,
@@ -217,10 +218,18 @@ describe('lightingFromScene', () => {
     const overcast = seaSkyFor(45, 0.95, 0.5, 0.85);
     expect(Math.abs(overcast.away[0] - overcast.away[2])).toBeLessThan(0.08); // a cool grey
     const night = seaSkyFor(-25, 0, 0.2, 1);
-    expect(Math.max(...night.away)).toBeLessThan(0.05);
+    expect(Math.max(...night.away)).toBeLessThan(0.2); // the night horizon's deep navy
+    expect(night.away[2]).toBeLessThan(day.away[2] / 3);
     expect(night.away).toEqual(night.toward);
     // The scene carries it, in step with the gradient's horizon.
     expect(lightingFromScene(scene(12, 'clear')).seaSky.away[2]).toBeGreaterThan(0.5);
+    // The haze colour is the horizon stop itself, as the gradient paints it, on both sides.
+    const rgb = (s: string) => s.match(/\d+/g)!.map(Number);
+    const h = horizonSkyFor(-2, 0.05, 0.9, 1);
+    const [, , horizonCss] = skyGradientFor(-2, 0.05, 0.9, 1);
+    h.toward.forEach((v, i) => expect(v * 255).toBeCloseTo(rgb(horizonCss)[i]!, -0.5)); // within a count
+    expect(h.away[0]).toBeLessThan(h.toward[0]);
+    expect(lightingFromScene(scene(12, 'clear')).horizonSky.away[2]).toBeGreaterThan(0.8);
   });
 
   it('the dome Mie coefficient follows haze only behind the physicalSkyDome flag', () => {

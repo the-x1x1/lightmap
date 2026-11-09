@@ -546,6 +546,8 @@ export class CesiumSceneHost implements SceneHost {
       u_time: 0,
       u_sunScreen: new C.Cartesian2(-1, -1),
       u_sunVisible: 0,
+      u_hazeAway: new C.Cartesian3(0.72, 0.78, 0.86),
+      u_hazeToward: new C.Cartesian3(0.72, 0.78, 0.86),
       u_starField: 0,
       u_atmosphereDark: 0,
       u_sunDirEC: new C.Cartesian3(0, 0, -1),
@@ -1116,6 +1118,15 @@ export class CesiumSceneHost implements SceneHost {
     (g['u_sunScreen'] as Cesium.Cartesian2).x = u.u_sunScreen[0];
     (g['u_sunScreen'] as Cesium.Cartesian2).y = u.u_sunScreen[1];
     g['u_sunVisible'] = u.u_sunVisible;
+    for (const [name, v] of [
+      ['u_hazeAway', u.u_hazeAway],
+      ['u_hazeToward', u.u_hazeToward],
+    ] as const) {
+      const c = g[name] as Cesium.Cartesian3;
+      c.x = v[0];
+      c.y = v[1];
+      c.z = v[2];
+    }
     // PostProcessStage copies uniform values on assignment; write them through.
     const target = this.gradeTarget;
     // Function uniforms (evaluated per frame) become read-only properties once the stage holds

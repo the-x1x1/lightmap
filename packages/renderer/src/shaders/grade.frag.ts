@@ -41,6 +41,8 @@ uniform vec2  u_sunScreen;      // sun position in 0..1 screen space (may be off
 uniform float u_sunVisible;     // 1 when the sun is above the horizon and not blocked by cloud
 uniform float u_starField;      // 1 while the star field is drawn (the host's skybox)
 uniform float u_atmosphereDark; // 1 when the atmosphere is dark of itself (no held light, no Moon)
+uniform vec3 u_hazeAway;        // the sky at the horizon away from the Sun (what distant ground hazes toward)
+uniform vec3 u_hazeToward;      // the same on the Sun's side (the glow at a low Sun)
 // The naked-eye planets (Mercury, Venus, Mars, Jupiter, Saturn): screen xy (0..1), the point's
 // peak brightness (0: not drawn) and its Gaussian radius in CSS pixels (planet-points.ts).
 uniform vec4 u_planet0;
@@ -388,9 +390,15 @@ void main() {
     float dh = -dot(rayEC, u_eyeUpEC) * distM;   // how far the path descends, metres
     float layer = abs(dh) < 1.0 ? 1.0 : 1000.0 * (1.0 - exp(-abs(dh) / 1000.0)) / abs(dh);
     float dist = 1.0 - exp(-3.0 * distM * layer / visibilityM);
-    vec3 hazeCol = mix(vec3(0.72, 0.78, 0.86), vec3(0.6, 0.62, 0.66), u_cloudOpacity);
-    hazeCol = mix(hazeCol, hazeCol * u_tint, 0.5 * (1.0 - u_cloudOpacity));
-    hazeCol = mix(hazeCol, vec3(0.05, 0.06, 0.1), u_nightFactor);
+    // Distant ground fades toward the sky at the horizon behind it: the sky gradient's own
+    // horizon colour (cloud greys it, night darkens it, haze pales it), the glow's colour on
+    // the Sun's side at a low Sun and the plain horizon away from it, by the ray's bearing.
+    vec3 rayH = rayEC - u_eyeUpEC * dot(rayEC, u_eyeUpEC);
+    vec3 sunH = u_sunDirEC - u_eyeUpEC * dot(u_sunDirEC, u_eyeUpEC);
+    float towardSun = dot(rayH, sunH) / max(length(rayH) * length(sunH), 1e-4);
+    float glowSide = clamp(0.5 + 0.5 * towardSun, 0.0, 1.0);
+    glowSide *= glowSide;
+    vec3 hazeCol = mix(u_hazeAway, u_hazeToward, glowSide);
     color = mix(color, hazeCol, clamp(dist * 0.85, 0.0, 0.85));
   }
 
@@ -451,6 +459,8 @@ export const GRADE_UNIFORM_NAMES = [
   'u_eyeHeightM',
   'u_starField',
   'u_atmosphereDark',
+  'u_hazeAway',
+  'u_hazeToward',
   'u_planet0',
   'u_planet1',
   'u_planet2',

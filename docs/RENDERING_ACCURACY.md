@@ -138,8 +138,11 @@ and never by taste: (1) **twilight** — the dome collapses within a degree of t
 the atmosphere light is clamped to a grazing −0.6° while the Sun is between −0.6° and −18°, and the
 grade shader restores the real darkening (`nightFactor`) and the deep blue of civil twilight
 (`blueHour` term, −6°…0°, warm glow preserved where the Sun set); (2) **aerial perspective** — far
-ground is lifted toward the sky colour by depth, more strongly at low Sun (`horizonHaze`), tinted
-by the light's colour. The light direction and terrain shading are untouched by either. Verified in
+ground is lifted toward the sky at the horizon behind it by depth, more strongly at low Sun
+(`horizonHaze`): the sky gradient's own horizon colour (`horizonSkyFor` — cloud greys it, night
+darkens it, haze pales it), the glow's colour on the Sun's side of the view at a low Sun and the
+plain horizon on the other, by each ray's bearing from the Sun's (a fixed pale blue half-tinted by
+the light's colour before, which greyed a sunset's far ridges where the sky behind them was warm). The light direction and terrain shading are untouched by either. Verified in
 `tools/renderer-smoke` (contact sheet `docs/media/renderer-smoke-2026-09-24c.png`).
 
 **Night sky.** The grade's twilight treatment (darkening and cooling the dome while Cesium still

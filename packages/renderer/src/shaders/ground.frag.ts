@@ -656,12 +656,12 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         // down (2 %, Fresnel for water), most of it looking out toward the horizon - a view
         // across the water takes the colour of the low sky, the sunset's glow on the Sun's side
         // and the plain horizon elsewhere, the grey of an overcast, the dark of night. Ripples
-        // scatter a grazing reflection, so it rises to three quarters, not to a mirror's whole.
+        // scatter a grazing reflection, so it rises to seven tenths, not to a mirror's whole.
         vec3 n = materialInput.normalEC;
         vec3 toEye = normalize(materialInput.positionToEyeEC);
         float cosView = clamp(dot(n, toEye), 0.0, 1.0);
         float grazing = pow(1.0 - cosView, 5.0);
-        float reflectance = 0.02 + 0.78 * grazing;
+        float reflectance = 0.02 + 0.68 * grazing;
         // Which way the view looks around the horizon, against the light's bearing.
         vec3 lookH = -toEye - n * dot(-toEye, n);
         vec3 lightH = czm_lightDirectionEC - n * dot(czm_lightDirectionEC, n);

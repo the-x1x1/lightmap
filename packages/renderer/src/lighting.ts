@@ -90,15 +90,16 @@ export interface LightingParameters {
   shadow: { azimuthDeg: number; lengthPerMetre: number | null };
   /** CSS sky gradient stops (top → horizon) for the overlay and preview chrome. */
   skyGradient: [string, string, string];
-  /** The sky a water surface reflects (`seaSkyFor`): linear RGB, away from the Sun and toward it. */
+  /** The sky a water surface reflects (`seaSkyFor`), away from the Sun and toward it. */
   seaSky: SeaSky;
+  /** The sky at the horizon (`horizonSkyFor`), what the grade's aerial perspective fades toward. */
+  horizonSky: SeaSky;
 }
 
 /**
- * What a flat water surface mirrors: the low sky, as linear RGB 0–1, on the side away from the
- * Sun (the plain horizon) and on the Sun's side (the sunrise/sunset glow when there is one;
- * the same colour by day and at night). The ground material blends between the two by the
- * view's bearing from the light's.
+ * A low-sky colour on two sides: away from the Sun (the plain horizon) and on the Sun's side
+ * (the sunrise/sunset glow when there is one; the same colour by day and at night), RGB 0–1 as
+ * the renderer draws it. The shaders blend between the two by the view's bearing from the Sun's.
  */
 export interface SeaSky {
   away: [number, number, number];
@@ -202,6 +203,7 @@ export function lightingFromScene(s: SceneState): LightingParameters {
 
   const skyGradient = skyGradientFor(el, p.cloudOpacity, atmosphere.warmth, p.skyLuminance, p.haze);
   const seaSky = seaSkyFor(el, p.cloudOpacity, atmosphere.warmth, p.skyLuminance, p.haze);
+  const horizonSky = horizonSkyFor(el, p.cloudOpacity, atmosphere.warmth, p.skyLuminance, p.haze);
 
   return {
     sunDirectionEcef: sunLightDirectionEcef(
@@ -262,6 +264,7 @@ export function lightingFromScene(s: SceneState): LightingParameters {
     shadow: shadowOnGround(solar.azimuthDegrees, el),
     skyGradient,
     seaSky,
+    horizonSky,
   };
 }
 
@@ -371,19 +374,33 @@ export function skyGradientFor(
   return [css(c.zenith), css(c.mid), css(c.horizon)];
 }
 
-/** sRGB 0–255 to linear 0–1 (the ground material works in the globe's linear light). */
-function srgbToLinear(c: Rgb): [number, number, number] {
-  const lin = (v: number) => {
-    const x = Math.max(0, Math.min(1, v / 255));
-    return Math.round((x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4) * 1000) / 1000;
-  };
-  return [lin(c[0]), lin(c[1]), lin(c[2])];
+/** sRGB 0–255 to the 0–1 the renderer draws with (Cesium writes colours to the frame as they are, no gamma stage). */
+function toUnit(c: Rgb): [number, number, number] {
+  const u = (v: number) => Math.round(Math.max(0, Math.min(1, v / 255)) * 1000) / 1000;
+  return [u(c[0]), u(c[1]), u(c[2])];
+}
+
+/**
+ * The sky at the horizon as the renderer draws it, 0–1: away from the Sun (the plain horizon)
+ * and on the Sun's side (the glow when there is one). The grade's aerial perspective fades
+ * distant ground toward these, by the view's bearing from the Sun's.
+ */
+export function horizonSkyFor(
+  elevationDeg: number,
+  cloudOpacity: number,
+  warmth: number,
+  skyLuminance: number,
+  haze = 0.1,
+): SeaSky {
+  const c = skyColoursFor(elevationDeg, cloudOpacity, warmth, skyLuminance, haze);
+  return { away: toUnit(c.horizonAway), toward: toUnit(c.horizon) };
 }
 
 /**
  * The sky a flat water surface reflects (`SeaSky`): a view across the water toward the horizon
  * mirrors the low sky, so each side is two thirds the horizon stop and a third the mid-sky —
- * the glow's side carrying the glow. Linear RGB, as the ground material wants it.
+ * the glow's side carrying the glow. 0–1 as the renderer draws it, which is what the ground
+ * material's other colours are.
  */
 export function seaSkyFor(
   elevationDeg: number,
@@ -398,5 +415,5 @@ export function seaSkyFor(
     h[1] * 0.67 + c.mid[1] * 0.33,
     h[2] * 0.67 + c.mid[2] * 0.33,
   ];
-  return { away: srgbToLinear(low(c.horizonAway)), toward: srgbToLinear(low(c.horizon)) };
+  return { away: toUnit(low(c.horizonAway)), toward: toUnit(low(c.horizon)) };
 }

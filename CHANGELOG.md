@@ -17,6 +17,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   side, as linear RGB; `SceneHost.setSeaSky`). The smoke harness draws the sea on a probe with
   the globe's own defines and lighting (five shots: noon, toward and away from a setting Sun,
   overcast, night; `WATER_RAW=1` adds a strip shot for reading the material's maths).
+- **Aerial perspective in the sky's colour**: distant ground now fades toward the sky gradient's
+  horizon colour behind it — the sunset's glow on the Sun's side of the view and the plain horizon
+  on the other, by each ray's bearing — instead of a fixed pale blue half-tinted by the light,
+  which greyed far ridges under a warm sky (`horizonSkyFor`, grade `u_hazeAway`/`u_hazeToward`).
 - The smoke harness's `CESIUM_BASE_URL` matches where the build is linked, so Workers and Assets
   load (they had 404'd, which read as a ground-material failure and a black shadow probe).
 - **No GPU backlog on slow machines**: the render loop now waits while two drawn frames are still
