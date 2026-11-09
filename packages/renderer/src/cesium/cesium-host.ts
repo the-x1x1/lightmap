@@ -239,6 +239,8 @@ export class CesiumSceneHost implements SceneHost {
   private globeSplit = { lambert: 0.9, ambient: 0.3 };
   /** The split the sky over the pin asks for (`setLight`), before the camera height's blend. */
   private pinSplit = { lambert: 0.9, ambient: 0.3 };
+  /** The sky light's twilight lift (`setLight`), for the buildings' and trees' shader. */
+  private skyLift = 1;
   /** The sky the water reflects (`setSeaSky`), kept for a material made later. */
   private seaSky: HostSeaSky | null = null;
   private buildings: Cesium.Cesium3DTileset | null = null;
@@ -800,7 +802,8 @@ export class CesiumSceneHost implements SceneHost {
     this.light.intensity = light.intensity;
     // The terrain's split between the light's direction and the sky (the sky over the pin).
     this.pinSplit = { lambert: light.globeLambert ?? 0.9, ambient: light.globeAmbient ?? 0.3 };
-    this.osmBuildings?.setDirectShare(this.pinSplit.lambert / 0.9);
+    this.skyLift = light.globeSkyLift ?? 1;
+    this.osmBuildings?.setDirectShare(this.pinSplit.lambert / 0.9, this.skyLift);
     this.applyGlobeSplit();
   }
 
@@ -2405,7 +2408,7 @@ export class CesiumSceneHost implements SceneHost {
         this.osmBuildings.setSeason(this.leaf.leafOn, this.leaf.autumn, this.leaf.deciduous);
         const sm = this.scene.shadowMap;
         this.osmBuildings.setShadowMap(sm.enabled, sm.darkness, sm.maximumDistance);
-        this.osmBuildings.setDirectShare(this.pinSplit.lambert / 0.9);
+        this.osmBuildings.setDirectShare(this.pinSplit.lambert / 0.9, this.skyLift);
         this.osmBuildingsCheckAt = 0;
         this.scene.requestRender();
         return;

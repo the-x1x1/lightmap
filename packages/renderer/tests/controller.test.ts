@@ -549,6 +549,21 @@ describe('globeShadingFor (the map stays a readable chart at night)', () => {
       false,
     );
     expect(flat.basemapBrightness).toBeCloseTo(0.6 * (0.2126 + 0.7152 * 0.7 + 0.0722 * 0.5), 2);
+    // On terrain the chart starts from the globe's own share at the switch (globeLightSplit:
+    // most of the light by then, the beam all but gone), not a day's 0.3.
+    const split = globeShadingFor(
+      {
+        camera: { mode: 'map' } as SceneState['camera'],
+        solar: { elevationDegrees: -0.9 } as SceneState['solar'],
+      },
+      {
+        sunIntensity: 0.3,
+        sunColor: [1, 1, 1],
+        globeLight: { lambert: 0.2, ambient: 0.9, skyLift: 3 },
+      },
+      true,
+    );
+    expect(split.basemapBrightness).toBeCloseTo(0.27, 2);
   });
   it('the controller tells the host once per change, not every tick', () => {
     const { host, calls } = fakeHost();

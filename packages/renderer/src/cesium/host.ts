@@ -20,6 +20,8 @@ export interface HostLight {
   /** The globe's directional and sky shares (`globeLightSplit`); Cesium's 0.9 / 0.3 when left out. */
   globeLambert?: number;
   globeAmbient?: number;
+  /** The sky light's lift above a day's share in twilight (`GlobeLightSplit.skyLift`); 1 when left out. */
+  globeSkyLift?: number;
 }
 
 /**

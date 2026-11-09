@@ -255,13 +255,16 @@ describe('lightingFromScene', () => {
       expect(level(g, el)).toBeCloseTo(cesium(el), 2);
     }
     // A clear Sun keeps Cesium's own split; a full overcast keeps a quarter of the relief.
-    expect(globeLightSplit(60, 60, 0)).toEqual({ lambert: 0.9, ambient: 0.3 });
+    expect(globeLightSplit(60, 60, 0)).toEqual({ lambert: 0.9, ambient: 0.3, skyLift: 1 });
     expect(globeLightSplit(60, 60, 1).lambert).toBeCloseTo(0.225, 3);
-    // Twilight: the light held at -0.6 deg, the Sun at -4 deg - a sixth of the relief, and level
-    // ground at the 0.3 the twilight levels were set against.
+    // Twilight: the light held at -0.6 deg, the Sun at -4 deg - a sixth of the relief, and the
+    // whole of the light on level ground (it is all sky light), lifted 1/0.3 above a day's share.
     const tw = globeLightSplit(-0.6, -4, 0.2);
     expect(tw.lambert).toBeLessThan(0.16);
-    expect(tw.ambient).toBe(0.3);
+    expect(tw.ambient).toBe(1);
+    expect(tw.skyLift).toBeCloseTo(3.333, 2);
+    // By day there is no lift: the ambient share only takes up what the relief gives away.
+    expect(globeLightSplit(20, 20, 0.5).skyLift).toBe(1);
     // A clear Sun with its disc up keeps the whole beam's relief (a raking sunrise).
     expect(globeLightSplit(1, 1, 0).lambert).toBe(0.9);
     // The scene carries it.

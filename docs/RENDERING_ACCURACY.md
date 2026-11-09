@@ -165,8 +165,15 @@ kept a sunny day's relief, and in twilight (the light held at the horizon) a slo
 out three times brighter than level ground lit by the same sky. The split now follows the scene
 (`globeLightSplit`): the directional share falls with the sky's diffuse fraction (a quarter of it
 left under a full overcast) and as the Sun's beam goes, to a sixth of a clear day's in twilight;
-the ambient share takes up exactly what level ground loses, so level ground is as bright as
-before (the exposure and twilight levels were set against it) and only the relief changes. A
+while the beam is there the ambient share takes up exactly what level ground loses, so level
+ground is as bright as before (the exposure was set against it) and only the relief changes.
+Once the beam has gone every bit of the light is sky light, and level ground takes the whole of it
+rather than a day's 0.3 share: on the smoke harness's synthetic plain at Sun −2.4° the ground sat
+4.9 stops under the sky, where sky-lit ground of albedo 0.2 sits about 2.3 under it (the overcast
+noon shot measures 2.3); the lift brings it about 1.7 stops up, short of the full physical ratio
+because the twilight exposure was set by eye against the old split. Buildings and trees lift their
+sky terms with it (`skyLift`), and the map's night chart starts from the globe's own share at the
+switch. A
 moonlit night is split as a clear day by its own light. **Caveat:** one ambient share for every
 face — no sky-view factor, so a gully is as sky-lit as a plain. Buildings and trees take the same
 directional share in their own shader (`litInstanceShader`, in tenths), the light it takes from

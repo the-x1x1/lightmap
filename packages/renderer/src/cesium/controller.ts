@@ -196,6 +196,7 @@ export class SceneController {
       intensity: lighting.sunIntensity,
       globeLambert: lighting.globeLight.lambert,
       globeAmbient: lighting.globeLight.ambient,
+      globeSkyLift: lighting.globeLight.skyLift,
     });
     this.host.setAtmosphere({ ...lighting.atmosphere, fogDensity: lighting.fogDensity });
     const shading = globeShadingFor(scene, lighting, this.host.terrainHasNormals?.() ?? true);
@@ -626,7 +627,7 @@ export class SceneController {
 export function globeShadingFor(
   scene: Pick<SceneState, 'camera' | 'solar'>,
   lighting: Pick<LightingParameters, 'sunIntensity'> &
-    Partial<Pick<LightingParameters, 'sunColor'>>,
+    Partial<Pick<LightingParameters, 'sunColor' | 'globeLight'>>,
   terrainHasNormals = true,
 ): HostGlobeShading {
   if (scene.camera.mode === 'viewpoint') return { lit: true, basemapBrightness: 1 };
@@ -636,12 +637,12 @@ export function globeShadingFor(
   const t = Math.min(1, Math.max(0, (-0.833 - el) / (18 - 0.833)));
   const night = 0.9 - 0.45 * t;
   // At the switch the lit globe under a Sun at the horizon showed level ground at its ambient
-  // share of the light's colour and strength - 0.3 on terrain with vertex normals (Cesium's
-  // vertex shadow darkness), all of it on the ellipsoid (its day/night shading is faded out at
+  // share of the light's colour and strength - the globe's split on terrain with vertex normals
+  // (globeLightSplit; most of the light by then, the beam all but gone), all of it on the ellipsoid (its day/night shading is faded out at
   // map heights): the flat chart starts there and opens to its night brightness over the next
   // 2.5 deg, instead of jumping several times brighter as the Sun sets.
   const [r, g, b] = lighting.sunColor ?? [1, 1, 1];
-  const share = terrainHasNormals ? 0.3 : 1;
+  const share = terrainHasNormals ? (lighting.globeLight?.ambient ?? 0.3) : 1;
   const litLevel = share * lighting.sunIntensity * (0.2126 * r + 0.7152 * g + 0.0722 * b);
   const from = Math.max(0.15, Math.min(night, litLevel));
   const u = Math.min(1, Math.max(0, (-0.833 - el) / 2.5));

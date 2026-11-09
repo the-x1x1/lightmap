@@ -141,14 +141,19 @@ export function seaSlopeVarianceFor(windMps: number): number {
 export interface GlobeLightSplit {
   lambert: number;
   ambient: number;
+  /**
+   * How much the sky light is lifted above a day's share once the beam has gone (1 by day, up
+   * to 1 / 0.3 in twilight), for the buildings' and trees' own shader to follow the ground.
+   */
+  skyLift: number;
 }
 
 /**
  * The split for a scene: the directional share falls with the sky's diffuse fraction (a quarter
  * left under a full overcast) and goes as the Sun's direct beam goes, to a sixth of the clear
- * day's (the afterglow's side of the sky is still the brighter); the ambient share takes up what
- * level ground loses, so level ground is exactly as bright as under the defaults (they are what
- * the exposure and the twilight levels were set against) and only the relief changes.
+ * day's (the afterglow's side of the sky is still the brighter); while the beam is there the
+ * ambient share takes up what level ground loses, so level ground is exactly as bright as under
+ * the defaults and only the relief changes; once it has gone the ambient share is the whole light.
  */
 export function globeLightSplit(
   lightElevationDeg: number,
@@ -160,8 +165,14 @@ export function globeLightSplit(
   const direct = smooth(-1.2, 0.2, sunElevationDeg);
   const lambert = 0.9 * (direct * (1 - 0.75 * d) + (1 - direct) * 0.17);
   const sinEl = Math.max(0, Math.sin((lightElevationDeg * Math.PI) / 180));
-  const ambient = 0.3 + (0.9 - lambert) * sinEl;
-  return { lambert: Math.round(lambert * 1000) / 1000, ambient: Math.round(ambient * 1000) / 1000 };
+  const dayAmbient = 0.3 + (0.9 - lambert) * sinEl;
+  // Once the beam has gone every bit of the light is sky light: level ground takes the whole of
+  // it, not a day's 0.3 share (the dusk plain sat ~5 stops under the sky; sky-lit ground of
+  // albedo 0.2 sits ~2.3 under it; this brings it to ~3.2, near the levels the twilight
+  // exposure was set against by eye).
+  const ambient = Math.min(1, dayAmbient + (1 - dayAmbient) * (1 - direct));
+  const r3 = (v: number) => Math.round(v * 1000) / 1000;
+  return { lambert: r3(lambert), ambient: r3(ambient), skyLift: r3(ambient / dayAmbient) };
 }
 
 /**

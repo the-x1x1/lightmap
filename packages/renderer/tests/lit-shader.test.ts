@@ -40,6 +40,10 @@ describe('buildings and trees shader', () => {
     // The trees take the same, the default (no share given) is a clear day's.
     expect(treeFragmentShader(1, 0, 1, 0, 1, 0.3)).toContain('0.55 * 0.30 * sun');
     expect(LIT_INSTANCE_FS).toContain('0.55 * 1.00 * sun');
+    // In twilight the sky terms rise with the ground's (globeLightSplit's skyLift), held to 3.4.
+    expect(LIT_INSTANCE_FS).toContain('(0.16 + 0.14 * sky) * 1.00');
+    expect(litInstanceShader(1, 0, true, 0.2, 3.33)).toContain('(0.16 + 0.14 * sky) * 3.33');
+    expect(treeFragmentShader(1, 0, 1, 0, 1, 0.2, 9)).toContain('(0.16 + 0.14 * sky) * 3.40');
   });
 
   it('compensates nothing with shadows off', () => {

@@ -99,6 +99,7 @@ export function litInstanceShader(
   shadowMaxM = 0,
   roofs = false,
   directShare = 1,
+  skyLift = 1,
 ): string {
   const d = Math.max(0.05, Math.min(1, shadowD)).toFixed(3);
   // The share of the Sun's term that is direct (globeLightSplit's directional share against a
@@ -106,6 +107,10 @@ export function litInstanceShader(
   // comes from the sky - most on faces that look up, as a diffuse sky lights them - and a flat
   // roof keeps exactly the level it had (its Sun term is sunUp, all of which comes back).
   const k = Math.max(0, Math.min(1, directShare)).toFixed(2);
+  // Once the beam has gone all the light is sky light, and the ground takes the whole of it
+  // (globeLightSplit): the sky terms are lifted with it, so a dusk street is not three times
+  // darker than the ground it stands on.
+  const lift = Math.max(1, Math.min(3.4, skyLift)).toFixed(2);
   const maxM = Math.max(0, shadowMaxM).toFixed(1);
   // Buildings: a flat roof is tar, gravel or membrane, a pitched one shingle or tile - darker
   // than the walls, and from a viewpoint stood on a roof or a map view the roofs are most of
@@ -138,7 +143,7 @@ void main()
     float sunUp = clamp(dot(upEC, czm_lightDirectionEC), 0.0, 1.0);
     float bounce = 0.12 * (1.0 - sky) * sunUp;
     float diffuseSun = 0.55 * (1.0 - ${k}) * sunUp * (0.5 + 0.5 * sky);
-    vec3 light = czm_lightColor * (0.55 * ${k} * sun + 0.16 + 0.14 * sky + bounce + diffuseSun);
+    vec3 light = czm_lightColor * (0.55 * ${k} * sun + (0.16 + 0.14 * sky) * ${lift} + bounce + diffuseSun);
     vec3 lit = color.rgb * light;
     // Aerial perspective: a far skyline takes the haze's colour as distant terrain does (the
     // globe gets Cesium's fog; these primitives do not), from 1.5 km out.
@@ -182,6 +187,7 @@ export function treeFragmentShader(
   shadowMaxM = 0,
   deciduous = 1,
   directShare = 1,
+  skyLift = 1,
 ): string {
   // Which crowns are deciduous: a hash of each crown's tone, so a crown keeps its kind.
   const pick = deciduous >= 1 ? '' : ` && fract(h * 11.1) < ${deciduous.toFixed(3)}`;
@@ -206,7 +212,7 @@ export function treeFragmentShader(
         color.a = 1.0;
     }`;
   const anchor = '    vec4 color = czm_gammaCorrect(v_color);';
-  return litInstanceShader(shadowD, shadowMaxM, false, directShare).replace(
+  return litInstanceShader(shadowD, shadowMaxM, false, directShare, skyLift).replace(
     anchor,
     anchor + season,
   );
@@ -383,6 +389,8 @@ export class OsmBuildingsLayer {
   private shadow = { d: 1, maxM: 0 };
   /** The direct share of the Sun's term (`setDirectShare`), in tenths. */
   private directShare = 1;
+  /** The sky light's twilight lift (`setDirectShare`), in tenths. */
+  private skyLift = 1;
   private buildingAppearance: Cesium.PerInstanceColorAppearance | null = null;
   private readonly buildingPrims = new Set<Cesium.Primitive>();
   /** Tiles' merged building primitives still being built in the workers (hidden). */
@@ -494,10 +502,12 @@ export class OsmBuildingsLayer {
    * `globeLightSplit`): faces turned to the Sun stand out under a clear sky and hardly under an
    * overcast or in twilight. In tenths, so a shader is swapped a few times a day.
    */
-  setDirectShare(share: number): void {
+  setDirectShare(share: number, skyLift = 1): void {
     const next = Math.round(Math.max(0, Math.min(1, share)) * 10) / 10;
-    if (next === this.directShare) return;
+    const lift = Math.round(Math.max(1, Math.min(3.4, skyLift)) * 10) / 10;
+    if (next === this.directShare && lift === this.skyLift) return;
     this.directShare = next;
+    this.skyLift = lift;
     this.treeAppearance = null;
     this.buildingAppearance = null;
     const trees = this.appearanceForTrees();
@@ -519,6 +529,7 @@ export class OsmBuildingsLayer {
         this.shadow.maxM,
         this.season.deciduous,
         this.directShare,
+        this.skyLift,
       ),
     });
     return this.treeAppearance;
@@ -534,6 +545,7 @@ export class OsmBuildingsLayer {
         this.shadow.maxM,
         true,
         this.directShare,
+        this.skyLift,
       ),
     });
     return this.buildingAppearance;
