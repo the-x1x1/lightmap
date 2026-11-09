@@ -19,6 +19,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   the globe's own defines and lighting (five shots: noon, toward and away from a setting Sun,
   overcast, night, dusk, the Moon; `WATER_RAW=<hour>` adds a strip shot for reading the
   material's maths).
+- **An overcast is brightest overhead**: a closing low deck takes the CIE standard overcast sky's
+  luminance, 1 + 2 sin(elevation), so a storm or overcast sky darkens toward the horizon instead
+  of reading as one flat grey.
 - **The afterglow stays warm after sunset**: the sky gradient's horizon glow on the Sun's side
   follows the Sun's depression once it has set (orange to about −2°, rose, the twilight's blue by
   −6°) instead of flipping to blue as soon as the light turned cool (−2°), which put a blue

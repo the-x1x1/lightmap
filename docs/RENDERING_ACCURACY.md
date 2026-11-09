@@ -428,6 +428,13 @@ _kind_ of cloud the forecast reports changes the light and the sky the way it do
 Sun); cirrus optical depth is not forecast, so its brightness is a fixed typical value. Verified
 in `tools/renderer-smoke` (`cirrus-sunset` vs `stratus-sunset` at 19:18, Sun −2.7°).
 
+**A closed deck is brightest overhead.** As the low deck closes (cover 60–95 %) its luminance takes
+the CIE standard overcast sky's profile, 1 + 2 sin(elevation) — overhead three times the horizon —
+normalised to a view 15° up and held within 0.65–1.45 of it, so a storm or overcast sky darkens
+toward the horizon instead of reading as one flat grey (`storm-viewpoint`: 133 overhead to 94 at
+the horizon, was 114 throughout). **Caveat:** the CIE profile is the uniform overcast's; a storm's
+rain shafts and a brighter band under the deck's edge are not modelled.
+
 ### Geometry
 
 Terrain mesh from the configured `TerrainProvider` (Re:Earth/Mapterhorn or Cesium World Terrain)

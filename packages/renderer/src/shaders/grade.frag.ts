@@ -340,6 +340,13 @@ void main() {
       cloudCol = mix(cloudCol, cloudCol * warm, lowSun * sunUp * 0.7 * (1.0 - thickness));
       cloudCol = mix(cloudCol, cloudCol * u_tint, 0.35 * (1.0 - thickness) * sunUp);
       cloudCol = mix(shade * 0.45, cloudCol, sunUp);
+      // A closed deck is brightest overhead: the CIE standard overcast sky's luminance goes as
+      // 1 + 2 sin(elevation), a third at the horizon of what it is at the zenith. Normalised to a
+      // view 15 deg up (where the deck was drawn before) and held within 0.65-1.45, it comes in
+      // as the low deck closes.
+      float sinView = clamp(dot(rayEC, u_eyeUpEC), 0.0, 1.0);
+      float cie = clamp((1.0 + 2.0 * sinView) / 1.52, 0.65, 1.45);
+      cloudCol *= mix(1.0, cie, smoothstep(0.6, 0.95, covLow));
       cloudCol *= deckLum * mix(1.0, 0.15, u_nightFactor * (1.0 - sunUp));
       sky = mix(sky, cloudCol, cloud * (0.75 + 0.25 * thickness));
       lowHere = cloud * thickness;

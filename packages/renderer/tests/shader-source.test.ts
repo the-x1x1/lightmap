@@ -67,3 +67,23 @@ describe("shader sources and Cesium's preprocessor", () => {
     });
   }
 });
+
+describe('the grade', () => {
+  it('hazes toward the horizon sky on both sides, darkening it with the night', () => {
+    for (const src of [GRADE_FRAGMENT_SHADER, GRADE_DAY_FRAGMENT_SHADER]) {
+      expect(src).toContain('vec3 hazeCol = mix(u_hazeAway, u_hazeToward, glowSide);');
+      expect(src).toContain('hazeCol = mix(hazeCol, vec3(0.05, 0.06, 0.1), u_nightFactor);');
+    }
+    expect(GRADE_UNIFORM_NAMES).toContain('u_hazeAway');
+    expect(GRADE_UNIFORM_NAMES).toContain('u_hazeToward');
+  });
+
+  it('gives a closing low deck the CIE overcast profile, brightest overhead', () => {
+    expect(GRADE_DAY_FRAGMENT_SHADER).toContain(
+      'float cie = clamp((1.0 + 2.0 * sinView) / 1.52, 0.65, 1.45);',
+    );
+    expect(GRADE_DAY_FRAGMENT_SHADER).toContain(
+      'cloudCol *= mix(1.0, cie, smoothstep(0.6, 0.95, covLow));',
+    );
+  });
+});
