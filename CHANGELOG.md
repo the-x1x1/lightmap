@@ -10,7 +10,7 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   sky, a grey one under an overcast, dark water at night, and toward a low Sun the sunrise or
   sunset glow on the water with the Sun's glitter path under it (a lobe narrow across the Sun's
   bearing and long toward the viewer, with the Sun's aureole mirrored around it, in the light's
-  colour). The globe lights every fragment as ground; a reflection is the sky's own light, so the
+  colour) — and, on a moonlit night, the moon path. The globe lights every fragment as ground; a reflection is the sky's own light, so the
   material divides the globe's Lambert term out of it (`lmUnlit`), floored so a reflection under
   a faint light comes out dimmer than the sky, never brighter. The lighting hands the renderer
   the two colours each tick (`seaSkyFor`: the gradient's horizon away from the Sun and on its

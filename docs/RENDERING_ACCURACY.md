@@ -234,7 +234,9 @@ linear RGB), on the side away from the Sun the plain horizon and on the Sun's si
 sunset glow when there is one, blended by the view's bearing from the light's; under it the
 Sun's glitter path — a lobe narrow across the Sun's bearing (σ ≈ 3.5°) and long toward the viewer
 (σ ≈ 8°), with the Sun's aureole mirrored as a wide soft lobe around it, in the light's colour and
-strongest at a low Sun. **Claim:** the sea goes blue under a blue sky, grey under an overcast,
+strongest at a low Sun. On a moonlit night the scene's light is the Moon, so the same path is the
+moon path, its colour lifted to a floor so a full Moon's disc on the ripples stands out from the
+night sea as it does. **Claim:** the sea goes blue under a blue sky, grey under an overcast,
 dark at night, and warm toward a setting Sun with the glitter under it, and the glitter sits on
 the Sun's bearing. **Caveat:** the globe lights every fragment as ground (the light's colour
 times Cesium's Lambert term), which is wrong for a reflection, so the material divides that term

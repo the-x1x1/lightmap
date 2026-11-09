@@ -707,7 +707,12 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         // scattering, which the sky stops keep clear of) mirrored as a wide, soft lobe.
         float aureole = exp(-dAz * dAz / 0.12 - dEl * dEl / 0.12) * grazing * 0.5;
         glint += aureole;
-        vec3 reflected = sky * reflectance + czm_lightColor * glint * 1.2;
+        // The glitter is the light's own disc on the ripples, far brighter than the sky round it
+        // however dim the light is overall: by moonlight its colour is lifted to a floor (the
+        // Sun's is already above it), so a full Moon leaves a moon path, not a faint smear.
+        float lightLum = dot(czm_lightColor, vec3(0.2126, 0.7152, 0.0722));
+        vec3 glitterCol = czm_lightColor * max(1.0, 0.45 / max(lightLum, 0.02));
+        vec3 reflected = sky * reflectance + glitterCol * glint * 1.2;
         vec3 body = sea * u_brightness * (1.0 - reflectance);
         material.diffuse = mix(material.diffuse, body + lmUnlit(reflected, n), water);
         // The paint carries the sky now; a little of the globe's own water shading (its wave

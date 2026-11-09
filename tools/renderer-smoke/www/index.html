@@ -807,6 +807,9 @@
         await waterShot('water-golden-away', 18.75, 'clear', 110);
         await waterShot('water-overcast', 12.5, 'overcast', 290);
         await waterShot('water-night', 23, 'clear', 290);
+        // The full Moon of 31 May 2026 low over the sea at 21:00: the scene's light is the
+        // Moon's, so the glitter path is the moon path, under it in the Moon's colour.
+        await waterShot('water-moon', 21, 'clear', scene(21, 'clear').lunar.azimuthDegrees);
         // WATER_RAW=1: one more shot of the golden-hour sea in three strips - the light's
         // colour times the globe's Lambert term, the material's raw output, and the two
         // multiplied (what the globe shows) - with the grade's haze, tint and saturation off,
