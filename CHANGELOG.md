@@ -24,6 +24,15 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   forecast's wind, or a stated typical one per scenario), so calm water shows a narrow mirror
   point and a breeze a long broad band — and it breaks into sparkles sized to the pixel at any
   distance, merging into a smooth band far out, with the path's average brightness unchanged.
+- **Haze thins with height**: aerial perspective averages the haze's density along each ray,
+  falling with height above the place's ground (1.2 km scale height), so from a summit far peaks
+  stand clear while the valley below sinks into haze (`u_hazeBaseM`).
+- **Golden hour's near ground no longer sinks to shadow**: Cesium's terrain shadow bias faded all
+  level ground within the shadow map's reach to the shadow darkness below ~17° of Sun, with a hard
+  edge where the reach ended; the host narrows its width (`TERRAIN_NORMAL_SHADING_SMOOTH`, 0.02),
+  so level ground is lit from about 1° up and faces turned away stay dark.
+- **Water is figured level**: its reflection and body lighting no longer follow the slope of the
+  sea floor the terrain carries near coasts (a light strip ending in a hard line offshore).
 - **Sea colour by latitude**: the water's body colour is the tropics' deep blue only between the
   tropics, turning grey-green toward the mid-latitudes (by latitude alone, no ocean-colour data).
 - **Wet roads glare toward a low Sun**: the wet film carries the light's own reflection too, as a

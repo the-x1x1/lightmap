@@ -75,7 +75,30 @@ describe('the grade', () => {
       expect(src).toContain('hazeCol = mix(hazeCol, vec3(0.05, 0.06, 0.1), u_nightFactor);');
     }
     expect(GRADE_UNIFORM_NAMES).toContain('u_hazeAway');
+    expect(GRADE_UNIFORM_NAMES).toContain('u_hazeBaseM');
     expect(GRADE_UNIFORM_NAMES).toContain('u_hazeToward');
+  });
+
+  it('thins the haze with height above the place, averaged along the ray', () => {
+    // The layer: exp(-h / 1200) from the place's ground, averaged between the eye's height and
+    // the point's, held to 2.5 times the place's own density.
+    for (const src of [GRADE_FRAGMENT_SHADER, GRADE_DAY_FRAGMENT_SHADER]) {
+      expect(src).toContain('float h0 = clamp(u_eyeHeightM - u_hazeBaseM, -1100.0, 20000.0);');
+      expect(src).toContain('1200.0 * (exp(-h1 / 1200.0) - rho0) / (h0 - h1)');
+      expect(src).toContain('layer = min(layer, 2.5);');
+    }
+    // What the layer gives, in numbers (the shader's formula, here in TypeScript).
+    const layer = (h0: number, h1: number) => {
+      const rho0 = Math.exp(-h0 / 1200);
+      const v = Math.abs(h0 - h1) < 1 ? rho0 : (1200 * (Math.exp(-h1 / 1200) - rho0)) / (h0 - h1);
+      return Math.min(v, 2.5);
+    };
+    expect(layer(2, 2)).toBeCloseTo(1, 2); // at the place's ground: its own visibility
+    expect(layer(3000, 3000)).toBeLessThan(0.1); // a summit's horizontal view: thin air
+    expect(layer(3000, 0)).toBeGreaterThan(0.3); // down into the valley: through the haze
+    expect(layer(2, 800)).toBeGreaterThan(0.7); // up at a ridge from the beach: a little clearer
+    expect(layer(2, 800)).toBeLessThan(0.8);
+    expect(layer(0, -1000)).toBeLessThan(2.5); // a gorge below the place: hazier, held
   });
 
   it('gives a closing low deck the CIE overcast profile, brightest overhead', () => {

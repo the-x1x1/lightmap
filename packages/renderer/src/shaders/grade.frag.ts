@@ -25,6 +25,7 @@ uniform vec3  u_tint;
 uniform float u_haze;
 uniform vec3 u_eyeUpEC;         // the local up at the camera, in eye coordinates (per frame)
 uniform float u_eyeHeightM;     // the camera's height above the ellipsoid (per frame)
+uniform float u_hazeBaseM;      // the ground's height at the place (where its visibility is measured)
 uniform float u_cloudCoverage;
 uniform float u_cloudDensity;
 uniform float u_cloudOpacity;
@@ -389,13 +390,21 @@ void main() {
       distM = -b - sqrt(max(b * b - (2.0 * 6371000.0 * eyeH + eyeH * eyeH), 0.0));
       distM = max(distM, 20000.0);
     }
-    // Haze lives near the ground: along a path that climbs out of it (a camera looking down
-    // from above) the optical depth is that of an exponential layer with a 1 km scale height,
-    // not of the whole distance at ground density.
+    // Haze lives near the ground: its density falls with height, an exponential layer with a
+    // 1.2 km scale height, at the visibility's own density at the place's ground (where a
+    // forecast measures it). The optical depth is the density averaged along the ray, from the
+    // eye's height to the point's: a camera looking down from above sees through thin air into
+    // the haze; from a summit a far peak stands clear in the summit's thinner air while the
+    // valley below sinks into its haze (held to 2.5 times the place's own).
     float visibilityM = 4000.0 * pow(20.0, 1.0 - clamp(u_haze, 0.0, 1.0))
         / (1.0 + 2.0 * max(0.0, u_horizonHaze - u_haze));
     float dh = -dot(rayEC, u_eyeUpEC) * distM;   // how far the path descends, metres
-    float layer = abs(dh) < 1.0 ? 1.0 : 1000.0 * (1.0 - exp(-abs(dh) / 1000.0)) / abs(dh);
+    float h0 = clamp(u_eyeHeightM - u_hazeBaseM, -1100.0, 20000.0);
+    float h1 = max(h0 - dh, -1100.0);
+    float rho0 = exp(-h0 / 1200.0);
+    float layer = abs(h0 - h1) < 1.0 ? rho0
+        : 1200.0 * (exp(-h1 / 1200.0) - rho0) / (h0 - h1);
+    layer = min(layer, 2.5);
     float dist = 1.0 - exp(-3.0 * distM * layer / visibilityM);
     // Distant ground fades toward the sky at the horizon behind it: the sky gradient's own
     // horizon colour (cloud greys it, night darkens it, haze pales it), the glow's colour on
@@ -472,6 +481,7 @@ export const GRADE_UNIFORM_NAMES = [
   'u_atmosphereDark',
   'u_hazeAway',
   'u_hazeToward',
+  'u_hazeBaseM',
   'u_planet0',
   'u_planet1',
   'u_planet2',

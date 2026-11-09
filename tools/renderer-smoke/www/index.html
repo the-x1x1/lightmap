@@ -126,705 +126,647 @@
             };
             const host_scene_postRender_remove = host.scene.postRender.addEventListener(h);
           });
-        window.__smoke.phase = 'noon-clear';
-        await wait(6000);
-        const stats1 = host.stats();
-        window.__smoke.stats1 = stats1;
-        window.__smoke.cesiumSun = stats1.cesiumSunDirectionEcef;
-        window.__smoke.ourSun = lightingFromScene(s1).sunDirectionEcef;
-        window.__smoke.shot = 'noon-clear';
-        await wait(200);
-        await new Promise((r) => {
-          window.__takeShot = r;
-        });
-        const s2 = scene(12.5, 'overcast');
-        controller.apply(s2);
-        window.__smoke.lighting.overcast = lightingFromScene(s2);
-        log('applied noon overcast');
-        await wait(1500);
-        window.__smoke.shot = 'noon-overcast';
-        await new Promise((r) => {
-          window.__takeShot = r;
-        });
-        const golden = scene(18.75, 'clear', {
-          ...defaultCamera(kailua.point, 250),
-          mode: 'viewpoint',
-          pitchDeg: 5,
-        });
-        controller.apply(golden);
-        window.__smoke.lighting.golden = lightingFromScene(golden);
-        log('applied golden viewpoint');
-        await wait(2500);
-        window.__smoke.shot = 'golden-viewpoint';
-        await new Promise((r) => {
-          window.__takeShot = r;
-        });
-        const blue = scene(19.5, 'clear', {
-          ...defaultCamera(kailua.point, 250),
-          mode: 'viewpoint',
-          pitchDeg: 5,
-        });
-        controller.apply(blue);
-        log('applied blue hour viewpoint');
-        await wait(1500);
-        window.__smoke.shot = 'blue-viewpoint';
-        await new Promise((r) => {
-          window.__takeShot = r;
-        });
-        const partly = scene(15, 'partly-cloudy', {
-          ...defaultCamera(kailua.point, 250),
-          mode: 'viewpoint',
-          pitchDeg: 12,
-        });
-        controller.apply(partly);
-        log('applied partly viewpoint');
-        await wait(1500);
-        window.__smoke.shot = 'partly-viewpoint';
-        await new Promise((r) => {
-          window.__takeShot = r;
-        });
-        const night = scene(23, 'clear', {
-          ...defaultCamera(kailua.point, 120),
-          mode: 'viewpoint',
-          pitchDeg: 30,
-        });
-        controller.apply(night);
-        log('applied night viewpoint');
-        await wait(1500);
-        window.__smoke.shot = 'night-viewpoint';
-        await new Promise((r) => {
-          window.__takeShot = r;
-        });
-        const storm = scene(12.5, 'storm', {
-          ...defaultCamera(kailua.point, 250),
-          mode: 'viewpoint',
-          pitchDeg: 5,
-        });
-        controller.apply(storm);
-        log('applied storm viewpoint');
-        await wait(1500);
-        window.__smoke.shot = 'storm-viewpoint';
-        await new Promise((r) => {
-          window.__takeShot = r;
-        });
-        // Phase 4 experiment (feature flag `physicalSkyDome`): the same storm with the dome's
-        // aerosol density from the sky model's Mie coefficient. Compare with the shot above —
-        // a hazier, paler sky with a wider halo is the expected difference; nothing else moves.
-        const stormPhysical = buildSceneState({
-          location: kailua,
-          utc: storm.utc,
-          now: new Date('2026-05-01T00:00:00Z'),
-          camera: storm.camera,
-          environment: env,
-          scenario: 'storm',
-          forceScenario: true,
-          weather: { capabilities: OPEN_METEO_CAPABILITIES, frames: [], providerFailed: false },
-          render: { ...DEFAULT_RENDER_SETTINGS, physicalSkyDome: true },
-          includeLunar: true,
-          realReference: false,
-        });
-        controller.apply(stormPhysical);
-        window.__smoke.lighting.stormPhysical = lightingFromScene(stormPhysical);
-        log(
-          'applied storm viewpoint, physical dome (mie ' +
-            window.__smoke.lighting.stormPhysical.atmosphere.mieCoefficient +
-            ')',
-        );
-        await wait(1500);
-        window.__smoke.shot = 'storm-physical-dome';
-        await new Promise((r) => {
-          window.__takeShot = r;
-        });
-        // Back to the default dome for every scene that follows.
-        controller.apply(scene(12.5, 'clear'));
-        await wait(300);
-        // Layered decks from a forecast frame (not a scenario): the same minute after sunset with
-        // only cirrus (stays sunlit, pink) and with only a low stratus deck (in shadow, dark).
-        const frameAt = (hour, layers) => ({
-          timestamp: localSelectionToUtc(
-            { year: 2026, month: 5, day: 31 },
-            hour * 60,
-            kailua.timeZone,
-          ).toISOString(),
-          cloudCoverTotal: Math.max(layers.low, layers.mid, layers.high),
-          cloudCoverLow: layers.low,
-          cloudCoverMid: layers.mid,
-          cloudCoverHigh: layers.high,
-          precipitationProbability: 0,
-          precipitationAmount: 0,
-          humidity: 60,
-          visibility: 40000,
-          windSpeed: 3,
-          windDirection: 90,
-          weatherCode: 2,
-        });
-        const forecastScene = (hour, layers, camera) =>
-          buildSceneState({
-            location: kailua,
-            utc: localSelectionToUtc({ year: 2026, month: 5, day: 31 }, hour * 60, kailua.timeZone),
-            now: new Date('2026-05-30T00:00:00Z'),
-            camera,
-            environment: env,
-            scenario: 'clear',
-            forceScenario: false,
-            weather: {
-              capabilities: OPEN_METEO_CAPABILITIES,
-              frames: [frameAt(19, layers), frameAt(20, layers)],
-              providerFailed: false,
-            },
-            render: DEFAULT_RENDER_SETTINGS,
-            includeLunar: true,
-            realReference: false,
-          });
-        const westCam = { ...defaultCamera(kailua.point, 265), mode: 'viewpoint', pitchDeg: 8 };
-        const cirrus = forecastScene(19.3, { low: 0, mid: 0, high: 80 }, westCam);
-        controller.apply(cirrus);
-        window.__smoke.lighting.cirrus = lightingFromScene(cirrus);
-        log(
-          'applied cirrus sunset (forecast frame) ' +
-            cirrus.atmosphere.mode +
-            ' el=' +
-            cirrus.solar.elevationDegrees.toFixed(2),
-        );
-        await wait(1500);
-        window.__smoke.shot = 'cirrus-sunset';
-        await new Promise((r) => {
-          window.__takeShot = r;
-        });
-        const stratus = forecastScene(19.3, { low: 80, mid: 0, high: 0 }, westCam);
-        controller.apply(stratus);
-        window.__smoke.lighting.stratus = lightingFromScene(stratus);
-        log('applied stratus sunset (forecast frame) ' + stratus.atmosphere.mode);
-        await wait(1500);
-        window.__smoke.shot = 'stratus-sunset';
-        await new Promise((r) => {
-          window.__takeShot = r;
-        });
-        // Shadow probe (accuracy before beauty): a 20 m tower on flat ground; its shadow must fall on
-        // the anti-solar side with length h / tan(el), and must not fade at low Sun. Measured from
-        // the frame itself: ground luminance along the shadow line vs the same distances on the Sun
-        // side, and just beyond the shadow's end.
-        const C = await import('@cesium/engine');
-        const cesiumScene = host.scene;
-        const towerLat = kailua.point.latitude + 0.0009;
-        const towerLng = kailua.point.longitude;
-        const enu = C.Transforms.eastNorthUpToFixedFrame(
-          C.Cartesian3.fromDegrees(towerLng, towerLat, 0),
-        );
-        cesiumScene.primitives.add(
-          new C.Primitive({
-            geometryInstances: new C.GeometryInstance({
-              geometry: C.BoxGeometry.fromDimensions({
-                dimensions: new C.Cartesian3(12, 12, 20),
-                vertexFormat: C.PerInstanceColorAppearance.VERTEX_FORMAT,
-              }),
-              modelMatrix: C.Matrix4.multiplyByTranslation(
-                enu,
-                new C.Cartesian3(0, 0, 10),
-                new C.Matrix4(),
-              ),
-              attributes: {
-                color: C.ColorGeometryInstanceAttribute.fromColor(
-                  C.Color.fromCssColorString('#d0d0d0'),
-                ),
-              },
-            }),
-            appearance: new C.PerInstanceColorAppearance({ closed: true }),
-            shadows: C.ShadowMode.ENABLED,
-            asynchronous: false,
-          }),
-        );
-        const shadowScene = scene(18.25, 'clear');
-        controller.apply(shadowScene);
-        controller.setOrbit({ headingDeg: 0, pitchDeg: -89, rangeM: 420 });
-        await wait(3000);
-        // The switch from the viewpoint is a camera flight, and on software GL it can outlast the
-        // wait: measure only once the camera stands over the tower (a capture mid-flight read
-        // the sky over the Earth's limb, and the probe failed for no fault in the shadow).
-        for (let i = 0; i < 60; i++) {
-          const cam = cesiumScene.camera;
-          if (!cam._currentFlight && Math.abs(cam.positionCartographic.height - 420) < 40) break;
-          await wait(500);
-        }
-        const el = shadowScene.solar.elevationDegrees;
-        const az = shadowScene.solar.azimuthDegrees;
-        const shadowAz = (az + 180) % 360;
-        const len = 20 / Math.tan((el * Math.PI) / 180);
-        const probe = (bearingDeg, distM) => {
-          const b = (bearingDeg * Math.PI) / 180;
-          const world = C.Matrix4.multiplyByPoint(
-            enu,
-            new C.Cartesian3(Math.sin(b) * distM, Math.cos(b) * distM, 0.3),
-            new C.Cartesian3(),
-          );
-          const w = C.SceneTransforms.worldToWindowCoordinates(cesiumScene, world);
-          return w ? { x: w.x, y: w.y } : null;
-        };
-        const fr = [0.3, 0.5, 0.7];
-        const pts = {
-          inShadow: fr.map((f) => probe(shadowAz, 8 + len * f)),
-          sunSide: fr.map((f) => probe(az, 8 + len * f)),
-          beyond: [probe(shadowAz, len * 1.6 + 12)],
-        };
-        const dataUrl = await host.captureThumbnail(4096);
-        const lum = await new Promise((resolve) => {
-          const img = new Image();
-          img.onload = () => {
-            const cv = document.createElement('canvas');
-            cv.width = img.width;
-            cv.height = img.height;
-            const ctx = cv.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            const sx = img.width / cesiumScene.canvas.clientWidth;
-            const sy = img.height / cesiumScene.canvas.clientHeight;
-            const at = (p) => {
-              if (!p) return null;
-              const d = ctx.getImageData(Math.round(p.x * sx), Math.round(p.y * sy), 1, 1).data;
-              return (0.2126 * d[0] + 0.7152 * d[1] + 0.0722 * d[2]) / 255;
-            };
-            resolve({
-              inShadow: pts.inShadow.map(at),
-              sunSide: pts.sunSide.map(at),
-              beyond: pts.beyond.map(at),
-            });
-          };
-          img.src = dataUrl;
-        });
-        window.__smoke.shadowProbe = { el, az, shadowAz, lengthM: len, pts, lum };
-        log(
-          'shadow probe el=' +
-            el.toFixed(1) +
-            ' shadow ' +
-            lum.inShadow.map((v) => v && v.toFixed(2)).join('/') +
-            ' sun side ' +
-            lum.sunSide.map((v) => v && v.toFixed(2)).join('/') +
-            ' beyond ' +
-            lum.beyond.map((v) => v && v.toFixed(2)).join('/'),
-        );
-        window.__smoke.shot = 'shadow-tower';
-        await new Promise((r) => {
-          window.__takeShot = r;
-        });
-        // Terrain horizon overlay: a synthetic 600 m ridge on the ~2 km ring across the east (the
-        // ellipsoid has no terrain to sample, so the profile is built directly). The map-mode sun
-        // path must show the morning behind the ridge as dark dashes over the gold path.
-        const { horizonProfileFromSamples, horizonRingDistances, horizonSamplePoints } =
-          await import('@lightmap/scene');
-        const ridgeRing = horizonRingDistances().reduce((b, d) =>
-          Math.abs(d - 2000) < Math.abs(b - 2000) ? d : b,
-        );
-        const ridgeProfile = horizonProfileFromSamples(
-          kailua.point,
-          2,
-          1.6,
-          horizonSamplePoints(kailua.point).map((p) => ({
-            azimuthDeg: p.azimuthDeg,
-            distanceM: p.distanceM,
-            heightM:
-              p.azimuthDeg >= 30 && p.azimuthDeg <= 150 && p.distanceM === ridgeRing ? 600 : 0,
-          })),
-          { providerId: 'smoke-synthetic', resolutionM: 30 },
-        );
-        const ridgeScene = buildSceneState({
-          location: kailua,
-          utc: localSelectionToUtc({ year: 2026, month: 5, day: 31 }, 7 * 60, kailua.timeZone),
-          now: new Date('2026-05-01T00:00:00Z'),
-          camera: defaultCamera(kailua.point, 90),
-          environment: env,
-          scenario: 'clear',
-          forceScenario: true,
-          weather: { capabilities: OPEN_METEO_CAPABILITIES, frames: [], providerFailed: false },
-          render: DEFAULT_RENDER_SETTINGS,
-          includeLunar: true,
-          realReference: false,
-          horizonProfile: ridgeProfile,
-        });
-        controller.apply(ridgeScene);
-        controller.setOrbit({ headingDeg: 0, pitchDeg: -60, rangeM: 1500 });
-        const th = ridgeScene.terrainHorizon;
-        window.__smoke.terrain = th
-          ? {
-              sunAboveTerrain: th.sunAboveTerrain,
-              horizonAtSunDeg: th.horizonAtSunDeg,
-              firstLight: th.sunEvents.firstLight,
-              sunrise: ridgeScene.dayEvents.sunrise,
-              differs: th.sunEvents.differsFromAstronomical,
-            }
-          : null;
-        log(
-          'terrain horizon at 07:00: ' +
-            (th
-              ? `sun ${th.sunAboveTerrain ? 'above' : 'behind'} terrain (ridge ${th.horizonAtSunDeg.toFixed(1)}°), first light ${th.sunEvents.firstLight ? th.sunEvents.firstLight.toISOString() : 'none'} vs sunrise ${ridgeScene.dayEvents.sunrise.toISOString()}`
-              : 'missing'),
-        );
-        await wait(2500);
-        window.__smoke.shot = 'terrain-path';
-        await new Promise((r) => {
-          window.__takeShot = r;
-        });
-        // Ground texture probe: the ellipsoid carries no vertex normals, so the globe never
-        // applies the material here; the same fabric source is compiled on a flat primitive by
-        // the camera instead — a shader error is a runtime error the harness fails on — and the
-        // shot shows the surface (turf and scrub at sea level, no snow at 21° N in May).
+        // SMOKE_ONLY=synthetic: straight to the synthetic terrain stage (minutes, not half an hour).
         const Cesium = await import('@cesium/engine');
-        const {
-          GROUND_COVER_BOUNDS_UNIFORM,
-          GROUND_COVER_IMAGE_UNIFORM,
-          GROUND_DETAIL_UNIFORM,
-          GROUND_MATERIAL_SOURCE,
-          GROUND_NOISE_UNIFORM,
-          NOISE_TEXTURE_SIZE,
-          createDetailTexture,
-          createNoiseTexture,
-          groundTextureFor,
-          makeNoiseTexture,
-        } = await import('@lightmap/renderer');
-        // The material's uniforms and its per-frame frame are the host's own (ground-material.ts),
-        // so this probe draws what the globe draws.
-        const { anchorGroundFrame, groundMaterialUniforms, newGroundFrame, updateGroundOffsets } =
-          await import('@lightmap/renderer/cesium');
-        const probeParams = groundTextureFor(s1);
-        const atlasImage = new Image();
-        atlasImage.src = 'textures/ground-detail.png';
-        await atlasImage.decode();
-        const detailTexture = createDetailTexture(Cesium, host.scene.context, atlasImage);
-        const noiseTexture = createNoiseTexture(
-          Cesium,
-          host.scene.context,
-          makeNoiseTexture(NOISE_TEXTURE_SIZE),
-          NOISE_TEXTURE_SIZE,
-        );
-        // A synthetic cover map over the probe rectangle (forest NW, crop NE, built SW, bare SE
-        // and an ice patch), packed as `packCover` does, so the cover branch runs for real:
-        // the shot must show the quadrants in place (forest at the north-west corner).
-        const { mercatorY, packCover } = await import('@lightmap/renderer');
-        const coverCanvas = document.createElement('canvas');
-        coverCanvas.width = coverCanvas.height = 64;
-        const cctx = coverCanvas.getContext('2d');
-        const cimg = cctx.createImageData(64, 64);
-        for (let y = 0; y < 64; y++)
-          for (let x = 0; x < 64; x++) {
-            // Row 0 is the north edge.
-            const north = y < 32;
-            const west = x < 32;
-            let cls = north && west ? 'tree' : north ? 'crop' : west ? 'built' : 'bare';
-            if ((x - 48) ** 2 + (y - 16) ** 2 < 36) cls = 'snow';
-            const v = packCover(cls);
-            cimg.data.set(v, (y * 64 + x) * 4);
-          }
-        cctx.putImageData(cimg, 0, 0);
-        const probeRect = { west: -157.76, south: 21.38, east: -157.7, north: 21.42 };
-        const coverBounds = new Cesium.Cartesian4(
-          Cesium.Math.toRadians(probeRect.west),
-          Cesium.Math.toRadians(probeRect.east),
-          mercatorY(probeRect.north),
-          mercatorY(probeRect.south),
-        );
-        const probeMaterial = new Cesium.Material({
-          fabric: {
-            type: 'LightMapGroundProbe',
-            uniforms: {
-              ...groundMaterialUniforms(Cesium, 1),
-              u_snowlineM: probeParams ? probeParams.snowlineM : 3000,
-              u_treelineM: probeParams ? probeParams.treelineM : 2100,
-              u_aridity: probeParams ? probeParams.aridity : 0.25,
-              u_ice: probeParams ? probeParams.ice : 0,
-              u_poleward: probeParams ? probeParams.poleward : 1,
-              // The cover map as the host declares it: a vec4 of bounds and an image uniform,
-              // here the synthetic map above, switched on (the one-frame default-white read
-              // before the upload is harmless in a probe).
-              [GROUND_COVER_BOUNDS_UNIFORM]: coverBounds,
-              [GROUND_COVER_IMAGE_UNIFORM]: coverCanvas,
-              u_coverOn: 1,
-            },
-            source: GROUND_MATERIAL_SOURCE,
-          },
-          translucent: false,
-          // As the host's: the cover map has no mip chain, and a mipmapped filter samples black.
-          minificationFilter: Cesium.TextureMinificationFilter.LINEAR,
-          magnificationFilter: Cesium.TextureMagnificationFilter.LINEAR,
-        });
-        // The detail tiles and the noise as the host builds them from the app's atlas, given to
-        // the material once it exists, as the host does (Cesium types fabric uniforms by value
-        // and has no type for a texture object).
-        if (detailTexture) {
-          probeMaterial.uniforms[GROUND_DETAIL_UNIFORM] = detailTexture;
-          probeMaterial.uniforms.u_detailOn = 1;
-        }
-        probeMaterial.uniforms[GROUND_NOISE_UNIFORM] = noiseTexture;
-        {
-          // The ground frame anchored at the probe's centre, the camera's place along it kept up
-          // each frame - the host's own code for the globe.
-          const centre = Cesium.Cartesian3.fromDegrees(
-            (probeRect.west + probeRect.east) / 2,
-            (probeRect.south + probeRect.north) / 2,
-          );
-          const frame = newGroundFrame(Cesium);
-          anchorGroundFrame(Cesium, frame, centre, probeMaterial.uniforms);
-          host.scene.preRender.addEventListener(() =>
-            updateGroundOffsets(
-              Cesium,
-              frame,
-              host.scene.camera.positionWC,
-              probeMaterial.uniforms,
-            ),
-          );
-        }
-        const groundPrimitive = host.scene.primitives.add(
-          new Cesium.Primitive({
-            geometryInstances: new Cesium.GeometryInstance({
-              geometry: new Cesium.RectangleGeometry({
-                rectangle: Cesium.Rectangle.fromDegrees(
-                  probeRect.west,
-                  probeRect.south,
-                  probeRect.east,
-                  probeRect.north,
-                ),
-                height: 3,
-                vertexFormat: Cesium.MaterialAppearance.MaterialSupport.ALL.vertexFormat,
-              }),
-            }),
-            appearance: new Cesium.MaterialAppearance({
-              material: probeMaterial,
-              materialSupport: Cesium.MaterialAppearance.MaterialSupport.ALL,
-            }),
-          }),
-        );
-        controller.apply(scene(12.5, 'clear'));
-        controller.setOrbit({ headingDeg: 20, pitchDeg: -45, rangeM: 2500 });
-        log(
-          'ground texture probe added (snowline ' +
-            (probeParams ? probeParams.snowlineM : '—') +
-            ' m)',
-        );
-        await wait(2500);
-        // The real globe program with the material (the path the app takes on terrain with
-        // vertex normals): Cesium's own GlobeVS/GlobeFS with the defines the app's globe uses,
-        // combined by Cesium's ShaderSource (builtins, automatic uniforms, defines) and compiled
-        // and linked on the scene's own GL context. Anything but 'ok' fails the run.
-        let globeProgram = 'unavailable';
-        try {
-          const ctx = host.scene.context;
-          const gl = ctx._gl;
-          const defines = [
-            'APPLY_MATERIAL',
-            'HAS_WATER_MASK',
-            'SHOW_REFLECTIVE_OCEAN',
-            'ENABLE_VERTEX_LIGHTING',
-            'DYNAMIC_ATMOSPHERE_LIGHTING',
-            'FOG',
-            'GROUND_ATMOSPHERE',
-            'TEXTURE_UNITS 4',
-          ];
-          if (Cesium._shadersGlobeFS && Cesium._shadersGlobeVS && gl) {
-            const fs = new Cesium.ShaderSource({
-              sources: [
-                Cesium._shadersAtmosphereCommon,
-                Cesium._shadersGroundAtmosphere,
-                GROUND_MATERIAL_SOURCE,
-                Cesium._shadersGlobeFS,
-                // GlobeSurfaceShaderSet writes this one per imagery-layer count; one plain layer
-                // stands in for it here.
-                'vec4 computeDayColor(vec4 initialColor, vec3 textureCoordinates, float nightBlend)\n{\n    return initialColor;\n}\n',
-              ],
-              defines,
-            }).createCombinedFragmentShader(ctx);
-            const vs = new Cesium.ShaderSource({
-              sources: [
-                Cesium._shadersAtmosphereCommon,
-                Cesium._shadersGroundAtmosphere,
-                Cesium._shadersGlobeVS,
-                // GlobeSurfaceShaderSet writes these two by scene mode and projection; the 3D,
-                // geographic ones stand in for them here.
-                'vec4 getPosition(vec3 position, float height, vec2 textureCoordinates) { return getPosition3DMode(position, height, textureCoordinates); }\n',
-                'float get2DYPositionFraction(vec2 textureCoordinates) { return get2DGeographicYPositionFraction(textureCoordinates); }\n',
-              ],
-              defines,
-            }).createCombinedVertexShader(ctx);
-            const compile = (type, src) => {
-              const sh = gl.createShader(type);
-              gl.shaderSource(sh, src);
-              gl.compileShader(sh);
-              if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS))
-                throw new Error(
-                  (type === gl.FRAGMENT_SHADER ? 'FS: ' : 'VS: ') + gl.getShaderInfoLog(sh),
-                );
-              return sh;
-            };
-            const f = compile(gl.FRAGMENT_SHADER, fs);
-            const v = compile(gl.VERTEX_SHADER, vs);
-            const prog = gl.createProgram();
-            gl.attachShader(prog, v);
-            gl.attachShader(prog, f);
-            gl.linkProgram(prog);
-            if (!gl.getProgramParameter(prog, gl.LINK_STATUS))
-              throw new Error('LINK: ' + gl.getProgramInfoLog(prog));
-            gl.deleteProgram(prog);
-            gl.deleteShader(v);
-            gl.deleteShader(f);
-            globeProgram = 'ok';
-          }
-        } catch (e) {
-          globeProgram = 'failed: ' + ((e && e.message) || e);
-          window.__smoke.errors.push('ground texture globe program: ' + globeProgram);
-        }
-        log('ground texture globe program: ' + globeProgram);
-        window.__smoke.groundProbe = {
-          params: probeParams,
-          globeProgram,
-          errorsBefore: window.__smoke.errors.length,
-        };
-        window.__smoke.shot = 'ground-texture';
-        await new Promise((r) => {
-          window.__takeShot = r;
-        });
-        // Close up: the camera 40 m from the pin, looking down at the probe — the atlas's
-        // grass tile (the Kailua shore reads as turf at this height) with no visible grid, and
-        // fixed to the ground as the orbit turns (two shots, same place).
-        controller.setOrbit({ headingDeg: 20, pitchDeg: -35, rangeM: 40 });
-        await wait(2500);
-        window.__smoke.shot = 'ground-detail';
-        await new Promise((r) => {
-          window.__takeShot = r;
-        });
-        controller.setOrbit({ headingDeg: 60, pitchDeg: -35, rangeM: 40 });
-        await wait(1500);
-        window.__smoke.shot = 'ground-detail-turned';
-        await new Promise((r) => {
-          window.__takeShot = r;
-        });
-        // The ground probe stands 3 m over the pin: out of the way of a viewpoint at the shore.
-        host.scene.primitives.remove(groundPrimitive);
-        // Water probe: the painted sea as the globe draws it. A rectangle of sea at sea level
-        // around the pin takes the same material with the globe's own defines (HAS_WATER_MASK,
-        // ENABLE_VERTEX_LIGHTING) and a fragment shader that does what GlobeFS does with the
-        // material - alpha-blends it over the imagery's sea and lights it by the light's colour
-        // and Cesium's Lambert term - so the shots show the sky in the water: blue at noon,
-        // the glow and the glitter toward a setting Sun, the plain horizon away from it, grey
-        // under an overcast and dark at night.
-        const waterMaterial = new Cesium.Material({
-          fabric: {
-            type: 'LightMapWaterProbe',
-            uniforms: {
-              ...groundMaterialUniforms(Cesium, 1),
-              u_snowlineM: 3000,
-              u_treelineM: 2100,
-            },
-            source:
-              '#define HAS_WATER_MASK\n#define ENABLE_VERTEX_LIGHTING\n' + GROUND_MATERIAL_SOURCE,
-          },
-          translucent: false,
-          minificationFilter: Cesium.TextureMinificationFilter.LINEAR,
-          magnificationFilter: Cesium.TextureMagnificationFilter.LINEAR,
-        });
-        waterMaterial.uniforms[GROUND_NOISE_UNIFORM] = noiseTexture;
-        if (detailTexture) waterMaterial.uniforms[GROUND_DETAIL_UNIFORM] = detailTexture;
-        {
-          const frame = newGroundFrame(Cesium);
-          anchorGroundFrame(
-            Cesium,
-            frame,
-            Cesium.Cartesian3.fromDegrees(kailua.point.longitude, kailua.point.latitude),
-            waterMaterial.uniforms,
-          );
-          host.scene.preRender.addEventListener(() =>
-            updateGroundOffsets(
-              Cesium,
-              frame,
-              host.scene.camera.positionWC,
-              waterMaterial.uniforms,
-            ),
-          );
-        }
-        const waterFS = [
-          'in vec3 v_positionEC;',
-          'in vec3 v_normalEC;',
-          'in vec2 v_st;',
-          'void main()',
-          '{',
-          '    vec3 normalEC = normalize(v_normalEC);',
-          '    czm_materialInput materialInput;',
-          '    materialInput.normalEC = normalEC;',
-          '    materialInput.positionToEyeEC = -v_positionEC;',
-          '    materialInput.st = v_st;',
-          '    materialInput.height = 0.0;',
-          '    materialInput.slope = 0.0;',
-          '    materialInput.aspect = 0.0;',
-          '    materialInput.waterMask = 1.0;',
-          '    czm_material material = czm_getMaterial(materialInput);',
-          '    vec4 imagery = vec4(0.05, 0.10, 0.18, 1.0);',
-          '    vec4 paint = vec4(material.diffuse, material.alpha);',
-          '    vec4 color = paint * vec4(paint.aaa, 1.0) + imagery * (1.0 - paint.a);',
-          '    float diffuseIntensity = clamp(czm_getLambertDiffuse(czm_lightDirectionEC, normalEC) * 0.9 + 0.3, 0.0, 1.0);',
-          '    out_FragColor = vec4(color.rgb * czm_lightColor * diffuseIntensity, 1.0);',
-          '}',
-        ].join('\n');
-        const waterPrimitive = host.scene.primitives.add(
-          new Cesium.Primitive({
-            geometryInstances: new Cesium.GeometryInstance({
-              geometry: new Cesium.RectangleGeometry({
-                rectangle: Cesium.Rectangle.fromDegrees(
-                  kailua.point.longitude - 0.12,
-                  kailua.point.latitude - 0.1,
-                  kailua.point.longitude + 0.12,
-                  kailua.point.latitude + 0.1,
-                ),
-                height: 0.5,
-                granularity: Cesium.Math.toRadians(0.01),
-                vertexFormat: Cesium.MaterialAppearance.MaterialSupport.ALL.vertexFormat,
-              }),
-            }),
-            appearance: new Cesium.MaterialAppearance({
-              material: waterMaterial,
-              materialSupport: Cesium.MaterialAppearance.MaterialSupport.ALL,
-              fragmentShaderSource: waterFS,
-            }),
-          }),
-        );
-        const waterShot = async (name, hour, scenario, headingDeg) => {
-          const sc = scene(hour, scenario, {
-            ...defaultCamera(kailua.point, headingDeg),
-            mode: 'viewpoint',
-            pitchDeg: -3,
-          });
-          controller.apply(sc);
-          // The host feeds its own globe material the sky in the water; the probe's material
-          // takes the same values here.
-          // (The probe lights itself with Cesium's default split, 0.9 / 0.3 - the material's own
-          // defaults - since a material's uniforms are renamed in its source and the probe's
-          // fragment shader cannot read them.)
-          const { seaSky, glitter, seaSlopeVariance } = lightingFromScene(sc);
-          waterMaterial.uniforms.u_glitter = glitter;
-          waterMaterial.uniforms.u_seaSlope2 = seaSlopeVariance;
-          waterMaterial.uniforms.u_seaSkyAway = new Cesium.Cartesian3(...seaSky.away);
-          waterMaterial.uniforms.u_seaSkyToward = new Cesium.Cartesian3(...seaSky.toward);
-          await wait(1800);
-          window.__smoke.shot = name;
+        if (!window.__synthOnly) {
+          window.__smoke.phase = 'noon-clear';
+          await wait(6000);
+          const stats1 = host.stats();
+          window.__smoke.stats1 = stats1;
+          window.__smoke.cesiumSun = stats1.cesiumSunDirectionEcef;
+          window.__smoke.ourSun = lightingFromScene(s1).sunDirectionEcef;
+          window.__smoke.shot = 'noon-clear';
+          await wait(200);
           await new Promise((r) => {
             window.__takeShot = r;
           });
-        };
-        await waterShot('water-noon', 12.5, 'clear', 290);
-        await waterShot('water-golden-toward', 18.75, 'clear', 290);
-        await waterShot('water-golden-away', 18.75, 'clear', 110);
-        // After sunset the light is held at the horizon: the glow on the water, no glitter path.
-        await waterShot('water-dusk', 19.4, 'clear', 290);
-        await waterShot('water-overcast', 12.5, 'overcast', 290);
-        await waterShot('water-night', 23, 'clear', 290);
-        // The full Moon of 31 May 2026 low over the sea at 21:00: the scene's light is the
-        // Moon's, so the glitter path is the moon path, under it in the Moon's colour.
-        await waterShot('water-moon', 21, 'clear', scene(21, 'clear').lunar.azimuthDegrees);
-        // WATER_RAW=<hour> (1: 18:45): one more shot of the sea in three strips - the light's
-        // colour times the globe's Lambert term, the material's raw output, and the two
-        // multiplied (what the globe shows) - with the grade's haze, tint and saturation off,
-        // for reading pixel values against the material's maths.
-        if (window.__waterRaw) {
-          host.scene.primitives.remove(waterPrimitive);
-          const rawFS = waterFS.replace(
-            'out_FragColor = vec4(color.rgb * czm_lightColor * diffuseIntensity, 1.0);',
-            'out_FragColor = vec4(material.diffuse, 1.0); if (gl_FragCoord.x < 0.33 * czm_viewport.z) out_FragColor = vec4(czm_lightColor * diffuseIntensity, 1.0); if (gl_FragCoord.x > 0.66 * czm_viewport.z) out_FragColor = vec4(material.diffuse * czm_lightColor * diffuseIntensity, 1.0);',
+          const s2 = scene(12.5, 'overcast');
+          controller.apply(s2);
+          window.__smoke.lighting.overcast = lightingFromScene(s2);
+          log('applied noon overcast');
+          await wait(1500);
+          window.__smoke.shot = 'noon-overcast';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+          const golden = scene(18.75, 'clear', {
+            ...defaultCamera(kailua.point, 250),
+            mode: 'viewpoint',
+            pitchDeg: 5,
+          });
+          controller.apply(golden);
+          window.__smoke.lighting.golden = lightingFromScene(golden);
+          log('applied golden viewpoint');
+          await wait(2500);
+          window.__smoke.shot = 'golden-viewpoint';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+          const blue = scene(19.5, 'clear', {
+            ...defaultCamera(kailua.point, 250),
+            mode: 'viewpoint',
+            pitchDeg: 5,
+          });
+          controller.apply(blue);
+          log('applied blue hour viewpoint');
+          await wait(1500);
+          window.__smoke.shot = 'blue-viewpoint';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+          const partly = scene(15, 'partly-cloudy', {
+            ...defaultCamera(kailua.point, 250),
+            mode: 'viewpoint',
+            pitchDeg: 12,
+          });
+          controller.apply(partly);
+          log('applied partly viewpoint');
+          await wait(1500);
+          window.__smoke.shot = 'partly-viewpoint';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+          const night = scene(23, 'clear', {
+            ...defaultCamera(kailua.point, 120),
+            mode: 'viewpoint',
+            pitchDeg: 30,
+          });
+          controller.apply(night);
+          log('applied night viewpoint');
+          await wait(1500);
+          window.__smoke.shot = 'night-viewpoint';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+          const storm = scene(12.5, 'storm', {
+            ...defaultCamera(kailua.point, 250),
+            mode: 'viewpoint',
+            pitchDeg: 5,
+          });
+          controller.apply(storm);
+          log('applied storm viewpoint');
+          await wait(1500);
+          window.__smoke.shot = 'storm-viewpoint';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+          // Phase 4 experiment (feature flag `physicalSkyDome`): the same storm with the dome's
+          // aerosol density from the sky model's Mie coefficient. Compare with the shot above —
+          // a hazier, paler sky with a wider halo is the expected difference; nothing else moves.
+          const stormPhysical = buildSceneState({
+            location: kailua,
+            utc: storm.utc,
+            now: new Date('2026-05-01T00:00:00Z'),
+            camera: storm.camera,
+            environment: env,
+            scenario: 'storm',
+            forceScenario: true,
+            weather: { capabilities: OPEN_METEO_CAPABILITIES, frames: [], providerFailed: false },
+            render: { ...DEFAULT_RENDER_SETTINGS, physicalSkyDome: true },
+            includeLunar: true,
+            realReference: false,
+          });
+          controller.apply(stormPhysical);
+          window.__smoke.lighting.stormPhysical = lightingFromScene(stormPhysical);
+          log(
+            'applied storm viewpoint, physical dome (mie ' +
+              window.__smoke.lighting.stormPhysical.atmosphere.mieCoefficient +
+              ')',
           );
-          host.scene.primitives.add(
+          await wait(1500);
+          window.__smoke.shot = 'storm-physical-dome';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+          // Back to the default dome for every scene that follows.
+          controller.apply(scene(12.5, 'clear'));
+          await wait(300);
+          // Layered decks from a forecast frame (not a scenario): the same minute after sunset with
+          // only cirrus (stays sunlit, pink) and with only a low stratus deck (in shadow, dark).
+          const frameAt = (hour, layers) => ({
+            timestamp: localSelectionToUtc(
+              { year: 2026, month: 5, day: 31 },
+              hour * 60,
+              kailua.timeZone,
+            ).toISOString(),
+            cloudCoverTotal: Math.max(layers.low, layers.mid, layers.high),
+            cloudCoverLow: layers.low,
+            cloudCoverMid: layers.mid,
+            cloudCoverHigh: layers.high,
+            precipitationProbability: 0,
+            precipitationAmount: 0,
+            humidity: 60,
+            visibility: 40000,
+            windSpeed: 3,
+            windDirection: 90,
+            weatherCode: 2,
+          });
+          const forecastScene = (hour, layers, camera) =>
+            buildSceneState({
+              location: kailua,
+              utc: localSelectionToUtc(
+                { year: 2026, month: 5, day: 31 },
+                hour * 60,
+                kailua.timeZone,
+              ),
+              now: new Date('2026-05-30T00:00:00Z'),
+              camera,
+              environment: env,
+              scenario: 'clear',
+              forceScenario: false,
+              weather: {
+                capabilities: OPEN_METEO_CAPABILITIES,
+                frames: [frameAt(19, layers), frameAt(20, layers)],
+                providerFailed: false,
+              },
+              render: DEFAULT_RENDER_SETTINGS,
+              includeLunar: true,
+              realReference: false,
+            });
+          const westCam = { ...defaultCamera(kailua.point, 265), mode: 'viewpoint', pitchDeg: 8 };
+          const cirrus = forecastScene(19.3, { low: 0, mid: 0, high: 80 }, westCam);
+          controller.apply(cirrus);
+          window.__smoke.lighting.cirrus = lightingFromScene(cirrus);
+          log(
+            'applied cirrus sunset (forecast frame) ' +
+              cirrus.atmosphere.mode +
+              ' el=' +
+              cirrus.solar.elevationDegrees.toFixed(2),
+          );
+          await wait(1500);
+          window.__smoke.shot = 'cirrus-sunset';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+          const stratus = forecastScene(19.3, { low: 80, mid: 0, high: 0 }, westCam);
+          controller.apply(stratus);
+          window.__smoke.lighting.stratus = lightingFromScene(stratus);
+          log('applied stratus sunset (forecast frame) ' + stratus.atmosphere.mode);
+          await wait(1500);
+          window.__smoke.shot = 'stratus-sunset';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+          // Shadow probe (accuracy before beauty): a 20 m tower on flat ground; its shadow must fall on
+          // the anti-solar side with length h / tan(el), and must not fade at low Sun. Measured from
+          // the frame itself: ground luminance along the shadow line vs the same distances on the Sun
+          // side, and just beyond the shadow's end.
+          const C = await import('@cesium/engine');
+          const cesiumScene = host.scene;
+          const towerLat = kailua.point.latitude + 0.0009;
+          const towerLng = kailua.point.longitude;
+          const enu = C.Transforms.eastNorthUpToFixedFrame(
+            C.Cartesian3.fromDegrees(towerLng, towerLat, 0),
+          );
+          cesiumScene.primitives.add(
+            new C.Primitive({
+              geometryInstances: new C.GeometryInstance({
+                geometry: C.BoxGeometry.fromDimensions({
+                  dimensions: new C.Cartesian3(12, 12, 20),
+                  vertexFormat: C.PerInstanceColorAppearance.VERTEX_FORMAT,
+                }),
+                modelMatrix: C.Matrix4.multiplyByTranslation(
+                  enu,
+                  new C.Cartesian3(0, 0, 10),
+                  new C.Matrix4(),
+                ),
+                attributes: {
+                  color: C.ColorGeometryInstanceAttribute.fromColor(
+                    C.Color.fromCssColorString('#d0d0d0'),
+                  ),
+                },
+              }),
+              appearance: new C.PerInstanceColorAppearance({ closed: true }),
+              shadows: C.ShadowMode.ENABLED,
+              asynchronous: false,
+            }),
+          );
+          const shadowScene = scene(18.25, 'clear');
+          controller.apply(shadowScene);
+          controller.setOrbit({ headingDeg: 0, pitchDeg: -89, rangeM: 420 });
+          await wait(3000);
+          // The switch from the viewpoint is a camera flight, and on software GL it can outlast the
+          // wait: measure only once the camera stands over the tower (a capture mid-flight read
+          // the sky over the Earth's limb, and the probe failed for no fault in the shadow).
+          for (let i = 0; i < 60; i++) {
+            const cam = cesiumScene.camera;
+            if (!cam._currentFlight && Math.abs(cam.positionCartographic.height - 420) < 40) break;
+            await wait(500);
+          }
+          const el = shadowScene.solar.elevationDegrees;
+          const az = shadowScene.solar.azimuthDegrees;
+          const shadowAz = (az + 180) % 360;
+          const len = 20 / Math.tan((el * Math.PI) / 180);
+          const probe = (bearingDeg, distM) => {
+            const b = (bearingDeg * Math.PI) / 180;
+            const world = C.Matrix4.multiplyByPoint(
+              enu,
+              new C.Cartesian3(Math.sin(b) * distM, Math.cos(b) * distM, 0.3),
+              new C.Cartesian3(),
+            );
+            const w = C.SceneTransforms.worldToWindowCoordinates(cesiumScene, world);
+            return w ? { x: w.x, y: w.y } : null;
+          };
+          const fr = [0.3, 0.5, 0.7];
+          const pts = {
+            inShadow: fr.map((f) => probe(shadowAz, 8 + len * f)),
+            sunSide: fr.map((f) => probe(az, 8 + len * f)),
+            beyond: [probe(shadowAz, len * 1.6 + 12)],
+          };
+          const dataUrl = await host.captureThumbnail(4096);
+          const lum = await new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+              const cv = document.createElement('canvas');
+              cv.width = img.width;
+              cv.height = img.height;
+              const ctx = cv.getContext('2d');
+              ctx.drawImage(img, 0, 0);
+              const sx = img.width / cesiumScene.canvas.clientWidth;
+              const sy = img.height / cesiumScene.canvas.clientHeight;
+              const at = (p) => {
+                if (!p) return null;
+                const d = ctx.getImageData(Math.round(p.x * sx), Math.round(p.y * sy), 1, 1).data;
+                return (0.2126 * d[0] + 0.7152 * d[1] + 0.0722 * d[2]) / 255;
+              };
+              resolve({
+                inShadow: pts.inShadow.map(at),
+                sunSide: pts.sunSide.map(at),
+                beyond: pts.beyond.map(at),
+              });
+            };
+            img.src = dataUrl;
+          });
+          window.__smoke.shadowProbe = { el, az, shadowAz, lengthM: len, pts, lum };
+          log(
+            'shadow probe el=' +
+              el.toFixed(1) +
+              ' shadow ' +
+              lum.inShadow.map((v) => v && v.toFixed(2)).join('/') +
+              ' sun side ' +
+              lum.sunSide.map((v) => v && v.toFixed(2)).join('/') +
+              ' beyond ' +
+              lum.beyond.map((v) => v && v.toFixed(2)).join('/'),
+          );
+          window.__smoke.shot = 'shadow-tower';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+          // Terrain horizon overlay: a synthetic 600 m ridge on the ~2 km ring across the east (the
+          // ellipsoid has no terrain to sample, so the profile is built directly). The map-mode sun
+          // path must show the morning behind the ridge as dark dashes over the gold path.
+          const { horizonProfileFromSamples, horizonRingDistances, horizonSamplePoints } =
+            await import('@lightmap/scene');
+          const ridgeRing = horizonRingDistances().reduce((b, d) =>
+            Math.abs(d - 2000) < Math.abs(b - 2000) ? d : b,
+          );
+          const ridgeProfile = horizonProfileFromSamples(
+            kailua.point,
+            2,
+            1.6,
+            horizonSamplePoints(kailua.point).map((p) => ({
+              azimuthDeg: p.azimuthDeg,
+              distanceM: p.distanceM,
+              heightM:
+                p.azimuthDeg >= 30 && p.azimuthDeg <= 150 && p.distanceM === ridgeRing ? 600 : 0,
+            })),
+            { providerId: 'smoke-synthetic', resolutionM: 30 },
+          );
+          const ridgeScene = buildSceneState({
+            location: kailua,
+            utc: localSelectionToUtc({ year: 2026, month: 5, day: 31 }, 7 * 60, kailua.timeZone),
+            now: new Date('2026-05-01T00:00:00Z'),
+            camera: defaultCamera(kailua.point, 90),
+            environment: env,
+            scenario: 'clear',
+            forceScenario: true,
+            weather: { capabilities: OPEN_METEO_CAPABILITIES, frames: [], providerFailed: false },
+            render: DEFAULT_RENDER_SETTINGS,
+            includeLunar: true,
+            realReference: false,
+            horizonProfile: ridgeProfile,
+          });
+          controller.apply(ridgeScene);
+          controller.setOrbit({ headingDeg: 0, pitchDeg: -60, rangeM: 1500 });
+          const th = ridgeScene.terrainHorizon;
+          window.__smoke.terrain = th
+            ? {
+                sunAboveTerrain: th.sunAboveTerrain,
+                horizonAtSunDeg: th.horizonAtSunDeg,
+                firstLight: th.sunEvents.firstLight,
+                sunrise: ridgeScene.dayEvents.sunrise,
+                differs: th.sunEvents.differsFromAstronomical,
+              }
+            : null;
+          log(
+            'terrain horizon at 07:00: ' +
+              (th
+                ? `sun ${th.sunAboveTerrain ? 'above' : 'behind'} terrain (ridge ${th.horizonAtSunDeg.toFixed(1)}°), first light ${th.sunEvents.firstLight ? th.sunEvents.firstLight.toISOString() : 'none'} vs sunrise ${ridgeScene.dayEvents.sunrise.toISOString()}`
+                : 'missing'),
+          );
+          await wait(2500);
+          window.__smoke.shot = 'terrain-path';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+          // Ground texture probe: the ellipsoid carries no vertex normals, so the globe never
+          // applies the material here; the same fabric source is compiled on a flat primitive by
+          // the camera instead — a shader error is a runtime error the harness fails on — and the
+          // shot shows the surface (turf and scrub at sea level, no snow at 21° N in May).
+          const Cesium = await import('@cesium/engine');
+          const {
+            GROUND_COVER_BOUNDS_UNIFORM,
+            GROUND_COVER_IMAGE_UNIFORM,
+            GROUND_DETAIL_UNIFORM,
+            GROUND_MATERIAL_SOURCE,
+            GROUND_NOISE_UNIFORM,
+            NOISE_TEXTURE_SIZE,
+            createDetailTexture,
+            createNoiseTexture,
+            groundTextureFor,
+            makeNoiseTexture,
+          } = await import('@lightmap/renderer');
+          // The material's uniforms and its per-frame frame are the host's own (ground-material.ts),
+          // so this probe draws what the globe draws.
+          const { anchorGroundFrame, groundMaterialUniforms, newGroundFrame, updateGroundOffsets } =
+            await import('@lightmap/renderer/cesium');
+          const probeParams = groundTextureFor(s1);
+          const atlasImage = new Image();
+          atlasImage.src = 'textures/ground-detail.png';
+          await atlasImage.decode();
+          const detailTexture = createDetailTexture(Cesium, host.scene.context, atlasImage);
+          const noiseTexture = createNoiseTexture(
+            Cesium,
+            host.scene.context,
+            makeNoiseTexture(NOISE_TEXTURE_SIZE),
+            NOISE_TEXTURE_SIZE,
+          );
+          // A synthetic cover map over the probe rectangle (forest NW, crop NE, built SW, bare SE
+          // and an ice patch), packed as `packCover` does, so the cover branch runs for real:
+          // the shot must show the quadrants in place (forest at the north-west corner).
+          const { mercatorY, packCover } = await import('@lightmap/renderer');
+          const coverCanvas = document.createElement('canvas');
+          coverCanvas.width = coverCanvas.height = 64;
+          const cctx = coverCanvas.getContext('2d');
+          const cimg = cctx.createImageData(64, 64);
+          for (let y = 0; y < 64; y++)
+            for (let x = 0; x < 64; x++) {
+              // Row 0 is the north edge.
+              const north = y < 32;
+              const west = x < 32;
+              let cls = north && west ? 'tree' : north ? 'crop' : west ? 'built' : 'bare';
+              if ((x - 48) ** 2 + (y - 16) ** 2 < 36) cls = 'snow';
+              const v = packCover(cls);
+              cimg.data.set(v, (y * 64 + x) * 4);
+            }
+          cctx.putImageData(cimg, 0, 0);
+          const probeRect = { west: -157.76, south: 21.38, east: -157.7, north: 21.42 };
+          const coverBounds = new Cesium.Cartesian4(
+            Cesium.Math.toRadians(probeRect.west),
+            Cesium.Math.toRadians(probeRect.east),
+            mercatorY(probeRect.north),
+            mercatorY(probeRect.south),
+          );
+          const probeMaterial = new Cesium.Material({
+            fabric: {
+              type: 'LightMapGroundProbe',
+              uniforms: {
+                ...groundMaterialUniforms(Cesium, 1),
+                u_snowlineM: probeParams ? probeParams.snowlineM : 3000,
+                u_treelineM: probeParams ? probeParams.treelineM : 2100,
+                u_aridity: probeParams ? probeParams.aridity : 0.25,
+                u_ice: probeParams ? probeParams.ice : 0,
+                u_poleward: probeParams ? probeParams.poleward : 1,
+                // The cover map as the host declares it: a vec4 of bounds and an image uniform,
+                // here the synthetic map above, switched on (the one-frame default-white read
+                // before the upload is harmless in a probe).
+                [GROUND_COVER_BOUNDS_UNIFORM]: coverBounds,
+                [GROUND_COVER_IMAGE_UNIFORM]: coverCanvas,
+                u_coverOn: 1,
+              },
+              source: GROUND_MATERIAL_SOURCE,
+            },
+            translucent: false,
+            // As the host's: the cover map has no mip chain, and a mipmapped filter samples black.
+            minificationFilter: Cesium.TextureMinificationFilter.LINEAR,
+            magnificationFilter: Cesium.TextureMagnificationFilter.LINEAR,
+          });
+          // The detail tiles and the noise as the host builds them from the app's atlas, given to
+          // the material once it exists, as the host does (Cesium types fabric uniforms by value
+          // and has no type for a texture object).
+          if (detailTexture) {
+            probeMaterial.uniforms[GROUND_DETAIL_UNIFORM] = detailTexture;
+            probeMaterial.uniforms.u_detailOn = 1;
+          }
+          probeMaterial.uniforms[GROUND_NOISE_UNIFORM] = noiseTexture;
+          {
+            // The ground frame anchored at the probe's centre, the camera's place along it kept up
+            // each frame - the host's own code for the globe.
+            const centre = Cesium.Cartesian3.fromDegrees(
+              (probeRect.west + probeRect.east) / 2,
+              (probeRect.south + probeRect.north) / 2,
+            );
+            const frame = newGroundFrame(Cesium);
+            anchorGroundFrame(Cesium, frame, centre, probeMaterial.uniforms);
+            host.scene.preRender.addEventListener(() =>
+              updateGroundOffsets(
+                Cesium,
+                frame,
+                host.scene.camera.positionWC,
+                probeMaterial.uniforms,
+              ),
+            );
+          }
+          const groundPrimitive = host.scene.primitives.add(
+            new Cesium.Primitive({
+              geometryInstances: new Cesium.GeometryInstance({
+                geometry: new Cesium.RectangleGeometry({
+                  rectangle: Cesium.Rectangle.fromDegrees(
+                    probeRect.west,
+                    probeRect.south,
+                    probeRect.east,
+                    probeRect.north,
+                  ),
+                  height: 3,
+                  vertexFormat: Cesium.MaterialAppearance.MaterialSupport.ALL.vertexFormat,
+                }),
+              }),
+              appearance: new Cesium.MaterialAppearance({
+                material: probeMaterial,
+                materialSupport: Cesium.MaterialAppearance.MaterialSupport.ALL,
+              }),
+            }),
+          );
+          controller.apply(scene(12.5, 'clear'));
+          controller.setOrbit({ headingDeg: 20, pitchDeg: -45, rangeM: 2500 });
+          log(
+            'ground texture probe added (snowline ' +
+              (probeParams ? probeParams.snowlineM : '—') +
+              ' m)',
+          );
+          await wait(2500);
+          // The real globe program with the material (the path the app takes on terrain with
+          // vertex normals): Cesium's own GlobeVS/GlobeFS with the defines the app's globe uses,
+          // combined by Cesium's ShaderSource (builtins, automatic uniforms, defines) and compiled
+          // and linked on the scene's own GL context. Anything but 'ok' fails the run.
+          let globeProgram = 'unavailable';
+          try {
+            const ctx = host.scene.context;
+            const gl = ctx._gl;
+            const defines = [
+              'APPLY_MATERIAL',
+              'HAS_WATER_MASK',
+              'SHOW_REFLECTIVE_OCEAN',
+              'ENABLE_VERTEX_LIGHTING',
+              'DYNAMIC_ATMOSPHERE_LIGHTING',
+              'FOG',
+              'GROUND_ATMOSPHERE',
+              'TEXTURE_UNITS 4',
+            ];
+            if (Cesium._shadersGlobeFS && Cesium._shadersGlobeVS && gl) {
+              const fs = new Cesium.ShaderSource({
+                sources: [
+                  Cesium._shadersAtmosphereCommon,
+                  Cesium._shadersGroundAtmosphere,
+                  GROUND_MATERIAL_SOURCE,
+                  Cesium._shadersGlobeFS,
+                  // GlobeSurfaceShaderSet writes this one per imagery-layer count; one plain layer
+                  // stands in for it here.
+                  'vec4 computeDayColor(vec4 initialColor, vec3 textureCoordinates, float nightBlend)\n{\n    return initialColor;\n}\n',
+                ],
+                defines,
+              }).createCombinedFragmentShader(ctx);
+              const vs = new Cesium.ShaderSource({
+                sources: [
+                  Cesium._shadersAtmosphereCommon,
+                  Cesium._shadersGroundAtmosphere,
+                  Cesium._shadersGlobeVS,
+                  // GlobeSurfaceShaderSet writes these two by scene mode and projection; the 3D,
+                  // geographic ones stand in for them here.
+                  'vec4 getPosition(vec3 position, float height, vec2 textureCoordinates) { return getPosition3DMode(position, height, textureCoordinates); }\n',
+                  'float get2DYPositionFraction(vec2 textureCoordinates) { return get2DGeographicYPositionFraction(textureCoordinates); }\n',
+                ],
+                defines,
+              }).createCombinedVertexShader(ctx);
+              const compile = (type, src) => {
+                const sh = gl.createShader(type);
+                gl.shaderSource(sh, src);
+                gl.compileShader(sh);
+                if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS))
+                  throw new Error(
+                    (type === gl.FRAGMENT_SHADER ? 'FS: ' : 'VS: ') + gl.getShaderInfoLog(sh),
+                  );
+                return sh;
+              };
+              const f = compile(gl.FRAGMENT_SHADER, fs);
+              const v = compile(gl.VERTEX_SHADER, vs);
+              const prog = gl.createProgram();
+              gl.attachShader(prog, v);
+              gl.attachShader(prog, f);
+              gl.linkProgram(prog);
+              if (!gl.getProgramParameter(prog, gl.LINK_STATUS))
+                throw new Error('LINK: ' + gl.getProgramInfoLog(prog));
+              gl.deleteProgram(prog);
+              gl.deleteShader(v);
+              gl.deleteShader(f);
+              globeProgram = 'ok';
+            }
+          } catch (e) {
+            globeProgram = 'failed: ' + ((e && e.message) || e);
+            window.__smoke.errors.push('ground texture globe program: ' + globeProgram);
+          }
+          log('ground texture globe program: ' + globeProgram);
+          window.__smoke.groundProbe = {
+            params: probeParams,
+            globeProgram,
+            errorsBefore: window.__smoke.errors.length,
+          };
+          window.__smoke.shot = 'ground-texture';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+          // Close up: the camera 40 m from the pin, looking down at the probe — the atlas's
+          // grass tile (the Kailua shore reads as turf at this height) with no visible grid, and
+          // fixed to the ground as the orbit turns (two shots, same place).
+          controller.setOrbit({ headingDeg: 20, pitchDeg: -35, rangeM: 40 });
+          await wait(2500);
+          window.__smoke.shot = 'ground-detail';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+          controller.setOrbit({ headingDeg: 60, pitchDeg: -35, rangeM: 40 });
+          await wait(1500);
+          window.__smoke.shot = 'ground-detail-turned';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+          // The ground probe stands 3 m over the pin: out of the way of a viewpoint at the shore.
+          host.scene.primitives.remove(groundPrimitive);
+          // Water probe: the painted sea as the globe draws it. A rectangle of sea at sea level
+          // around the pin takes the same material with the globe's own defines (HAS_WATER_MASK,
+          // ENABLE_VERTEX_LIGHTING) and a fragment shader that does what GlobeFS does with the
+          // material - alpha-blends it over the imagery's sea and lights it by the light's colour
+          // and Cesium's Lambert term - so the shots show the sky in the water: blue at noon,
+          // the glow and the glitter toward a setting Sun, the plain horizon away from it, grey
+          // under an overcast and dark at night.
+          const waterMaterial = new Cesium.Material({
+            fabric: {
+              type: 'LightMapWaterProbe',
+              uniforms: {
+                ...groundMaterialUniforms(Cesium, 1),
+                u_snowlineM: 3000,
+                u_treelineM: 2100,
+              },
+              source:
+                '#define HAS_WATER_MASK\n#define ENABLE_VERTEX_LIGHTING\n' + GROUND_MATERIAL_SOURCE,
+            },
+            translucent: false,
+            minificationFilter: Cesium.TextureMinificationFilter.LINEAR,
+            magnificationFilter: Cesium.TextureMagnificationFilter.LINEAR,
+          });
+          waterMaterial.uniforms[GROUND_NOISE_UNIFORM] = noiseTexture;
+          if (detailTexture) waterMaterial.uniforms[GROUND_DETAIL_UNIFORM] = detailTexture;
+          {
+            const frame = newGroundFrame(Cesium);
+            anchorGroundFrame(
+              Cesium,
+              frame,
+              Cesium.Cartesian3.fromDegrees(kailua.point.longitude, kailua.point.latitude),
+              waterMaterial.uniforms,
+            );
+            host.scene.preRender.addEventListener(() =>
+              updateGroundOffsets(
+                Cesium,
+                frame,
+                host.scene.camera.positionWC,
+                waterMaterial.uniforms,
+              ),
+            );
+          }
+          const waterFS = [
+            'in vec3 v_positionEC;',
+            'in vec3 v_normalEC;',
+            'in vec2 v_st;',
+            'void main()',
+            '{',
+            '    vec3 normalEC = normalize(v_normalEC);',
+            '    czm_materialInput materialInput;',
+            '    materialInput.normalEC = normalEC;',
+            '    materialInput.positionToEyeEC = -v_positionEC;',
+            '    materialInput.st = v_st;',
+            '    materialInput.height = 0.0;',
+            '    materialInput.slope = 0.0;',
+            '    materialInput.aspect = 0.0;',
+            '    materialInput.waterMask = 1.0;',
+            '    czm_material material = czm_getMaterial(materialInput);',
+            '    vec4 imagery = vec4(0.05, 0.10, 0.18, 1.0);',
+            '    vec4 paint = vec4(material.diffuse, material.alpha);',
+            '    vec4 color = paint * vec4(paint.aaa, 1.0) + imagery * (1.0 - paint.a);',
+            '    float diffuseIntensity = clamp(czm_getLambertDiffuse(czm_lightDirectionEC, normalEC) * 0.9 + 0.3, 0.0, 1.0);',
+            '    out_FragColor = vec4(color.rgb * czm_lightColor * diffuseIntensity, 1.0);',
+            '}',
+          ].join('\n');
+          const waterPrimitive = host.scene.primitives.add(
             new Cesium.Primitive({
               geometryInstances: new Cesium.GeometryInstance({
                 geometry: new Cesium.RectangleGeometry({
@@ -842,152 +784,218 @@
               appearance: new Cesium.MaterialAppearance({
                 material: waterMaterial,
                 materialSupport: Cesium.MaterialAppearance.MaterialSupport.ALL,
-                fragmentShaderSource: rawFS,
+                fragmentShaderSource: waterFS,
               }),
             }),
           );
-          const origSetGrade = host.setGrade.bind(host);
-          host.setGrade = (u) =>
-            origSetGrade({
-              ...u,
-              u_horizonHaze: 0,
-              u_haze: 0,
-              u_saturation: 1,
-              u_contrast: 1,
-              u_tint: [1, 1, 1],
-              u_warmth: 0,
+          const waterShot = async (name, hour, scenario, headingDeg) => {
+            const sc = scene(hour, scenario, {
+              ...defaultCamera(kailua.point, headingDeg),
+              mode: 'viewpoint',
+              pitchDeg: -3,
             });
-          await waterShot('water-raw', window.__waterRaw, 'clear', 290);
-          host.setGrade = origSetGrade;
-        }
-        host.scene.primitives.remove(waterPrimitive);
-        // Wet ground: the same probe with the water mask off, in rain - level wet ground mirrors
-        // the overcast at a grazing view, brightest along the far ground, as a wet street does.
-        const wetPrimitive = host.scene.primitives.add(
-          new Cesium.Primitive({
-            geometryInstances: new Cesium.GeometryInstance({
-              geometry: new Cesium.RectangleGeometry({
-                rectangle: Cesium.Rectangle.fromDegrees(
-                  kailua.point.longitude - 0.12,
-                  kailua.point.latitude - 0.1,
-                  kailua.point.longitude + 0.12,
-                  kailua.point.latitude + 0.1,
-                ),
-                height: 0.5,
-                granularity: Cesium.Math.toRadians(0.01),
-                vertexFormat: Cesium.MaterialAppearance.MaterialSupport.ALL.vertexFormat,
-              }),
-            }),
-            appearance: new Cesium.MaterialAppearance({
-              material: waterMaterial,
-              materialSupport: Cesium.MaterialAppearance.MaterialSupport.ALL,
-              fragmentShaderSource: waterFS.replace(
-                'materialInput.waterMask = 1.0;',
-                'materialInput.waterMask = 0.0;',
-              ),
-            }),
-          }),
-        );
-        // A wet road toward a low Sun between showers glares (the film's own Cox-Munk light).
-        for (const [name, scenario, wet, hour] of [
-          ['ground-dry', 'overcast', 0, 12.5],
-          ['ground-wet', 'storm', 1, 12.5],
-          ['ground-wet-glare', 'partly-cloudy', 1, 18.5],
-        ]) {
-          waterMaterial.uniforms.u_wet = wet;
-          waterMaterial.uniforms.u_seaLevelM = -100;
-          await waterShot(name, hour, scenario, 290);
-        }
-        host.scene.primitives.remove(wetPrimitive);
-        log('water probe drawn');
-        // Buildings and trees: a block and a broad-leaf crown with the layer's own shaders
-        // (compiled by Cesium - an error fails the run), lit by a clear Sun at 15:00 and by an
-        // overcast: under the overcast the sunward wall must stand out far less from the shaded
-        // one, a roof keeping its level.
-        const { litInstanceShader, treeFragmentShader } =
-          await import('/dist/renderer/src/cesium/osm-buildings-layer.js');
-        const blockAt = Cesium.Cartesian3.fromDegrees(
-          kailua.point.longitude + 0.0006,
-          kailua.point.latitude,
-          10,
-        );
-        const blockInstance = new Cesium.GeometryInstance({
-          geometry: Cesium.BoxGeometry.fromDimensions({
-            dimensions: new Cesium.Cartesian3(30, 30, 20),
-            vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
-          }),
-          modelMatrix: Cesium.Transforms.eastNorthUpToFixedFrame(blockAt),
-          attributes: {
-            color: Cesium.ColorGeometryInstanceAttribute.fromColor(
-              new Cesium.Color(0.72, 0.68, 0.62, 1),
-            ),
-          },
-        });
-        const crownInstance = new Cesium.GeometryInstance({
-          geometry: new Cesium.EllipsoidGeometry({
-            radii: new Cesium.Cartesian3(6, 6, 7),
-            vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
-          }),
-          modelMatrix: Cesium.Transforms.eastNorthUpToFixedFrame(
-            Cesium.Cartesian3.fromDegrees(
-              kailua.point.longitude + 0.0006,
-              kailua.point.latitude - 0.0004,
-              8,
-            ),
-          ),
-          attributes: {
-            color: Cesium.ColorGeometryInstanceAttribute.fromColor(
-              new Cesium.Color(0.22, 0.33, 0.16, 0.99),
-            ),
-          },
-        });
-        const instancePrims = [];
-        const drawInstances = (share) => {
-          for (const p of instancePrims.splice(0)) host.scene.primitives.remove(p);
-          for (const [instance, fs] of [
-            [blockInstance, litInstanceShader(1, 0, true, share)],
-            [crownInstance, treeFragmentShader(1, 0, 1, 0, 1, share)],
-          ])
-            instancePrims.push(
-              host.scene.primitives.add(
-                new Cesium.Primitive({
-                  geometryInstances: instance,
-                  asynchronous: false,
-                  appearance: new Cesium.PerInstanceColorAppearance({
-                    flat: false,
-                    translucent: false,
-                    closed: true,
-                    fragmentShaderSource: fs,
+            controller.apply(sc);
+            // The host feeds its own globe material the sky in the water; the probe's material
+            // takes the same values here.
+            // (The probe lights itself with Cesium's default split, 0.9 / 0.3 - the material's own
+            // defaults - since a material's uniforms are renamed in its source and the probe's
+            // fragment shader cannot read them.)
+            const { seaSky, glitter, seaSlopeVariance } = lightingFromScene(sc);
+            waterMaterial.uniforms.u_glitter = glitter;
+            waterMaterial.uniforms.u_seaSlope2 = seaSlopeVariance;
+            waterMaterial.uniforms.u_seaSkyAway = new Cesium.Cartesian3(...seaSky.away);
+            waterMaterial.uniforms.u_seaSkyToward = new Cesium.Cartesian3(...seaSky.toward);
+            await wait(1800);
+            window.__smoke.shot = name;
+            await new Promise((r) => {
+              window.__takeShot = r;
+            });
+          };
+          await waterShot('water-noon', 12.5, 'clear', 290);
+          await waterShot('water-golden-toward', 18.75, 'clear', 290);
+          await waterShot('water-golden-away', 18.75, 'clear', 110);
+          // After sunset the light is held at the horizon: the glow on the water, no glitter path.
+          await waterShot('water-dusk', 19.4, 'clear', 290);
+          await waterShot('water-overcast', 12.5, 'overcast', 290);
+          await waterShot('water-night', 23, 'clear', 290);
+          // The full Moon of 31 May 2026 low over the sea at 21:00: the scene's light is the
+          // Moon's, so the glitter path is the moon path, under it in the Moon's colour.
+          await waterShot('water-moon', 21, 'clear', scene(21, 'clear').lunar.azimuthDegrees);
+          // WATER_RAW=<hour> (1: 18:45): one more shot of the sea in three strips - the light's
+          // colour times the globe's Lambert term, the material's raw output, and the two
+          // multiplied (what the globe shows) - with the grade's haze, tint and saturation off,
+          // for reading pixel values against the material's maths.
+          if (window.__waterRaw) {
+            host.scene.primitives.remove(waterPrimitive);
+            const rawFS = waterFS.replace(
+              'out_FragColor = vec4(color.rgb * czm_lightColor * diffuseIntensity, 1.0);',
+              'out_FragColor = vec4(material.diffuse, 1.0); if (gl_FragCoord.x < 0.33 * czm_viewport.z) out_FragColor = vec4(czm_lightColor * diffuseIntensity, 1.0); if (gl_FragCoord.x > 0.66 * czm_viewport.z) out_FragColor = vec4(material.diffuse * czm_lightColor * diffuseIntensity, 1.0);',
+            );
+            host.scene.primitives.add(
+              new Cesium.Primitive({
+                geometryInstances: new Cesium.GeometryInstance({
+                  geometry: new Cesium.RectangleGeometry({
+                    rectangle: Cesium.Rectangle.fromDegrees(
+                      kailua.point.longitude - 0.12,
+                      kailua.point.latitude - 0.1,
+                      kailua.point.longitude + 0.12,
+                      kailua.point.latitude + 0.1,
+                    ),
+                    height: 0.5,
+                    granularity: Cesium.Math.toRadians(0.01),
+                    vertexFormat: Cesium.MaterialAppearance.MaterialSupport.ALL.vertexFormat,
                   }),
                 }),
-              ),
+                appearance: new Cesium.MaterialAppearance({
+                  material: waterMaterial,
+                  materialSupport: Cesium.MaterialAppearance.MaterialSupport.ALL,
+                  fragmentShaderSource: rawFS,
+                }),
+              }),
             );
-        };
-        for (const [name, scenario] of [
-          ['buildings-clear', 'clear'],
-          ['buildings-overcast', 'overcast'],
-        ]) {
-          const sc = scene(15, scenario, {
-            ...defaultCamera(
-              {
-                latitude: kailua.point.latitude - 0.0009,
-                longitude: kailua.point.longitude - 0.0006,
-              },
-              45,
+            const origSetGrade = host.setGrade.bind(host);
+            host.setGrade = (u) =>
+              origSetGrade({
+                ...u,
+                u_horizonHaze: 0,
+                u_haze: 0,
+                u_saturation: 1,
+                u_contrast: 1,
+                u_tint: [1, 1, 1],
+                u_warmth: 0,
+              });
+            await waterShot('water-raw', window.__waterRaw, 'clear', 290);
+            host.setGrade = origSetGrade;
+          }
+          host.scene.primitives.remove(waterPrimitive);
+          // Wet ground: the same probe with the water mask off, in rain - level wet ground mirrors
+          // the overcast at a grazing view, brightest along the far ground, as a wet street does.
+          const wetPrimitive = host.scene.primitives.add(
+            new Cesium.Primitive({
+              geometryInstances: new Cesium.GeometryInstance({
+                geometry: new Cesium.RectangleGeometry({
+                  rectangle: Cesium.Rectangle.fromDegrees(
+                    kailua.point.longitude - 0.12,
+                    kailua.point.latitude - 0.1,
+                    kailua.point.longitude + 0.12,
+                    kailua.point.latitude + 0.1,
+                  ),
+                  height: 0.5,
+                  granularity: Cesium.Math.toRadians(0.01),
+                  vertexFormat: Cesium.MaterialAppearance.MaterialSupport.ALL.vertexFormat,
+                }),
+              }),
+              appearance: new Cesium.MaterialAppearance({
+                material: waterMaterial,
+                materialSupport: Cesium.MaterialAppearance.MaterialSupport.ALL,
+                fragmentShaderSource: waterFS.replace(
+                  'materialInput.waterMask = 1.0;',
+                  'materialInput.waterMask = 0.0;',
+                ),
+              }),
+            }),
+          );
+          // A wet road toward a low Sun between showers glares (the film's own Cox-Munk light).
+          for (const [name, scenario, wet, hour] of [
+            ['ground-dry', 'overcast', 0, 12.5],
+            ['ground-wet', 'storm', 1, 12.5],
+            ['ground-wet-glare', 'partly-cloudy', 1, 18.5],
+          ]) {
+            waterMaterial.uniforms.u_wet = wet;
+            waterMaterial.uniforms.u_seaLevelM = -100;
+            await waterShot(name, hour, scenario, 290);
+          }
+          host.scene.primitives.remove(wetPrimitive);
+          log('water probe drawn');
+          // Buildings and trees: a block and a broad-leaf crown with the layer's own shaders
+          // (compiled by Cesium - an error fails the run), lit by a clear Sun at 15:00 and by an
+          // overcast: under the overcast the sunward wall must stand out far less from the shaded
+          // one, a roof keeping its level.
+          const { litInstanceShader, treeFragmentShader } =
+            await import('/dist/renderer/src/cesium/osm-buildings-layer.js');
+          const blockAt = Cesium.Cartesian3.fromDegrees(
+            kailua.point.longitude + 0.0006,
+            kailua.point.latitude,
+            10,
+          );
+          const blockInstance = new Cesium.GeometryInstance({
+            geometry: Cesium.BoxGeometry.fromDimensions({
+              dimensions: new Cesium.Cartesian3(30, 30, 20),
+              vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
+            }),
+            modelMatrix: Cesium.Transforms.eastNorthUpToFixedFrame(blockAt),
+            attributes: {
+              color: Cesium.ColorGeometryInstanceAttribute.fromColor(
+                new Cesium.Color(0.72, 0.68, 0.62, 1),
+              ),
+            },
+          });
+          const crownInstance = new Cesium.GeometryInstance({
+            geometry: new Cesium.EllipsoidGeometry({
+              radii: new Cesium.Cartesian3(6, 6, 7),
+              vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
+            }),
+            modelMatrix: Cesium.Transforms.eastNorthUpToFixedFrame(
+              Cesium.Cartesian3.fromDegrees(
+                kailua.point.longitude + 0.0006,
+                kailua.point.latitude - 0.0004,
+                8,
+              ),
             ),
-            mode: 'viewpoint',
-            pitchDeg: 2,
+            attributes: {
+              color: Cesium.ColorGeometryInstanceAttribute.fromColor(
+                new Cesium.Color(0.22, 0.33, 0.16, 0.99),
+              ),
+            },
           });
-          drawInstances(lightingFromScene(sc).globeLight.lambert / 0.9);
-          controller.apply(sc);
-          await wait(1800);
-          window.__smoke.shot = name;
-          await new Promise((r) => {
-            window.__takeShot = r;
-          });
+          const instancePrims = [];
+          const drawInstances = (share) => {
+            for (const p of instancePrims.splice(0)) host.scene.primitives.remove(p);
+            for (const [instance, fs] of [
+              [blockInstance, litInstanceShader(1, 0, true, share)],
+              [crownInstance, treeFragmentShader(1, 0, 1, 0, 1, share)],
+            ])
+              instancePrims.push(
+                host.scene.primitives.add(
+                  new Cesium.Primitive({
+                    geometryInstances: instance,
+                    asynchronous: false,
+                    appearance: new Cesium.PerInstanceColorAppearance({
+                      flat: false,
+                      translucent: false,
+                      closed: true,
+                      fragmentShaderSource: fs,
+                    }),
+                  }),
+                ),
+              );
+          };
+          for (const [name, scenario] of [
+            ['buildings-clear', 'clear'],
+            ['buildings-overcast', 'overcast'],
+          ]) {
+            const sc = scene(15, scenario, {
+              ...defaultCamera(
+                {
+                  latitude: kailua.point.latitude - 0.0009,
+                  longitude: kailua.point.longitude - 0.0006,
+                },
+                45,
+              ),
+              mode: 'viewpoint',
+              pitchDeg: 2,
+            });
+            drawInstances(lightingFromScene(sc).globeLight.lambert / 0.9);
+            controller.apply(sc);
+            await wait(1800);
+            window.__smoke.shot = name;
+            await new Promise((r) => {
+              window.__takeShot = r;
+            });
+          }
+          for (const p of instancePrims.splice(0)) host.scene.primitives.remove(p);
+          log('buildings and trees drawn');
         }
-        for (const p of instancePrims.splice(0)) host.scene.primitives.remove(p);
-        log('buildings and trees drawn');
         // Synthetic terrain (synthetic-terrain.js): quantized-mesh tiles with vertex normals and
         // a water mask, so the globe itself applies the ground material and draws water - the
         // real globe program, not a probe. Sea to the west (the sunset's side in May), a beach

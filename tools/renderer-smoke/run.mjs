@@ -47,6 +47,10 @@ page.on('console', (m) => {
   if (!t.startsWith('[smoke]')) consoleLines.push(`${m.type()}: ${t.slice(0, 300)}`);
 });
 page.on('pageerror', (e) => consoleLines.push('pageerror: ' + e.message));
+if (process.env.SMOKE_ONLY === 'synthetic')
+  await page.addInitScript(() => {
+    window.__synthOnly = true;
+  });
 if (process.env.WATER_RAW)
   await page.addInitScript((hour) => {
     window.__waterRaw = Number(hour) || 18.75;

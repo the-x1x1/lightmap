@@ -89,6 +89,8 @@ export interface HostGradeUniforms {
   /** The sky at the horizon away from the Sun and on its side (`horizonSkyFor`): what distant ground hazes toward. */
   u_hazeAway: [number, number, number];
   u_hazeToward: [number, number, number];
+  /** The ground's height at the place, metres above the ellipsoid: the haze layer's base. */
+  u_hazeBaseM: number;
 }
 
 export interface HostViewpointCamera {

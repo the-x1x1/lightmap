@@ -236,6 +236,7 @@ export class SceneController {
       u_atmosphereDark: !lighting.moonlit && scene.solar.elevationDegrees <= -18 ? 1 : 0,
       u_hazeAway: lighting.horizonSky.away,
       u_hazeToward: lighting.horizonSky.toward,
+      u_hazeBaseM: Math.round(this.groundHeightM),
     };
     this.host.setGrade(uniforms);
     this.host.setSunGlare?.({

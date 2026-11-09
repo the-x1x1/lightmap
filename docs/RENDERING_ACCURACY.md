@@ -53,7 +53,13 @@ Cesium's shadow map from the same light, cast and received by terrain (`globe.sh
 are switched off when direct light is below 12 % or the Sun is below −0.833° — and only then:
 Cesium's default low-Sun fade (`shadowMap.fadingEnabled`) is **off**, because golden-hour shadows
 are the product. Reach (`maximumDistance`) is 20 km at eye level and 3× the orbit range (8–60 km)
-in map view, so a ridge's shadow crosses a valley. **Claim:** direction and length of shadows;
+in map view, so a ridge's shadow crosses a valley. Cesium's terrain shadows also fade the ground
+by its own angle to the light (n·l over a width, floored at the darkness) to hide acne on faces
+turned away; at its default width, 0.3, all level ground within the map's reach sank to the
+shadow darkness with the Sun below ~17° — every golden hour's near ground nearly black, with a
+hard edge where the reach ended (seen on the smoke harness's synthetic terrain). The host narrows
+it to 0.02 (`TERRAIN_NORMAL_SHADING_SMOOTH`): level ground is fully lit from about 1° up, faces
+turned from the light still dark. **Claim:** direction and length of shadows;
 visible softening under cloud. **Verified:** the smoke harness renders a 20 m tower at Sun
 elevation ≈ 11° and measures the frame — the ground along the shadow line is < 70 % as bright as
 the Sun side and the point just beyond `h / tan(el)` is fully lit (`shadow-tower` scene).
@@ -142,7 +148,15 @@ ground is lifted toward the sky at the horizon behind it by depth, more strongly
 (`horizonHaze`): the sky gradient's own horizon colour (`horizonSkyFor` — cloud greys it, night
 darkens it, haze pales it), the glow's colour on the Sun's side of the view at a low Sun and the
 plain horizon on the other, by each ray's bearing from the Sun's (a fixed pale blue half-tinted by
-the light's colour before, which greyed a sunset's far ridges where the sky behind them was warm). The light direction and terrain shading are untouched by either. Verified in
+the light's colour before, which greyed a sunset's far ridges where the sky behind them was warm).
+The haze's density falls with height above the place's ground (where a forecast's visibility is
+measured) with a 1.2 km scale height, and each ray takes the density averaged between the eye's
+height and the point's: from a summit a far peak stands clear in the summit's thinner air while
+the valley below sinks into its haze; from below, a ridge stands a little crisper than distance
+alone would make it; looking down from the map, the haze is thin until near the ground (held to
+2.5 times the place's own density, for gorges far below it). **Caveat:** the layer follows the
+place's ground, not the terrain under each ray — a high plateau seen from a low coast hazes as
+air at the plateau's height. The light direction and terrain shading are untouched by either. Verified in
 `tools/renderer-smoke` (contact sheet `docs/media/renderer-smoke-2026-09-24c.png`).
 
 **Terrain shading under a diffuse sky.** Cesium shades terrain as the light times

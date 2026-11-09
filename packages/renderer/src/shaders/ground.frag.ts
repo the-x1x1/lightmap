@@ -807,8 +807,9 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         // Facets sized to the pixel (two octaves of the baked value noise, a product of two
         // channels, picked by log2 of the ground a pixel covers and blended between, so a
         // sparkle stays a pixel or two across at any distance); about 7 % of them flash,
-        // scaled by 1/0.0686 (their measured mean) so the path's average is the lobe's. Where
-        // a pixel covers metres of water it holds many facets, and the path goes smooth. They
+        // scaled by 1/0.0686 (their measured mean) so the path's average is the lobe's. As a
+        // pixel comes to cover metres of water (1 to 40 m) it holds more facets, and the path
+        // goes smooth by degrees - toward the horizon, as to the eye. They
         // drift with the clock (3 m a scene minute), so the pattern re-deals as time moves.
         if (glint > 0.002)
         {
@@ -820,7 +821,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
             float f1 = lmNoiseTex(sp, 2.0 * s0, gdx, gdy).g
                      * lmNoiseTex(sp.yx, 2.0 * s0, gdx.yx, gdy.yx).a;
             float facets = smoothstep(0.45, 0.6, mix(f0, f1, fract(lv))) / 0.0686;
-            float sparkleShare = 0.85 * (1.0 - smoothstep(0.3, 3.0, footprint));
+            float sparkleShare = 0.85 * (1.0 - smoothstep(1.0, 40.0, footprint));
             glint *= mix(1.0, facets, sparkleShare);
         }
         // The Sun's aureole on the water too: the bright haze around a low Sun (forward
