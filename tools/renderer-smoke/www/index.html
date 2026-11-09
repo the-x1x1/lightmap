@@ -985,6 +985,57 @@
         }
         for (const p of instancePrims.splice(0)) host.scene.primitives.remove(p);
         log('buildings and trees drawn');
+        // Synthetic terrain (synthetic-terrain.js): quantized-mesh tiles with vertex normals and
+        // a water mask, so the globe itself applies the ground material and draws water - the
+        // real globe program, not a probe. Sea to the west (the sunset's side in May), a beach
+        // at the pin, a ridge 3.5 km east. A place a hair from the pin's, so the controller
+        // samples the new ground and its sea level.
+        const { createSyntheticTerrain } = await import('/synthetic-terrain.js');
+        host.scene.terrainProvider = createSyntheticTerrain(Cesium, kailua.point);
+        const beach = {
+          ...kailua,
+          point: { latitude: kailua.point.latitude + 1e-6, longitude: kailua.point.longitude },
+        };
+        const beachScene = (hour, scenario, camera) =>
+          buildSceneState({
+            location: beach,
+            utc: localSelectionToUtc({ year: 2026, month: 5, day: 31 }, hour * 60, beach.timeZone),
+            now: new Date('2026-05-01T00:00:00Z'),
+            camera: camera ?? defaultCamera(beach.point, 90),
+            environment: { ...env, terrainAvailable: true, terrainProviderId: 'synthetic' },
+            scenario,
+            forceScenario: true,
+            weather: { capabilities: OPEN_METEO_CAPABILITIES, frames: [], providerFailed: false },
+            render: DEFAULT_RENDER_SETTINGS,
+            includeLunar: true,
+            realReference: false,
+          });
+        const synthShot = async (name, hour, scenario, camera, orbit) => {
+          controller.apply(beachScene(hour, scenario, camera));
+          if (orbit) controller.setOrbit(orbit);
+          await wait(4000);
+          window.__smoke.shot = name;
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+        };
+        const overRidge = { headingDeg: 70, pitchDeg: -22, rangeM: 7000 };
+        await synthShot('synth-map-clear', 10, 'clear', null, overRidge);
+        await synthShot('synth-map-overcast', 10, 'overcast', null, overRidge);
+        const look = (headingDeg, pitchDeg) => ({
+          ...defaultCamera(beach.point, headingDeg),
+          mode: 'viewpoint',
+          pitchDeg,
+        });
+        await synthShot('synth-golden-sea', 18.75, 'clear', look(290, 0));
+        await synthShot('synth-golden-ridge', 18.75, 'clear', look(80, 4));
+        await synthShot('synth-dusk-ridge', 19.4, 'clear', look(80, 4));
+        await synthShot('synth-overcast-ridge', 12.5, 'overcast', look(80, 4));
+        window.__smoke.synthetic = {
+          terrainHasNormals: host.terrainHasNormals(),
+          groundMaterial: !!host.scene.globe.material,
+        };
+        log('synthetic terrain drawn: ' + JSON.stringify(window.__smoke.synthetic));
         const thumb = await host.captureThumbnail(320);
         window.__smoke.thumbnail = thumb
           ? thumb.slice(0, 40) + '… (' + thumb.length + ' chars)'
