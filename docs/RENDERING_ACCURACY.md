@@ -154,8 +154,9 @@ left under a full overcast) and as the Sun's beam goes, to a sixth of a clear da
 the ambient share takes up exactly what level ground loses, so level ground is as bright as
 before (the exposure and twilight levels were set against it) and only the relief changes. A
 moonlit night is split as a clear day by its own light. **Caveat:** one ambient share for every
-face — no sky-view factor, so a gully is as sky-lit as a plain; buildings and trees keep their
-own lighting.
+face — no sky-view factor, so a gully is as sky-lit as a plain. Buildings and trees take the same
+directional share in their own shader (`litInstanceShader`, in tenths), the light it takes from
+the Sun's term coming back from the sky by how much a face looks up, so a roof keeps its level.
 
 **Night sky.** The grade's twilight treatment (darkening and cooling the dome while Cesium still
 lights its atmosphere from a Sun held at the horizon) is for the atmosphere only: the stars' light

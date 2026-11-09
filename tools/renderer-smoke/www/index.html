@@ -891,6 +891,94 @@
         }
         host.scene.primitives.remove(wetPrimitive);
         log('water probe drawn');
+        // Buildings and trees: a block and a broad-leaf crown with the layer's own shaders
+        // (compiled by Cesium - an error fails the run), lit by a clear Sun at 15:00 and by an
+        // overcast: under the overcast the sunward wall must stand out far less from the shaded
+        // one, a roof keeping its level.
+        const { litInstanceShader, treeFragmentShader } =
+          await import('/dist/renderer/src/cesium/osm-buildings-layer.js');
+        const blockAt = Cesium.Cartesian3.fromDegrees(
+          kailua.point.longitude + 0.0006,
+          kailua.point.latitude,
+          10,
+        );
+        const blockInstance = new Cesium.GeometryInstance({
+          geometry: Cesium.BoxGeometry.fromDimensions({
+            dimensions: new Cesium.Cartesian3(30, 30, 20),
+            vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
+          }),
+          modelMatrix: Cesium.Transforms.eastNorthUpToFixedFrame(blockAt),
+          attributes: {
+            color: Cesium.ColorGeometryInstanceAttribute.fromColor(
+              new Cesium.Color(0.72, 0.68, 0.62, 1),
+            ),
+          },
+        });
+        const crownInstance = new Cesium.GeometryInstance({
+          geometry: new Cesium.EllipsoidGeometry({
+            radii: new Cesium.Cartesian3(6, 6, 7),
+            vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
+          }),
+          modelMatrix: Cesium.Transforms.eastNorthUpToFixedFrame(
+            Cesium.Cartesian3.fromDegrees(
+              kailua.point.longitude + 0.0006,
+              kailua.point.latitude - 0.0004,
+              8,
+            ),
+          ),
+          attributes: {
+            color: Cesium.ColorGeometryInstanceAttribute.fromColor(
+              new Cesium.Color(0.22, 0.33, 0.16, 0.99),
+            ),
+          },
+        });
+        const instancePrims = [];
+        const drawInstances = (share) => {
+          for (const p of instancePrims.splice(0)) host.scene.primitives.remove(p);
+          for (const [instance, fs] of [
+            [blockInstance, litInstanceShader(1, 0, true, share)],
+            [crownInstance, treeFragmentShader(1, 0, 1, 0, 1, share)],
+          ])
+            instancePrims.push(
+              host.scene.primitives.add(
+                new Cesium.Primitive({
+                  geometryInstances: instance,
+                  asynchronous: false,
+                  appearance: new Cesium.PerInstanceColorAppearance({
+                    flat: false,
+                    translucent: false,
+                    closed: true,
+                    fragmentShaderSource: fs,
+                  }),
+                }),
+              ),
+            );
+        };
+        for (const [name, scenario] of [
+          ['buildings-clear', 'clear'],
+          ['buildings-overcast', 'overcast'],
+        ]) {
+          const sc = scene(15, scenario, {
+            ...defaultCamera(
+              {
+                latitude: kailua.point.latitude - 0.0009,
+                longitude: kailua.point.longitude - 0.0006,
+              },
+              45,
+            ),
+            mode: 'viewpoint',
+            pitchDeg: 2,
+          });
+          drawInstances(lightingFromScene(sc).globeLight.lambert / 0.9);
+          controller.apply(sc);
+          await wait(1800);
+          window.__smoke.shot = name;
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+        }
+        for (const p of instancePrims.splice(0)) host.scene.primitives.remove(p);
+        log('buildings and trees drawn');
         const thumb = await host.captureThumbnail(320);
         window.__smoke.thumbnail = thumb
           ? thumb.slice(0, 40) + '… (' + thumb.length + ' chars)'

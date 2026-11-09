@@ -20,7 +20,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 - **Terrain relief follows the sky**: under an overcast the slopes no longer keep a sunny day's
   relief, and in twilight a slope facing the held light no longer stands out three times brighter
   than level ground (`globeLightSplit` drives the globe's `lambertDiffuseMultiplier` and
-  `vertexShadowDarkness`; level ground's brightness is unchanged).
+  `vertexShadowDarkness`; level ground's brightness is unchanged). Buildings and trees take the
+  same share (`setDirectShare`, in tenths): a sunward wall stands out under a clear Sun and hardly
+  under an overcast, the rest of its light coming from the sky, most on faces that look up.
 - **Wet streets mirror the sky**: in rain, level ground takes a film's reflection of the same sky
   the water mirrors — up to a third at a grazing view on a mapped street, about a tenth on turf,
   none on slopes (smoke shots `ground-dry`/`ground-wet`).

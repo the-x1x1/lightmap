@@ -801,6 +801,7 @@ export class CesiumSceneHost implements SceneHost {
       u['u_ambientShare'] = ambient;
     }
     this.globeSplit = { lambert, ambient };
+    this.osmBuildings?.setDirectShare(lambert / 0.9);
   }
 
   setGlobeShading(shading: HostGlobeShading): void {
@@ -2358,6 +2359,7 @@ export class CesiumSceneHost implements SceneHost {
         this.osmBuildings.setSeason(this.leaf.leafOn, this.leaf.autumn, this.leaf.deciduous);
         const sm = this.scene.shadowMap;
         this.osmBuildings.setShadowMap(sm.enabled, sm.darkness, sm.maximumDistance);
+        this.osmBuildings.setDirectShare(this.globeSplit.lambert / 0.9);
         this.osmBuildingsCheckAt = 0;
         this.scene.requestRender();
         return;

@@ -23,6 +23,21 @@ describe('buildings and trees shader', () => {
     expect(src).toContain('if (-v_positionEC.z < 8000.0) outRgb /= expected;');
   });
 
+  it('takes the direction of the light from the direct share, keeping the level of a roof', () => {
+    // A clear day: the Sun's whole term is directional, nothing moved to the sky.
+    const clear = litInstanceShader(0.2, 8000, true, 1);
+    expect(clear).toContain('0.55 * 1.00 * sun');
+    expect(clear).toContain('0.55 * (1.0 - 1.00)');
+    // An overcast: a fifth of it directional; the rest from the sky, by how much a face looks
+    // up (a roof, sky = 1, gets the whole of it back: 0.55 * sunUp, as its sun term was).
+    const overcast = litInstanceShader(0.2, 8000, true, 0.2);
+    expect(overcast).toContain('0.55 * 0.20 * sun');
+    expect(overcast).toContain('sunUp * (0.5 + 0.5 * sky)');
+    // The trees take the same, the default (no share given) is a clear day's.
+    expect(treeFragmentShader(1, 0, 1, 0, 1, 0.3)).toContain('0.55 * 0.30 * sun');
+    expect(LIT_INSTANCE_FS).toContain('0.55 * 1.00 * sun');
+  });
+
   it('compensates nothing with shadows off', () => {
     // Darkness 1 makes the expected factor 1, and a zero distance skips the division.
     expect(LIT_INSTANCE_FS).toContain('0.0, 1.0), 1.000)');
