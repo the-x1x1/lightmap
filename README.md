@@ -217,14 +217,15 @@ daily account-erasure / cache-purge job once the production database secret exis
   a few tens of km — not an ephemeris; confirm before travelling for one.
 - **The exposure estimate is a model, not a meter**: a clear-sky illuminance curve scaled by the
   forecast's or scenario's cloud, moonlight by phase and a starlight floor, raised in the planner
-  by the estimated city glow; no street lighting, no local terrain shading. Every place it appears
-  says "estimate".
+  by the estimated city glow and cut to sky light when the pin is in a ridge's shadow; no street
+  lighting, no shade from buildings or trees. Every place it appears says "estimate".
 - **Real-reference imagery is disabled** until a licensed provider contract exists.
-- **Night sky**: Cesium's Moon mesh is hidden (it is lit by Cesium's own Sun and renders black at
-  night); a moonlit atmosphere halo marks the Moon's position and lights the scene instead. Stars
-  are faint under software GL. The Milky Way core verdict and dark windows are geometry (Sun
-  depth, Moon, altitude); city glow is a separate estimate from mapped built-up areas (larger
-  towns only), and airglow and haze are not modelled.
+- **Night sky**: the Moon is drawn by the planner from its own ephemeris (phase, size, lit limb,
+  reddened low down), not Cesium's Moon mesh, which is hidden; the naked-eye planets are points
+  with a twilight limiting magnitude. Stars are faint under software GL. The Milky Way core
+  verdict and dark windows are geometry (Sun depth, Moon, altitude, the sampled skyline); city
+  glow is a separate estimate from mapped built-up areas (larger towns only), and airglow is not
+  modelled.
 - **Open-Meteo and Nominatim are development-tier** until commercial arrangements are made.
 - **Legal pages are drafts** pending counsel review; `docs/PRIVACY.md` is the engineering behaviour
   they describe.
