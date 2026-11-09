@@ -52,13 +52,25 @@ export function createSyntheticTerrain(C, pin) {
   const scratchNormal = new C.Cartesian3();
   const scratchOct = new C.Cartesian2();
 
+  // Every tile to MAX_LEVEL: Cesium's sampleTerrainMostDetailed needs the availability to know
+  // how deep to sample (without it the controller cannot read the ground, the sea level stays
+  // unknown, and the coast rules that need it stay off).
+  const availability = new C.TileAvailability(tilingScheme, MAX_LEVEL);
+  for (let level = 0; level <= MAX_LEVEL; level++)
+    availability.addAvailableTileRange(
+      level,
+      0,
+      0,
+      tilingScheme.getNumberOfXTilesAtLevel(level) - 1,
+      tilingScheme.getNumberOfYTilesAtLevel(level) - 1,
+    );
   const provider = {
     tilingScheme,
     errorEvent: new C.Event(),
     credit: undefined,
     hasWaterMask: true,
     hasVertexNormals: true,
-    availability: undefined,
+    availability,
     getLevelMaximumGeometricError: (level) => levelZeroError / (1 << level),
     getTileDataAvailable: (x, y, level) => level <= MAX_LEVEL,
     loadTileDataAvailability: () => undefined,

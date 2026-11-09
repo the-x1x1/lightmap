@@ -51,6 +51,10 @@ if (process.env.SMOKE_ONLY === 'synthetic')
   await page.addInitScript(() => {
     window.__synthOnly = true;
   });
+if (process.env.SMOKE_DEBUG === 'water')
+  await page.addInitScript(() => {
+    window.__synthDebug = true;
+  });
 if (process.env.WATER_RAW)
   await page.addInitScript((hour) => {
     window.__waterRaw = Number(hour) || 18.75;

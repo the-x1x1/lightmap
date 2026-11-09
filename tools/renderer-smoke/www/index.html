@@ -1061,6 +1061,26 @@
         await synthShot('synth-golden-ridge', 18.75, 'clear', look(80, 4));
         await synthShot('synth-dusk-ridge', 19.4, 'clear', look(80, 4));
         await synthShot('synth-overcast-ridge', 12.5, 'overcast', look(80, 4));
+        // SMOKE_DEBUG=water: the map view once more with a material that paints what the globe
+        // hands the material - red the water mask, green the height in 10 m bands, blue the
+        // slope - to see where the coast's water ends.
+        if (window.__synthDebug) {
+          const real = host.scene.globe.material;
+          host.scene.globe.material = new Cesium.Material({
+            fabric: {
+              type: 'LightMapDebugWater',
+              source:
+                'czm_material czm_getMaterial(czm_materialInput m) {\n' +
+                '  czm_material mat = czm_getDefaultMaterial(m);\n' +
+                '  mat.diffuse = vec3(m.waterMask, fract(m.height / 10.0), clamp(m.slope * 10.0, 0.0, 1.0));\n' +
+                '  mat.alpha = 1.0;\n' +
+                '  return mat;\n' +
+                '}\n',
+            },
+          });
+          await synthShot('synth-debug-water', 10, 'clear', null, overRidge);
+          host.scene.globe.material = real;
+        }
         window.__smoke.synthetic = {
           terrainHasNormals: host.terrainHasNormals(),
           groundMaterial: !!host.scene.globe.material,
