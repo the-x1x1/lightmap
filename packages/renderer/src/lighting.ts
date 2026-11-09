@@ -256,10 +256,8 @@ export function lightingFromScene(s: SceneState): LightingParameters {
   const seaSky = seaSkyFor(el, p.cloudOpacity, atmosphere.warmth, p.skyLuminance, p.haze);
   const horizonSky = horizonSkyFor(el, p.cloudOpacity, atmosphere.warmth, p.skyLuminance, p.haze);
   const throughCloud = clamp01(p.sunTransmittance / 0.6);
-  const glitter =
-    Math.round(
-      (moonlit && el < -12 ? throughCloud : smooth(-1, 0.5, el) * throughCloud) * 100,
-    ) / 100;
+  const disc = moonlit && el < -12 ? throughCloud : smooth(-1, 0.5, el) * throughCloud;
+  const glitter = Math.round(disc * 100) / 100;
 
   return {
     sunDirectionEcef: sunLightDirectionEcef(
