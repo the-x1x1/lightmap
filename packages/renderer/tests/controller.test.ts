@@ -192,7 +192,10 @@ describe('SceneController', () => {
     expect(calls['setGroundTexture']![4]![0]).toBeNull();
     // The sky in the water goes with every tick the paint is on, and not once it is off.
     expect(calls['setSeaSky']).toHaveLength(5);
-    const sea = calls['setSeaSky']![0]![0] as { away: number[]; toward: number[] };
+    const sea = calls['setSeaSky']![0]![0] as {
+      away: [number, number, number];
+      toward: [number, number, number];
+    };
     expect(sea.away).toHaveLength(3);
     expect(sea.away[2]).toBeGreaterThan(sea.away[0]);
   });
