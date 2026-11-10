@@ -63,8 +63,10 @@ async function setDateTime(page: Page, date: string, minutes: number) {
 }
 
 test('Kailua Beach, 31 May 2026, 12:30: light, source label, scenarios', async ({ page }) => {
-  // The acceptance story has grown (seasons, night planning, playback): give it room on CI.
-  test.slow();
+  // The acceptance story has grown (seasons, night planning, playback, and since November the
+  // water and haze shaders, which SwiftShader draws slowly): give it room on CI. test.slow()'s
+  // 270 s ran out on the mobile project.
+  test.setTimeout(480_000);
   await page.goto('/');
   await expect(page.getByTestId('map-shell')).toBeVisible();
   await pickKailua(page);
