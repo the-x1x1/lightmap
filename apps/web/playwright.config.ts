@@ -55,6 +55,9 @@ export default defineConfig({
     { name: 'desktop-chromium', use: { ...devices['Desktop Chrome'] } },
     {
       name: 'mobile-chromium',
+      // The phone viewport draws the scene slower still on the runner's software renderer (more
+      // so since the November water and haze shaders): 90 s ran out on the preferences test.
+      timeout: 180_000,
       use: {
         ...devices['Pixel 7'],
         // The field view asks for the back camera: Chromium's fake device answers without a prompt.

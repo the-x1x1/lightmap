@@ -100,7 +100,19 @@ dmgroot="$out/dmg"
 mkdir -p "$dmgroot"
 ditto "$app" "$dmgroot/LightMap.app"
 ln -s /Applications "$dmgroot/Applications"
-hdiutil create -volname "LightMap $version" -srcfolder "$dmgroot" -ov -format UDZO "$dmg" > /dev/null
+# hdiutil sometimes fails with "Resource busy" on a hosted runner (a volume still held from a
+# moment before): try again a few times before giving up.
+for attempt in 1 2 3 4; do
+  if hdiutil create -volname "LightMap $version" -srcfolder "$dmgroot" -ov -format UDZO "$dmg" > /dev/null; then
+    break
+  fi
+  if [ "$attempt" = 4 ]; then
+    echo "hdiutil create failed four times" >&2
+    exit 1
+  fi
+  echo "hdiutil create failed (attempt $attempt); retrying in $((attempt * 10)) s" >&2
+  sleep $((attempt * 10))
+done
 rm -rf "$dmgroot"
 
 if notarise; then
