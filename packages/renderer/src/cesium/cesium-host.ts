@@ -84,6 +84,7 @@ import {
 } from './ground-material.ts';
 import { StepGlide, lerpVec3, nlerpDir, type Vec3Like } from '../step-glide.ts';
 import { FramePacer } from './frame-pacer.ts';
+import { isSoftwareRendererName, rendererName } from './software-gl.ts';
 import type { Vec3 } from '../sun-vector.ts';
 import type {
   HostAtmosphere,
@@ -231,6 +232,8 @@ export class CesiumSceneHost implements SceneHost {
   private readonly gradeTarget: Record<string, unknown>;
   /** Holds the render loop's ticks back while two drawn frames are still on the GPU. */
   private readonly pacer: FramePacer;
+  /** The context draws on the CPU (SwiftShader and the like): one drawn pixel per CSS pixel. */
+  private readonly softwareGl: boolean;
   private readonly gradeUniforms: Record<string, unknown>;
   private groundMaterial: Cesium.Material | null = null;
   /** The shadow map as the globe receives it (`setShadows`), kept for a material made later. */
@@ -690,9 +693,9 @@ export class CesiumSceneHost implements SceneHost {
     // The render loop's tick (not a frame drawn on purpose, as a capture's) skips while the
     // GPU is two frames behind (`FramePacer`); what it would have drawn is drawn at the next
     // tick that finds it caught up - a request, a moved camera, stay pending until then.
-    this.pacer = FramePacer.forContext(
-      (scene as unknown as { context?: { _gl?: unknown } }).context?._gl,
-    );
+    const gl = (scene as unknown as { context?: { _gl?: unknown } }).context?._gl;
+    this.pacer = FramePacer.forContext(gl);
+    this.softwareGl = isSoftwareRendererName(rendererName(gl));
     const tick = this.widget.render.bind(this.widget);
     this.widget.render = () => {
       if (!this.pacer.behind(performance.now())) tick();
@@ -1784,7 +1787,10 @@ export class CesiumSceneHost implements SceneHost {
     this.osmBuildings?.setLean(q.terrainScreenSpaceError >= 4);
     this.osmLean = q.terrainScreenSpaceError >= 4;
     const dpr = typeof devicePixelRatio === 'number' && devicePixelRatio > 0 ? devicePixelRatio : 1;
-    this.widget.resolutionScale = Math.min(q.resolutionScale, 2 / dpr);
+    // At most two drawn pixels per CSS pixel; one on a software renderer, where every pixel is
+    // shaded on the CPU: a phone-sized page at a phone's density (2.6) drew 1.6 times a laptop
+    // window's pixels there, and the frames ran to seconds (CI's mobile tests timed out).
+    this.widget.resolutionScale = Math.min(q.resolutionScale, (this.softwareGl ? 1 : 2) / dpr);
     // Fewer samples on the cheap rungs (the framebuffers are rebuilt once, on the change); with
     // MSAA off, FXAA keeps the edges from stair-stepping at a fraction of the cost.
     const msaa = q.msaaSamples ?? 4;

@@ -4,6 +4,11 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Software rendering draws one pixel per CSS pixel**: on a renderer that shades on the CPU
+  (SwiftShader — CI's browsers, Chrome with no usable GPU — llvmpipe, Microsoft's Basic Render
+  Driver) the scene is drawn at the page's own resolution rather than up to twice it. A phone-sized
+  page at a phone's density drew 1.6 times a laptop window's pixels there, and CI's mobile tests
+  ran out of time.
 - **Sunlit snow sparkles**: close to the eye, snow in direct sun (or moonlight) is strewn with
   points of light — its ice grains are small mirrors — sparse, pixel-sized, of varied brightness,
   re-dealt as the view turns, and gone once a pixel covers more than a few tens of centimetres
