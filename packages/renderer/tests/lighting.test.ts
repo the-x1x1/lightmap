@@ -325,6 +325,13 @@ describe('moonlight', () => {
     const noMoon = lightingFromScene(scene(23, 'clear', { includeLunar: false }));
     expect(noMoon.moonlit).toBe(false);
     expect(noMoon.sunIntensity).toBe(0);
+    // A full Moon high up casts shadows as a clear day's are; with no Moon there are none.
+    expect(night.shadowsEnabled).toBe(true);
+    expect(night.shadowDarkness).toBeLessThan(0.4);
+    expect(noMoon.shadowsEnabled).toBe(false);
+    // Overcast: the light is the cloud's, and the shade all but gone, as by day.
+    const dull = lightingFromScene(scene(23, 'overcast', { includeLunar: true }));
+    expect(dull.shadowDarkness).toBeGreaterThan(0.8);
   });
 });
 

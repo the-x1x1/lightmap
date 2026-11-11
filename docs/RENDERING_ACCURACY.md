@@ -50,7 +50,13 @@ every point of a large scene (parallax across a few kilometres is far below a de
 
 Cesium's shadow map from the same light, cast and received by terrain (`globe.shadows = ENABLED`).
 `shadowMap.darkness` rises with the scenario's diffuse fraction, so overcast shadows fade; shadows
-are switched off when direct light is below 12 % or the Sun is below −0.833° — and only then:
+are switched off when direct light is below 12 % or the Sun is below −0.833° — and only then,
+unless a bright Moon has the light: from a Moon at least half lit and 2° up (in full by 6°), the
+night's shadows are cast from the Moon as by day, as dark against the moonlit ground as a clear
+day's against sunlit ground (moonlight is sunlight; a long exposure and the dark-adapted eye both
+show them). Under the full Moon at 30° the harness's tower shade is a third of the moonlit ground
+beside it (`shadow-moon`), as the Sun's is (0.34). Cesium's default low-Sun fade
+(`shadowMap.fadingEnabled`) is **off**, because golden-hour shadows
 Cesium's default low-Sun fade (`shadowMap.fadingEnabled`) is **off**, because golden-hour shadows
 are the product. Reach (`maximumDistance`) is 20 km at eye level and 3× the orbit range (8–60 km)
 in map view, so a ridge's shadow crosses a valley. Cesium's terrain shadows also fade the ground

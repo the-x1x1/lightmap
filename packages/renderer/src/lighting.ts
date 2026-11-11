@@ -222,7 +222,8 @@ export function lightingFromScene(s: SceneState): LightingParameters {
     smooth(-18, -12, el) *
     (0.6 + 0.4 * p.diffuseFraction);
   // Moonlight: once the Sun is well down and the Moon is up, the scene's light comes from the
-  // Moon — dim, cool, from the Moon's direction. Shadows stay off (too faint to be honest about).
+  // Moon — dim, cool, from the Moon's direction. A Moon at least half lit and clear of the
+  // horizon casts shadows (moonShadows, below); a crescent's are too faint to be honest about.
   const moon = s.lunar;
   const moonUp = moon !== null && moon.isAboveHorizon;
   const moonlight = moonUp ? 0.14 * moon.illuminatedFraction * (1 - smooth(-18, -12, el)) : 0;
@@ -263,10 +264,24 @@ export function lightingFromScene(s: SceneState): LightingParameters {
   // terrain shadows sink it to the darkness however narrow the bias (TERRAIN_NORMAL_SHADING_SMOOTH),
   // with a hard edge where the map's reach ends: the shadows fade out over that last stretch
   // instead (at the horizon everything is in the shade of the ground and lit by the sky).
-  const shadowDarkness = clamp01(
-    1 - (1 - (0.25 + 0.75 * p.diffuseFraction - 0.15 * smooth(0, 30, el))) * smooth(0, 1.2, el),
-  );
-  const shadowsEnabled = s.render.shadows && directLightPresent;
+  // By moonlight too: a bright Moon throws the same hard shadows the Sun does, as dark against
+  // the moonlit ground as a clear day's shade against sunlit ground (moonlight is sunlight, and
+  // the night sky around it lights the shade as the day sky does) - a long exposure shows them,
+  // and so does the dark-adapted eye. From a Moon half lit, past 2 deg up (in full by 6),
+  // through clouds thin enough to let the Sun's beam through.
+  const moonShadows =
+    moonlit &&
+    el < -12 &&
+    moon !== null &&
+    moon.illuminatedFraction >= 0.5 &&
+    moon.elevationDegrees > 2 &&
+    p.sunTransmittance > 0.12;
+  const shadowDarkness = moonShadows
+    ? clamp01(1 - (1 - (0.25 + 0.75 * p.diffuseFraction)) * smooth(2, 6, moon.elevationDegrees))
+    : clamp01(
+        1 - (1 - (0.25 + 0.75 * p.diffuseFraction - 0.15 * smooth(0, 30, el))) * smooth(0, 1.2, el),
+      );
+  const shadowsEnabled = s.render.shadows && (directLightPresent || moonShadows);
 
   const nightFactor = 1 - smooth(-18, 0, el);
   // Twilight lift for the sky dome: the atmosphere is lit at a grazing angle, so give it more

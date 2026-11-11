@@ -412,6 +412,53 @@
           await new Promise((r) => {
             window.__takeShot = r;
           });
+          // The same tower under the full Moon (23:00, high in the south-east): its shadow on the
+          // side away from the Moon, darker than the moonlit ground the same distance toward it.
+          const moonScene = scene(23, 'clear');
+          controller.apply(moonScene);
+          await wait(3000);
+          if (moonScene.lunar) {
+            const mEl = moonScene.lunar.elevationDegrees;
+            const mAz = moonScene.lunar.azimuthDegrees;
+            const mLen = 20 / Math.tan((mEl * Math.PI) / 180);
+            const mPts = {
+              inShadow: fr.map((f) => probe((mAz + 180) % 360, 8 + mLen * f)),
+              moonSide: fr.map((f) => probe(mAz, 8 + mLen * f)),
+            };
+            const mUrl = await host.captureThumbnail(4096);
+            const mLum = await new Promise((resolve) => {
+              const img = new Image();
+              img.onload = () => {
+                const cv = document.createElement('canvas');
+                cv.width = img.width;
+                cv.height = img.height;
+                const ctx = cv.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                const sx = img.width / cesiumScene.canvas.clientWidth;
+                const sy = img.height / cesiumScene.canvas.clientHeight;
+                const at = (p) => {
+                  if (!p) return null;
+                  const d = ctx.getImageData(Math.round(p.x * sx), Math.round(p.y * sy), 1, 1).data;
+                  return (0.2126 * d[0] + 0.7152 * d[1] + 0.0722 * d[2]) / 255;
+                };
+                resolve({ inShadow: mPts.inShadow.map(at), moonSide: mPts.moonSide.map(at) });
+              };
+              img.src = mUrl;
+            });
+            window.__smoke.moonShadowProbe = { el: mEl, az: mAz, lengthM: mLen, lum: mLum };
+            log(
+              'moon shadow probe el=' +
+                mEl.toFixed(1) +
+                ' shadow ' +
+                mLum.inShadow.map((v) => v && v.toFixed(3)).join('/') +
+                ' moon side ' +
+                mLum.moonSide.map((v) => v && v.toFixed(3)).join('/'),
+            );
+          }
+          window.__smoke.shot = 'shadow-moon';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
           // Terrain horizon overlay: a synthetic 600 m ridge on the ~2 km ring across the east (the
           // ellipsoid has no terrain to sample, so the profile is built directly). The map-mode sun
           // path must show the morning behind the ridge as dark dashes over the gold path.

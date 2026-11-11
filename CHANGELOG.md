@@ -4,6 +4,11 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Moon shadows**: a Moon at least half lit and 2° up (in full by 6°), through cloud thin enough
+  for a beam, now casts the night's shadows as the Sun does by day, as dark against the moonlit
+  ground as a clear day's shade against sunlit ground — a long exposure shows them, and so does
+  the dark-adapted eye. Before, shadows were off all night. The smoke harness adds `shadow-moon`:
+  the tower under the full Moon at 30°, its shade a third of the moonlit ground beside it.
 - **The glow in the water is as wide as the glow in the sky**: the sea and wet ground mirrored
   the sunset glow almost evenly across the whole view (by the bearing's cosine, squared); now by
   its eighth power, as the dome draws it — three quarters 40° either side of the light, nothing a
