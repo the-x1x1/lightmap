@@ -265,7 +265,9 @@ the lighting has it (`seaSkyFor`: two thirds the gradient's horizon stop, a thir
 the frame's 0–1 colours), on the side away from the Sun the plain horizon and on the Sun's side the
 sunrise or sunset glow when there is one — after sunset the afterglow, orange to about −2°, rose,
 mostly warm still at −4° (as the drawn dome keeps its band over the set Sun), then the
-twilight's blue by about −8° — blended by the view's bearing from the light's. Two corrections
+twilight's blue by about −8° — blended by the view's bearing from the light's (by the eighth
+power of its half-cosine, as narrow as the glow the dome draws: three quarters of it 40° either
+side of the light, none a quarter of the way round). Two corrections
 toward the dome as drawn: through the dusk (from sunset to −5°, gone by −10°) the mirrored sky is
 lifted by up to half, since the dome stays bright low down where the gradient's twilight stops
 darken (measured in the harness: the sea at −4° had been half the sky's brightness over it, 0.79

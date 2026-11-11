@@ -4,6 +4,11 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **The glow in the water is as wide as the glow in the sky**: the sea and wet ground mirrored
+  the sunset glow almost evenly across the whole view (by the bearing's cosine, squared); now by
+  its eighth power, as the dome draws it — three quarters 40° either side of the light, nothing a
+  quarter of the way round. At dusk the sea under the afterglow is brightest under it and bluer
+  to either side, as the sky over it is.
 - **No mint-green sky round a sunset**: Cesium's single-scattering dome ran a low Sun's pale
   horizon and the rim of its glow to a mint green (green 30–45 levels over both red and blue), a
   hue a clear sky does not take; the grade now holds the sky's green to a hair over the larger of

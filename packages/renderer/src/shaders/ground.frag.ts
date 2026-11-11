@@ -671,8 +671,8 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         vec3 lookH = -toEye - n * dot(-toEye, n);
         vec3 lightH = czm_lightDirectionEC - n * dot(czm_lightDirectionEC, n);
         float towardLight = dot(lookH, lightH) / max(length(lookH) * length(lightH), 1e-4);
-        float glowSide = clamp(0.5 + 0.5 * towardLight, 0.0, 1.0);
-        wetSky = mix(u_seaSkyAway, u_seaSkyToward, glowSide * glowSide);
+        float glowSide = pow(clamp(0.5 + 0.5 * towardLight, 0.0, 1.0), 8.0);  // the glow's lobe, as on the sea
+        wetSky = mix(u_seaSkyAway, u_seaSkyToward, glowSide);
         // Looking toward a low Sun a wet road glares: the light in the film, as in the sea but
         // rougher (a film over asphalt or turf, mean square slope 0.08 - a broad, soft glare).
         // In the light's own colour: no moonlight floor for a broad film (whole streets went white).
@@ -816,8 +816,10 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         vec3 lookH = -toEye - n * dot(-toEye, n);
         vec3 lightH = czm_lightDirectionEC - n * dot(czm_lightDirectionEC, n);
         float towardLight = dot(lookH, lightH) / max(length(lookH) * length(lightH), 1e-4);
-        float glowSide = clamp(0.5 + 0.5 * towardLight, 0.0, 1.0);
-        glowSide *= glowSide;
+        // The glow's lobe as the dome draws it: about three quarters of its brightness 40 deg
+        // either side of the light's bearing, nothing a quarter of the way round (measured over
+        // a dusk sea; squared, the mirrored glow ran nearly flat across the whole view).
+        float glowSide = pow(clamp(0.5 + 0.5 * towardLight, 0.0, 1.0), 8.0);
         vec3 sky = mix(u_seaSkyAway, u_seaSkyToward, glowSide);
         // The Sun's own image on the ripples, by Cox and Munk's sea surface (lmCoxMunk), the
         // slopes spread by the wind (u_seaSlope2: 0.003 in a calm, 0.029 in a 5 m/s breeze):
