@@ -4,6 +4,12 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Sunlit snow sparkles**: close to the eye, snow in direct sun (or moonlight) is strewn with
+  points of light — its ice grains are small mirrors — sparse, pixel-sized, of varied brightness,
+  re-dealt as the view turns, and gone once a pixel covers more than a few tens of centimetres
+  of snow; looking toward a low Sun the snow also takes a soft forward glare. The smoke harness
+  adds two shots (`synth-snow-sun`, `synth-snow-away`: the synthetic summit with the snowline
+  brought down).
 - **The sky in the water**: the painted sea and lakes now mirror the sky. Looking out across the
   water takes the colour of the low sky by Fresnel's rule (2 % looking straight down, seven
   tenths at a grazing view, ripples keeping it from a mirror's whole): a blue sea under a blue

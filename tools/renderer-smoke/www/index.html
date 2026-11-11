@@ -1100,6 +1100,41 @@
             window.__takeShot = r;
           });
         }
+        // Snow sparkle: the summit again with the snowline brought down to 200 m (the uniform
+        // set after the scene is applied), looking down toward the afternoon Sun (the forward
+        // sheen and the grains' flashes near the eye) and away from it (flashes, no sheen).
+        for (const [name, heading] of [
+          ['synth-snow-sun', 280],
+          ['synth-snow-away', 100],
+        ]) {
+          controller.apply(
+            buildSceneState({
+              location: summit,
+              utc: localSelectionToUtc(
+                { year: 2026, month: 5, day: 31 },
+                16.5 * 60,
+                summit.timeZone,
+              ),
+              now: new Date('2026-05-01T00:00:00Z'),
+              camera: { ...defaultCamera(summitPoint, heading), mode: 'viewpoint', pitchDeg: -28 },
+              environment: { ...env, terrainAvailable: true, terrainProviderId: 'synthetic' },
+              scenario: 'clear',
+              forceScenario: true,
+              weather: { capabilities: OPEN_METEO_CAPABILITIES, frames: [], providerFailed: false },
+              render: DEFAULT_RENDER_SETTINGS,
+              includeLunar: true,
+              realReference: false,
+            }),
+          );
+          host.scene.globe.material.uniforms.u_snowlineM = 200;
+          await wait(1500);
+          if (!(await settle())) log(name + ': not settled in 45 s');
+          await wait(500);
+          window.__smoke.shot = name;
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+        }
         // SMOKE_DEBUG=water: the map view once more with a material that paints what the globe
         // hands the material - red the water mask, green the height in 10 m bands, blue the
         // slope - to see where the coast's water ends.

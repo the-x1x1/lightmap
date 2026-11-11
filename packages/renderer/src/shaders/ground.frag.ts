@@ -679,6 +679,39 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         wetGlare = czm_lightColor * lmCoxMunk(czm_lightDirectionEC, toEye, n, 0.08)
                  * u_glitter * film;
     }
+    // Snow in direct light sparkles: its ice grains are small mirrors, each throwing the Sun to
+    // the eye or not, so sunlit snow close by is strewn with points of light that move as the
+    // eye does. Grains turn every way, so the flashes need no particular geometry, only light
+    // on the surface. They are sparse (cells a pixel across, 0.6 % flashing, each as bright as
+    // its own grain), and only near the eye: once a pixel covers more than a few tens of
+    // centimetres of snow the eye sees the mean, which the snow's own albedo already carries
+    // (at a metre a pixel the cells, a pixel wide but many long at a grazing view, came out as
+    // dashes). A broad forward sheen as well:
+    // looking toward a low Sun, snow glares softly (a rough, Cox-Munk-like lobe, mean square slope 0.3).
+    vec3 snowGlint = vec3(0.0);
+    if (u_glitter > 0.0 && snowy > 0.05)
+    {
+        vec3 n = materialInput.normalEC;
+        vec3 toEye = normalize(materialInput.positionToEyeEC);
+        float sunOn = clamp(dot(n, czm_lightDirectionEC), 0.0, 1.0);
+        float footprint = max(max(length(gdx), length(gdy)), 1e-4);
+        float near = 1.0 - smoothstep(0.08, 0.4, footprint);
+        float flash = 0.0;
+        if (near > 0.0)
+        {
+            // Cells a pixel across along the pixel's shorter side (at a grazing view a pixel
+            // spans far more ground down the screen than across it, and cells by the longer side
+            // drew dashes), re-dealt as the half-vector turns by about 3 degrees.
+            float across = max(min(length(gdx), length(gdy)), 1e-4);
+            float c0 = exp2(floor(clamp(log2(across), -8.0, 2.0)));
+            vec3 halfV = normalize(czm_lightDirectionEC + toEye);
+            vec3 turn = floor(halfV * 20.0);
+            float u = lmHash(vec3(floor(g.xy / c0), 7.0) + turn * 0.731);
+            flash = step(0.994, u) * (0.35 + 0.65 * fract(u * 977.0)) * near;
+        }
+        float sheen = lmCoxMunk(czm_lightDirectionEC, toEye, n, 0.3) * 0.25;
+        snowGlint = czm_lightColor * u_glitter * snowy * sunOn * (2.5 * flash + sheen);
+    }
     // Rock and snow are what they are; open ground lets real imagery's own hue through. Over
     // the bundled coarse basemap the paint is all but opaque on land: that map's 500 m pixels
     // put sea and lakes well onto the land near every coast. Over real imagery (Sentinel-2's
@@ -696,6 +729,9 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     if (wetR > 0.0)
         material.diffuse = material.diffuse * (1.0 - wetR)
             + lmUnlit(wetSky * wetR + wetGlare, materialInput.normalEC, materialInput.positionToEyeEC.z)
+            / max(alpha, 0.05);
+    if (snowGlint.r + snowGlint.g + snowGlint.b > 0.0)
+        material.diffuse += lmUnlit(snowGlint, materialInput.normalEC, materialInput.positionToEyeEC.z)
             / max(alpha, 0.05);
 #ifdef HAS_WATER_MASK
     // Water, from the terrain's own mask - which arrives with coarse tiles and is upsampled for
