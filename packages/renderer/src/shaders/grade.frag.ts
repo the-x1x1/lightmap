@@ -418,8 +418,10 @@ void main() {
     vec3 hazeCol = mix(u_hazeAway, u_hazeToward, glowSide);
     // The gradient's twilight and night stops are colours for the chrome, not the dome as the
     // grade darkens it: through the dusk the haze goes to the night air's dark blue as the dome
-    // does, so a far ridge never stands lighter than the sky over it.
-    hazeCol = mix(hazeCol, vec3(0.05, 0.06, 0.1), u_nightFactor);
+    // does, so a far ridge never stands lighter than the sky over it. The dome comes out near
+    // black at night (its faint glow cut to 6 %), so the night air is near black too: at 0.05
+    // to 0.1 the far sea stood as a lit navy band under a black sky.
+    hazeCol = mix(hazeCol, vec3(0.012, 0.016, 0.03), u_nightFactor);
     color = mix(color, hazeCol, clamp(dist * 0.85, 0.0, 0.85));
   }
 

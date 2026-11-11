@@ -10,6 +10,13 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   of snow; looking toward a low Sun the snow also takes a soft forward glare. The smoke harness
   adds two shots (`synth-snow-sun`, `synth-snow-away`: the synthetic summit with the snowline
   brought down).
+- **Dusk water and the night sea**: the sunset glow stays warm in the sky colours to about −4°
+  as the drawn sky does (it went lavender by −4°, so the sea under a peach afterglow mirrored a
+  grey-violet sky), and through the dusk the sky in the water is lifted by up to half (the sea
+  measured half the brightness of the sky over it at −4°, against 0.8–0.9 by day). By night the
+  sky in the water and the air the grade fades distant ground into go near black, as the drawn
+  night dome does: the night sea had stood as a lit navy band under a black sky.
+
 - **The sky in the water**: the painted sea and lakes now mirror the sky. Looking out across the
   water takes the colour of the low sky by Fresnel's rule (2 % looking straight down, seven
   tenths at a grazing view, ripples keeping it from a mirror's whole): a blue sea under a blue

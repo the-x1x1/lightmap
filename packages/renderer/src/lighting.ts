@@ -450,13 +450,15 @@ export function skyColoursFor(
   // The glow on the Sun's side of the horizon. While the Sun is up its hue is the scattering
   // model's (a warm light warms it; a cool, diffuse one leaves it blue). Once it has set the
   // light turns cool but the afterglow does not: it stays orange to a couple of degrees down,
-  // goes rose, and gives way to the twilight's dusky blue by about -6 deg - by the Sun's
+  // goes rose, and gives way to the twilight's dusky blue by about -8 deg - by the Sun's
   // depression, not the light's colour (which had flipped the glow blue at -2 deg while the
-  // sky the renderer draws still glowed).
+  // sky the renderer draws still glowed). The grade keeps the bright band over the set Sun warm
+  // (its glowKeep) well into the blue hour, so the band stays mostly warm to about -4 deg here
+  // too: half blue there, the sea under it mirrored a lavender sky over a peach one.
   const dayGlow: Rgb =
     warmth > 0.55 ? (physical ? brighten(physical.glow) : [255, 150, 70]) : [120, 140, 210];
   const afterglow = mix([240, 130, 105], [255, 150, 70], smooth(-3, -0.5, elevationDeg));
-  const duskGlow = mix([120, 140, 210], afterglow, smooth(-6.5, -1.5, elevationDeg));
+  const duskGlow = mix([120, 140, 210], afterglow, smooth(-8, -3, elevationDeg));
   const glow = mix(duskGlow, dayGlow, smooth(-0.5, 0.5, elevationDeg));
   const build = (clear: Rgb, nightC: Rgb, glowAmount: number): Rgb => {
     let c = mix(clear, overcast, cloudOpacity);
@@ -523,10 +525,20 @@ export function seaSkyFor(
   haze = 0.1,
 ): SeaSky {
   const c = skyColoursFor(elevationDeg, cloudOpacity, warmth, skyLuminance, haze);
+  // The gradient's night stops are the chrome's navy; the dome as the grade draws it is near
+  // black by night (its faint glow cut to a few per cent), and the water mirrors that: from
+  // nautical twilight's end the mirrored sky darkens to a sixth (the night sea had stood as a lit
+  // navy band under a black sky). The Moon's path is the glitter's, not this.
+  // Through the dusk the other way: the dome Cesium draws stays bright low down (its light is
+  // held at the horizon), brighter than the gradient's twilight stops, and the sea under it
+  // measured half the sky's brightness at -4 deg where by day it is 0.8 to 0.9 of it. Lifted by
+  // up to half from the Sun's setting to -5 deg, gone by -10.
+  const dusk = (1 - smooth(-2, 0, elevationDeg)) * smooth(-10, -5, elevationDeg);
+  const k = (0.15 + 0.85 * smooth(-18, -12, elevationDeg)) * (1 + 0.5 * dusk);
   const low = (h: Rgb): Rgb => [
-    h[0] * 0.67 + c.mid[0] * 0.33,
-    h[1] * 0.67 + c.mid[1] * 0.33,
-    h[2] * 0.67 + c.mid[2] * 0.33,
+    (h[0] * 0.67 + c.mid[0] * 0.33) * k,
+    (h[1] * 0.67 + c.mid[1] * 0.33) * k,
+    (h[2] * 0.67 + c.mid[2] * 0.33) * k,
   ];
   return { away: toUnit(low(c.horizonAway)), toward: toUnit(low(c.horizon)) };
 }

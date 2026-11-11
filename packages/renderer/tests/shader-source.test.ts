@@ -72,7 +72,7 @@ describe('the grade', () => {
   it('hazes toward the horizon sky on both sides, darkening it with the night', () => {
     for (const src of [GRADE_FRAGMENT_SHADER, GRADE_DAY_FRAGMENT_SHADER]) {
       expect(src).toContain('vec3 hazeCol = mix(u_hazeAway, u_hazeToward, glowSide);');
-      expect(src).toContain('hazeCol = mix(hazeCol, vec3(0.05, 0.06, 0.1), u_nightFactor);');
+      expect(src).toContain('hazeCol = mix(hazeCol, vec3(0.012, 0.016, 0.03), u_nightFactor);');
     }
     expect(GRADE_UNIFORM_NAMES).toContain('u_hazeAway');
     expect(GRADE_UNIFORM_NAMES).toContain('u_hazeBaseM');

@@ -227,6 +227,11 @@ describe('lightingFromScene', () => {
     expect(Math.abs(overcast.away[0] - overcast.away[2])).toBeLessThan(0.08); // a cool grey
     const night = seaSkyFor(-25, 0, 0.2, 1);
     expect(Math.max(...night.away)).toBeLessThan(0.2); // the night horizon's deep navy
+    // ... darkened as the grade darkens the night dome: no lit band of sea under a black sky.
+    expect(Math.max(...night.away)).toBeLessThan(0.04);
+    // Through the dusk the dome stays bright low down: the sky in the water is lifted there.
+    const lum = (c: number[]) => 0.2126 * c[0]! + 0.7152 * c[1]! + 0.0722 * c[2]!;
+    expect(lum(seaSkyFor(-4, 0, 0.6, 1).toward)).toBeGreaterThan(0.6);
     expect(night.away[2]).toBeLessThan(day.away[2] / 3);
     expect(night.away).toEqual(night.toward);
     // The scene carries it, in step with the gradient's horizon.
