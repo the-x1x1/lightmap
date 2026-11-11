@@ -100,9 +100,11 @@ overhead, its paling with haze and the hue of the sunrise/sunset glow come from 
 the scenario; hand-set colours remain for twilight, night and the daytime horizon
 (`RENDERING_ACCURACY.md`).
 
-Also delivered (unreleased): **water** — the terrain water mask is requested and Cesium's water
-effect shades sea and lakes with a specular glint from the scene light and a ripple normal map
-(`RENDERING_ACCURACY.md` "Water"); no swell geometry or sky reflection.
+Also delivered (unreleased): **water** — the terrain water mask is requested and the ground
+material paints sea and lakes that mirror the low sky by Fresnel's rule (the sunrise or sunset
+glow and afterglow on the Sun's side, dark at night), with the Sun's or the Moon's glitter path by
+Cox and Munk's wind-roughened surface, broken into pixel-sized sparkles (`RENDERING_ACCURACY.md`
+"Water"); no swell geometry, and the mirrored sky is the horizon's colour, not the clouds' shapes.
 
 Also delivered (unreleased): the **ground texture** — a procedural surface over the terrain
 (turf, scrub, rock by slope, scree above the treeline, snow above a latitude- and
@@ -128,8 +130,8 @@ Buildings through ion, lit and shadow-casting with the terrain, ODbL attribution
 `RENDERING_ACCURACY.md`); the terrain horizon takes them in within 2.5 km of the pin, so "when does the
 sun clear that block" is answered in a city. The scattering model in
 Cesium's own dome (the haze → Mie wiring is in behind the `physicalSkyDome` flag with a
-smoke-harness shot to judge it; enabling it is the PC's call); a fuller water shader (waves, sky
-reflection) is not planned until Phase 8. Everything stays grounded: geometry and light direction are
+smoke-harness shot to judge it; enabling it is the PC's call); wave geometry and a reflection
+of the dome pixel by pixel are not planned until Phase 8. Everything stays grounded: geometry and light direction are
 never altered for looks.
 
 ## Phase 5 — Real references (future, requires licensing work)

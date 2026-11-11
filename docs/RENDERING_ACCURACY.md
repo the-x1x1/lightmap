@@ -262,7 +262,13 @@ opacity, so the reflection is put in at full strength over it. What it mirrors i
 the lighting has it (`seaSkyFor`: two thirds the gradient's horizon stop, a third the mid-sky, as
 the frame's 0–1 colours), on the side away from the Sun the plain horizon and on the Sun's side the
 sunrise or sunset glow when there is one — after sunset the afterglow, orange to about −2°, rose,
-then the twilight's blue by −6° — blended by the view's bearing from the light's. Under it the
+mostly warm still at −4° (as the drawn dome keeps its band over the set Sun), then the
+twilight's blue by about −8° — blended by the view's bearing from the light's. Two corrections
+toward the dome as drawn: through the dusk (from sunset to −5°, gone by −10°) the mirrored sky is
+lifted by up to half, since the dome stays bright low down where the gradient's twilight stops
+darken (measured in the harness: the sea at −4° had been half the sky's brightness over it, 0.79
+after, against 0.78–0.88 by day); and from −12° to −18° it darkens to a sixth, as the grade cuts
+the night dome's faint glow, so the night sea is no lit band under a black sky. Under it the
 Sun's glitter path, by Cox and Munk's sea surface (1954): the ripple facets' slopes are spread
 normally with a mean square slope set by the wind, 0.003 + 0.00512 · U (U the wind at 10 m, m/s:
 the forecast's, or a stated typical wind for a scenario — 4 m/s clear, 5 partly cloudy, 6
@@ -322,7 +328,14 @@ coasts left bare; height lengthens only a real winter, so the high cities of the
 Mexico City, Bogotá, Nairobi — and Denver are never painted white) the line is drawn down under the ground by the share covered — and, inside the
 forecast horizon, the forecast's own word:
 when the frame has snow lying at the model's grid point (≥ 1 cm) the snowline drops to just
-under the pin's height, and when it has the ground bare it rises to just over it — and a strip of
+under the pin's height, and when it has the ground bare it rises to just over it. Sunlit snow
+near the eye sparkles: its grains are small mirrors, so in direct light (the Sun's beam or the
+Moon's) it is strewn with sparse pixel-sized points of varied brightness, cells a pixel across the
+pixel's shorter side with 0.6 % of them lit, re-dealt as the view turns by a few degrees; they go
+once a pixel covers more than a few tens of centimetres of snow, where the eye sees the mean the
+snow's albedo already carries, and looking toward a low Sun the snow takes a broad, soft forward
+glare (a rough Cox–Munk lobe, mean square slope 0.3). **Caveat:** a statistical texture, not the
+grains; the harness shows it with the snowline brought down (`synth-snow-*`). And a strip of
 shore where flat ground meets sea level (`ground-texture.ts`, tested). The inputs are the
 terrain's own height, slope and aspect and a noise field anchored to the fragment's world
 position, so patches stay put as the camera moves. One regional cue comes from the bundled
@@ -530,7 +543,10 @@ Ultra and High, 2x on Balanced, and FXAA alone on Battery and Minimal. The gover
 High, or on Balanced where the WebGL renderer names an integrated GPU (Intel HD/UHD/Iris, AMD's
 APU graphics, Adreno), and climbs if the machine has headroom. A step down applies at once; a
 climb (which rebuilds the shadow map and the multisample buffers) waits until the camera has
-rested 1.5 s, so it never stutters a drag that is going well.
+rested 1.5 s, so it never stutters a drag that is going well. The drawn resolution is at most
+two pixels per CSS pixel, and one where the WebGL renderer names a software renderer
+(SwiftShader, llvmpipe, Microsoft's Basic Render Driver: `software-gl.ts`), where every pixel is
+shaded on the CPU.
 
 ### Smoothness
 
