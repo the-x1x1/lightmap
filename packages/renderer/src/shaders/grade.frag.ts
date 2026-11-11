@@ -439,6 +439,15 @@ void main() {
     color = mix(color, color * 0.8 + vec3(0.18), streak * u_precipitation * 0.8);
   }
 
+  // No green sky: Cesium's single-scattering dome runs a low Sun's pale horizon to a mint
+  // green (measured round a golden-hour glow: green 30-45 levels over both red and blue), a hue
+  // a clear sky does not take - its colours run from blue through white to yellow and orange.
+  // Green is held to a hair over the larger of the other two, last (held on the dome, the
+  // grade's contrast clipped green first on the glow's near-white rim and brought it back).
+  if (isSky) {
+    color = clamp(color, 0.0, 1.0);
+    color.g = mix(color.g, min(color.g, max(color.r, color.b) + 0.01), 0.9);
+  }
   out_FragColor = vec4(clamp(color, 0.0, 1.0), src.a);
 }
 `;

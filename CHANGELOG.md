@@ -4,6 +4,12 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **No mint-green sky round a sunset**: Cesium's single-scattering dome ran a low Sun's pale
+  horizon and the rim of its glow to a mint green (green 30–45 levels over both red and blue), a
+  hue a clear sky does not take; the grade now holds the sky's green to a hair over the larger of
+  red and blue, last, after its contrast (which had clipped green first on the glow's near-white
+  rim). Golden-hour shots in the harness: 23 000–35 000 green sky pixels each before, none after;
+  other scenes unchanged.
 - **Software rendering draws one pixel per CSS pixel**: on a renderer that shades on the CPU
   (SwiftShader — CI's browsers, Chrome with no usable GPU — llvmpipe, Microsoft's Basic Render
   Driver) the scene is drawn at the page's own resolution rather than up to twice it. A phone-sized

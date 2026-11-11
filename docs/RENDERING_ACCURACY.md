@@ -110,7 +110,9 @@ sunset. **Caveat:** real values vary with aerosol, altitude and humidity by hund
 
 Cesium's sky atmosphere with `dynamicLighting = SCENE_LIGHT` follows our light, giving a horizon
 glow on the Sun's side and darkness opposite. Hue/saturation/brightness shifts encode cloud and
-haze; fog density encodes visibility. **Claim:** sky is bright/blue when clear and grey/flat when
+haze; fog density encodes visibility. The grade holds the sky's green to a hair over the larger
+of red and blue as its last step: the single-scattering dome runs a low Sun's pale horizon and the
+rim of its glow to a mint green that a clear sky does not show. **Claim:** sky is bright/blue when clear and grey/flat when
 overcast; twilight colours sit on the correct side of the sky. **Caveat:** Cesium's dome is its own
 single-scattering model (not spectral); no real cloud shapes.
 
