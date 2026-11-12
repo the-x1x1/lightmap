@@ -996,10 +996,10 @@
             },
           });
           const instancePrims = [];
-          const drawInstances = (share) => {
+          const drawInstances = (share, skyLift = 1, lights = 0) => {
             for (const p of instancePrims.splice(0)) host.scene.primitives.remove(p);
             for (const [instance, fs] of [
-              [blockInstance, litInstanceShader(1, 0, true, share)],
+              [blockInstance, litInstanceShader(1, 0, true, share, skyLift, lights)],
               [crownInstance, treeFragmentShader(1, 0, 1, 0, 1, share)],
             ])
               instancePrims.push(
@@ -1017,11 +1017,14 @@
                 ),
               );
           };
-          for (const [name, scenario] of [
-            ['buildings-clear', 'clear'],
-            ['buildings-overcast', 'overcast'],
+          // And at the blue hour (Sun about -6 deg): the town's lights on, windows lit in the
+          // block's walls.
+          for (const [name, scenario, hour] of [
+            ['buildings-clear', 'clear', 15],
+            ['buildings-overcast', 'overcast', 15],
+            ['buildings-dusk', 'clear', 19.75],
           ]) {
-            const sc = scene(15, scenario, {
+            const sc = scene(hour, scenario, {
               ...defaultCamera(
                 {
                   latitude: kailua.point.latitude - 0.0009,
@@ -1032,7 +1035,8 @@
               mode: 'viewpoint',
               pitchDeg: 2,
             });
-            drawInstances(lightingFromScene(sc).globeLight.lambert / 0.9);
+            const scl = lightingFromScene(sc);
+            drawInstances(scl.globeLight.lambert / 0.9, scl.globeLight.skyLift, scl.cityLights);
             controller.apply(sc);
             await wait(1800);
             window.__smoke.shot = name;

@@ -325,6 +325,9 @@ describe('moonlight', () => {
     const noMoon = lightingFromScene(scene(23, 'clear', { includeLunar: false }));
     expect(noMoon.moonlit).toBe(false);
     expect(noMoon.sunIntensity).toBe(0);
+    // The town's lights are on at night, off by day.
+    expect(night.cityLights).toBe(1);
+    expect(lightingFromScene(scene(12, 'clear')).cityLights).toBe(0);
     // A full Moon high up casts shadows as a clear day's are; with no Moon there are none.
     expect(night.shadowsEnabled).toBe(true);
     expect(night.shadowDarkness).toBeLessThan(0.4);

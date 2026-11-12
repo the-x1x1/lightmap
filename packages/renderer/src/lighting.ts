@@ -55,6 +55,11 @@ export interface LightingParameters {
   /** Shadow map darkness 0..1 as Cesium defines it: 0 = black shadows, 1 = no visible shadow. */
   shadowDarkness: number;
   shadowsEnabled: boolean;
+  /**
+   * How far the town's lights are on, 0..1: none with the Sun 2 deg up, all of them by -4 deg (the
+   * blue hour's middle), by the Sun alone - lit windows in the buildings' walls.
+   */
+  cityLights: number;
   /** Sky-atmosphere shifts (Cesium: hue/saturation/brightness deltas around 0). */
   atmosphere: {
     hueShift: number;
@@ -350,6 +355,7 @@ export function lightingFromScene(s: SceneState): LightingParameters {
     globeLight,
     shadowDarkness,
     shadowsEnabled,
+    cityLights: 1 - smooth(-4, 2, el),
     atmosphere: {
       hueShift: atmosphereHue,
       saturationShift: atmosphereSaturation,

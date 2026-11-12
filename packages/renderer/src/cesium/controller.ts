@@ -197,6 +197,7 @@ export class SceneController {
       globeLambert: lighting.globeLight.lambert,
       globeAmbient: lighting.globeLight.ambient,
       globeSkyLift: lighting.globeLight.skyLift,
+      cityLights: lighting.cityLights,
     });
     this.host.setAtmosphere({ ...lighting.atmosphere, fogDensity: lighting.fogDensity });
     const shading = globeShadingFor(scene, lighting, this.host.terrainHasNormals?.() ?? true);

@@ -100,6 +100,7 @@ export function litInstanceShader(
   roofs = false,
   directShare = 1,
   skyLift = 1,
+  cityLights = 0,
 ): string {
   const d = Math.max(0.05, Math.min(1, shadowD)).toFixed(3);
   // The share of the Sun's term that is direct (globeLightSplit's directional share against a
@@ -150,7 +151,7 @@ void main()
     float dist = length(v_positionEC);
     float haze = clamp((dist - 1500.0) / 14000.0, 0.0, 0.55);
     vec3 hazeColor = czm_lightColor * vec3(0.36, 0.40, 0.46);
-    vec3 outRgb = mix(lit, hazeColor, haze);
+    vec3 outRgb = mix(lit, hazeColor, haze);${roofs && cityLights > 0 ? windowsCode(cityLights) : ''}
     // Cesium's factor for an unoccluded fragment: its normal shading over the first
     // PRIMITIVE_NORMAL_SHADING_SMOOTH of n.l, floored at the darkness; none beyond the shadow
     // distance.
@@ -160,6 +161,55 @@ void main()
     out_FragColor = vec4(outRgb, color.a);
 }
 `;
+}
+
+/**
+ * Lit windows, from the dusk on (`cityLights`, 0..1): the walls carry a grid of windows - bays
+ * 3.6 m wide, storeys 3.2 m tall, each window 40 % of its bay's width and half its storey's
+ * height - of which up to 38 % are lit, each its own warm-to-cool white and brightness, picked
+ * by a hash of the window and the building's tone so a window stays lit or dark. The light is
+ * the window's own: added after the shading, not scaled by the scene's light. Where a pixel
+ * spans more than about half a window the grid gives way to its mean glow, so a far town is a
+ * haze of warm light rather than shimmering dots.
+ *
+ * The grid is anchored to the world, not the eye: across a wall by the wall's horizontal
+ * direction (rounded to 1/1024, so every fragment of a wall takes the same) dotted with the
+ * camera's position split as Cesium splits it (high part, fixed within 65 km, taken modulo
+ * 64 bays; low part and the fragment's offset from the eye, both small and exact), up it by the
+ * height above the ellipsoid (the eye's height plus the offset). Storeys count from sea level,
+ * not each building's base. ASCII only.
+ */
+function windowsCode(cityLights: number): string {
+  const on = Math.max(0, Math.min(1, cityLights)).toFixed(2);
+  return `
+    float wallness = 1.0 - smoothstep(0.35, 0.6, abs(dot(normalEC, upEC)));
+    if (wallness > 0.0)
+    {
+        vec3 relMC = (czm_inverseModelView * vec4(v_positionEC, 0.0)).xyz;
+        vec3 nMC = (czm_inverseModelView * vec4(normalEC, 0.0)).xyz;
+        vec3 uMC = (czm_inverseModelView * vec4(upEC, 0.0)).xyz;
+        vec3 t = cross(uMC, nMC);
+        t = floor(t / max(length(t), 1e-4) * 1024.0 + 0.5) / 1024.0;
+        float along = mod(dot(t, czm_encodedCameraPositionMCHigh), 230.4)
+                    + dot(t, czm_encodedCameraPositionMCLow) + dot(t, relMC);
+        vec3 relWC = (czm_inverseView * vec4(v_positionEC, 0.0)).xyz;
+        float up = czm_eyeHeight + dot(relWC, normalize(positionWC));
+        vec2 cell = vec2(along / 3.6, up / 3.2);
+        vec2 id = floor(cell);
+        vec2 f = fract(cell);
+        vec2 fw = max(fwidth(cell), vec2(1e-4));
+        float inX = smoothstep(0.30 - fw.x, 0.30 + fw.x, f.x) - smoothstep(0.70 - fw.x, 0.70 + fw.x, f.x);
+        float inY = smoothstep(0.30 - fw.y, 0.30 + fw.y, f.y) - smoothstep(0.80 - fw.y, 0.80 + fw.y, f.y);
+        float hsh = fract(sin(dot(id, vec2(12.9898, 78.233)) + v_color.r * 91.7 + v_color.b * 37.3) * 43758.5453);
+        float litW = step(hsh, 0.38 * ${on});
+        float hue = fract(hsh * 7.31);
+        vec3 lamp = mix(vec3(1.0, 0.70, 0.40), vec3(0.88, 0.90, 1.0), hue * hue) * (0.55 + 0.45 * fract(hsh * 3.7));
+        vec3 glowNear = lamp * litW * inX * inY;
+        // A window's mean over the grid: 38 % lit, 20 % of the wall glass, an average lamp.
+        vec3 glowFar = vec3(0.93, 0.74, 0.52) * 0.78 * 0.38 * ${on} * 0.20;
+        float far = smoothstep(0.25, 0.6, max(fw.x, fw.y));
+        outRgb += mix(glowNear, glowFar, far) * wallness * (1.0 - haze);
+    }`;
 }
 
 /** The lit shader without shadow compensation (shadows off). */
@@ -392,6 +442,8 @@ export class OsmBuildingsLayer {
   /** The sky light's twilight lift (`setDirectShare`), in tenths. */
   private skyLift = 1;
   private buildingAppearance: Cesium.PerInstanceColorAppearance | null = null;
+  /** How far the town's lights are on (`setCityLights`), in tenths. */
+  private cityLights = 0;
   private readonly buildingPrims = new Set<Cesium.Primitive>();
   /** Tiles' merged building primitives still being built in the workers (hidden). */
   private readonly merging = new Set<Cesium.Primitive>();
@@ -517,6 +569,20 @@ export class OsmBuildingsLayer {
     this.scene.requestRender();
   }
 
+  /**
+   * How far the town's lights are on, 0..1 (`LightingParameters.cityLights`): lit windows in the
+   * walls. In tenths, so the buildings' shader is swapped a few times through the dusk.
+   */
+  setCityLights(level: number): void {
+    const next = Math.round(Math.max(0, Math.min(1, level)) * 10) / 10;
+    if (next === this.cityLights) return;
+    this.cityLights = next;
+    this.buildingAppearance = null;
+    const buildings = this.appearanceForBuildings();
+    for (const p of this.buildingPrims) p.appearance = buildings;
+    this.scene.requestRender();
+  }
+
   private appearanceForTrees(): Cesium.PerInstanceColorAppearance {
     this.treeAppearance ??= new this.C.PerInstanceColorAppearance({
       flat: false,
@@ -546,6 +612,7 @@ export class OsmBuildingsLayer {
         true,
         this.directShare,
         this.skyLift,
+        this.cityLights,
       ),
     });
     return this.buildingAppearance;

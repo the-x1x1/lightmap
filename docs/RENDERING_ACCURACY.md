@@ -509,6 +509,18 @@ woods, fields, sand, water) and, within 1.5 km, its streets to their usual width
 are. **Caveat:** DEM resolution (≈30 m globally, better in some regions); buildings, streets and
 land cover as OpenStreetMap has them (see Shadows); street widths are by class, not measured.
 
+From the dusk the town's lights come on: none with the Sun 2° up, all by −4° (`cityLights`). The
+buildings' walls carry a grid of windows — bays 3.6 m wide, storeys 3.2 m tall, each window 40 %
+of its bay and half its storey — of which up to 38 % are lit, each its own warm-to-cool white and
+brightness and staying lit or dark, the light added after the shading rather than scaled by the
+scene's. Where a pixel spans more than about half a window, the grid gives way to its mean glow.
+The grid is anchored to the world (across a wall by its direction and the camera's position as
+Cesium splits it, up it by height above the ellipsoid), so it holds still as the eye moves.
+**Caveat:** a pattern, not the building's windows — storeys count from sea level, not each
+building's base; corners can cut a window; which windows are lit is a hash, not a time of
+night (offices and homes go dark on no schedule here). The harness shows it at 19:45 on its
+test block (`buildings-dusk`).
+
 ### The map view at night
 
 The overhead map is a chart, not a photograph. Once the Sun is under the horizon and nothing

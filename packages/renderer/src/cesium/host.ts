@@ -22,6 +22,8 @@ export interface HostLight {
   globeAmbient?: number;
   /** The sky light's lift above a day's share in twilight (`GlobeLightSplit.skyLift`); 1 when left out. */
   globeSkyLift?: number;
+  /** How far the town's lights are on, 0..1 (`LightingParameters.cityLights`); off when left out. */
+  cityLights?: number;
 }
 
 /**

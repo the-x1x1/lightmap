@@ -4,6 +4,12 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Lit windows from the dusk**: the town's lights come on as the Sun goes, none with it 2° up and
+  all by −4°: building walls carry a grid of windows (bays 3.6 m, storeys 3.2 m) of which up to
+  38 % are lit, each its own warm-to-cool white and brightness, anchored to the world so they hold
+  still as the eye moves, and fading to their mean glow where a window is smaller than a pixel —
+  a blue-hour skyline with its lights on rather than dark boxes. The smoke harness adds
+  `buildings-dusk` (the test block at 19:45).
 - **Moon shadows**: a Moon at least half lit and 2° up (in full by 6°), through cloud thin enough
   for a beam, now casts the night's shadows as the Sun does by day, as dark against the moonlit
   ground as a clear day's shade against sunlit ground — a long exposure shows them, and so does

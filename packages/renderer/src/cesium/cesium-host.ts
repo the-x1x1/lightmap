@@ -244,6 +244,8 @@ export class CesiumSceneHost implements SceneHost {
   private pinSplit = { lambert: 0.9, ambient: 0.3 };
   /** The sky light's twilight lift (`setLight`), for the buildings' and trees' shader. */
   private skyLift = 1;
+  /** How far the town's lights are on (`HostLight.cityLights`). */
+  private cityLights = 0;
   /** The sky the water reflects (`setSeaSky`), kept for a material made later. */
   private seaSky: HostSeaSky | null = null;
   private buildings: Cesium.Cesium3DTileset | null = null;
@@ -807,6 +809,8 @@ export class CesiumSceneHost implements SceneHost {
     this.pinSplit = { lambert: light.globeLambert ?? 0.9, ambient: light.globeAmbient ?? 0.3 };
     this.skyLift = light.globeSkyLift ?? 1;
     this.osmBuildings?.setDirectShare(this.pinSplit.lambert / 0.9, this.skyLift);
+    this.cityLights = light.cityLights ?? 0;
+    this.osmBuildings?.setCityLights(this.cityLights);
     this.applyGlobeSplit();
   }
 
@@ -2415,6 +2419,7 @@ export class CesiumSceneHost implements SceneHost {
         const sm = this.scene.shadowMap;
         this.osmBuildings.setShadowMap(sm.enabled, sm.darkness, sm.maximumDistance);
         this.osmBuildings.setDirectShare(this.pinSplit.lambert / 0.9, this.skyLift);
+        this.osmBuildings.setCityLights(this.cityLights);
         this.osmBuildingsCheckAt = 0;
         this.scene.requestRender();
         return;
