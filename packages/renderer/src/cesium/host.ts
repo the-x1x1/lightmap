@@ -250,6 +250,18 @@ export interface HostSunGlare {
   tint?: [number, number, number];
 }
 
+/** The towns' glow over a place (`skyGlowAt`), for the night sky. */
+export interface HostTownGlow {
+  /** Where it was figured. */
+  at: GeoPoint;
+  /** Walker's index (area km^2 x km^-2.5 summed over the towns). */
+  index: number;
+  /** Inside a city (a city sky all round). */
+  city: boolean;
+  /** Bearing of the strongest glow, degrees from north; null when it has none. */
+  bearingDeg: number | null;
+}
+
 export interface SceneHost {
   setTime(utc: Date): void;
   setLight(light: HostLight): void;
@@ -267,6 +279,8 @@ export interface SceneHost {
    * horizon's colour on the side away from the Sun and the glow's on its side.
    */
   setSeaSky?(sky: HostSeaSky): void;
+  /** The towns' glow in the night sky (`skyGlowAt` at the place); null for none. */
+  setTownGlow?(glow: HostTownGlow | null): void;
   /** The public ion token once capabilities arrive (ion terrain, imagery and buildings use it). */
   setIonToken(token: string | undefined): void;
   setTerrain(t: TerrainDescriptor): Promise<void>;

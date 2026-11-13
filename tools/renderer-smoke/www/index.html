@@ -1050,6 +1050,10 @@
             ['buildings-overcast', 'overcast', 15],
             ['buildings-dusk', 'clear', 19.75],
             ['buildings-night', 'clear', 22],
+            // The towns' glow (a suburb's index, the strongest glow to the north-east, ahead):
+            // a warm dome low over the horizon, stronger under an overcast lit from below.
+            ['town-glow', 'clear', 22],
+            ['town-glow-overcast', 'overcast', 22],
           ]) {
             const sc = scene(hour, scenario, {
               ...defaultCamera(
@@ -1066,6 +1070,11 @@
             drawInstances(scl.globeLight.lambert / 0.9, scl.globeLight.skyLift, scl.cityLights);
             // The street lamps along the made-up grid (lit only at the dusk shot).
             host.setStreetLamps(streetLampPositions(grid, 35, 6000, kLon, kLat));
+            host.setTownGlow(
+              name.startsWith('town-glow')
+                ? { at: kailua.point, index: 1.5, city: false, bearingDeg: 45 }
+                : null,
+            );
             controller.apply(sc);
             await wait(1800);
             window.__smoke.shot = name;
@@ -1075,6 +1084,7 @@
           }
           for (const p of instancePrims.splice(0)) host.scene.primitives.remove(p);
           host.setStreetLamps([]);
+          host.setTownGlow(null);
           log('buildings and trees drawn');
         }
         // Synthetic terrain (synthetic-terrain.js): quantized-mesh tiles with vertex normals and

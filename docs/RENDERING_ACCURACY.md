@@ -531,6 +531,15 @@ of lights. **Caveat:** where lamps stand is a rule, not a survey (OpenStreetMap 
 them); they light nothing round them — no pools on the street. The harness draws them along a
 made-up street grid (`buildings-dusk`, `buildings-night`).
 
+Over them, the towns' glow: the night advice's sky-glow estimate (Walker's law over Natural
+Earth's built-up areas, `sky-glow.ts`) drawn in the night sky as a warm dome (sodium and LED
+together, a dull orange) falling off with height over about 9°, a lobe toward the strongest town,
+all round as the index grows past a horizon glow's and inside a city, with a fifth of it up to
+the zenith there; its strength is the night sky's brightness over a natural one on a log scale (a
+city sky, 60 times, is full strength). A cloud deck carries 2.5 times as much, lit from below.
+**Caveat:** the estimate's own (Natural Earth's larger towns only, 2002–03 data); the dome's
+shape and colour are a pattern, not a radiative model.
+
 ### The map view at night
 
 The overhead map is a chart, not a photograph. Once the Sun is under the horizon and nothing

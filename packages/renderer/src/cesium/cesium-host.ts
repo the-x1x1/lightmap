@@ -96,6 +96,7 @@ import type {
   HostLight,
   HostMoonDisc,
   HostSeaSky,
+  HostTownGlow,
   HostSunGlare,
   HostPlanet,
   HostOrbitCamera,
@@ -247,6 +248,9 @@ export class CesiumSceneHost implements SceneHost {
   private skyLift = 1;
   /** How far the town's lights are on (`HostLight.cityLights`). */
   private cityLights = 0;
+  /** The towns' glow for the night grade (`setTownGlow`). */
+  private townGlow: { strength: number; allRound: number; dirWC: Cesium.Cartesian3 } | null = null;
+  private readonly townGlowDirScratch: Cesium.Cartesian3;
   /** The street lamps along the mapped roads near the place, lit from the dusk. */
   private streetLamps: Cesium.BillboardCollection | null = null;
   private streetLampsShownAt = -1;
@@ -427,6 +431,7 @@ export class CesiumSceneHost implements SceneHost {
     this.urbanAreasUrl = options.urbanAreasUrl?.replace(/\/$/, '');
     this.geoidUrl = options.geoidUrl?.replace(/\/$/, '');
     this.eyeUpScratch = new C.Cartesian3();
+    this.townGlowDirScratch = new C.Cartesian3();
     this.enuScratch = newGroundFrame(C);
     if (options.ionToken) C.Ion.defaultAccessToken = options.ionToken;
 
@@ -577,6 +582,19 @@ export class CesiumSceneHost implements SceneHost {
       u_sunDirEC: new C.Cartesian3(0, 0, -1),
       u_sunTint: new C.Cartesian3(1, 1, 1),
       u_moonDirEC: new C.Cartesian3(0, 0, -1),
+      u_townGlow: () => {
+        const g = this.townGlow;
+        return new C.Cartesian4(g?.strength ?? 0, g?.allRound ?? 0, this.cityLights, 0);
+      },
+      u_townGlowDirEC: () => {
+        const d = this.townGlow?.dirWC ?? C.Cartesian3.UNIT_Z;
+        const out = C.Matrix4.multiplyByPointAsVector(
+          scene.camera.viewMatrix,
+          d,
+          this.townGlowDirScratch,
+        );
+        return C.Cartesian3.normalize(out, out);
+      },
       u_moonGlow: 0,
       u_moonRadiusDeg: 0,
       ...Object.fromEntries(PLANET_SLOTS.map((name) => [name, new C.Cartesian4(-10, -10, 0, 1)])),
@@ -853,6 +871,31 @@ export class CesiumSceneHost implements SceneHost {
     // underneath it read as one chart.
     this.basemapBrightness = shading.basemapBrightness;
     this.applyImagerySeason();
+  }
+
+  /**
+   * The towns' glow for the night grade: its strength from Walker's index as the night sky's
+   * brightness over a natural one goes (log of 1 + 6 x index against a city's 60x), all round
+   * inside a city and more so as the index grows past a horizon glow's, and the bearing of the
+   * strongest glow as a level direction at the place.
+   */
+  setTownGlow(glow: HostTownGlow | null): void {
+    const C = this.C;
+    if (!glow || (!glow.city && glow.index < 0.03)) {
+      this.townGlow = null;
+    } else {
+      const strength = glow.city ? 1 : Math.min(1, Math.log10(1 + 6 * glow.index) / Math.log10(61));
+      const t = Math.max(0, Math.min(1, (glow.index - 0.15) / (3 - 0.15)));
+      const allRound = glow.city || glow.bearingDeg === null ? 1 : t * t * (3 - 2 * t);
+      const at = C.Cartesian3.fromDegrees(glow.at.longitude, glow.at.latitude, 0);
+      const enu = C.Transforms.eastNorthUpToFixedFrame(at);
+      const b = ((glow.bearingDeg ?? 0) * Math.PI) / 180;
+      const local = new C.Cartesian3(Math.sin(b), Math.cos(b), 0);
+      const dirWC = C.Matrix4.multiplyByPointAsVector(enu, local, new C.Cartesian3());
+      C.Cartesian3.normalize(dirWC, dirWC);
+      this.townGlow = { strength, allRound, dirWC };
+    }
+    this.scene.requestRender();
   }
 
   setSeaSky(sky: HostSeaSky): void {
@@ -2760,13 +2803,17 @@ export class CesiumSceneHost implements SceneHost {
   }
 
   /**
-   * The night grade while the frame shows a star, a planet or the Moon's aureole, the day grade
+   * The night grade while the frame shows a star, a planet, the Moon's aureole or the towns'
+   * glow, the day grade
    * otherwise (the same picture without them, at about half the cost on a software renderer).
    * Picked each frame from the uniforms about to be drawn, so the two never disagree.
    */
   private chooseGrade(): void {
     const u = this.gradeUniforms;
     let night = (u['u_starField'] as number) > 0.5 || (u['u_moonGlow'] as number) > 0;
+    // The towns' glow is the night grade's too, and shows most under a moonless overcast, when
+    // there is no star or Moon to call for it.
+    if ((this.townGlow?.strength ?? 0) > 0 && this.cityLights > 0) night = true;
     for (const name of PLANET_SLOTS) if ((u[name] as Cesium.Cartesian4).z > 0) night = true;
     if (this.grade.enabled !== night) {
       this.grade.enabled = night;

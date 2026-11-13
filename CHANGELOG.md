@@ -4,6 +4,13 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **The towns' glow in the night sky**: the sky-glow estimate the night advice already gives
+  (Walker's law over the mapped built-up areas, `skyGlowAt`) now shows in the 3D view — a warm
+  dome low over the horizon toward the strongest town, all round inside or beside a city and a
+  little up to the zenith there, coming up as the lights come on, and carried more strongly by a
+  cloud deck, lit from below: the orange overcast of a city night. The map fetches the cells only
+  once the Sun is down. The smoke harness adds `town-glow` and `town-glow-overcast` (a suburb's
+  index, the glow ahead).
 - **Street lamps at night**: along OpenStreetMap's roads near the place, a lamp every 35 m,
   staggered either side, white LED or orange sodium, lit with the town's lights from the dusk —
   so even a moonless night, when the ground goes black, shows a town's streets as strings of

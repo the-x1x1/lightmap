@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { directionFromFrame, frameCoordinates } from '@lightmap/scene';
 import { usePlannerStore } from '@/features/planner/store';
 import { useApplyScene, useRenderer } from '@/features/map/use-renderer';
+import { useSkyGlow } from '@/features/planner/use-sky-glow';
 import { api } from '@/lib/client/api';
 import type { CapabilitiesResponse, ReverseResponse } from '@/lib/api-types';
 import type { SceneState } from '@lightmap/scene';
@@ -166,6 +167,29 @@ export function WorldMap({ scene, capabilities, onRendererInfo, className }: Wor
   useApplyScene(renderer.controller, effectiveScene);
 
   const host = renderer.host;
+  // The towns' glow in the night sky: read once the Sun is down (the cells are fetched only
+  // then), and handed to the renderer for the grade's warm dome over the towns.
+  const night = (scene?.solar.elevationDegrees ?? 90) < 0;
+  const glow = useSkyGlow(
+    scene?.location.point.latitude ?? 0,
+    scene?.location.point.longitude ?? 0,
+    night && scene !== null,
+  );
+  const glowLat = scene?.location.point.latitude;
+  const glowLng = scene?.location.point.longitude;
+  useEffect(() => {
+    if (!host?.setTownGlow) return;
+    if (!glow || glowLat === undefined || glowLng === undefined) {
+      host.setTownGlow(null);
+      return;
+    }
+    host.setTownGlow({
+      at: { latitude: glowLat, longitude: glowLng },
+      index: glow.index,
+      city: glow.grade === 'city',
+      bearingDeg: glow.bearingDeg,
+    });
+  }, [host, glow, glowLat, glowLng]);
   // Stable per host, so consumers keyed on it (the terrain-horizon run) do not restart when the
   // quality label or error text changes.
   const sampleHeights = useMemo(

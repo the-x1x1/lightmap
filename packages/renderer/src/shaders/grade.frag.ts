@@ -54,6 +54,8 @@ uniform vec4 u_planet4;
 uniform vec3 u_sunDirEC;        // toward the Sun, eye coordinates (per frame, gliding)
 uniform vec3 u_sunTint;         // the colour of the Sun's direct light at its elevation
 uniform vec3 u_moonDirEC;       // toward the Moon, eye coordinates (per frame)
+uniform vec4 u_townGlow;        // the towns' glow: x strength 0..1, y all-round share, z lights on (host)
+uniform vec3 u_townGlowDirEC;   // toward the strongest glow, eye coordinates (per frame)
 uniform float u_moonGlow;       // the Moon's aureole, 0 none - 1 a full Moon in a dark sky
 uniform float u_moonRadiusDeg;  // the Moon's disc radius as drawn, degrees (0: no disc)
 
@@ -371,6 +373,26 @@ void main() {
     }
 #endif
     color = mix(dome, sky, underDecks);
+    // The towns' glow at night (sky-glow.ts: Walker's law over the mapped built-up areas, set
+    // by the host): their lights scattered back down by the air, a warm dome low over the towns
+    // - a lobe toward the strongest of them, all round where the place is in or by a city, and
+    // a little up to the zenith there - lit as the lights come on. A deck over a town is lit
+    // from below, so cloud carries more of it: the orange overcast of a city night. Strength 1
+    // is a city sky (about 60 times a natural one), its horizon a dull orange-grey.
+#ifdef LM_NIGHT
+    if (u_townGlow.x * u_townGlow.z > 0.0) {
+      vec3 up = u_eyeUpEC;
+      float elevR = asin(clamp(dot(rayEC, up), -1.0, 1.0));
+      vec3 rayH = rayEC - dot(rayEC, up) * up;
+      vec3 dirH = u_townGlowDirEC - dot(u_townGlowDirEC, up) * up;
+      float toward = dot(normalize(rayH + 1e-6), normalize(dirH + 1e-6));
+      float lobe = pow(0.5 + 0.5 * toward, 3.0);
+      float shape = mix(lobe, 1.0, u_townGlow.y);
+      float height = exp(-max(elevR, 0.0) / 0.16) + 0.2 * u_townGlow.y;
+      float decks = 1.0 + 1.5 * clamp(u_cloudOpacity, 0.0, 1.0);
+      color += vec3(1.0, 0.72, 0.45) * 0.2 * u_townGlow.x * u_townGlow.z * shape * height * decks;
+    }
+#endif
   } else {
     // Aerial perspective: lift toward the sky colour with the real distance through the air
     // (the depth turned back into eye space - a curve on raw depth, which is logarithmic and
@@ -504,4 +526,6 @@ export const GRADE_UNIFORM_NAMES = [
   'u_moonDirEC',
   'u_moonGlow',
   'u_moonRadiusDeg',
+  'u_townGlow',
+  'u_townGlowDirEC',
 ] as const;
