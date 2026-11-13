@@ -354,7 +354,9 @@
                   ),
                 },
               }),
-              appearance: new C.PerInstanceColorAppearance({ closed: true }),
+              // Opaque, as the app's buildings are: the default (translucent) wrote no depth,
+              // and the grade took the tower for sky - cloud drawn over it, the Sun through it.
+              appearance: new C.PerInstanceColorAppearance({ closed: true, translucent: false }),
               shadows: C.ShadowMode.ENABLED,
               asynchronous: false,
             }),
@@ -477,6 +479,29 @@
           await new Promise((r) => {
             window.__takeShot = r;
           });
+          // Sunbeams: from 40 m on the tower's far side from the 18:15 Sun (11 deg up), looking at
+          // it - the tower (26 deg tall from there) hides the Sun's disc and lets the beams by.
+          {
+            const sunAz = scene(18.25, 'clear').solar.azimuthDegrees;
+            const back = ((sunAz + 180) * Math.PI) / 180;
+            const eyePoint = {
+              latitude: towerLat + (40 * Math.cos(back)) / 111320,
+              longitude:
+                towerLng + (40 * Math.sin(back)) / (111320 * Math.cos((towerLat * Math.PI) / 180)),
+            };
+            controller.apply(
+              scene(18.25, 'partly-cloudy', {
+                ...defaultCamera(eyePoint, sunAz),
+                mode: 'viewpoint',
+                pitchDeg: 10,
+              }),
+            );
+            await wait(3000);
+            window.__smoke.shot = 'sunbeams';
+            await new Promise((r) => {
+              window.__takeShot = r;
+            });
+          }
           // Terrain horizon overlay: a synthetic 600 m ridge on the ~2 km ring across the east (the
           // ellipsoid has no terrain to sample, so the profile is built directly). The map-mode sun
           // path must show the morning behind the ridge as dark dashes over the gold path.

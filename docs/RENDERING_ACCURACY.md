@@ -540,6 +540,19 @@ city sky, 60 times, is full strength). A cloud deck carries 2.5 times as much, l
 **Caveat:** the estimate's own (Natural Earth's larger towns only, 2002–03 data); the dome's
 shape and colour are a pattern, not a radiative model.
 
+### Sunbeams
+
+A low Sun — from just below the horizon to about 25° up, its beam getting through, more so in
+hazier air — hidden behind a ridge, buildings or trees lights the air between in lanes. The grade
+marches 16 steps from each pixel toward the Sun's place on the screen (at most 0.6 of the
+screen's height) through the depth buffer; the share of the way that is open sky lights the
+pixel in the Sun's colour, falling off over about a third of the screen's height from the Sun,
+and only as far as the Sun's own disc is hidden (five depth reads round it): an open Sun is its
+glare's, not rays'. A variant of the grade of its own (`LM_RAYS`), drawn only while such a Sun is
+ahead of the camera. **Caveat:** screen-space — an occluder off the screen casts no beams, and
+the cloud decks (painted in the grade, not in the depth) none either; the beams' strength is a
+look, not a scattering model. The harness shows them at the tower (`sunbeams`).
+
 ### Rainbows
 
 In showers with the Sun's beam getting through (a forecast's showers through a broken sky) and

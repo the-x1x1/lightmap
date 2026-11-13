@@ -81,6 +81,8 @@ export interface HostGradeUniforms {
   u_precipitation: number;
   /** A rainbow's strength (`LightingParameters.grade.rainbow`). */
   u_rainbow?: number;
+  /** Sunbeams' strength (`LightingParameters.grade.rays`). */
+  u_rays?: number;
   u_horizonHaze: number;
   u_sunElevation: number;
   u_time: number;

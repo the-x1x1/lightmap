@@ -18,7 +18,11 @@ import type {
   LandCoverDescriptor,
   TerrainDescriptor,
 } from '@lightmap/geospatial';
-import { GRADE_DAY_FRAGMENT_SHADER, GRADE_FRAGMENT_SHADER } from '../shaders/grade.frag.ts';
+import {
+  GRADE_DAY_FRAGMENT_SHADER,
+  GRADE_FRAGMENT_SHADER,
+  GRADE_RAYS_FRAGMENT_SHADER,
+} from '../shaders/grade.frag.ts';
 import { OsmBuildingsLayer, PRIMITIVE_NORMAL_SHADING_SMOOTH } from './osm-buildings-layer.ts';
 import { coverShapesFromTile, streetLinesFromTile } from '../vector-cover.ts';
 import { streetLampPositions } from '../street-lamps.ts';
@@ -226,6 +230,8 @@ export class CesiumSceneHost implements SceneHost {
    * `grade` while no star, planet or aureole is shown: the two share one uniforms object.
    */
   private readonly gradeDay: Cesium.PostProcessStage;
+  /** The day grade with sunbeams (`GRADE_RAYS_FRAGMENT_SHADER`), while a low Sun is ahead. */
+  private readonly gradeRays: Cesium.PostProcessStage;
   /**
    * Where a grade value is written: both stages' uniforms. A stage copies its uniforms into its
    * own on its first draw (values set afterwards reach it only through its setters), so each
@@ -570,6 +576,7 @@ export class CesiumSceneHost implements SceneHost {
       u_nightFactor: 0,
       u_precipitation: 0,
       u_rainbow: 0,
+      u_rays: 0,
       u_horizonHaze: 0.1,
       u_sunElevation: 45,
       u_time: 0,
@@ -620,8 +627,14 @@ export class CesiumSceneHost implements SceneHost {
       uniforms: this.gradeUniforms,
       name: 'lightmap-grade-day',
     });
+    this.gradeRays = new C.PostProcessStage({
+      fragmentShader: GRADE_RAYS_FRAGMENT_SHADER,
+      uniforms: this.gradeUniforms,
+      name: 'lightmap-grade-rays',
+    });
     this.grade.enabled = false;
-    const stages = [this.grade, this.gradeDay];
+    this.gradeRays.enabled = false;
+    const stages = [this.grade, this.gradeDay, this.gradeRays];
     this.gradeTarget = new Proxy<Record<string, unknown>>(
       {},
       {
@@ -634,6 +647,7 @@ export class CesiumSceneHost implements SceneHost {
     );
     scene.postProcessStages.add(this.grade);
     scene.postProcessStages.add(this.gradeDay);
+    scene.postProcessStages.add(this.gradeRays);
 
     // Frame-rate sampling for the quality governor (`frame-sampler.ts`): only frames drawn
     // back to back while the camera moves.
@@ -1238,6 +1252,7 @@ export class CesiumSceneHost implements SceneHost {
     g['u_nightFactor'] = u.u_nightFactor;
     g['u_precipitation'] = u.u_precipitation;
     g['u_rainbow'] = u.u_rainbow ?? 0;
+    g['u_rays'] = u.u_rays ?? 0;
     g['u_horizonHaze'] = u.u_horizonHaze;
     g['u_sunElevation'] = u.u_sunElevation;
     g['u_time'] = u.u_time;
@@ -2817,10 +2832,13 @@ export class CesiumSceneHost implements SceneHost {
     // there is no star or Moon to call for it.
     if ((this.townGlow?.strength ?? 0) > 0 && this.cityLights > 0) night = true;
     for (const name of PLANET_SLOTS) if ((u[name] as Cesium.Cartesian4).z > 0) night = true;
-    if (this.grade.enabled !== night) {
-      this.grade.enabled = night;
-      this.gradeDay.enabled = !night;
-    }
+    // Sunbeams: their own variant, while a low Sun with rays to give is ahead of the camera.
+    const sunEC = u['u_sunDirEC'] as Cesium.Cartesian3 | undefined;
+    const rays = !night && (u['u_rays'] as number) > 0 && sunEC !== undefined && sunEC.z < 0;
+    if (this.grade.enabled !== night) this.grade.enabled = night;
+    if (this.gradeRays.enabled !== rays) this.gradeRays.enabled = rays;
+    const day = !night && !rays;
+    if (this.gradeDay.enabled !== day) this.gradeDay.enabled = day;
   }
 
   /** One of the grade's plain uniforms, written through to the stage and the on-screen record. */

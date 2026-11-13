@@ -95,6 +95,11 @@ export interface LightingParameters {
      */
     rainbow: number;
     /**
+     * Sunbeams' strength, 0..1: a Sun from just below the horizon to about 25 deg up, its beam
+     * getting through (transmittance 0.3-0.6), stronger in hazier air (40 % of it in clear).
+     */
+    rays: number;
+    /**
      * Aerial perspective toward the horizon: the scenario's haze plus the longer atmospheric path
      * at low sun. Applied to ground pixels by depth in the grade shader; never to geometry.
      */
@@ -392,6 +397,11 @@ export function lightingFromScene(s: SceneState): LightingParameters {
         smooth(0.25, 0.55, p.sunTransmittance) *
         (1 - smooth(38, 42, el)) *
         smooth(0, 2, el),
+      rays:
+        smooth(-1, 1, el) *
+        (1 - smooth(15, 25, el)) *
+        smooth(0.3, 0.6, p.sunTransmittance) *
+        (0.4 + 0.6 * clamp01(p.haze)),
       horizonHaze,
       sunElevation: el,
     },

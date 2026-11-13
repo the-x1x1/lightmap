@@ -36,6 +36,7 @@ uniform float u_skyLuminance;
 uniform float u_nightFactor;
 uniform float u_precipitation;
 uniform float u_rainbow;         // a rainbow's strength, 0..1 (showers in sunlight)
+uniform float u_rays;            // sunbeams' strength, 0..1 (a low Sun through hazy air)
 uniform float u_horizonHaze;    // aerial perspective toward the horizon (scenario haze + low sun)
 uniform float u_sunElevation;   // degrees, geometric
 uniform float u_time;
@@ -448,6 +449,39 @@ void main() {
     color = mix(color, hazeCol, clamp(dist * 0.85, 0.0, 0.85));
   }
 
+  // Sunbeams: with a low Sun hidden behind a ridge, buildings or trees, the hazy air between is
+  // lit in lanes where its line to the Sun is open and left in the shade's lanes where it is
+  // not - the rays a photographer waits for. Marched in screen space toward the Sun (16 depth
+  // reads over at most 0.6 of the screen's height): the share of the way that is open sky
+  // lights the pixel, falling off away from the Sun, and only as much as the Sun's own disc is
+  // hidden (an open Sun is its glare's, not rays'). Its own variant of the grade (LM_RAYS), so
+  // the march costs nothing when no low Sun is ahead.
+#ifdef LM_RAYS
+  if (u_rays > 0.0 && u_sunDirEC.z < 0.0) {
+    vec4 sc = czm_projection * vec4(u_sunDirEC * 1000.0, 1.0);
+    vec2 sunUv = sc.xy / sc.w * 0.5 + 0.5;
+    vec2 toSun = sunUv - v_textureCoordinates;
+    float lenS = length(toSun * czm_viewport.zw) / czm_viewport.w;
+    vec2 stepUv = toSun * min(1.0, 0.6 / max(lenS, 1e-4)) / 16.0;
+    vec2 pr = v_textureCoordinates;
+    float open = 0.0;
+    for (int i = 0; i < 16; i++) {
+      pr += stepUv;
+      open += step(1.0 - 1e-6, texture(depthTexture, pr).r);
+    }
+    open /= 16.0;
+    vec2 px = 3.0 / czm_viewport.zw;
+    float sunOpen = 0.2 * (step(1.0 - 1e-6, texture(depthTexture, sunUv).r)
+        + step(1.0 - 1e-6, texture(depthTexture, sunUv + vec2(px.x, 0.0)).r)
+        + step(1.0 - 1e-6, texture(depthTexture, sunUv - vec2(px.x, 0.0)).r)
+        + step(1.0 - 1e-6, texture(depthTexture, sunUv + vec2(0.0, px.y)).r)
+        + step(1.0 - 1e-6, texture(depthTexture, sunUv - vec2(0.0, px.y)).r));
+    bool sunOnScreen = all(greaterThan(sunUv, vec2(0.0))) && all(lessThan(sunUv, vec2(1.0)));
+    float hidden = sunOnScreen ? 1.0 - sunOpen : 0.5;
+    color += u_sunTint * open * exp(-lenS / 0.35) * hidden * u_rays * 0.22;
+  }
+#endif
+
   // The rainbow: sunlight turned back by the falling drops, round the point opposite the Sun -
   // the primary bow from 40.6 deg (violet, inside) to 42.3 (red, outside), the fainter
   // secondary from 50.4 (red, inside) to 53.4 (violet, outside), the sky brighter inside the
@@ -510,6 +544,9 @@ export const GRADE_FRAGMENT_SHADER = `#define LM_NIGHT\n${GRADE_SOURCE}`;
  */
 export const GRADE_DAY_FRAGMENT_SHADER = GRADE_SOURCE;
 
+/** The day grade with sunbeams (LM_RAYS), drawn while a low Sun is ahead of the camera. */
+export const GRADE_RAYS_FRAGMENT_SHADER = `#define LM_RAYS\n${GRADE_SOURCE}`;
+
 export const GRADE_UNIFORM_NAMES = [
   'u_saturation',
   'u_contrast',
@@ -526,6 +563,7 @@ export const GRADE_UNIFORM_NAMES = [
   'u_nightFactor',
   'u_precipitation',
   'u_rainbow',
+  'u_rays',
   'u_horizonHaze',
   'u_sunElevation',
   'u_time',

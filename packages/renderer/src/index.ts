@@ -15,6 +15,7 @@ export {
 export {
   GRADE_FRAGMENT_SHADER,
   GRADE_DAY_FRAGMENT_SHADER,
+  GRADE_RAYS_FRAGMENT_SHADER,
   GRADE_UNIFORM_NAMES,
 } from './shaders/grade.frag.ts';
 export {

@@ -4,6 +4,14 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Sunbeams**: a low Sun (from just below the horizon to about 25° up) hidden behind a ridge,
+  buildings or trees now lights the hazy air in lanes where its line to the Sun is open — a
+  16-step march toward the Sun through the depth buffer, falling off away from it, only as far
+  as the Sun's disc is hidden (an open Sun is its glare's), stronger in hazier air. Its own
+  variant of the grade (`GRADE_RAYS_FRAGMENT_SHADER`), drawn only while such a Sun is ahead of
+  the camera, so the march costs nothing otherwise. The smoke harness adds `sunbeams` (the
+  tower at 18:15 hiding the Sun) and draws its tower opaque, as the app's buildings are (it
+  wrote no depth, and the grade had taken it for sky).
 - **Rainbows**: showers in sunlight (a forecast's showers through a broken sky: precipitation
   0.15 with the Sun's beam getting through) with the Sun up but under 42° now draw the bow where
   it stands — the primary from 40.6° (violet, inside) to 42.3° (red, outside) round the point

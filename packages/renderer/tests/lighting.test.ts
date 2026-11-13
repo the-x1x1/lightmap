@@ -81,6 +81,12 @@ describe('lightingFromScene', () => {
     expect(lightingFromScene(scene(17.5, 'storm')).grade.rainbow).toBe(0);
   });
 
+  it('sunbeams with a low Sun getting through, none at noon or under a storm', () => {
+    expect(lightingFromScene(scene(18.75, 'clear')).grade.rays).toBeGreaterThan(0.3);
+    expect(lightingFromScene(scene(12.5, 'clear')).grade.rays).toBe(0);
+    expect(lightingFromScene(scene(18.75, 'storm')).grade.rays).toBe(0);
+  });
+
   it('noon clear: strong neutral light, shadows on, dark shadows', () => {
     const l = lightingFromScene(scene(12.5, 'clear'));
     expect(l.sunIntensity).toBeGreaterThan(1.8);
