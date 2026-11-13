@@ -4,6 +4,12 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Street lamps at night**: along OpenStreetMap's roads near the place, a lamp every 35 m,
+  staggered either side, white LED or orange sodium, lit with the town's lights from the dusk —
+  so even a moonless night, when the ground goes black, shows a town's streets as strings of
+  lights. Drawn translucent, so the grade treats them as points of light in the sky (lifted out
+  before it grades and put back) rather than hazing their cores to black. The smoke harness
+  draws them along a made-up street grid and adds `buildings-night` (22:00).
 - **Lit windows from the dusk**: the town's lights come on as the Sun goes, none with it 2° up and
   all by −4°: building walls carry a grid of windows (bays 3.6 m, storeys 3.2 m) of which up to
   38 % are lit, each its own warm-to-cool white and brightness, anchored to the world so they hold

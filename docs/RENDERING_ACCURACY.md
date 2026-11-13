@@ -521,6 +521,16 @@ building's base; corners can cut a window; which windows are lit is a hash, not 
 night (offices and homes go dark on no schedule here). The harness shows it at 19:45 on its
 test block (`buildings-dusk`).
 
+With the windows, the street lamps: along OpenStreetMap's roads within 1.5 km of the place (5 m
+wide and up; no paths, tracks or yards), one every 35 m, staggered either side and set back half
+the road's width plus a metre, 7 m over the ground (`street-lamps.ts`). Each is a soft point of
+its own light, white LED or orange sodium (two in five), smaller with distance, hidden behind
+terrain and buildings, and on as far as the town's lights are. Their light is not the scene's,
+so a moonless night, when the globe itself goes black, still shows a town's streets as strings
+of lights. **Caveat:** where lamps stand is a rule, not a survey (OpenStreetMap rarely maps
+them); they light nothing round them — no pools on the street. The harness draws them along a
+made-up street grid (`buildings-dusk`, `buildings-night`).
+
 ### The map view at night
 
 The overhead map is a chart, not a photograph. Once the Sun is under the horizon and nothing

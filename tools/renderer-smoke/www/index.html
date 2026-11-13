@@ -960,6 +960,32 @@
           // one, a roof keeping its level.
           const { litInstanceShader, treeFragmentShader } =
             await import('/dist/renderer/src/cesium/osm-buildings-layer.js');
+          const { streetLampPositions } = await import('/dist/renderer/src/street-lamps.js');
+          // A made-up street grid round the block (the harness has no OpenStreetMap tiles): roads
+          // 9 m wide every 150 m, east-west and north-south, 1.2 km each way, for the lamps.
+          const kLon = kailua.point.longitude;
+          const kLat = kailua.point.latitude;
+          const mLat = 1 / 111320;
+          const mLon = mLat / Math.cos((kLat * Math.PI) / 180);
+          const grid = [];
+          for (let k = -4; k <= 4; k++) {
+            grid.push({
+              kind: 'road',
+              widthM: 9,
+              points: [
+                [kLon - 600 * mLon, kLat + (k * 150 - 40) * mLat],
+                [kLon + 600 * mLon, kLat + (k * 150 - 40) * mLat],
+              ],
+            });
+            grid.push({
+              kind: 'road',
+              widthM: 9,
+              points: [
+                [kLon + (k * 150 - 20) * mLon, kLat - 600 * mLat],
+                [kLon + (k * 150 - 20) * mLon, kLat + 600 * mLat],
+              ],
+            });
+          }
           const blockAt = Cesium.Cartesian3.fromDegrees(
             kailua.point.longitude + 0.0006,
             kailua.point.latitude,
@@ -1023,6 +1049,7 @@
             ['buildings-clear', 'clear', 15],
             ['buildings-overcast', 'overcast', 15],
             ['buildings-dusk', 'clear', 19.75],
+            ['buildings-night', 'clear', 22],
           ]) {
             const sc = scene(hour, scenario, {
               ...defaultCamera(
@@ -1037,6 +1064,8 @@
             });
             const scl = lightingFromScene(sc);
             drawInstances(scl.globeLight.lambert / 0.9, scl.globeLight.skyLift, scl.cityLights);
+            // The street lamps along the made-up grid (lit only at the dusk shot).
+            host.setStreetLamps(streetLampPositions(grid, 35, 6000, kLon, kLat));
             controller.apply(sc);
             await wait(1800);
             window.__smoke.shot = name;
@@ -1045,6 +1074,7 @@
             });
           }
           for (const p of instancePrims.splice(0)) host.scene.primitives.remove(p);
+          host.setStreetLamps([]);
           log('buildings and trees drawn');
         }
         // Synthetic terrain (synthetic-terrain.js): quantized-mesh tiles with vertex normals and

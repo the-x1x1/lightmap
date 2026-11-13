@@ -21,6 +21,7 @@ import type {
 import { GRADE_DAY_FRAGMENT_SHADER, GRADE_FRAGMENT_SHADER } from '../shaders/grade.frag.ts';
 import { OsmBuildingsLayer, PRIMITIVE_NORMAL_SHADING_SMOOTH } from './osm-buildings-layer.ts';
 import { coverShapesFromTile, streetLinesFromTile } from '../vector-cover.ts';
+import { streetLampPositions } from '../street-lamps.ts';
 import { lonLatToTile, tilePointToLonLat } from '../vector-tile.ts';
 import { createDetailTexture, createNoiseTexture, type DetailTileCesium } from './detail-tiles.ts';
 import { NOISE_TEXTURE_SIZE, makeNoiseTexture } from '../noise-texture.ts';
@@ -246,6 +247,9 @@ export class CesiumSceneHost implements SceneHost {
   private skyLift = 1;
   /** How far the town's lights are on (`HostLight.cityLights`). */
   private cityLights = 0;
+  /** The street lamps along the mapped roads near the place, lit from the dusk. */
+  private streetLamps: Cesium.BillboardCollection | null = null;
+  private streetLampsShownAt = -1;
   /** The sky the water reflects (`setSeaSky`), kept for a material made later. */
   private seaSky: HostSeaSky | null = null;
   private buildings: Cesium.Cesium3DTileset | null = null;
@@ -811,6 +815,7 @@ export class CesiumSceneHost implements SceneHost {
     this.osmBuildings?.setDirectShare(this.pinSplit.lambert / 0.9, this.skyLift);
     this.cityLights = light.cityLights ?? 0;
     this.osmBuildings?.setCityLights(this.cityLights);
+    this.showStreetLamps();
     this.applyGlobeSplit();
   }
 
@@ -2027,8 +2032,10 @@ export class CesiumSceneHost implements SceneHost {
       this.roadCanvas = null;
       this.roadBounds = null;
       this.applyRoadMap();
+      this.setStreetLamps([]);
       return;
     }
+    this.setStreetLamps(streetLampPositions(lines, 35, 6000, p.longitude, p.latitude));
     const canvas = document.createElement('canvas');
     canvas.width = SIZE;
     canvas.height = SIZE;
@@ -2090,6 +2097,75 @@ export class CesiumSceneHost implements SceneHost {
     this.roadCanvas = canvas;
     this.roadBounds = [west, east, north, south];
     this.applyRoadMap();
+  }
+
+  /**
+   * The street lamps (`streetLampPositions`) as glowing points 7 m over the ground, clamped to
+   * it and hidden behind the terrain and buildings in front of them: a soft-edged sprite of the
+   * lamp's own light, white LED or orange sodium (two in five), smaller with distance, and lit
+   * only as far as the town's lights are on (`showStreetLamps`). Their light is their own, not
+   * the scene's, so a moonless night - when the globe itself goes black - still shows a town's
+   * streets as strings of lights.
+   */
+  private setStreetLamps(lamps: [number, number][]): void {
+    const C = this.C;
+    if (this.streetLamps) {
+      this.scene.primitives.remove(this.streetLamps);
+      this.streetLamps = null;
+    }
+    this.streetLampsShownAt = -1;
+    if (lamps.length === 0 || typeof document === 'undefined') return;
+    const sprite = document.createElement('canvas');
+    sprite.width = 32;
+    sprite.height = 32;
+    const ctx = sprite.getContext('2d');
+    if (!ctx) return;
+    const g = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(0.18, 'rgba(255,255,255,0.9)');
+    g.addColorStop(0.45, 'rgba(255,255,255,0.25)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 32, 32);
+    // Translucent only: no depth written. A lamp's opaque core wrote depth and the grade took it
+    // for distant ground, hazing it to black inside a bright rim; as sky the grade lifts bright
+    // points out before it grades and puts them back (its star test), and the depth test against
+    // the terrain and buildings still hides the lamps behind them.
+    const lampsOut = new C.BillboardCollection({
+      scene: this.scene,
+      blendOption: C.BlendOption.TRANSLUCENT,
+    });
+    const near = new C.NearFarScalar(80, 1, 2500, 0.35);
+    lamps.forEach(([lon, lat], i) => {
+      const sodium = (i * 2654435761) % 5 < 2;
+      lampsOut.add({
+        position: C.Cartesian3.fromDegrees(lon, lat, 7),
+        heightReference: C.HeightReference.RELATIVE_TO_GROUND,
+        image: sprite,
+        width: 14,
+        height: 14,
+        scaleByDistance: near,
+        color: sodium ? new C.Color(1, 0.62, 0.26, 1) : new C.Color(1, 0.94, 0.84, 1),
+      });
+    });
+    lampsOut.show = false;
+    this.streetLamps = this.scene.primitives.add(lampsOut) as Cesium.BillboardCollection;
+    this.showStreetLamps();
+  }
+
+  /** The lamps on as far as the town's lights are (in tenths, so the colours are set a few times a dusk). */
+  private showStreetLamps(): void {
+    const lamps = this.streetLamps;
+    if (!lamps) return;
+    const on = Math.round(this.cityLights * 10) / 10;
+    if (on === this.streetLampsShownAt) return;
+    this.streetLampsShownAt = on;
+    lamps.show = on > 0;
+    for (let i = 0; i < lamps.length; i++) {
+      const b = lamps.get(i);
+      b.color = new this.C.Color(b.color.red, b.color.green, b.color.blue, on);
+    }
+    this.scene.requestRender();
   }
 
   /** Run `fn` after the next render has gone through (an image uniform is uploaded in it), then render again. */
@@ -3212,6 +3288,8 @@ export class CesiumSceneHost implements SceneHost {
     this.buildings = null;
     this.osmBuildings?.destroy();
     this.osmBuildings = null;
+    if (this.streetLamps) this.scene.primitives.remove(this.streetLamps);
+    this.streetLamps = null;
     this.pickHandler?.destroy();
     this.groundMaterial?.destroy();
     this.groundMaterial = null;
