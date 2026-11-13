@@ -4,6 +4,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **The Sun through cirrus**: a cirrus veil painted over the Sun at its full strength, so under a
+  sheet the brightest thing in the sky was a dull grey. A cirrus sheet passes most of the beam
+  (55–85 %): the veil now thins over the Sun's disc, the disc is drawn white-hot as the veil takes
+  over, and the ice's forward scatter rings it with a tight glow and a wide one.
 - **Halos and sun dogs**: under a cirrostratus sheet the Sun now stands in its 22° halo — sharp
   and reddish on the inside edge, fading white outward, the sky a little darker inside it — and a
   low Sun (under about 40°) throws its two sun dogs at its own height either side, red toward the

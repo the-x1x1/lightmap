@@ -313,7 +313,20 @@ void main() {
       vec3 cirrus = mix(vec3(0.92, 0.94, 0.98), warm, lowSun * 0.9);
       cirrus = mix(shade * 0.6, cirrus, highLit);
       cirrus *= deckLum * mix(1.0, 0.25, u_nightFactor * (1.0 - highLit));
-      sky = mix(sky, cirrus, veil * (0.5 + 0.35 * covHigh));
+      // The Sun through it: a cirrus sheet passes most of the direct beam (55-85 %), so its disc
+      // shows through, bright, in a glow the ice scatters forward round it - a tight one and a
+      // wide one (painted over at the veil's full strength, the Sun had gone, leaving a dull
+      // grey where the brightest thing in the sky should be).
+      float aSunV = degrees(acos(clamp(dot(rayEC, u_sunDirEC), -1.0, 1.0)));
+      float sunUpV = smoothstep(-0.5, 1.0, u_sunElevation);
+      float throughV = (1.0 - smoothstep(0.35, 1.2, aSunV)) * sunUpV;
+      sky = mix(sky, cirrus, veil * (0.5 + 0.35 * covHigh) * (1.0 - 0.8 * throughV));
+      // The disc itself drawn as the veil takes over (the dome's own is faint by then): the
+      // Sun's 0.53 deg, white-hot, in the tight glow and the wide one.
+      float discV = 1.0 - smoothstep(0.22, 0.32, aSunV);
+      sky += mix(vec3(1.0, 0.97, 0.92), warm, lowSun * 0.8)
+          * (discV * 1.2 + exp(-aSunV / 1.2) * 0.55 + exp(-aSunV / 8.0) * 0.10)
+          * veil * sunUpV * highLit * deckLum;
       veilHere = veil;
       // Halos: a cirrostratus sheet's ice crystals turn the light by 22 deg at least, so round
       // the Sun stands a ring of that radius, sharp and reddish on its inside edge, fading

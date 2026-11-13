@@ -564,6 +564,10 @@ Sun's side. All of it weighted by the veil at the pixel, so it is as patchy as t
 Moon gets the ring by night, white. **Caveat:** whether the crystals are there to make a halo is
 not in any forecast — the halo shows wherever the sheet is, as a possibility; no other arcs.
 
+The Sun shows through the sheet: the veil thins to a fifth over the Sun's disc, the disc (0.53°)
+is drawn white-hot in proportion to the veil, and the ice's forward scatter adds a tight glow
+(falling off over about 1.2°) and a wide one (8°).
+
 ### Rainbows
 
 In showers with the Sun's beam getting through (a forecast's showers through a broken sky) and
