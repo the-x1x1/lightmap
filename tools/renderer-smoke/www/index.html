@@ -316,6 +316,22 @@
           await new Promise((r) => {
             window.__takeShot = r;
           });
+          // A halo: a cirrostratus sheet (85 % high cloud) with the Sun about 24 deg up, looking
+          // at it - the 22 deg ring round it, the sun dogs either side at its height.
+          {
+            const hs = scene(17.4, 'clear');
+            const haloCam = {
+              ...defaultCamera(kailua.point, hs.solar.azimuthDegrees),
+              mode: 'viewpoint',
+              pitchDeg: hs.solar.elevationDegrees - 4,
+            };
+            controller.apply(forecastScene(17.4, { low: 0, mid: 0, high: 85 }, haloCam));
+            await wait(1500);
+            window.__smoke.shot = 'halo';
+            await new Promise((r) => {
+              window.__takeShot = r;
+            });
+          }
           const stratus = forecastScene(19.3, { low: 80, mid: 0, high: 0 }, westCam);
           controller.apply(stratus);
           window.__smoke.lighting.stratus = lightingFromScene(stratus);

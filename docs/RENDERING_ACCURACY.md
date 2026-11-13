@@ -553,6 +553,17 @@ ahead of the camera. **Caveat:** screen-space — an occluder off the screen cas
 the cloud decks (painted in the grade, not in the depth) none either; the beams' strength is a
 look, not a scattering model. The harness shows them at the tower (`sunbeams`).
 
+### Halos
+
+A cirrostratus sheet (high cloud from 35 % cover, in full by 80 %) carries the 22° halo round the
+Sun: a ring peaking at 22.7°, cut sharp inside 21.6–22.3° and reddish there, fading white
+outward, the sky 6 % darker inside it; with the Sun under about 40° (fading from 30°) the two sun
+dogs at the Sun's elevation, at the azimuth offset where the angular distance from the Sun is 22°
+(cos Δaz = (cos 22° − sin²h) / cos²h, so they stand wider of the Sun as it climbs), red on the
+Sun's side. All of it weighted by the veil at the pixel, so it is as patchy as the cirrus. A bright
+Moon gets the ring by night, white. **Caveat:** whether the crystals are there to make a halo is
+not in any forecast — the halo shows wherever the sheet is, as a possibility; no other arcs.
+
 ### Rainbows
 
 In showers with the Sun's beam getting through (a forecast's showers through a broken sky) and

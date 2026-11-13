@@ -315,6 +315,40 @@ void main() {
       cirrus *= deckLum * mix(1.0, 0.25, u_nightFactor * (1.0 - highLit));
       sky = mix(sky, cirrus, veil * (0.5 + 0.35 * covHigh));
       veilHere = veil;
+      // Halos: a cirrostratus sheet's ice crystals turn the light by 22 deg at least, so round
+      // the Sun stands a ring of that radius, sharp and reddish on its inside edge, fading
+      // white outward, the sky darker inside it; and with a low Sun the plate crystals throw
+      // two sun dogs at the Sun's height either side, red toward the Sun, gone as it climbs past
+      // about 40 deg. In the veil itself (patchy where it is) and as strong as the sheet is
+      // wide (scattered cirrus seldom makes one). The Moon makes the same ring by night.
+      float sheetLike = smoothstep(0.35, 0.8, covHigh) * veil;
+      if (sheetLike > 0.0) {
+        vec3 up = u_eyeUpEC;
+        float sunUpH = smoothstep(-0.5, 1.0, u_sunElevation) * highLit;
+        float a = degrees(acos(clamp(dot(rayEC, u_sunDirEC), -1.0, 1.0)));
+        float ring = exp(-pow((a - 22.7) / 1.2, 2.0)) * smoothstep(21.6, 22.3, a);
+        vec3 ringCol = mix(vec3(1.0, 0.70, 0.52), vec3(1.0), smoothstep(22.3, 24.5, a));
+        float inside = 1.0 - smoothstep(20.5, 22.0, a);
+        float sEl = asin(clamp(dot(u_sunDirEC, up), -1.0, 1.0));
+        float rEl = asin(clamp(dot(rayEC, up), -1.0, 1.0));
+        vec3 sH = normalize(u_sunDirEC - dot(u_sunDirEC, up) * up + 1e-6);
+        vec3 rH = normalize(rayEC - dot(rayEC, up) * up + 1e-6);
+        float dAz = degrees(acos(clamp(dot(sH, rH), -1.0, 1.0)));
+        float cS = max(cos(sEl), 0.3);
+        float dogAz = degrees(acos(clamp((cos(radians(22.0)) - sin(sEl) * sin(sEl)) / (cS * cS), -1.0, 1.0)));
+        float dog = exp(-pow((dAz - dogAz) / 1.1, 2.0) - pow(degrees(rEl - sEl) / 1.5, 2.0))
+            * (1.0 - smoothstep(30.0, 42.0, degrees(sEl)));
+        vec3 dogCol = mix(vec3(1.0, 0.62, 0.42), vec3(1.0, 0.98, 0.92), smoothstep(-0.6, 1.2, dAz - dogAz));
+        sky = sky * (1.0 - 0.06 * inside * sheetLike * sunUpH)
+            + (ringCol * ring * 0.10 + dogCol * dog * 0.30) * sheetLike * sunUpH * deckLum;
+#ifdef LM_NIGHT
+        if (u_moonGlow > 0.0) {
+          float am = degrees(acos(clamp(dot(rayEC, u_moonDirEC), -1.0, 1.0)));
+          float mring = exp(-pow((am - 22.7) / 1.3, 2.0)) * smoothstep(21.6, 22.3, am);
+          sky += vec3(0.95, 0.95, 1.0) * mring * 0.05 * u_moonGlow * sheetLike;
+        }
+#endif
+      }
     }
 
     // Mid deck: altostratus / altocumulus. A smoother grey-white sheet; the Sun shows through as a disc.

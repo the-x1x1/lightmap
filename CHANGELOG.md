@@ -4,6 +4,12 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Halos and sun dogs**: under a cirrostratus sheet the Sun now stands in its 22° halo — sharp
+  and reddish on the inside edge, fading white outward, the sky a little darker inside it — and a
+  low Sun (under about 40°) throws its two sun dogs at its own height either side, red toward the
+  Sun, at the offset the crystals give for that height. Drawn in the cirrus veil itself (patchy
+  where it is) and as strong as the sheet is wide; a bright Moon gets the same ring by night. The
+  smoke harness adds `halo` (85 % high cloud, the Sun 24° up).
 - **Sunbeams**: a low Sun (from just below the horizon to about 25° up) hidden behind a ridge,
   buildings or trees now lights the hazy air in lanes where its line to the Sun is open — a
   16-step march toward the Sun through the depth buffer, falling off away from it, only as far
