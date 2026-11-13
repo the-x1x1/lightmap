@@ -89,6 +89,12 @@ export interface LightingParameters {
     nightFactor: number;
     precipitation: number;
     /**
+     * A rainbow's strength, 0..1: showers falling (precipitation 0.05-0.15) while the Sun's beam
+     * gets through (transmittance 0.25-0.55) and the Sun is up but under 42 deg, below which the
+     * bow stands above the horizon opposite it.
+     */
+    rainbow: number;
+    /**
      * Aerial perspective toward the horizon: the scenario's haze plus the longer atmospheric path
      * at low sun. Applied to ground pixels by depth in the grade shader; never to geometry.
      */
@@ -381,6 +387,11 @@ export function lightingFromScene(s: SceneState): LightingParameters {
       skyLuminance: p.skyLuminance,
       nightFactor,
       precipitation: p.precipitation,
+      rainbow:
+        smooth(0.05, 0.15, p.precipitation) *
+        smooth(0.25, 0.55, p.sunTransmittance) *
+        (1 - smooth(38, 42, el)) *
+        smooth(0, 2, el),
       horizonHaze,
       sunElevation: el,
     },

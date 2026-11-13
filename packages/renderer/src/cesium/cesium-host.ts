@@ -569,6 +569,7 @@ export class CesiumSceneHost implements SceneHost {
       u_skyLuminance: 1,
       u_nightFactor: 0,
       u_precipitation: 0,
+      u_rainbow: 0,
       u_horizonHaze: 0.1,
       u_sunElevation: 45,
       u_time: 0,
@@ -1236,6 +1237,7 @@ export class CesiumSceneHost implements SceneHost {
     g['u_skyLuminance'] = u.u_skyLuminance;
     g['u_nightFactor'] = u.u_nightFactor;
     g['u_precipitation'] = u.u_precipitation;
+    g['u_rainbow'] = u.u_rainbow ?? 0;
     g['u_horizonHaze'] = u.u_horizonHaze;
     g['u_sunElevation'] = u.u_sunElevation;
     g['u_time'] = u.u_time;

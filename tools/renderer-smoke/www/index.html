@@ -162,6 +162,24 @@
           await new Promise((r) => {
             window.__takeShot = r;
           });
+          // A rainbow: a shower opposite the late-afternoon Sun (about 20 deg up in the west),
+          // looking east and up, the rainbow uniform turned on as a forecast shower would.
+          const bowScene = scene(17.5, 'partly-cloudy', {
+            ...defaultCamera(kailua.point, 95),
+            mode: 'viewpoint',
+            pitchDeg: 12,
+          });
+          controller.apply(bowScene);
+          for (const tgt of [host.gradeUniforms, host.gradeTarget]) {
+            tgt['u_rainbow'] = 1;
+            tgt['u_precipitation'] = 0.15;
+          }
+          host.scene.requestRender();
+          await wait(2500);
+          window.__smoke.shot = 'rainbow';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
           const blue = scene(19.5, 'clear', {
             ...defaultCamera(kailua.point, 250),
             mode: 'viewpoint',

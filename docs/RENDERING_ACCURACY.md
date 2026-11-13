@@ -540,6 +540,18 @@ city sky, 60 times, is full strength). A cloud deck carries 2.5 times as much, l
 **Caveat:** the estimate's own (Natural Earth's larger towns only, 2002–03 data); the dome's
 shape and colour are a pattern, not a radiative model.
 
+### Rainbows
+
+In showers with the Sun's beam getting through (a forecast's showers through a broken sky) and
+the Sun up but under 42°, the grade draws the rainbow round the antisolar point: the primary
+bow from 40.6° (violet, inside) to 42.3° (red, outside), the secondary from 50.4° (red, inside)
+to 53.4° (violet, outside) at about two fifths of its strength, the sky 7 % brighter inside the
+primary and 6 % darker in Alexander's band between them, the colours mixed a third with white for
+the Sun's half-degree disc. The radii are the textbook's for raindrops (refractive index 1.333);
+the position is exact for the Sun's direction. **Caveat:** drawn over the whole sky opposite the
+Sun, not only where a shower's curtain stands, and as bright over a sunlit cloud as over a dark
+one; no supernumerary bands; the weather decides only that showers are about, not where.
+
 ### The map view at night
 
 The overhead map is a chart, not a photograph. Once the Sun is under the horizon and nothing

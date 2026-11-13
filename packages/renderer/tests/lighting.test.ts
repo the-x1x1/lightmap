@@ -62,6 +62,25 @@ function scene(
 }
 
 describe('lightingFromScene', () => {
+  it('a rainbow in showers with the Sun out and under 42 deg, and not otherwise', () => {
+    const showers = (hour: number) => {
+      const s = scene(hour, 'partly-cloudy');
+      return {
+        ...s,
+        atmosphere: {
+          ...s.atmosphere,
+          parameters: { ...s.atmosphere.parameters, precipitation: 0.15, sunTransmittance: 0.7 },
+        },
+      };
+    };
+    expect(lightingFromScene(showers(17.5)).grade.rainbow).toBeGreaterThan(0.9);
+    // The Sun too high at noon: the bow is under the horizon.
+    expect(lightingFromScene(showers(12.5)).grade.rainbow).toBe(0);
+    // No rain; or rain with no Sun through it.
+    expect(lightingFromScene(scene(17.5, 'clear')).grade.rainbow).toBe(0);
+    expect(lightingFromScene(scene(17.5, 'storm')).grade.rainbow).toBe(0);
+  });
+
   it('noon clear: strong neutral light, shadows on, dark shadows', () => {
     const l = lightingFromScene(scene(12.5, 'clear'));
     expect(l.sunIntensity).toBeGreaterThan(1.8);

@@ -4,6 +4,16 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Rainbows**: showers in sunlight (a forecast's showers through a broken sky: precipitation
+  0.15 with the Sun's beam getting through) with the Sun up but under 42° now draw the bow where
+  it stands — the primary from 40.6° (violet, inside) to 42.3° (red, outside) round the point
+  opposite the Sun, the fainter secondary from 50.4° to 53.4° with its colours reversed, the sky
+  brighter inside the primary and darker between the two (Alexander's band), the colours washed
+  a little by the Sun's disc. Where and when the bow stands is the planning question; the
+  smoke harness adds `rainbow` (17:30, looking east).
+- **The towns' glow under a moonless overcast**: the host now draws the night grade whenever the
+  glow is on (it had wanted a star, planet or the Moon to switch to it, and under a closed deck
+  with no Moon there is none).
 - **The towns' glow in the night sky**: the sky-glow estimate the night advice already gives
   (Walker's law over the mapped built-up areas, `skyGlowAt`) now shows in the 3D view — a warm
   dome low over the horizon toward the strongest town, all round inside or beside a city and a

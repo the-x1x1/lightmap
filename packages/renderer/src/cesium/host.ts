@@ -79,6 +79,8 @@ export interface HostGradeUniforms {
   u_skyLuminance: number;
   u_nightFactor: number;
   u_precipitation: number;
+  /** A rainbow's strength (`LightingParameters.grade.rainbow`). */
+  u_rainbow?: number;
   u_horizonHaze: number;
   u_sunElevation: number;
   u_time: number;

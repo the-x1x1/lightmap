@@ -35,6 +35,7 @@ uniform float u_cloudHigh;
 uniform float u_skyLuminance;
 uniform float u_nightFactor;
 uniform float u_precipitation;
+uniform float u_rainbow;         // a rainbow's strength, 0..1 (showers in sunlight)
 uniform float u_horizonHaze;    // aerial perspective toward the horizon (scenario haze + low sun)
 uniform float u_sunElevation;   // degrees, geometric
 uniform float u_time;
@@ -447,6 +448,26 @@ void main() {
     color = mix(color, hazeCol, clamp(dist * 0.85, 0.0, 0.85));
   }
 
+  // The rainbow: sunlight turned back by the falling drops, round the point opposite the Sun -
+  // the primary bow from 40.6 deg (violet, inside) to 42.3 (red, outside), the fainter
+  // secondary from 50.4 (red, inside) to 53.4 (violet, outside), the sky brighter inside the
+  // primary and darker between the two (Alexander's band). Its colours washed by the Sun's
+  // half-degree disc. Over the sky (where a shower's curtain stands against it), opposite a
+  // Sun under 42 deg.
+  if (isSky && u_rainbow > 0.0) {
+    float th = degrees(acos(clamp(-dot(rayEC, u_sunDirEC), -1.0, 1.0)));
+    float t1 = (th - 40.4) / 2.1;
+    float b1 = smoothstep(-0.12, 0.12, t1) * (1.0 - smoothstep(0.88, 1.12, t1));
+    float t2 = (53.6 - th) / 3.2;
+    float b2 = smoothstep(-0.12, 0.12, t2) * (1.0 - smoothstep(0.88, 1.12, t2));
+    vec3 h1 = clamp(abs(mod((1.0 - clamp(t1, 0.0, 1.0)) * 0.78 * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+    vec3 h2 = clamp(abs(mod((1.0 - clamp(t2, 0.0, 1.0)) * 0.78 * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+    vec3 bow = mix(h1, vec3(1.0), 0.3) * b1 * 0.16 + mix(h2, vec3(1.0), 0.4) * b2 * 0.06;
+    float inside = 1.0 - smoothstep(39.5, 40.8, th);
+    float alexander = smoothstep(42.4, 43.4, th) * (1.0 - smoothstep(49.6, 50.6, th));
+    color = color * (1.0 + u_rainbow * (0.07 * inside - 0.06 * alexander)) + bow * u_rainbow;
+  }
+
   // Global grade.
   color = saturate3(color, u_saturation);
   color = (color - 0.5) * u_contrast + 0.5;
@@ -504,6 +525,7 @@ export const GRADE_UNIFORM_NAMES = [
   'u_skyLuminance',
   'u_nightFactor',
   'u_precipitation',
+  'u_rainbow',
   'u_horizonHaze',
   'u_sunElevation',
   'u_time',
