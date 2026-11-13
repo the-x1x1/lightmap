@@ -76,7 +76,7 @@ describe('buildings and trees shader', () => {
     const night = litInstanceShader(0.2, 8000, true, 0, 3, 1);
     expect(night).toContain('wallness');
     expect(night).toContain('0.38 * 1.00');
-    expect(night).toMatch(/^[\x00-\x7f]*$/);
+    expect([...night].every((c) => c.charCodeAt(0) < 128)).toBe(true);
     // Trees and the roof-less test block take none.
     expect(litInstanceShader(0.2, 8000, false, 0, 3, 1)).not.toContain('wallness');
   });
