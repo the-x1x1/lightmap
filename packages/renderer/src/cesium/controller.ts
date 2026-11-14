@@ -231,6 +231,15 @@ export class SceneController {
       u_rays: lighting.grade.rays,
       u_windToward: lighting.grade.windToward,
       u_windMps: lighting.grade.windMps,
+      u_sunENU: (() => {
+        const az = (scene.solar.azimuthDegrees * Math.PI) / 180;
+        const el = (scene.solar.elevationDegrees * Math.PI) / 180;
+        return [Math.sin(az) * Math.cos(el), Math.cos(az) * Math.cos(el), Math.sin(el)] as [
+          number,
+          number,
+          number,
+        ];
+      })(),
       u_horizonHaze: lighting.grade.horizonHaze,
       u_sunElevation: lighting.grade.sunElevation,
       // Clouds drift with the selected time, not the wall clock, so scrubbing reads as motion.

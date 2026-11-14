@@ -26,6 +26,7 @@ uniform float u_haze;
 uniform vec3 u_eyeUpEC;         // the local up at the camera, in eye coordinates (per frame)
 uniform vec3 u_eyeEastEC;       // the local east at the camera, in eye coordinates (per frame)
 uniform vec2 u_windToward;      // where the wind blows the decks, a unit vector east and north
+uniform vec2 u_eyeFromPlaceKm;  // the camera east and north of the place, km (per frame)
 uniform float u_windMps;        // the wind's speed, m/s
 uniform float u_eyeHeightM;     // the camera's height above the ellipsoid (per frame)
 uniform float u_hazeBaseM;      // the ground's height at the place (where its visibility is measured)
@@ -83,16 +84,17 @@ vec3 saturate3(vec3 c, float s) {
 }
 
 // The dimmest and the brightest of eight samples on a ring px (in uv) round uv.
-// Where a ray from the eye meets a cloud deck hKm above it: km east and north of the eye, in a
-// frame fixed to the ground (the local east and north at the camera), so a deck stays put in the
-// sky as the camera turns and crowds toward the horizon as a real one does. A ray nearer the
+// Where a ray from the eye meets a cloud deck hKm above it: km east and north of the place, in a
+// frame fixed to the ground (the local east and north at the camera, the eye's own offset from
+// the place added), so a deck stays put in the sky as the camera turns or travels, crowds toward
+// the horizon as a real one does, and casts its shadow where the ground material reads it. A ray nearer the
 // horizon than 2 deg is held there (the deck beyond is read as its mean, below).
 vec2 deckPoint(vec3 ray, float hKm) {
   vec3 up = u_eyeUpEC;
   vec3 east = normalize(u_eyeEastEC - dot(u_eyeEastEC, up) * up);
   vec3 north = cross(up, east);
   float ru = max(dot(ray, up), 0.035);
-  return vec2(dot(ray, east), dot(ray, north)) * (hKm / ru);
+  return vec2(dot(ray, east), dot(ray, north)) * (hKm / ru) + u_eyeFromPlaceKm;
 }
 
 vec3 ringMin(vec2 uv, vec2 px) {
@@ -654,6 +656,7 @@ export const GRADE_UNIFORM_NAMES = [
   'u_eyeUpEC',
   'u_eyeEastEC',
   'u_windToward',
+  'u_eyeFromPlaceKm',
   'u_windMps',
   'u_eyeHeightM',
   'u_starField',

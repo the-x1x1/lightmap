@@ -258,6 +258,8 @@ export class CesiumSceneHost implements SceneHost {
   private townGlow: { strength: number; allRound: number; dirWC: Cesium.Cartesian3 } | null = null;
   private readonly townGlowDirScratch: Cesium.Cartesian3;
   private readonly eyeEastScratch: Cesium.Cartesian3;
+  private readonly eyeFromPlaceScratch: Cesium.Cartesian2;
+  private readonly eyeFromPlaceDiff: Cesium.Cartesian3;
   /** The street lamps along the mapped roads near the place, lit from the dusk. */
   private streetLamps: Cesium.BillboardCollection | null = null;
   private streetLampsShownAt = -1;
@@ -440,6 +442,8 @@ export class CesiumSceneHost implements SceneHost {
     this.eyeUpScratch = new C.Cartesian3();
     this.townGlowDirScratch = new C.Cartesian3();
     this.eyeEastScratch = new C.Cartesian3();
+    this.eyeFromPlaceScratch = new C.Cartesian2();
+    this.eyeFromPlaceDiff = new C.Cartesian3();
     this.enuScratch = newGroundFrame(C);
     if (options.ionToken) C.Ion.defaultAccessToken = options.ionToken;
 
@@ -581,6 +585,19 @@ export class CesiumSceneHost implements SceneHost {
       u_rays: 0,
       u_windToward: new C.Cartesian2(-0.92, -0.38),
       u_windMps: 5,
+      u_eyeFromPlaceKm: () => {
+        const f = this.enuScratch;
+        const out = this.eyeFromPlaceScratch;
+        if (!f.anchored) {
+          out.x = 0;
+          out.y = 0;
+          return out;
+        }
+        const d = C.Cartesian3.subtract(scene.camera.positionWC, f.anchor, this.eyeFromPlaceDiff);
+        out.x = C.Cartesian3.dot(d, f.east) / 1000;
+        out.y = C.Cartesian3.dot(d, f.north) / 1000;
+        return out;
+      },
       u_horizonHaze: 0.1,
       u_sunElevation: 45,
       u_time: 0,
@@ -1249,8 +1266,18 @@ export class CesiumSceneHost implements SceneHost {
     const g = this.gradeUniforms;
     // The ground's cloud shadows drift with the same clock as the sky's clouds.
     this.lastGradeTime = u.u_time;
-    if (this.groundMaterial)
-      (this.groundMaterial.uniforms as Record<string, number>)['u_cloudTime'] = u.u_time;
+    if (this.groundMaterial) {
+      const gu = this.groundMaterial.uniforms as Record<string, unknown>;
+      gu['u_cloudTime'] = u.u_time;
+      // And the decks themselves, for the shadows they cast where the sky draws them.
+      gu['u_cloudLowCov'] = u.u_cloudLow;
+      gu['u_cloudMidCov'] = u.u_cloudMid;
+      gu['u_deckBaseM'] = u.u_hazeBaseM;
+      gu['u_windMps'] = u.u_windMps ?? 5;
+      if (u.u_windToward)
+        gu['u_windToward'] = new this.C.Cartesian2(u.u_windToward[0], u.u_windToward[1]);
+      if (u.u_sunENU) gu['u_sunENU'] = new this.C.Cartesian3(...u.u_sunENU);
+    }
     g['u_saturation'] = u.u_saturation;
     g['u_contrast'] = u.u_contrast;
     g['u_warmth'] = u.u_warmth;

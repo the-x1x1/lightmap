@@ -366,15 +366,18 @@ per-fragment relief and the near grain, Battery keeps the base surface alone, Mi
 off with the shadows; the `groundTexture` flag turns it off everywhere. On bare ground within a few kilometres a **micro-relief** shading
 reads the grain as small bumps lit by the scene's own Sun direction, so rock and scree show a
 texture that turns with the light through the day — a shading of the albedo only, within
-±30 %, gone on snow. Under **broken cloud** the ground is dappled with
-cumulus-sized patches of shade (a kilometre or two across) drifting north-east with the
-planner's clock at about 200 m a minute (a pattern's wind, not the forecast's), fading toward
-the horizon —
+±30 %, gone on snow. Under **broken cloud** the ground lies in the shadows of the clouds
+the sky draws: from each point up the Sun's ray to the low deck (1.5 km) and the mid one (4 km),
+read with the grade's own noise in the wind's frame and drifting with the same clock, so a cloud
+toward the Sun is the one whose shadow falls there and the shadows move with the clouds. The
+shade dims imagery and paint together (laid in with the paint's opacity: on the paint alone it
+had all but vanished past a kilometre, where the imagery shows through), fading toward the
+horizon —
 nothing under a clear sky or an overcast one (the light is already diffuse and dimmed as a
 whole), most at half cover, nothing under a complete sheet at any level (an altostratus
 overcast has no gaps however thin) and nothing without direct sun (`cloudShadowStrength`:
-4t(1−t) over the total sun-blocking cover, the shade's depth leaning on the low deck); the patches are a pattern, not the forecast's own clouds, and
-they do not match the clouds drawn in the sky. Under rain the ground is darker and duller
+4t(1−t) over the total sun-blocking cover, the shade's depth leaning on the low deck); the clouds and their shadows are a pattern at the
+forecast's cover, not the forecast's own clouds, but the shadows are the sky's clouds'. Under rain the ground is darker and duller
 (the scenario's precipitation; snow apart). **Claim:** the surface lit by the true Sun, with
 shadows and horizon geometry untouched (the material runs before the globe's lighting and
 changes albedo only; the micro-relief uses the light direction but never the shadow map or

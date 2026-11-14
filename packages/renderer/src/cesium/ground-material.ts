@@ -47,6 +47,16 @@ export function groundMaterialUniforms(C: C, coarseBasemap: number): Record<stri
       GROUND_DETAIL_TIERS.map((t) => [t.offsetUniform, new C.Cartesian3(0, 0, 0)]),
     ),
     u_camMod: new C.Cartesian3(0, 0, 0),
+    // The cloud decks the sky draws, for the shadows they cast (`setGrade` fills them): the
+    // camera from the frame's anchor in metres (per frame), the Sun's direction on the frame, the
+    // wind, the low and mid decks' cover and the place's ground height.
+    u_camFromAnchor: new C.Cartesian3(0, 0, 0),
+    u_sunENU: new C.Cartesian3(0, 0, 1),
+    u_windToward: new C.Cartesian2(-0.92, -0.38),
+    u_windMps: 5,
+    u_cloudLowCov: 0,
+    u_cloudMidCov: 0,
+    u_deckBaseM: 0,
     [GROUND_TOWN_GRID.cellUniform]: new C.Cartesian3(0, 0, 0),
     [GROUND_TOWN_GRID.fracUniform]: new C.Cartesian3(0, 0, 0),
   };
@@ -119,6 +129,12 @@ export function updateGroundOffsets(
   camMod.x = wrap(ce);
   camMod.y = wrap(cn);
   camMod.z = wrap(cu);
+  const fromAnchor = u['u_camFromAnchor'] as Cesium.Cartesian3 | undefined;
+  if (fromAnchor) {
+    fromAnchor.x = ce - C.Cartesian3.dot(frame.anchor, frame.east);
+    fromAnchor.y = cn - C.Cartesian3.dot(frame.anchor, frame.north);
+    fromAnchor.z = cu - C.Cartesian3.dot(frame.anchor, frame.up);
+  }
   for (const tier of GROUND_DETAIL_TIERS) {
     const off = u[tier.offsetUniform] as Cesium.Cartesian3;
     off.x = f(ce / tier.periodM);

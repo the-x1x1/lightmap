@@ -4,6 +4,14 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Cloud shadows under the clouds**: the patches of shade on the ground were their own pattern,
+  unrelated to the clouds in the sky, and darkened only the painted layer — so past a kilometre,
+  where the paint gives way to the imagery, they had all but vanished. Each point now looks up
+  the Sun's ray to the low and mid decks the sky draws (the same noise, in the wind's frame,
+  drifting with the same clock): it is in shade where that deck has cloud, the shadows move with
+  the clouds, and the shade dims imagery and paint together. The decks themselves are now
+  anchored to the place, so they no longer travel with a camera moving over the map. The smoke
+  harness adds `synth-map-partly` (shadows down to 55 % over the synthetic land).
 - **Clouds go with the wind**: the decks drift downwind with the scene's clock — the forecast's
   wind direction and speed (the wind aloft taken as 2.5 times the surface's), or a trade wind from
   the east-north-east without a forecast — and the cirrus streaks lie along the wind, rather than

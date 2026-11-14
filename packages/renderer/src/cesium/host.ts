@@ -86,6 +86,8 @@ export interface HostGradeUniforms {
   /** Where the wind blows the cloud decks (east, north unit vector) and its speed, m/s. */
   u_windToward?: [number, number];
   u_windMps?: number;
+  /** Toward the Sun on the place's east/north/up frame (the cloud shadows' ray). */
+  u_sunENU?: [number, number, number];
   u_horizonHaze: number;
   u_sunElevation: number;
   u_time: number;

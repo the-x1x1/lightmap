@@ -219,6 +219,28 @@ uniform vec3 u_upWC;
 uniform vec3 u_seaSkyAway;
 uniform vec3 u_seaSkyToward;
 uniform vec3 u_camMod;
+uniform vec3 u_camFromAnchor;   // the camera from the frame's anchor (the place), metres
+uniform vec3 u_sunENU;          // toward the Sun on the frame (east, north, up)
+uniform vec2 u_windToward;      // where the wind blows the decks, a unit vector east and north
+uniform float u_windMps;        // the wind's speed, m/s
+uniform float u_cloudLowCov;    // the low deck's cover, 0-1 (the grade's)
+uniform float u_cloudMidCov;    // the mid deck's cover, 0-1
+uniform float u_deckBaseM;      // the place's ground height, metres (the decks stand on it)
+
+// The grade's cloud noise, the same to the bit, so the shadow a deck casts is the one the sky
+// draws (grade.frag.ts hash / vnoise / fbm).
+float lmCloudHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
+float lmCloudNoise(vec2 p) {
+    vec2 i = floor(p); vec2 f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(lmCloudHash(i), lmCloudHash(i + vec2(1.0, 0.0)), u.x),
+               mix(lmCloudHash(i + vec2(0.0, 1.0)), lmCloudHash(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+float lmCloudFbm(vec2 p) {
+    float v = 0.0; float a = 0.5;
+    for (int k = 0; k < 5; k++) { v += a * lmCloudNoise(p); p = p * 2.03 + vec2(17.3, 9.1); a *= 0.5; }
+    return v;
+}
 uniform vec3 u_detailOffset;
 uniform vec3 u_detailOffset1;
 uniform vec3 u_townCell;
@@ -629,17 +651,39 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         ground *= clamp(1.0 + reliefW * 0.9 * (bumped - flat_), 0.7, 1.3);
     }
 
-    // Broken cloud: patches of shadow the size of cumulus (a kilometre or two) drifting with the
-    // planner's clock toward the north-east at ~ 200 m/min, over everything but water. A
-    // dappling of the albedo - the light's direction, the terrain shadows and the sky are
-    // untouched; the patches are a pattern, not the forecast's own clouds.
-    if (u_cloudShadow > 0.0 && u_detail > 0.0)
+    // Broken cloud: the shadows of the clouds the sky draws. From this point up the Sun's ray to
+    // the low deck (1.5 km over the place's ground) and the mid one (4 km), each read as the
+    // grade reads it there - the same noise, in the wind's frame, drifting with the same clock -
+    // so a cloud overhead toward the Sun is the one whose shadow falls here, and the shadows
+    // move with the clouds. The low deck's shade deeper than the mid one's. It darkens what is
+    // seen there, imagery and paint together (applied with the paint's opacity, below: on the
+    // paint alone it all but vanished past a kilometre, where the paint gives way to the
+    // imagery); the light's direction, the terrain shadows and the sky are untouched.
+    float cloudK = 1.0;
+    if (u_cloudShadow > 0.0 && u_detail > 0.0 && u_sunENU.z > 0.02)
     {
-        vec2 pc = g.xy - vec2(190.0, 60.0) * u_cloudTime;
-        float cloud = 0.7 * lmNoiseTex(pc, ${f(P.clouds)}, gdx, gdy).r
-                    + 0.3 * lmNoiseTex(vec2(pc.y, -pc.x), ${f(P.clouds / 2)}, vec2(gdx.y, -gdx.x), vec2(gdy.y, -gdy.x)).b;
-        float shade = smoothstep(0.38, 0.62, cloud) * smoothstep(80000.0, 15000.0, dist);
-        ground *= 1.0 - 0.45 * u_cloudShadow * clamp(u_detail, 0.0, 1.0) * shade;
+        vec3 fromPlace = enu + u_camFromAnchor;
+        vec2 sunRun = u_sunENU.xy / u_sunENU.z;
+        vec2 wTo = normalize(u_windToward + vec2(1e-6, 0.0));
+        vec2 wAcross = vec2(-wTo.y, wTo.x);
+        float driftKm = mod(u_cloudTime, 5760.0) * u_windMps * 2.5 * 0.06;
+        float shadeC = 0.0;
+        if (u_cloudLowCov > 0.005) {
+            float climb = 1.5 - (materialInput.height - u_deckBaseM) / 1000.0;
+            vec2 d = fromPlace.xy / 1000.0 + sunRun * max(climb, 0.05);
+            vec2 p = vec2(dot(d, wTo) - driftKm, dot(d, wAcross)) / 1.8;
+            float n = lmCloudFbm(p);
+            shadeC = smoothstep(1.0 - u_cloudLowCov - 0.15, 1.0 - u_cloudLowCov + 0.15, n);
+        }
+        if (u_cloudMidCov > 0.005) {
+            float climb = 4.0 - (materialInput.height - u_deckBaseM) / 1000.0;
+            vec2 d = fromPlace.xy / 1000.0 + sunRun * max(climb, 0.05);
+            vec2 p = vec2(dot(d, wTo) - driftKm, dot(d, wAcross)) / 5.5;
+            float n = lmCloudFbm(p + vec2(11.0, 5.0));
+            shadeC = max(shadeC, 0.6 * smoothstep(1.0 - u_cloudMidCov - 0.2, 1.0 - u_cloudMidCov + 0.2, n));
+        }
+        float shade = shadeC * smoothstep(80000.0, 15000.0, dist);
+        cloudK = 1.0 - 0.45 * u_cloudShadow * clamp(u_detail, 0.0, 1.0) * shade;
     }
 
     // Rain: wet ground is darker and duller (water in the surface), snow apart.
@@ -724,6 +768,14 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float alpha = u_strength * mix(imageryAlpha, 0.985, u_coarseBasemap);
     // A mapped street is the street: no imagery blur through it.
     alpha = mix(alpha, u_strength * 0.97, roadPaint);
+    // The cloud's shadow over imagery and paint alike: the paint is laid over the imagery by its
+    // opacity, so the opacity is raised toward a black that dims the imagery by cloudK and the
+    // paint scaled to keep its own share - what is seen comes out cloudK times what it was.
+    if (cloudK < 1.0) {
+        float a2 = 1.0 - cloudK * (1.0 - alpha);
+        material.diffuse *= cloudK * alpha / max(a2, 1e-3);
+        alpha = a2;
+    }
     // The wet film's reflection, as a share of what is seen: the paint is blended over the
     // imagery by its opacity, so the reflected light is put in at its full strength over it.
     if (wetR > 0.0)

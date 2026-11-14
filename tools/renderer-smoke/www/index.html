@@ -1222,6 +1222,8 @@
         const overRidge = { headingDeg: 70, pitchDeg: -22, rangeM: 7000 };
         await synthShot('synth-map-clear', 10, 'clear', null, overRidge);
         await synthShot('synth-map-overcast', 10, 'overcast', null, overRidge);
+        // Broken cloud from above: the shadows the sky's decks cast, kilometres across.
+        await synthShot('synth-map-partly', 10, 'partly-cloudy', null, overRidge);
         const look = (headingDeg, pitchDeg) => ({
           ...defaultCamera(beach.point, headingDeg),
           mode: 'viewpoint',
