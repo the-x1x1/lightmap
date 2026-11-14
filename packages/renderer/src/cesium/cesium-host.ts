@@ -90,6 +90,7 @@ import {
 import { StepGlide, lerpVec3, nlerpDir, type Vec3Like } from '../step-glide.ts';
 import { FramePacer } from './frame-pacer.ts';
 import { isSoftwareRendererName, rendererName } from './software-gl.ts';
+import { installShadowTint } from './shadow-tint.ts';
 import type { Vec3 } from '../sun-vector.ts';
 import type {
   HostAtmosphere,
@@ -434,6 +435,8 @@ export class CesiumSceneHost implements SceneHost {
 
   constructor(C: CesiumModule, options: CesiumHostOptions) {
     this.C = C;
+    // Shadows in the sky's colour, not grey (shadow-tint.ts): before any shader is built.
+    installShadowTint(C);
     this.onError = options.onError;
     this.ionToken = options.ionToken;
     this.detailAtlasUrl = options.groundDetailAtlasUrl;

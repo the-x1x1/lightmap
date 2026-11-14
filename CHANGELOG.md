@@ -4,6 +4,14 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Shadows in the sky's colour**: Cesium darkens what is in shade by a grey, but shade on a clear
+  day is lit by the blue sky alone while the rest has the Sun as well, so real shadows read cool
+  against warm sunlight — most of all under a low, orange Sun. Cesium's shadow receive shader is
+  wrapped (`shadow-tint.ts`) so the shaded share takes the sky's light over the scene's light, at
+  its own luminance, by as much as the shade is deep: a gentle blue at noon, a strong one at
+  golden hour, none under an overcast (no shade to tint) and none outside the shadow. Buildings,
+  trees and terrain alike; the buildings' shadow compensation is unchanged (unshadowed pixels are
+  untouched).
 - **Golden-hour ground at a photograph's exposure**: level ground at Cesium's light falls 1.4
   stops from noon to a Sun 4° up while the sky it draws falls less, so a golden-hour field came
   out 2.9 stops under the sky where a noon one sits 2.1 — near black in the foreground. The sky's

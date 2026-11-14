@@ -81,6 +81,15 @@ never the trees (see "Terrain horizon"); shadow map resolution is
 finite (1024–4096) and softens with reach; terrain self-shadowing at grazing angles shows some
 shadow-map artefacts.
 
+**Shadow colour.** Cesium darkens shade by a grey; shade on a clear day is lit by the sky alone,
+so its colour is the sky's light, not the Sun's. Cesium's shadow receive shader is wrapped
+(`shadow-tint.ts`, `ShadowMapShader.createShadowReceiveFragmentShader`) so the shaded fraction —
+how far the visibility has gone toward the darkness — is tinted by a clear sky's blue
+(0.80, 0.90, 1.05) over the scene's light colour, at unit luminance, by up to 60 %: a gentle blue
+under a white noon Sun, a strong one under an orange golden-hour Sun, nothing where the darkness
+is near 1 (overcast) or outside the shadow. **Caveat:** the sky's colour is a clear day's, not
+the scenario's; under haze the shade is as blue as under a clear sky.
+
 ### Terrain horizon
 
 The land horizon around the viewpoint is sampled from the same DEM the preview renders
