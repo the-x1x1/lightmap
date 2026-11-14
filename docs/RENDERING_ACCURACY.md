@@ -90,6 +90,16 @@ under a white noon Sun, a strong one under an orange golden-hour Sun, nothing wh
 is near 1 (overcast) or outside the shadow. **Caveat:** the sky's colour is a clear day's, not
 the scenario's; under haze the shade is as blue as under a clear sky.
 
+**Sky view on slopes.** Cesium gives every face the same share of sky light whatever its tilt,
+but a plane tilted by _t_ sees only (1 + cos _t_) / 2 of the sky: all of it when level, 85 % at
+45°, half on a cliff. The ground material (`ground.frag.ts`) scales the sky's share of each
+fragment's light by that factor, leaving the Sun's share alone, laid in through the paint's
+opacity with the cloud shadow so imagery and paint darken together. Level ground is unchanged and
+a sunny day's relief barely so; under an overcast or in twilight, when nearly all the light is
+sky light, steep slopes come out darker than the ground about them (the synthetic 37° ridge flank
+about 4 % darker overcast). **Caveat:** an open-sky estimate from the local slope alone; a gully's
+walls hide more sky than its floor's tilt says, and that is not modelled.
+
 ### Terrain horizon
 
 The land horizon around the viewpoint is sampled from the same DEM the preview renders

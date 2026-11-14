@@ -789,6 +789,20 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float alpha = u_strength * mix(imageryAlpha, 0.985, u_coarseBasemap);
     // A mapped street is the street: no imagery blur through it.
     alpha = mix(alpha, u_strength * 0.97, roadPaint);
+    // The sky a slope sees: Cesium lights every face with the same sky share whatever its tilt,
+    // but a plane tilted by t sees (1 + cos t) / 2 of the sky - all of it level, 85 % at 45 deg,
+    // half on a cliff - so its sky light is that much less. Only the sky's share of this
+    // fragment's light is scaled (the beam's is the beam's), so level ground is as it was, a
+    // sunny day's relief barely changes, and under an overcast or in twilight - when all the
+    // light is sky light - cliffs, gullies and steep valley sides come out darker than the
+    // ground about them, as they do. Laid in with the cloud's shadow, over imagery and paint.
+#ifdef ENABLE_VERTEX_LIGHTING
+    {
+        float skyView = 0.5 + 0.5 * cos(clamp(materialInput.slope, 0.0, 1.5708));
+        float beam = clamp(dot(materialInput.normalEC, czm_lightDirectionEC), 0.0, 1.0) * u_lambertMul;
+        cloudK *= (beam + u_ambientShare * skyView) / max(beam + u_ambientShare, 1e-3);
+    }
+#endif
     // The cloud's shadow over imagery and paint alike: the paint is laid over the imagery by its
     // opacity, so the opacity is raised toward a black that dims the imagery by cloudK and the
     // paint scaled to keep its own share - what is seen comes out cloudK times what it was.

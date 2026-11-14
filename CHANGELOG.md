@@ -4,6 +4,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Slopes see less sky**: a tilted face sees only (1 + cos tilt) / 2 of the sky, so the sky's
+  share of the ground's light is now scaled by that; under an overcast or at twilight steep
+  slopes and cliffs come out darker than the level ground about them, while level ground and a
+  sunny day's relief are unchanged.
 - **Shadows in the sky's colour**: Cesium darkens what is in shade by a grey, but shade on a clear
   day is lit by the blue sky alone while the rest has the Sun as well, so real shadows read cool
   against warm sunlight — most of all under a low, orange Sun. Cesium's shadow receive shader is
