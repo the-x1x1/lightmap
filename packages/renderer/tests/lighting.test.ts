@@ -18,6 +18,7 @@ import {
   skyGradientFor,
   starFieldVisibility,
   visibilityFromHaze,
+  windTowardFor,
 } from '../src/lighting.ts';
 import { azElFromEcefToward, type Vec3 } from '../src/sun-vector.ts';
 
@@ -79,6 +80,16 @@ describe('lightingFromScene', () => {
     // No rain; or rain with no Sun through it.
     expect(lightingFromScene(scene(17.5, 'clear')).grade.rainbow).toBe(0);
     expect(lightingFromScene(scene(17.5, 'storm')).grade.rainbow).toBe(0);
+  });
+
+  it('the wind blows the decks where the forecast sends them, a trade wind without one', () => {
+    const [e, n] = windTowardFor(0); // from the north: toward the south
+    expect(e).toBeCloseTo(0, 6);
+    expect(n).toBeCloseTo(-1, 6);
+    const [te, tn] = windTowardFor(null); // the trades, from 67.5 deg: toward the west-south-west
+    expect(te).toBeLessThan(-0.9);
+    expect(tn).toBeLessThan(-0.3);
+    expect(lightingFromScene(scene(12.5, 'clear')).grade.windMps).toBeGreaterThan(0);
   });
 
   it('sunbeams with a low Sun getting through, none at noon or under a storm', () => {

@@ -83,6 +83,9 @@ export interface HostGradeUniforms {
   u_rainbow?: number;
   /** Sunbeams' strength (`LightingParameters.grade.rays`). */
   u_rays?: number;
+  /** Where the wind blows the cloud decks (east, north unit vector) and its speed, m/s. */
+  u_windToward?: [number, number];
+  u_windMps?: number;
   u_horizonHaze: number;
   u_sunElevation: number;
   u_time: number;

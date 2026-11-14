@@ -548,8 +548,10 @@ local east and north at the camera): they keep their place in the sky as the cam
 the perspective of a real layer — large overhead, crowding to the horizon — and within about 8°
 of the horizon (fully by 2°) fade to the deck's mean, as foreshortened cloud does. A deck at or
 below the camera is not drawn overhead. **Caveat:** flat layers of procedural noise, not volumes;
-heights are typical for each band, not the forecast's; the wind drifts them east-north-east
-whatever the wind.
+heights are typical for each band, not the forecast's. They drift downwind with the scene's
+clock — the forecast's wind (direction and speed, the wind aloft taken as 2.5 times the
+surface's), a trade wind from 67.5° without a forecast — and the cirrus streaks lie along it;
+the clock is wrapped every four days, so the pattern jumps once in four days of scrubbing.
 
 ### Sunbeams
 

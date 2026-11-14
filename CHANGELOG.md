@@ -4,6 +4,11 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Clouds go with the wind**: the decks drift downwind with the scene's clock — the forecast's
+  wind direction and speed (the wind aloft taken as 2.5 times the surface's), or a trade wind from
+  the east-north-east without a forecast — and the cirrus streaks lie along the wind, rather than
+  every sky drifting east whatever the weather. Scrubbing an hour moves a cirrus deck about
+  45 km in a 5 m/s wind.
 - **Clouds stay in the sky as the camera turns**: the grade's three cloud decks were painted in
   screen coordinates, so they slid with every pan and tilt and looked the same whichever way the
   camera faced. Each deck is now a layer at its height (low 1.5 km, mid 4 km, cirrus 9 km over

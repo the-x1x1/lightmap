@@ -25,6 +25,8 @@ uniform vec3  u_tint;
 uniform float u_haze;
 uniform vec3 u_eyeUpEC;         // the local up at the camera, in eye coordinates (per frame)
 uniform vec3 u_eyeEastEC;       // the local east at the camera, in eye coordinates (per frame)
+uniform vec2 u_windToward;      // where the wind blows the decks, a unit vector east and north
+uniform float u_windMps;        // the wind's speed, m/s
 uniform float u_eyeHeightM;     // the camera's height above the ellipsoid (per frame)
 uniform float u_hazeBaseM;      // the ground's height at the place (where its visibility is measured)
 uniform float u_cloudCoverage;
@@ -310,6 +312,13 @@ void main() {
     float hMid = 4.0 + groundKm - eyeKm;
     float hHigh = 9.0 + groundKm - eyeKm;
     float detail = smoothstep(0.03, 0.14, dot(rayEC, u_eyeUpEC));
+    // The decks in the wind's frame - x downwind, y across it - so the cirrus streaks lie along
+    // the wind and every deck drifts downwind with the scene's clock: the wind aloft taken as
+    // 2.5 times the surface's, the clock wrapped every four days (a drift of thousands of km
+    // would cost the noise its precision).
+    vec2 wTo = normalize(u_windToward + vec2(1e-6, 0.0));
+    vec2 wAcross = vec2(-wTo.y, wTo.x);
+    float driftKm = mod(u_time, 5760.0) * u_windMps * 2.5 * 0.06;
     // Direct light reaching a cloud is warm from the golden hour down: fully orange-red once the
     // Sun is below the observer's horizon (the beam has crossed the whole atmosphere twice).
     float lowSun  = 1.0 - smoothstep(-1.0, 8.0, u_sunElevation);
@@ -327,7 +336,8 @@ void main() {
 
     // High deck: cirrus. Fibrous, stretched along the wind; thin, so it brightens more than it hides.
     if (covHigh > 0.005) {
-      vec2 ph = deckPoint(rayEC, max(hHigh, 0.3)) / 15.0 + vec2(u_time * 0.006, u_time * 0.0008);
+      vec2 dh = deckPoint(rayEC, max(hHigh, 0.3));
+      vec2 ph = vec2(dot(dh, wTo) - driftKm, dot(dh, wAcross)) / 15.0;
       // Streaks run along the horizon (the wind shear that makes cirrus fibrous), so the noise is
       // sampled at a low x frequency and a high y frequency.
       float nh = mix(0.5, fbm(ph * vec2(0.5, 1.0) + vec2(3.1, 7.7)), detail) - step(hHigh, 0.0);
@@ -389,7 +399,8 @@ void main() {
 
     // Mid deck: altostratus / altocumulus. A smoother grey-white sheet; the Sun shows through as a disc.
     if (covMid > 0.005) {
-      vec2 pm = deckPoint(rayEC, max(hMid, 0.3)) / 5.5 + vec2(u_time * 0.005, u_time * 0.001);
+      vec2 dm = deckPoint(rayEC, max(hMid, 0.3));
+      vec2 pm = vec2(dot(dm, wTo) - driftKm, dot(dm, wAcross)) / 5.5;
       float nm = mix(0.5, fbm(pm + vec2(11.0, 5.0)), detail) - step(hMid, 0.0);
       float sheet = smoothstep(1.0 - covMid - 0.2, 1.0 - covMid + 0.2, nm);
       vec3 alto = mix(vec3(0.86, 0.87, 0.90), vec3(0.62, 0.64, 0.68), covMid * 0.7);
@@ -402,7 +413,8 @@ void main() {
 
     // Low deck: stratus / cumulus with dark bases; thickness from the scenario density.
     if (covLow > 0.005) {
-      vec2 p = deckPoint(rayEC, max(hLow, 0.3)) / 1.8 + vec2(u_time * 0.004, u_time * 0.001);
+      vec2 dl = deckPoint(rayEC, max(hLow, 0.3));
+      vec2 p = vec2(dot(dl, wTo) - driftKm, dot(dl, wAcross)) / 1.8;
       float n = mix(0.5, fbm(p), detail) - step(hLow, 0.0);
       float cloud = smoothstep(1.0 - covLow - 0.15, 1.0 - covLow + 0.15, n);
       float thickness = clamp(u_cloudDensity * (0.5 + 0.5 * u_cloudOpacity), 0.0, 1.0);
@@ -641,6 +653,8 @@ export const GRADE_UNIFORM_NAMES = [
   'u_sunVisible',
   'u_eyeUpEC',
   'u_eyeEastEC',
+  'u_windToward',
+  'u_windMps',
   'u_eyeHeightM',
   'u_starField',
   'u_atmosphereDark',

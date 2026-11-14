@@ -579,6 +579,8 @@ export class CesiumSceneHost implements SceneHost {
       u_precipitation: 0,
       u_rainbow: 0,
       u_rays: 0,
+      u_windToward: new C.Cartesian2(-0.92, -0.38),
+      u_windMps: 5,
       u_horizonHaze: 0.1,
       u_sunElevation: 45,
       u_time: 0,
@@ -1267,6 +1269,9 @@ export class CesiumSceneHost implements SceneHost {
     g['u_precipitation'] = u.u_precipitation;
     g['u_rainbow'] = u.u_rainbow ?? 0;
     g['u_rays'] = u.u_rays ?? 0;
+    if (u.u_windToward)
+      g['u_windToward'] = new this.C.Cartesian2(u.u_windToward[0], u.u_windToward[1]);
+    g['u_windMps'] = u.u_windMps ?? 5;
     g['u_horizonHaze'] = u.u_horizonHaze;
     g['u_sunElevation'] = u.u_sunElevation;
     g['u_time'] = u.u_time;

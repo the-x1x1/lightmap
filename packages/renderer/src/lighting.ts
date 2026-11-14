@@ -100,6 +100,13 @@ export interface LightingParameters {
      */
     rays: number;
     /**
+     * Where the wind blows the cloud decks, a unit vector east and north (toward, not from: the
+     * forecast's direction turned round), and its speed, m/s; with no forecast frame a trade
+     * wind from the east-north-east at the scenario's typical speed.
+     */
+    windToward: [number, number];
+    windMps: number;
+    /**
      * Aerial perspective toward the horizon: the scenario's haze plus the longer atmospheric path
      * at low sun. Applied to ground pixels by depth in the grade shader; never to geometry.
      */
@@ -140,6 +147,16 @@ export const SCENARIO_TYPICAL_WIND_MPS: Record<WeatherScenarioId, number> = {
   overcast: 6,
   storm: 13,
 };
+
+/**
+ * Where a wind from `fromDeg` (degrees from north, as forecasts give it) blows toward, a unit
+ * vector east and north; with none, toward the west-south-west (a trade wind from 67.5 deg).
+ */
+export function windTowardFor(fromDeg: number | null): [number, number] {
+  const from = fromDeg !== null && Number.isFinite(fromDeg) ? fromDeg : 67.5;
+  const to = ((from + 180) * Math.PI) / 180;
+  return [Math.sin(to), Math.cos(to)];
+}
 
 /** Cox and Munk's mean square slope of the sea for a wind, m/s (held to 0–20 m/s). */
 export function seaSlopeVarianceFor(windMps: number): number {
@@ -397,6 +414,8 @@ export function lightingFromScene(s: SceneState): LightingParameters {
         smooth(0.25, 0.55, p.sunTransmittance) *
         (1 - smooth(38, 42, el)) *
         smooth(0, 2, el),
+      windToward: windTowardFor(atmosphere.frame?.windDirection ?? null),
+      windMps: wind ?? 5,
       rays:
         smooth(-1, 1, el) *
         (1 - smooth(15, 25, el)) *
