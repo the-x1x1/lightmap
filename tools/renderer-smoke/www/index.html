@@ -1307,6 +1307,35 @@
             window.__takeShot = r;
           });
         }
+        // Backlit grass: from the summit at 18:36, looking down the slopes into the low Sun - the
+        // fields glow where the light comes through the blades (the snowline put back up).
+        {
+          const bl = buildSceneState({
+            location: summit,
+            utc: localSelectionToUtc({ year: 2026, month: 5, day: 31 }, 18.6 * 60, summit.timeZone),
+            now: new Date('2026-05-01T00:00:00Z'),
+            camera: { ...defaultCamera(summitPoint, 0), mode: 'viewpoint', pitchDeg: -10 },
+            environment: { ...env, terrainAvailable: true, terrainProviderId: 'synthetic' },
+            scenario: 'clear',
+            forceScenario: true,
+            weather: { capabilities: OPEN_METEO_CAPABILITIES, frames: [], providerFailed: false },
+            render: DEFAULT_RENDER_SETTINGS,
+            includeLunar: true,
+            realReference: false,
+          });
+          controller.apply({
+            ...bl,
+            camera: { ...bl.camera, headingDeg: bl.solar.azimuthDegrees },
+          });
+          host.scene.globe.material.uniforms.u_snowlineM = 6000;
+          await wait(1500);
+          if (!(await settle())) log('synth-backlit: not settled in 45 s');
+          await wait(500);
+          window.__smoke.shot = 'synth-backlit';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+        }
         // SMOKE_DEBUG=water: the map view once more with a material that paints what the globe
         // hands the material - red the water mask, green the height in 10 m bands, blue the
         // slope - to see where the coast's water ends.

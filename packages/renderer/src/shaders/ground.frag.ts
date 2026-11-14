@@ -732,6 +732,27 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // (at a metre a pixel the cells, a pixel wide but many long at a grazing view, came out as
     // dashes). A broad forward sheen as well:
     // looking toward a low Sun, snow glares softly (a rough, Cox-Munk-like lobe, mean square slope 0.3).
+    // Backlit vegetation: grass blades and leaves pass a tenth or so of the light through them,
+    // so looking toward a low Sun a field or a wood glows yellow-green (gold where the grass is
+    // dormant) - the glow of a golden-hour meadow seen into the light. A forward lobe round the
+    // light's direction, over the open and wooded ground (not rock, scree, snow, shore, built
+    // or bare ground), lit only by the direct beam: the shadow map and the cloud shadows take it
+    // where they fall. Ground is seen from above, so the lobe comes into view only with a low
+    // light; it is added as light of its own, not shaded by the ground's facing.
+    vec3 vegGlow = vec3(0.0);
+    if (u_glitter > 0.0)
+    {
+        float veg = (1.0 - alpine) * (1.0 - rocky) * (1.0 - snowy) * (1.0 - shoreline)
+                  * (1.0 - built) * (1.0 - bareC);
+        if (veg > 0.01)
+        {
+            vec3 viewRay = -normalize(materialInput.positionToEyeEC);
+            float lobe = pow(max(dot(viewRay, czm_lightDirectionEC), 0.0), 6.0);
+            vec3 leaf = mix(vec3(0.62, 0.70, 0.20), vec3(0.75, 0.58, 0.26), 1.0 - u_grassGreen);
+            float leaves = mix(0.8, 1.2, canopy) * mix(0.5, 1.0, u_leafOn * canopy + (1.0 - canopy));
+            vegGlow = czm_lightColor * u_glitter * leaf * veg * leaves * lobe * 0.35;
+        }
+    }
     vec3 snowGlint = vec3(0.0);
     if (u_glitter > 0.0 && snowy > 0.05)
     {
@@ -783,7 +804,10 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
             + lmUnlit(wetSky * wetR + wetGlare, materialInput.normalEC, materialInput.positionToEyeEC.z)
             / max(alpha, 0.05);
     if (snowGlint.r + snowGlint.g + snowGlint.b > 0.0)
-        material.diffuse += lmUnlit(snowGlint, materialInput.normalEC, materialInput.positionToEyeEC.z)
+        material.diffuse += lmUnlit(snowGlint * cloudK, materialInput.normalEC, materialInput.positionToEyeEC.z)
+            / max(alpha, 0.05);
+    if (vegGlow.r + vegGlow.g + vegGlow.b > 0.0)
+        material.diffuse += lmUnlit(vegGlow * cloudK, materialInput.normalEC, materialInput.positionToEyeEC.z)
             / max(alpha, 0.05);
 #ifdef HAS_WATER_MASK
     // Water, from the terrain's own mask - which arrives with coarse tiles and is upsampled for

@@ -281,10 +281,16 @@ describe('lightingFromScene', () => {
     expect(lightingFromScene(scene(12, 'clear')).horizonSky.away[2]).toBeGreaterThan(0.8);
   });
 
-  it('splits the globe light: relief under a clear Sun, little under overcast or in twilight, level ground unchanged', () => {
+  it('splits the globe light: relief under a clear Sun, little under overcast or in twilight, level ground as Cesium has it but lifted under a low Sun', () => {
     const level = (g: { lambert: number; ambient: number }, el: number) =>
       g.lambert * Math.max(0, Math.sin((el * Math.PI) / 180)) + g.ambient;
-    const cesium = (el: number) => 0.9 * Math.max(0, Math.sin((el * Math.PI) / 180)) + 0.3;
+    // Cesium's level ground, lifted by up to 35 % as the Sun nears the horizon (gone by 25 deg).
+    const sm = (a: number, b: number, x: number) => {
+      const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+      return t * t * (3 - 2 * t);
+    };
+    const cesium = (el: number) =>
+      (0.9 * Math.max(0, Math.sin((el * Math.PI) / 180)) + 0.3) * (1 + 0.35 * (1 - sm(4, 25, el)));
     for (const [el, d] of [
       [60, 0],
       [60, 1],
@@ -310,7 +316,9 @@ describe('lightingFromScene', () => {
     expect(globeLightSplit(-0.6, -9, 0).ambient).toBeGreaterThan(0.3);
     expect(globeLightSplit(-0.6, -9, 0).ambient).toBeLessThan(1);
     // By day there is no lift: the ambient share only takes up what the relief gives away.
-    expect(globeLightSplit(20, 20, 0.5).skyLift).toBe(1);
+    expect(globeLightSplit(30, 30, 0.5).skyLift).toBe(1);
+    // Under a low Sun level ground comes up, through the sky's share (buildings too).
+    expect(globeLightSplit(4, 4, 0).skyLift).toBeGreaterThan(1.3);
     // A clear Sun with its disc up keeps the whole beam's relief (a raking sunrise).
     expect(globeLightSplit(1, 1, 0).lambert).toBe(0.9);
     // The scene carries it.

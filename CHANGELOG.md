@@ -4,6 +4,17 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Golden-hour ground at a photograph's exposure**: level ground at Cesium's light falls 1.4
+  stops from noon to a Sun 4° up while the sky it draws falls less, so a golden-hour field came
+  out 2.9 stops under the sky where a noon one sits 2.1 — near black in the foreground. The sky's
+  share now lifts level ground by up to 35 % as the Sun nears the horizon (gone by 25°), back to
+  about the noon ratio, through `skyLift` so buildings and trees come up with it; the relief is
+  left as it was.
+- **Backlit grass and leaves**: looking toward a low Sun, open and wooded ground glows
+  yellow-green (gold where the grass is dormant) with the light the blades and leaves let
+  through — a forward lobe round the light's direction, lit only by the direct beam, so the
+  terrain's and the clouds' shadows still take it. The smoke harness adds `synth-backlit` (the
+  synthetic summit's slopes into the 18:36 Sun).
 - **Cloud shadows under the clouds**: the patches of shade on the ground were their own pattern,
   unrelated to the clouds in the sky, and darkened only the painted layer — so past a kilometre,
   where the paint gives way to the imagery, they had all but vanished. Each point now looks up

@@ -175,7 +175,13 @@ out three times brighter than level ground lit by the same sky. The split now fo
 (`globeLightSplit`): the directional share falls with the sky's diffuse fraction (a quarter of it
 left under a full overcast) and as the Sun's beam goes, to a sixth of a clear day's in twilight;
 while the beam is there the ambient share takes up exactly what level ground loses, so level
-ground is as bright as before (the exposure was set against it) and only the relief changes.
+ground is as bright as before (the exposure was set against it) and only the relief changes —
+from 25° of Sun up. Below that the sky's share lifts level ground by up to 35 % as the Sun nears
+the horizon: Cesium's level ground falls 1.4 stops from noon to a Sun 4° up while the sky it draws
+falls less, and on the harness's synthetic plain a golden-hour field sat 2.9 stops under the sky
+where the noon one sits 2.1 (in a photograph, exposed for the scene, the two keep their ratio);
+lifted, it sits at about the noon ratio again. Through `skyLift`, so buildings and trees come up
+with the ground; the relief is left as it was.
 Once the beam has gone every bit of the light is sky light, and level ground takes the whole of it
 rather than a day's 0.3 share: on the smoke harness's synthetic plain at Sun −4° the ground sat
 5.0 stops under the sky, where sky-lit ground of albedo 0.2 sits about 2.3 under it (the overcast
@@ -345,7 +351,12 @@ pixel's shorter side with 0.6 % of them lit, re-dealt as the view turns by a few
 once a pixel covers more than a few tens of centimetres of snow, where the eye sees the mean the
 snow's albedo already carries, and looking toward a low Sun the snow takes a broad, soft forward
 glare (a rough Cox–Munk lobe, mean square slope 0.3). **Caveat:** a statistical texture, not the
-grains; the harness shows it with the snowline brought down (`synth-snow-*`). And a strip of
+grains; the harness shows it with the snowline brought down (`synth-snow-*`). Open and wooded ground
+seen toward a low Sun glows with the light its blades and leaves let through: a forward lobe
+(the sixth power of the cosine between the view and the light), yellow-green — gold for dormant
+grass, a little stronger under leafed canopy — lit only by the direct beam, so the terrain's and
+the clouds' shadows take it; rock, scree, snow, shore, built and bare ground do not glow
+(`synth-backlit`). And a strip of
 shore where flat ground meets sea level (`ground-texture.ts`, tested). The inputs are the
 terrain's own height, slope and aspect and a noise field anchored to the fragment's world
 position, so patches stay put as the camera moves. One regional cue comes from the bundled

@@ -207,7 +207,18 @@ export function globeLightSplit(
   // back at a day's share (as it was), and a moonlit one switches to the Moon's split from there
   // with no jump.
   const twilight = (1 - direct) * smooth(-12, -6, sunElevationDeg);
-  const ambient = Math.min(1, dayAmbient + (1 - dayAmbient) * twilight);
+  // A low Sun: the exposure follows the light. Level ground at Cesium's 0.3 + 0.9 sin(h) falls
+  // 1.4 stops from noon to a Sun 4 deg up, while the sky Cesium draws over it falls less, so
+  // against that sky a golden-hour field came out 0.7 stop darker than a noon one (measured in
+  // the harness: 2.8 stops under the sky, 2.1 at noon) - where in a photograph, exposed for the
+  // scene, the two keep their ratio. The sky's share lifts level ground by up to 35 % as the
+  // Sun nears the horizon, gone by 25 deg (with the light's colour clipped at the renderer's
+  // range, that came out at the noon ratio again: 2.2 stops under the sky; 60 % overshot to
+  // 1.7); through `skyLift`, so buildings and trees come up with the ground, and the relief -
+  // the beam's share - is left as it was.
+  const lowSunLift = 0.35 * (1 - smooth(4, 25, lightElevationDeg)) * direct;
+  const dayLit = dayAmbient + lowSunLift * (0.3 + 0.9 * sinEl);
+  const ambient = Math.min(1, dayLit + (1 - dayLit) * twilight);
   const r3 = (v: number) => Math.round(v * 1000) / 1000;
   return { lambert: r3(lambert), ambient: r3(ambient), skyLift: r3(ambient / dayAmbient) };
 }
