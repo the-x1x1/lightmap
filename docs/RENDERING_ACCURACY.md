@@ -540,6 +540,17 @@ city sky, 60 times, is full strength). A cloud deck carries 2.5 times as much, l
 **Caveat:** the estimate's own (Natural Earth's larger towns only, 2002–03 data); the dome's
 shape and colour are a pattern, not a radiative model.
 
+### Cloud decks in the sky
+
+The grade's cloud decks (low, mid and cirrus) are layers at 1.5, 4 and 9 km above the place's
+ground, each read where the view's ray meets it, in kilometres east and north of the eye (the
+local east and north at the camera): they keep their place in the sky as the camera turns, take
+the perspective of a real layer — large overhead, crowding to the horizon — and within about 8°
+of the horizon (fully by 2°) fade to the deck's mean, as foreshortened cloud does. A deck at or
+below the camera is not drawn overhead. **Caveat:** flat layers of procedural noise, not volumes;
+heights are typical for each band, not the forecast's; the wind drifts them east-north-east
+whatever the wind.
+
 ### Sunbeams
 
 A low Sun — from just below the horizon to about 25° up, its beam getting through, more so in

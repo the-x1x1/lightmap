@@ -162,6 +162,26 @@
           await new Promise((r) => {
             window.__takeShot = r;
           });
+          // The cloud decks hold still in the sky as the camera turns: the same broken sky, the
+          // camera turned 20 deg right between the two shots (the clouds should move left by as
+          // much, not stay where they were on the screen).
+          for (const [name, heading] of [
+            ['deck-pan-a', 20],
+            ['deck-pan-b', 40],
+          ]) {
+            controller.apply(
+              scene(14, 'partly-cloudy', {
+                ...defaultCamera(kailua.point, heading),
+                mode: 'viewpoint',
+                pitchDeg: 25,
+              }),
+            );
+            await wait(2000);
+            window.__smoke.shot = name;
+            await new Promise((r) => {
+              window.__takeShot = r;
+            });
+          }
           // A rainbow: a shower opposite the late-afternoon Sun (about 20 deg up in the west),
           // looking east and up, the rainbow uniform turned on as a forecast shower would.
           const bowScene = scene(17.5, 'partly-cloudy', {

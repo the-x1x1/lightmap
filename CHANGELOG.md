@@ -4,6 +4,15 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Clouds stay in the sky as the camera turns**: the grade's three cloud decks were painted in
+  screen coordinates, so they slid with every pan and tilt and looked the same whichever way the
+  camera faced. Each deck is now a layer at its height (low 1.5 km, mid 4 km, cirrus 9 km over
+  the place's ground), read where the view's ray meets it in a frame fixed to the ground (the
+  local east and north at the camera): clouds hold their place as the view turns, are large
+  overhead and crowd into thin bands toward the horizon (read as the deck's mean within about
+  8° of it, where the layer is too foreshortened to resolve), and a deck at or below the camera
+  is not drawn overhead. The smoke harness adds `deck-pan-a`/`-b` (the same sky with the camera
+  turned 20°: the clouds move 182 px across, as the turn does at that pitch).
 - **The Sun through cirrus**: a cirrus veil painted over the Sun at its full strength, so under a
   sheet the brightest thing in the sky was a dull grey. A cirrus sheet passes most of the beam
   (55–85 %): the veil now thins over the Sun's disc, the disc is drawn white-hot as the veil takes

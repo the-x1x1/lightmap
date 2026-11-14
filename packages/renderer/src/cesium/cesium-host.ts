@@ -257,6 +257,7 @@ export class CesiumSceneHost implements SceneHost {
   /** The towns' glow for the night grade (`setTownGlow`). */
   private townGlow: { strength: number; allRound: number; dirWC: Cesium.Cartesian3 } | null = null;
   private readonly townGlowDirScratch: Cesium.Cartesian3;
+  private readonly eyeEastScratch: Cesium.Cartesian3;
   /** The street lamps along the mapped roads near the place, lit from the dusk. */
   private streetLamps: Cesium.BillboardCollection | null = null;
   private streetLampsShownAt = -1;
@@ -438,6 +439,7 @@ export class CesiumSceneHost implements SceneHost {
     this.geoidUrl = options.geoidUrl?.replace(/\/$/, '');
     this.eyeUpScratch = new C.Cartesian3();
     this.townGlowDirScratch = new C.Cartesian3();
+    this.eyeEastScratch = new C.Cartesian3();
     this.enuScratch = newGroundFrame(C);
     if (options.ionToken) C.Ion.defaultAccessToken = options.ionToken;
 
@@ -614,6 +616,18 @@ export class CesiumSceneHost implements SceneHost {
           C.Ellipsoid.WGS84.geodeticSurfaceNormal(cam.positionWC, this.eyeUpScratch) ??
           C.Cartesian3.clone(C.Cartesian3.UNIT_Z, this.eyeUpScratch);
         return C.Matrix4.multiplyByPointAsVector(cam.viewMatrix, up, this.eyeUpScratch);
+      },
+      // The local east at the camera (Z x up), for the cloud decks' ground-fixed frame.
+      u_eyeEastEC: () => {
+        const cam = scene.camera;
+        const up =
+          C.Ellipsoid.WGS84.geodeticSurfaceNormal(cam.positionWC, this.eyeEastScratch) ??
+          C.Cartesian3.clone(C.Cartesian3.UNIT_Z, this.eyeEastScratch);
+        const east = C.Cartesian3.cross(C.Cartesian3.UNIT_Z, up, this.eyeEastScratch);
+        if (C.Cartesian3.magnitudeSquared(east) < 1e-12)
+          C.Cartesian3.clone(C.Cartesian3.UNIT_X, east);
+        C.Cartesian3.normalize(east, east);
+        return C.Matrix4.multiplyByPointAsVector(cam.viewMatrix, east, this.eyeEastScratch);
       },
       u_eyeHeightM: () => scene.camera.positionCartographic.height,
     };
