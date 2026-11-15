@@ -516,7 +516,20 @@ void main() {
     float layer = abs(h0 - h1) < 1.0 ? rho0
         : 1200.0 * (exp(-h1 / 1200.0) - rho0) / (h0 - h1);
     layer = min(layer, 2.5);
-    float dist = 1.0 - exp(-3.0 * distM * layer / visibilityM);
+    // The air's own molecules scatter too, and by colour: Rayleigh's coefficients at sea level,
+    // 5.8 / 13.5 / 33.1 per 1000 km for red, green and blue, in an 8 km scale-height layer. The
+    // visibility is measured in green, so green's share of it is the molecules' and the rest
+    // the haze's (grey); red then fades into the air more slowly than the visibility says and
+    // blue faster, so a ridge 10-40 km off on a clear day goes blue before it goes pale - the
+    // blue of far hills - while a hazy day's is the haze's grey as before.
+    vec3 rayleigh = vec3(5.8e-6, 13.5e-6, 33.1e-6);
+    float rho0R = exp(-h0 / 8000.0);
+    float layerR = abs(h0 - h1) < 1.0 ? rho0R
+        : 8000.0 * (exp(-h1 / 8000.0) - rho0R) / (h0 - h1);
+    layerR = min(layerR, 1.15);
+    float mieBeta = max(3.0 / visibilityM - rayleigh.g, 0.0);
+    vec3 distRGB = 1.0 - exp(-distM * (mieBeta * layer + rayleigh * layerR));
+    float dist = distRGB.g;
     // Distant ground fades toward the sky at the horizon behind it: the sky gradient's own
     // horizon colour (cloud greys it, night darkens it, haze pales it), the glow's colour on
     // the Sun's side at a low Sun and the plain horizon away from it, by the ray's bearing.
@@ -532,7 +545,7 @@ void main() {
     // black at night (its faint glow cut to 6 %), so the night air is near black too: at 0.05
     // to 0.1 the far sea stood as a lit navy band under a black sky.
     hazeCol = mix(hazeCol, vec3(0.012, 0.016, 0.03), u_nightFactor);
-    color = mix(color, hazeCol, clamp(dist * 0.85, 0.0, 0.85));
+    color = mix(color, hazeCol, clamp(distRGB * 0.85, 0.0, 0.85));
     // Valley mist: on a calm, near-saturated morning the air cooled on the ground overnight lies
     // in the low ground as a shallow white layer - full below the low ground about the place
     // (u_mistFloorM: the lowest of the terrain's samples a few km round), thinning above it with

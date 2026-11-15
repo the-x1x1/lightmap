@@ -4,6 +4,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Blue distant hills**: the aerial perspective now fades each colour at its own rate, the air's
+  molecules scattering blue about six times as strongly as red, so on a clear day ridges 10–40 km
+  off turn blue before they turn pale; a hazy day's distance stays grey.
 - **Valley mist**: on a calm, near-saturated morning (from the forecast's humidity, wind, low
   cloud and rain) a shallow white layer lies in the low ground about the place, thinning as the
   Sun climbs from 5° to 15°; from a viewpoint above it the plain and valleys sink into white

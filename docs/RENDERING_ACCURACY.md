@@ -195,7 +195,12 @@ alone would make it; looking down from the map, the haze is thin until near the 
 2.5 times the place's own density, for gorges far below it). **Caveat:** the layer follows the
 place's ground, not the terrain under each ray — a high plateau seen from a low coast hazes as
 air at the plateau's height, and a pin dropped on a summit takes the forecast's haze at the summit
-(the valley below up to 2.5 times it). The light direction and terrain shading are untouched by either. Verified in
+(the valley below up to 2.5 times it). The fade goes by colour: the air's molecules scatter
+by Rayleigh's coefficients (5.8 / 13.5 / 33.1 × 10⁻⁶ m⁻¹ for red, green, blue, in an 8 km
+layer), the visibility (taken as green's) minus green's molecular share is grey haze, so red
+fades into the air more slowly than the visibility says and blue faster: on a clear day hills
+10–40 km off go blue before they go pale, and on a hazy one the haze's grey dominates as before.
+The light direction and terrain shading are untouched by either. Verified in
 `tools/renderer-smoke` (contact sheet `docs/media/renderer-smoke-2026-09-24c.png`).
 
 **Terrain shading under a diffuse sky.** Cesium shades terrain as the light times
