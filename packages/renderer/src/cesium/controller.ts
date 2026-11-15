@@ -33,7 +33,7 @@ import { lightingFromScene, type LightingParameters } from '../lighting.ts';
 import { enuTowardSun, enuToEcef } from '../sun-vector.ts';
 import { discTint, moonDiscOpacity, moonDiscTint, moonGlowStrength } from '../moon-disc.ts';
 import { planetPointInSky } from '../planet-points.ts';
-import { seaProbePoints, seaSurfaceFromSamples } from '../geoid.ts';
+import { lowGroundFromSamples, seaProbePoints, seaSurfaceFromSamples } from '../geoid.ts';
 import type {
   HostCamera,
   HostGlobeShading,
@@ -99,6 +99,8 @@ export class SceneController {
   private groundHeightSampled = false;
   private lastDayKey: string | null = null;
   private groundHeightM = 0;
+  /** The low ground about the place (ellipsoid metres), where a valley mist lies. */
+  private lowGroundM = 0;
   /**
    * Where the Viewpoint's eye stands when the place is on a building: its roof (a pin dropped by
    * a geocoder or a click lands on footprints all the time, and an eye inside a building sees a
@@ -229,6 +231,7 @@ export class SceneController {
       u_precipitation: lighting.grade.precipitation,
       u_rainbow: lighting.grade.rainbow,
       u_rays: lighting.grade.rays,
+      u_mist: lighting.grade.mist,
       u_windToward: lighting.grade.windToward,
       u_windMps: lighting.grade.windMps,
       u_sunENU: (() => {
@@ -252,6 +255,7 @@ export class SceneController {
       u_hazeAway: lighting.horizonSky.away,
       u_hazeToward: lighting.horizonSky.toward,
       u_hazeBaseM: Math.round(this.groundHeightM),
+      u_mistFloorM: Math.min(this.lowGroundM, Math.round(this.groundHeightM)),
     };
     this.host.setGrade(uniforms);
     this.host.setSunGlare?.({
@@ -579,16 +583,15 @@ export class SceneController {
     // With the geoid, the sea as the terrain itself has it nearby (the coast rule works within
     // a metre or so of it, finer than the geoid's own accuracy).
     let seaLevel = measured ?? 0;
-    if (geoid !== null) {
-      const probe = await this.host
-        .sampleGroundHeights(
-          seaProbePoints(scene.location.point.latitude, scene.location.point.longitude),
-          13,
-        )
-        .catch(() => null);
-      if (this.groundHeightKey !== key || this.host.isDestroyed()) return;
-      seaLevel = probe ? seaSurfaceFromSamples(geoid, probe) : geoid;
-    }
+    // The same rings of samples give the low ground about the place, where a valley mist lies.
+    const probe = await this.host
+      .sampleGroundHeights(
+        seaProbePoints(scene.location.point.latitude, scene.location.point.longitude),
+        13,
+      )
+      .catch(() => null);
+    if (this.groundHeightKey !== key || this.host.isDestroyed()) return;
+    if (geoid !== null) seaLevel = probe ? seaSurfaceFromSamples(geoid, probe) : geoid;
     // Rounded to decimetres: the coast rule works within a metre or two of sea level.
     const seaLevelRounded = Math.round(Math.max(-120, Math.min(120, seaLevel)) * 10) / 10;
     const known = geoid !== null || measured !== null;
@@ -597,7 +600,10 @@ export class SceneController {
       this.seaLevelM = seaLevelRounded;
       this.seaLevelKnown = known;
     }
-    const groundChanged = next !== this.groundHeightM;
+    const lowGround = Math.round(lowGroundFromSamples(next, known ? seaLevel : null, probe ?? []));
+    const lowChanged = lowGround !== this.lowGroundM;
+    this.lowGroundM = lowGround;
+    const groundChanged = next !== this.groundHeightM || lowChanged;
     this.groundHeightM = next;
     this.groundHeightSampled = h !== null;
     // The camera, the overlay and the ground texture's snow all read the height: one apply.

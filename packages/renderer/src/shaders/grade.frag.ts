@@ -41,6 +41,8 @@ uniform float u_nightFactor;
 uniform float u_precipitation;
 uniform float u_rainbow;         // a rainbow's strength, 0..1 (showers in sunlight)
 uniform float u_rays;            // sunbeams' strength, 0..1 (a low Sun through hazy air)
+uniform float u_mist;            // valley mist's strength, 0..1 (calm, near-saturated early air)
+uniform float u_mistFloorM;      // the low ground about the place, where the mist lies (ellipsoid m)
 uniform float u_horizonHaze;    // aerial perspective toward the horizon (scenario haze + low sun)
 uniform float u_sunElevation;   // degrees, geometric
 uniform float u_time;
@@ -531,6 +533,25 @@ void main() {
     // to 0.1 the far sea stood as a lit navy band under a black sky.
     hazeCol = mix(hazeCol, vec3(0.012, 0.016, 0.03), u_nightFactor);
     color = mix(color, hazeCol, clamp(dist * 0.85, 0.0, 0.85));
+    // Valley mist: on a calm, near-saturated morning the air cooled on the ground overnight lies
+    // in the low ground as a shallow white layer - full below the low ground about the place
+    // (u_mistFloorM: the lowest of the terrain's samples a few km round), thinning above it with
+    // a 70 m scale height, a 1.5 km visibility at its full - until the Sun burns it off. The density averaged along the ray as for the haze (the integral of
+    // min(1, exp(-h / H)) is h below the ground and H (1 - exp(-h / H)) above it), so from a
+    // summit the plain and valleys below are drowned in white while the ridges stand out of it,
+    // and from within it the distance goes white. Its light is the sky's at the horizon, paled
+    // toward white (droplets scatter all colours alike) and warmed a little on the Sun's side.
+    if (u_mist > 0.0) {
+      float f0 = max(u_eyeHeightM - u_mistFloorM, -1100.0);
+      float f1 = max(f0 - dh, -1100.0);
+      float m0 = f0 <= 0.0 ? f0 : 70.0 * (1.0 - exp(-f0 / 70.0));
+      float m1 = f1 <= 0.0 ? f1 : 70.0 * (1.0 - exp(-f1 / 70.0));
+      float mAvg = abs(f0 - f1) < 1.0 ? min(1.0, exp(-f0 / 70.0)) : (m0 - m1) / (f0 - f1);
+      float mist = 1.0 - exp(-3.0 * distM * clamp(mAvg, 0.0, 1.0) * u_mist / 1500.0);
+      vec3 mistCol = mix(vec3(dot(hazeCol, vec3(0.2126, 0.7152, 0.0722))), hazeCol, 0.6);
+      mistCol *= 1.05 + 0.15 * glowSide;
+      color = mix(color, mistCol, clamp(mist, 0.0, 0.92));
+    }
   }
 
   // Sunbeams: with a low Sun hidden behind a ridge, buildings or trees, the hazy air between is
@@ -648,6 +669,8 @@ export const GRADE_UNIFORM_NAMES = [
   'u_precipitation',
   'u_rainbow',
   'u_rays',
+  'u_mist',
+  'u_mistFloorM',
   'u_horizonHaze',
   'u_sunElevation',
   'u_time',

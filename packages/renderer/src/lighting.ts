@@ -100,6 +100,14 @@ export interface LightingParameters {
      */
     rays: number;
     /**
+     * Valley mist, 0..1: a shallow layer pooled on the low ground about the place (near-saturated
+     * air, 88-97 % humidity, or a fog in the forecast; a calm under 1.5-4.5 m/s, which would
+     * otherwise stir it away) from the night to its burning off as the Sun climbs past 5-15 deg,
+     * thinned under a low overcast (which stops the ground cooling) and in rain. Only from a
+     * forecast frame: a scenario says nothing of the air's moisture.
+     */
+    mist: number;
+    /**
      * Where the wind blows the cloud decks, a unit vector east and north (toward, not from: the
      * forecast's direction turned round), and its speed, m/s; with no forecast frame a trade
      * wind from the east-north-east at the scenario's typical speed.
@@ -147,6 +155,37 @@ export const SCENARIO_TYPICAL_WIND_MPS: Record<WeatherScenarioId, number> = {
   overcast: 6,
   storm: 13,
 };
+
+/** The WMO weather codes for fog and depositing rime fog. */
+const FOG_CODES = new Set([45, 48]);
+
+/**
+ * Valley mist's strength (`grade.mist`) from a forecast frame and the Sun's elevation, degrees:
+ * near-saturated or foggy air, a calm, the night and early morning (gone as the Sun passes
+ * 5-15 deg), less under a low overcast and in rain. 0 with no frame.
+ */
+export function mistFor(
+  frame: {
+    humidity: number | null;
+    visibility: number | null;
+    windSpeed: number | null;
+    weatherCode: number | null;
+    cloudCoverLow?: number | null;
+  } | null,
+  sunElevationDeg: number,
+  precipitation: number,
+): number {
+  if (!frame) return 0;
+  const foggy =
+    (frame.weatherCode !== null && FOG_CODES.has(frame.weatherCode)) ||
+    (frame.visibility !== null && frame.visibility < 1000);
+  const moist = foggy ? 1 : frame.humidity === null ? 0 : smooth(88, 97, frame.humidity);
+  const calm = 1 - smooth(1.5, 4.5, frame.windSpeed ?? 3);
+  const early = 1 - smooth(5, 15, sunElevationDeg);
+  const lowDeck = 1 - 0.6 * smooth(60, 95, frame.cloudCoverLow ?? 0);
+  const dry = 1 - smooth(0.05, 0.2, precipitation);
+  return clamp01(moist * calm * early * lowDeck * dry);
+}
 
 /**
  * Where a wind from `fromDeg` (degrees from north, as forecasts give it) blows toward, a unit
@@ -425,6 +464,7 @@ export function lightingFromScene(s: SceneState): LightingParameters {
         smooth(0.25, 0.55, p.sunTransmittance) *
         (1 - smooth(38, 42, el)) *
         smooth(0, 2, el),
+      mist: mistFor(atmosphere.frame ?? null, el, p.precipitation),
       windToward: windTowardFor(atmosphere.frame?.windDirection ?? null),
       windMps: wind ?? 5,
       rays:

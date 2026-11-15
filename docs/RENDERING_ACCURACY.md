@@ -90,6 +90,17 @@ under a white noon Sun, a strong one under an orange golden-hour Sun, nothing wh
 is near 1 (overcast) or outside the shadow. **Caveat:** the sky's colour is a clear day's, not
 the scenario's; under haze the shade is as blue as under a clear sky.
 
+**Valley mist.** On a calm, near-saturated morning the air cooled on the ground overnight lies in
+the low ground as a shallow white layer. Its strength (`grade.mist`, `mistFor` in `lighting.ts`)
+comes only from a forecast frame: humidity 88–97 % (or a fog code, or visibility under 1 km),
+wind under 1.5–4.5 m/s, gone as the Sun climbs past 5–15°, cut to 40 % under a low overcast and
+to nothing in rain. In the grade (`u_mist`) it is an exponential layer with a 70 m scale height
+above the low ground about the place (`u_mistFloorM`: the second lowest of the terrain samples on
+rings 1.5 and 5 km round, never under the sea nor over the place), full below it, 1.5 km
+visibility at full; the density is averaged along each ground pixel's ray as for the haze, so from
+a summit the plain drowns in white while the ridges stand out. **Caveat:** one flat floor for the
+whole view; a second valley lower or higher than the sampled rings fills to the same height.
+
 **Sky view on slopes.** Cesium gives every face the same share of sky light whatever its tilt,
 but a plane tilted by _t_ sees only (1 + cos _t_) / 2 of the sky: all of it when level, 85 % at
 45°, half on a cliff. The ground material (`ground.frag.ts`) scales the sky's share of each

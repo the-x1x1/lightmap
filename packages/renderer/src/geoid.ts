@@ -91,3 +91,21 @@ export function seaSurfaceFromSamples(
   if (near.length < 2) return geoidM;
   return geoidM + Math.max(-3, Math.min(3, near[1]!));
 }
+
+/**
+ * The low ground about a place, where a valley mist lies (ellipsoid heights, as the samples):
+ * the second lowest of the terrain's samples round it (one stray pit ignored), never under the
+ * sea's surface when that is known nor over the place's own ground. The place's ground with
+ * fewer than two samples.
+ */
+export function lowGroundFromSamples(
+  groundM: number,
+  seaLevelM: number | null,
+  samples: ReadonlyArray<number | null>,
+): number {
+  const hs = samples.filter((h): h is number => typeof h === 'number' && Number.isFinite(h));
+  if (hs.length < 2) return groundM;
+  hs.sort((a, b) => a - b);
+  const low = Math.max(hs[1]!, seaLevelM ?? -Infinity);
+  return Math.min(groundM, low);
+}

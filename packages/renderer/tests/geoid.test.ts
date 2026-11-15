@@ -1,6 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { geoidCellKey, geoidHeightM, seaProbePoints, seaSurfaceFromSamples } from '../src/geoid.ts';
+import {
+  geoidCellKey,
+  geoidHeightM,
+  lowGroundFromSamples,
+  seaProbePoints,
+  seaSurfaceFromSamples,
+} from '../src/geoid.ts';
 
 const cell = (key: string) => {
   const b = readFileSync(
@@ -68,5 +74,14 @@ describe('sea surface near a place', () => {
     // Inland: nothing near sea level, the geoid stands.
     expect(seaSurfaceFromSamples(15, [120, 300, null])).toBe(15);
     expect(seaSurfaceFromSamples(15, [15.8])).toBe(15);
+  });
+});
+
+describe('lowGroundFromSamples', () => {
+  it('the second lowest sample, between the sea and the place', () => {
+    expect(lowGroundFromSamples(817, 15, [600, 20, 5, 400, null, 30])).toBe(20);
+    expect(lowGroundFromSamples(817, 25, [600, 20, 5, 400])).toBe(25); // not under the sea
+    expect(lowGroundFromSamples(100, null, [600, 500, 400])).toBe(100); // not over the place
+    expect(lowGroundFromSamples(100, null, [null, 40])).toBe(100); // too few
   });
 });

@@ -83,6 +83,10 @@ export interface HostGradeUniforms {
   u_rainbow?: number;
   /** Sunbeams' strength (`LightingParameters.grade.rays`). */
   u_rays?: number;
+  /** Valley mist's strength (`LightingParameters.grade.mist`). */
+  u_mist?: number;
+  /** The low ground about the place, where the mist lies (ellipsoid metres; `u_hazeBaseM` when absent). */
+  u_mistFloorM?: number;
   /** Where the wind blows the cloud decks (east, north unit vector) and its speed, m/s. */
   u_windToward?: [number, number];
   u_windMps?: number;

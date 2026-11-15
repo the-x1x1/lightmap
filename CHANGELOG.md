@@ -4,6 +4,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Valley mist**: on a calm, near-saturated morning (from the forecast's humidity, wind, low
+  cloud and rain) a shallow white layer lies in the low ground about the place, thinning as the
+  Sun climbs from 5° to 15°; from a viewpoint above it the plain and valleys sink into white
+  while the ridges stand out.
 - **Slopes see less sky**: a tilted face sees only (1 + cos tilt) / 2 of the sky, so the sky's
   share of the ground's light is now scaled by that; under an overcast or at twilight steep
   slopes and cliffs come out darker than the level ground about them, while level ground and a

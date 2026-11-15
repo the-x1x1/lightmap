@@ -19,6 +19,7 @@ import {
   starFieldVisibility,
   visibilityFromHaze,
   windTowardFor,
+  mistFor,
 } from '../src/lighting.ts';
 import { azElFromEcefToward, type Vec3 } from '../src/sun-vector.ts';
 
@@ -80,6 +81,26 @@ describe('lightingFromScene', () => {
     // No rain; or rain with no Sun through it.
     expect(lightingFromScene(scene(17.5, 'clear')).grade.rainbow).toBe(0);
     expect(lightingFromScene(scene(17.5, 'storm')).grade.rainbow).toBe(0);
+  });
+
+  it('valley mist in calm near-saturated air before the Sun is up 15 deg, none without a forecast', () => {
+    const f = (o: Partial<Parameters<typeof mistFor>[0] & object> = {}) => ({
+      humidity: 97,
+      visibility: 20000,
+      windSpeed: 0.5,
+      weatherCode: 1,
+      cloudCoverLow: 0,
+      ...o,
+    });
+    expect(mistFor(f(), 2, 0)).toBeCloseTo(1, 6);
+    expect(mistFor(f(), 20, 0)).toBe(0); // burnt off
+    expect(mistFor(f({ windSpeed: 6 }), 2, 0)).toBe(0); // stirred away
+    expect(mistFor(f({ humidity: 70 }), 2, 0)).toBe(0); // dry air
+    expect(mistFor(f({ humidity: 70, weatherCode: 45 }), 2, 0)).toBeCloseTo(1, 6); // fog
+    expect(mistFor(f({ cloudCoverLow: 100 }), 2, 0)).toBeCloseTo(0.4, 6); // a low overcast
+    expect(mistFor(f(), 2, 0.5)).toBe(0); // rain
+    expect(mistFor(null, 2, 0)).toBe(0);
+    expect(lightingFromScene(scene(6, 'clear')).grade.mist).toBe(0);
   });
 
   it('the wind blows the decks where the forecast sends them, a trade wind without one', () => {
