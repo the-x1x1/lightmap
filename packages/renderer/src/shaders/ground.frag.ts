@@ -507,6 +507,14 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
             vec3 forest = lmSeasonCanopy(mix(vec3(0.13, 0.25, 0.10), vec3(0.27, 0.38, 0.17), crowns), crowns) * (0.9 + 0.2 * grain);
             float fieldTone = lmHash(floor(positionWC / 260.0) + 7.0);
             vec3 field = mix(vec3(0.50, 0.52, 0.28), vec3(0.72, 0.64, 0.40), fieldTone) * (0.9 + 0.2 * grain);
+            // The crops keep the season: while things grow, a patchwork of green fields and
+            // ripe gold ones; through the dormant season mostly bare, ploughed soil with a few
+            // fields of winter crop green - by field, so the patchwork changes field by field.
+            float fieldCrop = lmHash(floor(positionWC / 260.0) + 13.0);
+            vec3 growingField = mix(vec3(0.33, 0.45, 0.20), vec3(0.74, 0.64, 0.38), step(fieldCrop, 0.4));
+            vec3 dormantField = mix(vec3(0.44, 0.37, 0.28), vec3(0.30, 0.40, 0.20), step(fieldCrop, 0.25));
+            vec3 seasonField = mix(dormantField, growingField, u_grassGreen) * (0.9 + 0.2 * grain);
+            field = mix(field, seasonField, 0.7);
             vec3 town = vec3(0.50, 0.48, 0.45) * (0.9 + 0.15 * grain);
             vec3 sand = mix(vec3(0.60, 0.56, 0.48), vec3(0.76, 0.66, 0.46), u_aridity) * (0.86 + 0.28 * grain);
             ground = mix(ground, sand, open * bareC);

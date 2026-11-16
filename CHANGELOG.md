@@ -4,6 +4,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Fields keep the season**: cropland is a patchwork of green and ripe-gold fields while things
+  grow and mostly bare ploughed soil with a few winter-green fields in the dormant season.
 - **The hot spot**: with the Sun behind the viewer, grass and trees brighten round the shadow of
   the viewer's own head (the opposition effect in every aerial photo), glowing on dewy grass.
 - **Wet sand at the water's edge**: the strip of beach the waves run up is darker and glazed,
