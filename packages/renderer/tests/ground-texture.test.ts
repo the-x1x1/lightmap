@@ -215,6 +215,48 @@ describe('groundTextureFor', () => {
     expect(groundTextureFor(storm)!.wet).toBeLessThanOrEqual(1);
   });
 
+  it('the ground stays wet after the forecast’s rain has stopped', () => {
+    const frame = (iso: string, mm: number) => ({
+      timestamp: iso,
+      cloudCoverTotal: 10,
+      cloudCoverLow: 10,
+      cloudCoverMid: 0,
+      cloudCoverHigh: 0,
+      precipitationProbability: 0,
+      precipitationAmount: mm,
+      humidity: 70,
+      visibility: 30000,
+      windSpeed: 3,
+      windDirection: 60,
+      weatherCode: 1,
+    });
+    const after = buildSceneState({
+      location: place(21.4, -157.73, 'Pacific/Honolulu'),
+      utc: new Date('2026-02-09T22:00:00Z'),
+      now: new Date('2026-02-09T20:00:00Z'),
+      camera: defaultCamera({ latitude: 21.4, longitude: -157.73 }, 90),
+      environment: env,
+      scenario: 'clear',
+      forceScenario: false,
+      weather: {
+        capabilities: OPEN_METEO_CAPABILITIES,
+        frames: [
+          frame('2026-02-09T20:00:00Z', 3),
+          frame('2026-02-09T21:00:00Z', 0),
+          frame('2026-02-09T22:00:00Z', 0),
+          frame('2026-02-09T23:00:00Z', 0),
+        ],
+        providerFailed: false,
+      },
+      render: DEFAULT_RENDER_SETTINGS,
+      includeLunar: false,
+      realReference: false,
+    });
+    expect(after.atmosphere.mode).toBe('FORECAST');
+    expect(after.atmosphere.parameters.precipitation).toBeLessThan(0.05);
+    expect(groundTextureFor(after)!.wet).toBeGreaterThan(0.8);
+  });
+
   it('is off when the setting says so; the Minimal rung keeps the base surface', () => {
     expect(
       groundTextureFor(
@@ -342,10 +384,11 @@ describe('ground material source', () => {
     );
     // The sea's body colour: tropical blue between the tropics, grey-green beyond.
     expect(GROUND_MATERIAL_SOURCE).toContain('sea = mix(temperateSea, sea, tropicalSea);');
-    // A wet road glares toward a low Sun, as a rougher film.
+    // A wet road glares toward a low Sun, as a rougher film; a puddle is a still mirror.
     expect(GROUND_MATERIAL_SOURCE).toContain(
-      'wetGlare = czm_lightColor * lmCoxMunk(czm_lightDirectionEC, toEye, n, 0.08)',
+      'lmCoxMunk(czm_lightDirectionEC, toEye, n, 0.08) * film * (1.0 - pond)',
     );
+    expect(GROUND_MATERIAL_SOURCE).toContain('float puddleR = pond * (0.02 + 0.98 * grazing);');
     expect(GROUND_MATERIAL_SOURCE).toContain(
       'mix(step(0.93, u0), step(0.93, u1), fract(lv)) / 0.07',
     );

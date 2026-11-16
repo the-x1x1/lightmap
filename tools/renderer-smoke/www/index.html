@@ -1273,6 +1273,59 @@
             window.__takeShot = r;
           });
         }
+        // After the rain: the plain at 7 am, looking east toward the low Sun from 300 m off, the
+        // forecast's 3 mm of rain two hours gone and the sky clear now, against the same hour dry:
+        // the ground still wet, puddles mirroring the sky and the Sun's glint.
+        for (const [name, rainMm] of [
+          ['synth-after-dry', 0],
+          ['synth-after-rain', 3],
+        ]) {
+          const at = (hour, mm) => ({
+            timestamp: localSelectionToUtc(
+              { year: 2026, month: 5, day: 31 },
+              hour * 60,
+              beach.timeZone,
+            ).toISOString(),
+            cloudCoverTotal: 5,
+            cloudCoverLow: 5,
+            cloudCoverMid: 0,
+            cloudCoverHigh: 0,
+            precipitationProbability: 0,
+            precipitationAmount: mm,
+            humidity: 75,
+            visibility: 30000,
+            windSpeed: 3,
+            windDirection: 60,
+            weatherCode: 1,
+          });
+          controller.apply(
+            buildSceneState({
+              location: beach,
+              utc: localSelectionToUtc({ year: 2026, month: 5, day: 31 }, 7 * 60, beach.timeZone),
+              now: new Date('2026-05-31T15:00:00Z'),
+              camera: defaultCamera(beach.point, 90),
+              environment: { ...env, terrainAvailable: true, terrainProviderId: 'synthetic' },
+              scenario: 'clear',
+              forceScenario: false,
+              weather: {
+                capabilities: OPEN_METEO_CAPABILITIES,
+                frames: [at(5, rainMm), at(6, 0), at(7, 0), at(8, 0)],
+                providerFailed: false,
+              },
+              render: DEFAULT_RENDER_SETTINGS,
+              includeLunar: true,
+              realReference: false,
+            }),
+          );
+          controller.setOrbit({ headingDeg: 75, pitchDeg: -5, rangeM: 120 });
+          await wait(1500);
+          if (!(await settle())) log(name + ': not settled in 45 s');
+          await wait(500);
+          window.__smoke.shot = name;
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+        }
         await synthShot('synth-map-clear', 10, 'clear', null, overRidge);
         await synthShot('synth-map-overcast', 10, 'overcast', null, overRidge);
         // Broken cloud from above: the shadows the sky's decks cast, kilometres across.

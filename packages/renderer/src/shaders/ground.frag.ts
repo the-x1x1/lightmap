@@ -711,7 +711,26 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         float grazing = pow(1.0 - clamp(dot(n, toEye), 0.0, 1.0), 5.0);
         float level = 1.0 - smoothstep(0.02, 0.08, slope);
         float film = wetness * level * mix(0.35, 1.0, roadPaint);
-        wetR = film * (0.02 + 0.32 * grazing);
+        // Puddles: on level ground the water gathers in the hollows - patches a few metres
+        // across (two readings of the noise against repetition), more and larger the wetter it
+        // is, on streets and bare ground more than on turf, which drinks it. A puddle is a still
+        // mirror: water's own Fresnel reflectance (2 % looking down, all of it at grazing), the
+        // sky sharp in it and the Sun a small hot glint; the film round it as before. Where a
+        // pixel spans more than a few metres the patches give way to their share of the
+        // ground, so the far field keeps their mean rather than shimmering.
+        float pn = 0.6 * lmNoiseTex(g.xy, 320.0, gdx, gdy).g
+                 + 0.4 * lmNoiseTex(vec2(g.y, -g.x), 224.0, vec2(gdx.y, -gdx.x), vec2(gdy.y, -gdy.x)).a;
+        float pThresh = mix(0.70, 0.58, wetness);
+        float pMask = smoothstep(pThresh, pThresh + 0.03, pn);
+        float footprint = length(gdx) + length(gdy);
+        float pShare = 0.45 * (0.72 - pThresh) / 0.14;
+        float pond = wetness * level * mix(0.3, 1.0, max(roadPaint, dryness))
+                   * mix(pShare, pMask, 1.0 - smoothstep(1.5, 6.0, footprint));
+        float puddleR = pond * (0.02 + 0.98 * grazing);
+        // Seen from above, a puddle is mostly its own floor through the water: soaked, darker
+        // than the wet ground round it (a third), imagery and paint alike.
+        cloudK *= 1.0 - 0.35 * pond;
+        wetR = max(film * (0.02 + 0.32 * grazing), puddleR);
         vec3 lookH = -toEye - n * dot(-toEye, n);
         vec3 lightH = czm_lightDirectionEC - n * dot(czm_lightDirectionEC, n);
         float towardLight = dot(lookH, lightH) / max(length(lookH) * length(lightH), 1e-4);
@@ -720,8 +739,9 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         // Looking toward a low Sun a wet road glares: the light in the film, as in the sea but
         // rougher (a film over asphalt or turf, mean square slope 0.08 - a broad, soft glare).
         // In the light's own colour: no moonlight floor for a broad film (whole streets went white).
-        wetGlare = czm_lightColor * lmCoxMunk(czm_lightDirectionEC, toEye, n, 0.08)
-                 * u_glitter * film;
+        wetGlare = czm_lightColor * u_glitter
+                 * (lmCoxMunk(czm_lightDirectionEC, toEye, n, 0.08) * film * (1.0 - pond)
+                    + lmCoxMunk(czm_lightDirectionEC, toEye, n, 0.004) * pond);
     }
     // Snow in direct light sparkles: its ice grains are small mirrors, each throwing the Sun to
     // the eye or not, so sunlit snow close by is strewn with points of light that move as the

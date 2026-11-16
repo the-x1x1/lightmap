@@ -297,8 +297,18 @@ only — no swell or wave geometry; the water mask is the provider's, not a tide
 
 **Wet ground.** In rain the paint darkens and greys the ground, and level ground (under about
 3°) mirrors the same sky the water does as a film: up to a third at a grazing view on a mapped
-street, about a tenth on turf, none on slopes. **Caveat:** no puddles, no ripples from the
-rain, and the mirrored sky is the horizon's colour, not the clouds' shapes.
+street, about a tenth on turf, none on slopes. The ground stays wet after the rain: with a
+forecast, each hour's rain over the day before (`groundWetnessAt` in `packages/weather`) dries off
+with a 4 h e-folding time, a millimetre's worth wetting the ground to 63 %, and the wetness is the
+larger of that and the rain falling. On level ground the water stands in puddles a few metres
+across (two readings of the baked noise at 320 m and 224 m repeats), covering about 5 % of the
+ground just damp to about 45 % soaked, on streets and bare ground more than on turf: still
+mirrors at water's full Fresnel reflectance (2 % looking down to all of it at grazing) with a
+sharp Sun glint (mean square slope 0.004), their floors a third darker than the wet ground round
+them, imagery and paint alike; where a pixel spans more than a few metres they give way to their
+mean share. **Caveat:** puddles fall by noise, not in the terrain's real hollows; no ripples from
+the rain; drying ignores sun and wind; and the mirrored sky is the horizon's colour, not the
+clouds' shapes.
 
 **The sky in the water.** The painted water mirrors the sky (`shaders/ground.frag.ts`, the water
 branch): the share reflected follows Fresnel's rule for water — 2 % looking straight down, rising

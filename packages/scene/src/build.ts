@@ -15,6 +15,7 @@ import {
 import {
   colorTemperatureKelvin,
   decideWeatherMode,
+  groundWetnessAt,
   interpolateFrame,
   parametersForForecast,
   scenarioById,
@@ -298,6 +299,7 @@ export function deriveAtmosphere(
       mode: decision.mode,
       scenario,
       frame,
+      groundWetness: groundWetnessAt(inputs.weather.frames, inputs.utc),
       parameters: parametersForForecast(frame),
       colorTemperatureK: kelvin,
       warmth,

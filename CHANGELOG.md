@@ -4,6 +4,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **After the rain**: with a forecast the ground stays wet for hours after the rain stops (each
+  hour's rain drying off over about 4 h), and level ground holds puddles a few metres across -
+  darker floors, still mirrors of the sky at a grazing view and a sharp glint of a low Sun - more
+  of them the wetter it is, on streets and bare ground more than on turf.
 - **Blue distant hills**: the aerial perspective now fades each colour at its own rate, the air's
   molecules scattering blue about six times as strongly as red, so on a clear day ridges 10–40 km
   off turn blue before they turn pale; a hazy day's distance stays grey.

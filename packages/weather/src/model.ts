@@ -102,6 +102,31 @@ export interface WeatherProvider {
   getClimatology?(lat: number, lng: number, month: number): Promise<unknown>;
 }
 
+/**
+ * How wet the ground still is at `at`, 0..1, from the rain of the day before it: each hour's
+ * amount (mm, in the hour ending at its frame's time; the hour under way counts as far as it
+ * has gone) dries off with a 4 h e-folding time, and a millimetre's worth wets the ground to
+ * 63 %. So a shower an hour ago leaves the streets running, a wet night leaves puddles into the
+ * morning, and yesterday's rain is gone. 0 with no rain on record.
+ */
+export function groundWetnessAt(frames: readonly WeatherFrame[], at: Date): number {
+  const t = at.getTime();
+  const HOUR = 3_600_000;
+  let water = 0;
+  for (const f of frames) {
+    const ft = Date.parse(f.timestamp);
+    const mm = f.precipitationAmount;
+    if (!mm || mm <= 0 || !Number.isFinite(ft)) continue;
+    if (ft > t) {
+      if (ft - t < HOUR) water += mm * (1 - (ft - t) / HOUR);
+      continue;
+    }
+    const ageH = (t - ft) / HOUR;
+    if (ageH < 24) water += mm * Math.exp(-ageH / 4);
+  }
+  return water > 0 ? 1 - Math.exp(-water / 1) : 0;
+}
+
 /** Linear interpolation between the two frames bracketing `at`; null fields interpolate as null. */
 export function interpolateFrame(frames: readonly WeatherFrame[], at: Date): WeatherFrame | null {
   if (frames.length === 0) return null;

@@ -77,6 +77,11 @@ export interface AtmosphereState {
   scenario: WeatherScenarioId;
   /** The frame in force when mode is a forecast; null when scenario-driven. */
   frame: WeatherFrame | null;
+  /**
+   * How wet the ground still is from the forecast's recent rain, 0..1 (`groundWetnessAt`);
+   * absent when scenario-driven.
+   */
+  groundWetness?: number;
   parameters: AtmosphereParameters;
   /** Direct sunlight colour temperature, Kelvin, from solar elevation. */
   colorTemperatureK: number;

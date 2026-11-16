@@ -29,7 +29,7 @@ export interface GroundTextureParams {
   shore: 0 | 1;
   /** How strongly broken cloud dapples the ground, 0–1 (`cloudShadowStrength`). */
   cloudShadow: number;
-  /** How wet the ground is, 0–1, from the scenario's precipitation. */
+  /** How wet the ground is, 0–1: the precipitation falling, or the forecast's recent rain. */
   wet: number;
   /** What the quality rung affords: 0 the base surface, 1 with cloud shadows, 2 with relief and the near grain. */
   detail: 0 | 1 | 2;
@@ -243,8 +243,20 @@ export function groundTextureFor(
     shore: context.seaLevelKnown ? 1 : 0,
     // Ultra/High (soft shadows) carry everything; Balanced drops the detail tiles, mottling and
     // relief; Battery and Minimal keep the base surface only.
+    // Rain falling now, or the forecast's recent rain still on the ground.
     wet:
-      Math.round(Math.max(0, Math.min(1, scene.atmosphere.parameters.precipitation)) * 100) / 100,
+      Math.round(
+        Math.max(
+          0,
+          Math.min(
+            1,
+            Math.max(
+              scene.atmosphere.parameters.precipitation,
+              scene.atmosphere.groundWetness ?? 0,
+            ),
+          ),
+        ) * 100,
+      ) / 100,
     // The Minimal rung (no shadows) keeps the base surface: without the paint the coarse
     // basemap's sea and lakes show on the land, and the look would jump with the rung.
     detail: !scene.render.shadows
