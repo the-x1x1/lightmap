@@ -466,7 +466,10 @@ built-up ground a warm grey with a block-sized grain, bare ground sand and rock 
 region's aridity, permanent snow and ice snow at any height; grass and wetland leave the
 procedural open ground. Under seasonal snow a wood is not white: the trees stand dark and
 grey-green through it, whitest in the gaps between crowns (20–55 % snow over the forest
-colour at 80 %), with its sparkle and wetness cut by two thirds (`ground-texture-snow`).
+colour at 80 %), with its sparkle and wetness cut by two thirds (`ground-texture-snow`). A
+town under snow keeps its grid: roofs and parks go white, the trees in the lots stay dark, and
+the streets (the town pattern's and OpenStreetMap's mapped roads) stay a ploughed, slushy grey
+(0.36–0.38 with a quarter snow); mapped paths are mostly buried.
 Steep rock and the seasonal snow otherwise win, water stays with the
 water mask, and a texel the palette did not know (no tile, a wrong palette, beyond the
 map's reach) changes nothing. The read is re-done when the pin moves more than 0.05°; the

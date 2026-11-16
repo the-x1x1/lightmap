@@ -595,7 +595,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         roadsKnown *= step(0.5, rv.a);
         osmWater = smoothstep(0.35, 0.65, rv.b) * roadsKnown;
     }
-    float townW = known * built * (1.0 - snowy) * (1.0 - rocky) * smoothstep(4.0, 12.0, pxPerM * 48.0);
+    float townW = known * built * (1.0 - rocky) * smoothstep(4.0, 12.0, pxPerM * 48.0);
     if (townW > 0.0)
     {
         vec2 bq = enu.xy / 48.0 + u_townFrac.xy;
@@ -628,7 +628,16 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         vec3 green = mix(vec3(0.24, 0.34, 0.18), dormant * 0.85, dormancy) * (0.85 + n16);
         block = mix(block, green, park);
         vec3 city = mix(block, vec3(0.31, 0.31, 0.32), street);
+        // A town under snow: the roofs and parks go white, the trees in the lots stand dark
+        // through it, and the cleared streets stay a slushy grey - the grid still reads, as a
+        // snowbound town does from above, rather than vanishing into an even white.
+        vec3 roofSnow = mix(snow * 0.95, roof * 0.8, step(kind, 0.16) * 0.6);
+        vec3 blockSnow = mix(snow * 0.9, roofSnow, lotW);
+        blockSnow = mix(blockSnow, snow * 0.97, park);
+        vec3 citySnow = mix(blockSnow, mix(vec3(0.36, 0.36, 0.38), snow, 0.25), street);
+        city = mix(city, citySnow, snowy);
         ground = mix(ground, city, townW * 0.8 * (1.0 - roadsKnown));
+        snowy *= 1.0 - 0.4 * townW;   // less of a snowfield to glint
     }
 
     // The real streets near the viewer, where OpenStreetMap maps them: asphalt for roads (R),
@@ -638,8 +647,10 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     {
         vec3 asphalt = vec3(0.21, 0.21, 0.22) * (0.88 + 0.24 * grain);
         vec3 paving = vec3(0.55, 0.52, 0.48) * (0.88 + 0.24 * grain);
-        float onRoad = rv.r * (1.0 - snowy * 0.85);
+        // Under snow a road is ploughed to a slushy grey and a path mostly buried.
+        float onRoad = rv.r;
         float onPath = rv.g * (1.0 - snowy * 0.85) * (1.0 - onRoad);
+        asphalt = mix(asphalt, mix(vec3(0.36, 0.36, 0.38), snow, 0.25), snowy);
         ground = mix(ground, paving, onPath * roadsKnown);
         ground = mix(ground, asphalt, onRoad * roadsKnown);
         roadPaint = max(onRoad, onPath) * roadsKnown;
