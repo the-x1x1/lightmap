@@ -556,6 +556,15 @@ toward the horizon instead of reading as one flat grey (`storm-viewpoint`: 133 o
 the horizon, was 114 throughout). **Caveat:** the CIE profile is the uniform overcast's; a storm's
 rain shafts and a brighter band under the deck's edge are not modelled.
 
+**Silver linings.** Broken low cloud seen against the Sun is lit from behind: within about 15° of
+the Sun (an e-folding of 0.26 rad from it) a cloud's core is up to 45 % darker - the light has to
+get through it - while its thin margins (where the cover's edge runs, 4c(1−c) of the cloud's
+coverage c) scatter it forward and glow within about 8° (0.14 rad), white by day and gold at a
+low Sun. Only for broken
+cloud (gone as the low cover closes from 60 % to 95 %) and in daylight (`partly-sunward`).
+**Caveat:** a 2-D sheet's notion of a margin; real cumulus are lit through their tops and sides
+too, and a cloud's own shadow on its neighbours is not modelled.
+
 ### Geometry
 
 Terrain mesh from the configured `TerrainProvider` (Re:Earth/Mapterhorn or Cesium World Terrain)

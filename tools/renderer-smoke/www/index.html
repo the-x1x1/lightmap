@@ -224,6 +224,19 @@
           await new Promise((r) => {
             window.__takeShot = r;
           });
+          // Broken cloud toward a Sun 20 deg up: dark cores, bright margins round the Sun.
+          controller.apply(
+            scene(17.5, 'partly-cloudy', {
+              ...defaultCamera(kailua.point, 292),
+              mode: 'viewpoint',
+              pitchDeg: 14,
+            }),
+          );
+          await wait(1500);
+          window.__smoke.shot = 'partly-sunward';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
           const night = scene(23, 'clear', {
             ...defaultCamera(kailua.point, 120),
             mode: 'viewpoint',

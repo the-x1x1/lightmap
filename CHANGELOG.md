@@ -4,6 +4,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Silver linings**: broken cloud near the Sun is lit from behind - darker cores, bright
+  margins, gold at a low Sun - instead of the same white as cloud elsewhere in the sky.
 - **After the rain**: with a forecast the ground stays wet for hours after the rain stops (each
   hour's rain drying off over about 4 h), and level ground holds puddles a few metres across -
   darker floors, still mirrors of the sky at a grazing view and a sharp glint of a low Sun - more

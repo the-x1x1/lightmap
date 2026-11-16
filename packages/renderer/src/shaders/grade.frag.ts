@@ -438,6 +438,21 @@ void main() {
       float sinView = clamp(dot(rayEC, u_eyeUpEC), 0.0, 1.0);
       float cie = clamp((1.0 + 2.0 * sinView) / 1.52, 0.65, 1.45);
       cloudCol *= mix(1.0, cie, smoothstep(0.6, 0.95, covLow));
+      // Broken cloud against the Sun: lit from behind, its cores go dark - the light has to get
+      // through them - within about 15 deg of the Sun - while its thin margins scatter the
+      // light forward and glow (the silver lining, gold at a low Sun), within about 8 deg and
+      // strongest beside it (a wider glow blew a broad white blot round a Sun behind cloud); an
+      // overcast has no margins to light.
+      {
+        float aSun = acos(clamp(dot(rayEC, u_sunDirEC), -1.0, 1.0));
+        float broken = sunUp * (1.0 - smoothstep(0.6, 0.95, covLow)) * detail;
+        float back = exp(-aSun / 0.26) * broken;
+        float rim = exp(-aSun / 0.14) * broken;
+        float margin = 4.0 * cloud * (1.0 - cloud);
+        float core = smoothstep(0.35, 0.8, cloud);
+        cloudCol *= 1.0 - 0.45 * back * core * (0.5 + 0.5 * thickness);
+        cloudCol += mix(vec3(1.0), warm, lowSun) * 0.9 * rim * margin;
+      }
       cloudCol *= deckLum * mix(1.0, 0.15, u_nightFactor * (1.0 - sunUp));
       sky = mix(sky, cloudCol, cloud * (0.75 + 0.25 * thickness));
       lowHere = cloud * thickness;
