@@ -1055,6 +1055,7 @@ export class CesiumSceneHost implements SceneHost {
     this.detailTarget = g.detail;
     u['u_wet'] = g.wet;
     u['u_frost'] = g.frost ?? 0;
+    u['u_lakeIce'] = g.snowCover ?? 0;
     u['u_dew'] = g.dew ?? 0;
     u['u_cloudTime'] = this.lastGradeTime;
     this.leaf = {

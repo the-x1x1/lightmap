@@ -1545,6 +1545,21 @@
           await new Promise((r) => {
             window.__takeShot = r;
           });
+          // Lake ice: the same water taken as a lake 100 m above the sea (the sea level set 100 m
+          // down) in the snow season - frozen, snow-covered, swept grey-blue in patches.
+          {
+            const gu = host.scene.globe.material.uniforms;
+            const was = [gu.u_lakeIce, gu.u_seaLevelM, gu.u_shore];
+            gu.u_lakeIce = 1;
+            gu.u_seaLevelM = -100;
+            gu.u_shore = 0;
+            await wait(2500);
+            window.__smoke.shot = 'synth-lake-ice';
+            await new Promise((r) => {
+              window.__takeShot = r;
+            });
+            [gu.u_lakeIce, gu.u_seaLevelM, gu.u_shore] = was;
+          }
         }
         // After the rain: the plain at 7 am, looking east toward the low Sun from 300 m off, the
         // forecast's 3 mm of rain two hours gone and the sky clear now, against the same hour dry:

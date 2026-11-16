@@ -54,6 +54,8 @@ export const GROUND_UNIFORM_DEFAULTS = {
   u_wet: 0,
   /** Hoar frost on the ground, 0–1: a clear, calm, cold night's rime, white and sparkling. */
   u_frost: 0,
+  /** Lakes frozen over, 0–1: the lying snow's season (the ground texture's `snowCover`). */
+  u_lakeIce: 0,
   /** Dew on the grass, 0–1: a calm, clear, humid morning's beads, a sheen toward a low Sun. */
   u_dew: 0,
   /** The globe's directional and sky shares of the light (globeLightSplit), which the reflections divide out. */
@@ -195,6 +197,7 @@ uniform float u_cloudTime;
 uniform float u_detail;
 uniform float u_wet;
 uniform float u_frost;
+uniform float u_lakeIce;
 uniform float u_dew;
 uniform float u_lambertMul;
 uniform float u_ambientShare;
@@ -938,6 +941,19 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     water = smoothstep(0.3, 0.7, water);
     // Near the viewer, OpenStreetMap's shoreline (metres) instead of the mask's (tens of metres).
     water = mix(water, osmWater, roadsKnown);
+    // Lake ice: through the season the snow lies on the land, the lakes are frozen and snow-covered
+    // - white, with grey-blue patches where the wind has swept the ice clear - not open water.
+    // Fresh water only: well above the sea (a few metres where its level is known, 15-25 m where
+    // it is not, the ellipsoid standing in for it); the sea itself stays open.
+    float lakeIce = u_lakeIce * smoothstep(mix(15.0, 2.0, u_shore), mix(25.0, 5.0, u_shore), height);
+    if (water > 0.0 && lakeIce > 0.0)
+    {
+        float swept = smoothstep(0.55, 0.75, 0.6 * patches + 0.4 * grain);
+        vec3 ice = mix(snow * (0.93 + 0.05 * grain), vec3(0.55, 0.63, 0.70), swept);
+        material.diffuse = mix(material.diffuse, ice * u_brightness, water * lakeIce);
+        alpha = mix(alpha, 0.95 * u_strength, water * lakeIce);
+        water *= 1.0 - lakeIce;
+    }
     // On water the paint is a deep sea colour (a little mottled, greyer toward the horizon) over
     // most of Cesium's own water shading, leaving some for the Sun's glint and waves.
     if (water > 0.0)

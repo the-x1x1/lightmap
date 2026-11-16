@@ -388,6 +388,15 @@ colour at the horizon, not the dome pixel by pixel, so cloud shapes and the Sun'
 the water. The smoke harness draws the sea on a probe with the globe's own defines and lighting
 (`water-*` shots).
 
+**Lake ice.** Through the season the snow lies on the land (the ground texture's `snowCover`,
+`u_lakeIce`), the painted lakes are frozen and snow-covered: white with grey-blue patches where
+the wind has swept the ice clear, nearly opaque over the imagery. Fresh water only - well above
+the sea, 2–5 m where its level is known and 15–25 m where it is not (the ellipsoid standing in);
+the sea stays open (`synth-lake-ice`, the synthetic sea taken as a lake 100 m up).
+**Caveat:** freezing follows the snow season, not the water's own temperature, so a large deep
+lake that stays open into the winter is drawn frozen, and spring ice lingering after the snow is
+not.
+
 **Whitecaps.** In a wind the waves break: foam covers a share of the water that climbs steeply
 with the wind at 10 m (Monahan and O'Muircheartaigh 1980, 3.84 × 10⁻⁶ U^3.41: under 0.1 % in a
 5 m/s breeze, 1 % at 10 m/s, 2.4 % in the storm scenario's 13 m/s, held to 8 %). The painted
