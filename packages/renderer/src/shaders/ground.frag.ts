@@ -820,6 +820,14 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
             vec3 leaf = mix(vec3(0.62, 0.70, 0.20), vec3(0.75, 0.58, 0.26), 1.0 - u_grassGreen);
             float leaves = mix(0.8, 1.2, canopy) * mix(0.5, 1.0, u_leafOn * canopy + (1.0 - canopy));
             vegGlow = czm_lightColor * u_glitter * leaf * veg * leaves * lobe * 0.35;
+            // The hot spot: looking straight away from the Sun, every leaf and blade hides its
+            // own shadow, so vegetation brightens round the shadow of one's own head (the
+            // opposition effect - the bright patch round the antisolar point in every aerial
+            // photograph of fields and forest): about a quarter within a few degrees, a little
+            // wider; on dewy grass the drops focus it into a glow (heiligenschein).
+            float back = max(dot(-viewRay, czm_lightDirectionEC), 0.0);
+            float hot = 0.22 * exp(-(1.0 - back) / 0.02) + 0.6 * dewW * exp(-(1.0 - back) / 0.004);
+            vegGlow += czm_lightColor * u_glitter * ground * veg * hot;
         }
     }
     vec3 snowGlint = vec3(0.0);

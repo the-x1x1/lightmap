@@ -4,6 +4,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **The hot spot**: with the Sun behind the viewer, grass and trees brighten round the shadow of
+  the viewer's own head (the opposition effect in every aerial photo), glowing on dewy grass.
 - **Wet sand at the water's edge**: the strip of beach the waves run up is darker and glazed,
   mirroring the sky and a low Sun's glare, as on any real shore.
 - **Whitecaps**: in a wind the sea is flecked with breaking foam, a share that climbs steeply

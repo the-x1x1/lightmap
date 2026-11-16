@@ -326,8 +326,18 @@ it longer are not modelled.
 above 1–3 °C (below that it is frost), drying as the Sun climbs from 10° to 30°, none in rain.
 On vegetation only it adds the snow's glint at 35 % - points of light near the eye - and a
 broad sheen toward the Sun (Cox–Munk, mean square slope 0.12), both lit by the direct beam
-(`synth-dew`, looking along the grass toward a 16° Sun). **Caveat:** no heiligenschein (the
-bright glow round the shadow of one's head on dewy grass), and the paint's colour is unchanged.
+(`synth-dew`, looking along the grass toward a 16° Sun). **Caveat:** the heiligenschein (the
+bright glow round the shadow of one's head on dewy grass) is drawn below, and the paint's colour
+is unchanged.
+
+**The hot spot.** Looking straight away from the Sun every leaf and blade hides its own shadow,
+so vegetation brightens round the antisolar point - the opposition effect, the bright patch in
+every aerial photograph of fields and forest taken with the Sun behind the camera. The ground
+material adds 22 % of the ground's own colour in the direct beam, falling off with 1 − cos of
+the angle from the antisolar point over 0.02 (about 11°); on dewy grass a narrower glow (0.004,
+about 5°) of 60 % more, the heiligenschein, focused by the drops (`synth-hotspot`). Vegetated
+ground only, the same weight as the backlit glow's. **Caveat:** one lobe for every canopy; real
+hot spots are sharper over fine grass than over forest.
 
 **The sky in the water.** The painted water mirrors the sky (`shaders/ground.frag.ts`, the water
 branch): the share reflected follows Fresnel's rule for water — 2 % looking straight down, rising

@@ -1445,6 +1445,58 @@
             window.__takeShot = r;
           });
         }
+        // The hot spot: 10 am seen from above with the Sun behind the camera (Sun about 55 deg up
+        // in the east, the view 55 deg down to the west), the antisolar point at the view's
+        // centre on the shore - the grass brighter round it.
+        {
+          const at = (hour) => ({
+            timestamp: localSelectionToUtc(
+              { year: 2026, month: 5, day: 31 },
+              hour * 60,
+              beach.timeZone,
+            ).toISOString(),
+            cloudCoverTotal: 0,
+            cloudCoverLow: 0,
+            cloudCoverMid: 0,
+            cloudCoverHigh: 0,
+            precipitationProbability: 0,
+            precipitationAmount: 0,
+            humidity: 70,
+            visibility: 30000,
+            windSpeed: 1,
+            windDirection: 60,
+            weatherCode: 0,
+            temperature: 16,
+            dewPoint: 10,
+          });
+          controller.apply(
+            buildSceneState({
+              location: beach,
+              utc: localSelectionToUtc({ year: 2026, month: 5, day: 31 }, 10 * 60, beach.timeZone),
+              now: new Date('2026-05-31T15:00:00Z'),
+              camera: defaultCamera(beach.point, 250),
+              environment: { ...env, terrainAvailable: true, terrainProviderId: 'synthetic' },
+              scenario: 'clear',
+              forceScenario: false,
+              weather: {
+                capabilities: OPEN_METEO_CAPABILITIES,
+                frames: [at(9.5), at(10.5)],
+                providerFailed: false,
+              },
+              render: DEFAULT_RENDER_SETTINGS,
+              includeLunar: true,
+              realReference: false,
+            }),
+          );
+          controller.setOrbit({ headingDeg: 265, pitchDeg: -55, rangeM: 600 });
+          await wait(1500);
+          if (!(await settle())) log('synth-hotspot: not settled in 45 s');
+          await wait(500);
+          window.__smoke.shot = 'synth-hotspot';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+        }
         // Whitecaps: the sea at noon in a 14 m/s trade wind (forecast frames), from 400 m off the
         // shore looking out to sea - foam flecking about 3 % of the water.
         {
