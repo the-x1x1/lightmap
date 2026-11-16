@@ -685,7 +685,9 @@ test block (`buildings-dusk`).
 Through the lying snow's season (the ground texture's `snowCover`, `setSnow`) the buildings and
 trees carry it on whatever looks up: a roof goes white by the snow's extent wherever its face is
 within about 45–70° of level (steeper faces and walls shed it), a crown's top in patches at a
-little over half that, as conifers hold snow (`buildings-snow`). **Caveat:** no drifts, no
+little over half that, as conifers hold snow (`buildings-snow`). While the ground is wet (rain
+falling or the forecast's recent rain, the ground texture's `wet`) walls, roofs and leaves are
+darkened with it, by up to a quarter (`buildings-wet`). **Caveat:** no drifts, no
 melt from heated roofs, and the snow is all or nothing across the town.
 
 With the windows, the street lamps: along OpenStreetMap's roads within 1.5 km of the place (5 m

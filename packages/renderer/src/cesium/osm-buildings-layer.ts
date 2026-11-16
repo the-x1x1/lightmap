@@ -102,6 +102,7 @@ export function litInstanceShader(
   skyLift = 1,
   cityLights = 0,
   snow = 0,
+  wet = 0,
 ): string {
   const d = Math.max(0.05, Math.min(1, shadowD)).toFixed(3);
   // The share of the Sun's term that is direct (globeLightSplit's directional share against a
@@ -134,6 +135,14 @@ export function litInstanceShader(
     float snowUp = smoothstep(0.35, 0.8, dot(normalEC, upEC));
     color.rgb = mix(color.rgb, czm_gammaCorrect(vec4(0.90, 0.92, 0.95, 1.0)).rgb, ${s.toFixed(2)} * snowUp);`
       : '';
+  // Rain-wet walls, roofs and leaves (the ground texture's `wet`): water in the surface darkens
+  // them as it does the ground, about a quarter at the wettest, under any snow.
+  const w = Math.max(0, Math.min(1, wet));
+  const wetCode =
+    w > 0
+      ? `
+    color.rgb *= ${(1 - 0.25 * w).toFixed(3)};`
+      : '';
   return `
 in vec3 v_positionEC;
 in vec3 v_normalEC;
@@ -148,7 +157,7 @@ void main()
 #endif
     vec4 color = czm_gammaCorrect(v_color);
     vec3 positionWC = (czm_inverseView * vec4(v_positionEC, 1.0)).xyz;
-    vec3 upEC = normalize((czm_view * vec4(normalize(positionWC), 0.0)).xyz);${roofCode}${snowCode}
+    vec3 upEC = normalize((czm_view * vec4(normalize(positionWC), 0.0)).xyz);${roofCode}${wetCode}${snowCode}
     float sun = max(dot(normalEC, czm_lightDirectionEC), 0.0);
     float sky = 0.5 + 0.5 * dot(normalEC, upEC);
     float sunUp = clamp(dot(upEC, czm_lightDirectionEC), 0.0, 1.0);
@@ -249,6 +258,7 @@ export function treeFragmentShader(
   directShare = 1,
   skyLift = 1,
   snow = 0,
+  wet = 0,
 ): string {
   // Which crowns are deciduous: a hash of each crown's tone, so a crown keeps its kind.
   const pick = deciduous >= 1 ? '' : ` && fract(h * 11.1) < ${deciduous.toFixed(3)}`;
@@ -282,6 +292,7 @@ export function treeFragmentShader(
     skyLift,
     0,
     snow * 0.55,
+    wet,
   ).replace(anchor, anchor + season);
 }
 
@@ -463,6 +474,8 @@ export class OsmBuildingsLayer {
   private cityLights = 0;
   /** Lying snow on roofs and crowns, 0..1 in tenths (`setSnow`). */
   private snow = 0;
+  /** Rain-wet surfaces, 0..1 in tenths (`setWet`). */
+  private wet = 0;
   private readonly buildingPrims = new Set<Cesium.Primitive>();
   /** Tiles' merged building primitives still being built in the workers (hidden). */
   private readonly merging = new Set<Cesium.Primitive>();
@@ -619,6 +632,23 @@ export class OsmBuildingsLayer {
     this.scene.requestRender();
   }
 
+  /**
+   * How wet the town is, 0..1 (the ground texture's `wet`): walls, roofs and leaves darkened
+   * with the ground. In tenths, so the shaders are swapped only as the rain comes and goes.
+   */
+  setWet(level: number): void {
+    const next = Math.round(Math.max(0, Math.min(1, level)) * 10) / 10;
+    if (next === this.wet) return;
+    this.wet = next;
+    this.treeAppearance = null;
+    this.buildingAppearance = null;
+    const trees = this.appearanceForTrees();
+    for (const p of this.treePrims) p.appearance = trees;
+    const buildings = this.appearanceForBuildings();
+    for (const p of this.buildingPrims) p.appearance = buildings;
+    this.scene.requestRender();
+  }
+
   private appearanceForTrees(): Cesium.PerInstanceColorAppearance {
     this.treeAppearance ??= new this.C.PerInstanceColorAppearance({
       flat: false,
@@ -633,6 +663,7 @@ export class OsmBuildingsLayer {
         this.directShare,
         this.skyLift,
         this.snow,
+        this.wet,
       ),
     });
     return this.treeAppearance;
@@ -651,6 +682,7 @@ export class OsmBuildingsLayer {
         this.skyLift,
         this.cityLights,
         this.snow,
+        this.wet,
       ),
     });
     return this.buildingAppearance;

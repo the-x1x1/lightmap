@@ -90,4 +90,10 @@ describe('buildings and trees shader', () => {
     expect(treeFragmentShader(1, 0)).not.toContain('snowUp');
     expect([...roofs].every((c) => c.charCodeAt(0) < 128)).toBe(true);
   });
+
+  it('rain-wet walls, roofs and leaves darken by up to a quarter', () => {
+    expect(litInstanceShader(0.2, 8000, true, 1, 1, 0, 0, 1)).toContain('color.rgb *= 0.750;');
+    expect(treeFragmentShader(1, 0, 0.45, 20000, 1, 1, 1, 0, 0.4)).toContain('color.rgb *= 0.900;');
+    expect(litInstanceShader(0.2, 8000, true)).not.toContain('color.rgb *= 0.');
+  });
 });

@@ -273,6 +273,8 @@ export class CesiumSceneHost implements SceneHost {
   private leaf = { leafOn: 1, autumn: 0, grassGreen: 1, deciduous: 1 };
   /** Lying snow around the place, 0-1 (the ground texture's `snowCover`), for the far imagery. */
   private snowCover = 0;
+  /** How wet the ground is, 0-1 (the ground texture's `wet`), for the buildings and trees. */
+  private wetLevel = 0;
   /** The chart's dimming (`setGlobeShading`): 1 by day, lower for the unlit night chart. */
   private basemapBrightness = 1;
   /** The base imagery's tiles take the season per pixel (`seasonalise`), and for which season. */
@@ -1073,6 +1075,8 @@ export class CesiumSceneHost implements SceneHost {
     u['u_grassGreen'] = this.leaf.grassGreen;
     this.osmBuildings?.setSeason(this.leaf.leafOn, this.leaf.autumn, this.leaf.deciduous);
     this.osmBuildings?.setSnow(this.snowCover);
+    this.wetLevel = g.wet;
+    this.osmBuildings?.setWet(this.wetLevel);
     this.applyImagerySeason();
     this.scene.requestRender();
   }
@@ -2616,6 +2620,7 @@ export class CesiumSceneHost implements SceneHost {
         this.osmBuildings.setLean(this.osmLean);
         this.osmBuildings.setSeason(this.leaf.leafOn, this.leaf.autumn, this.leaf.deciduous);
         this.osmBuildings.setSnow(this.snowCover);
+        this.osmBuildings.setWet(this.wetLevel);
         const sm = this.scene.shadowMap;
         this.osmBuildings.setShadowMap(sm.enabled, sm.darkness, sm.maximumDistance);
         this.osmBuildings.setDirectShare(this.pinSplit.lambert / 0.9, this.skyLift);

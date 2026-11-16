@@ -4,6 +4,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Wet buildings and trees**: while the ground is wet from rain, walls, roofs and leaves darken
+  with it.
 - **Snow on roofs and trees**: through the snow season, roofs go white and the tops of the trees
   carry patches of snow, while walls and steep faces stay clear.
 - **Dusty haze over dry country**: in arid regions the distance fades toward a beige dust haze

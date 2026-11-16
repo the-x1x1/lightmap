@@ -1172,11 +1172,11 @@
             },
           });
           const instancePrims = [];
-          const drawInstances = (share, skyLift = 1, lights = 0, snow = 0) => {
+          const drawInstances = (share, skyLift = 1, lights = 0, snow = 0, wet = 0) => {
             for (const p of instancePrims.splice(0)) host.scene.primitives.remove(p);
             for (const [instance, fs] of [
-              [blockInstance, litInstanceShader(1, 0, true, share, skyLift, lights, snow)],
-              [crownInstance, treeFragmentShader(1, 0, 1, 0, 1, share, 1, snow)],
+              [blockInstance, litInstanceShader(1, 0, true, share, skyLift, lights, snow, wet)],
+              [crownInstance, treeFragmentShader(1, 0, 1, 0, 1, share, 1, snow, wet)],
             ])
               instancePrims.push(
                 host.scene.primitives.add(
@@ -1243,6 +1243,17 @@
             controller.setOrbit({ headingDeg: 120, pitchDeg: -35, rangeM: 160 });
             await wait(1800);
             window.__smoke.shot = 'buildings-snow';
+            await new Promise((r) => {
+              window.__takeShot = r;
+            });
+            // And the same block rain-wet under an overcast: walls, roof and crown darkened.
+            const wsc = scene(15, 'overcast', null);
+            const wscl = lightingFromScene(wsc);
+            drawInstances(wscl.globeLight.lambert / 0.9, wscl.globeLight.skyLift, 0, 0, 1);
+            controller.apply(wsc);
+            controller.setOrbit({ headingDeg: 120, pitchDeg: -35, rangeM: 160 });
+            await wait(1800);
+            window.__smoke.shot = 'buildings-wet';
             await new Promise((r) => {
               window.__takeShot = r;
             });
