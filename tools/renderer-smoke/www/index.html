@@ -1335,6 +1335,57 @@
             window.__takeShot = r;
           });
         }
+        // Hoar frost: the plain just after sunrise after a clear, calm night at -2 deg C, looking
+        // toward the low Sun from 300 m off - rime on the grass, glittering.
+        {
+          const at = (hour) => ({
+            timestamp: localSelectionToUtc(
+              { year: 2026, month: 5, day: 31 },
+              hour * 60,
+              beach.timeZone,
+            ).toISOString(),
+            cloudCoverTotal: 0,
+            cloudCoverLow: 0,
+            cloudCoverMid: 0,
+            cloudCoverHigh: 0,
+            precipitationProbability: 0,
+            precipitationAmount: 0,
+            humidity: 90,
+            visibility: 30000,
+            windSpeed: 1,
+            windDirection: 60,
+            weatherCode: 0,
+            temperature: -2,
+            dewPoint: -3.5,
+          });
+          controller.apply(
+            buildSceneState({
+              location: beach,
+              utc: localSelectionToUtc({ year: 2026, month: 5, day: 31 }, 6.3 * 60, beach.timeZone),
+              now: new Date('2026-05-31T15:00:00Z'),
+              camera: defaultCamera(beach.point, 90),
+              environment: { ...env, terrainAvailable: true, terrainProviderId: 'synthetic' },
+              scenario: 'clear',
+              forceScenario: false,
+              weather: {
+                capabilities: OPEN_METEO_CAPABILITIES,
+                frames: [at(6), at(7)],
+                providerFailed: false,
+              },
+              render: DEFAULT_RENDER_SETTINGS,
+              includeLunar: true,
+              realReference: false,
+            }),
+          );
+          controller.setOrbit({ headingDeg: 75, pitchDeg: -10, rangeM: 300 });
+          await wait(1500);
+          if (!(await settle())) log('synth-frost: not settled in 45 s');
+          await wait(500);
+          window.__smoke.shot = 'synth-frost';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+        }
         // After the rain: the plain at 7 am, looking east toward the low Sun from 300 m off, the
         // forecast's 3 mm of rain two hours gone and the sky clear now, against the same hour dry:
         // the ground still wet, puddles mirroring the sky and the Sun's glint.

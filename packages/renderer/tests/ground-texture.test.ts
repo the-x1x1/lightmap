@@ -10,6 +10,7 @@ import { OPEN_METEO_CAPABILITIES } from '@lightmap/weather';
 import {
   NEUTRAL_LAND_HINT,
   dayOfYearUtc,
+  frostFor,
   groundTextureFor,
   landHintFromColor,
   landHintFromPixels,
@@ -213,6 +214,26 @@ describe('groundTextureFor', () => {
     });
     expect(groundTextureFor(storm)!.wet).toBeGreaterThan(0.5);
     expect(groundTextureFor(storm)!.wet).toBeLessThanOrEqual(1);
+  });
+
+  it('hoar frost after a clear, calm, cold night, melting as the Sun climbs', () => {
+    const f = (o = {}) => ({
+      temperature: -2,
+      humidity: 90,
+      cloudCoverLow: 0,
+      cloudCoverMid: 0,
+      windSpeed: 1,
+      ...o,
+    });
+    expect(frostFor(f(), 2, 0)).toBe(1);
+    expect(frostFor(f({ temperature: 6 }), 2, 0)).toBe(0); // too warm
+    expect(frostFor(f({ cloudCoverLow: 100 }), 2, 0)).toBe(0); // a blanket of cloud
+    expect(frostFor(f({ windSpeed: 9 }), 2, 0)).toBe(0); // stirred
+    expect(frostFor(f({ temperature: 1 }), 30, 0)).toBe(0); // melted
+    expect(frostFor(f({ temperature: -8 }), 30, 0)).toBe(1); // a day that stays frozen
+    expect(frostFor(f(), 2, 0.5)).toBe(0); // falling snow instead
+    expect(frostFor(f({ temperature: null }), 2, 0)).toBe(0);
+    expect(frostFor(null, 2, 0)).toBe(0);
   });
 
   it('the ground stays wet after the forecast’s rain has stopped', () => {

@@ -310,6 +310,17 @@ mean share. **Caveat:** puddles fall by noise, not in the terrain's real hollows
 the rain; drying ignores sun and wind; and the mirrored sky is the horizon's colour, not the
 clouds' shapes.
 
+**Hoar frost.** After a clear, calm, cold night the dew freezes on the ground as rime. Its
+strength (`frostFor` in `ground-texture.ts`, `u_frost`) comes only from a forecast frame: the air
+under 3 °C at 2 m (full by −1 °C, the ground radiating below it), humidity 60–85 %, the low deck
+(plus half the mid) under 40–85 %, wind under 3–7 m/s; it melts as the Sun climbs from 8° to 25°
+unless the day stays below 0 to −4 °C, and none falls with rain or snow. The ground paint goes
+toward a pale, faintly blue grey-white (0.80, 0.83, 0.88) by up to 80 %, thinner on rock and
+sand, none on cliffs, patchy with the grain; it counts toward the paint's cover over imagery, and
+sparkles in a low Sun with the snow's glint at 70 % (`synth-frost`). **Caveat:** frost falls by
+the forecast's 2 m air, not the ground's own temperature; frost hollows and shaded slopes keeping
+it longer are not modelled.
+
 **The sky in the water.** The painted water mirrors the sky (`shaders/ground.frag.ts`, the water
 branch): the share reflected follows Fresnel's rule for water — 2 % looking straight down, rising
 toward a grazing view to seven tenths (ripples scatter a grazing reflection, so never a mirror's

@@ -31,6 +31,8 @@ export interface GroundTextureParams {
   cloudShadow: number;
   /** How wet the ground is, 0–1: the precipitation falling, or the forecast's recent rain. */
   wet: number;
+  /** Hoar frost on the ground, 0–1 (`frostFor`): a clear, calm, cold night's rime. */
+  frost: number;
   /** What the quality rung affords: 0 the base surface, 1 with cloud shadows, 2 with relief and the near grain. */
   detail: 0 | 1 | 2;
   /** Broad-leaf canopy in leaf, 0 bare – 1 full (`leafSeason`). */
@@ -277,5 +279,46 @@ export function groundTextureFor(
       scene.atmosphere.parameters.sunTransmittance,
       scene.solar.elevationDegrees,
     ),
+    frost: frostFor(
+      scene.atmosphere.frame ?? null,
+      scene.solar.elevationDegrees,
+      scene.atmosphere.parameters.precipitation,
+    ),
   };
+}
+
+const smoothFrost = (e0: number, e1: number, x: number): number => {
+  const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0)));
+  return t * t * (3 - 2 * t);
+};
+
+/**
+ * Hoar frost on the ground, 0–1, from a forecast frame and the Sun's elevation, degrees: on a
+ * clear, calm night the ground radiates its heat away and cools below the air, so with the air
+ * near freezing (under 3 deg C at 2 m, full by -1) and moist (humidity 60–85 %) the dew freezes
+ * as rime on grass and roofs. Cloud (the low deck closing past 40–85 %) and wind (3–7 m/s) keep
+ * the ground warm; it melts as the Sun climbs from 8 deg to 25, later on a day that stays well
+ * below freezing; none in rain or snow. 0 with no frame: a scenario says nothing of the cold.
+ */
+export function frostFor(
+  frame: {
+    temperature?: number | null;
+    humidity: number | null;
+    cloudCoverLow: number | null;
+    cloudCoverMid: number | null;
+    windSpeed: number | null;
+  } | null,
+  sunElevationDeg: number,
+  precipitation: number,
+): number {
+  const t = frame?.temperature;
+  if (!frame || typeof t !== 'number' || !Number.isFinite(t)) return 0;
+  const cold = 1 - smoothFrost(-1, 3, t);
+  const moist = frame.humidity === null ? 0.5 : smoothFrost(60, 85, frame.humidity);
+  const cover = (frame.cloudCoverLow ?? 0) + 0.5 * (frame.cloudCoverMid ?? 0);
+  const clear = 1 - smoothFrost(40, 85, cover);
+  const calm = 1 - smoothFrost(3, 7, frame.windSpeed ?? 2);
+  const thaw = smoothFrost(8, 25, sunElevationDeg) * smoothFrost(-4, 0, t);
+  const dry = 1 - smoothFrost(0.05, 0.2, precipitation);
+  return Math.round(cold * moist * clear * calm * (1 - thaw) * dry * 100) / 100;
 }

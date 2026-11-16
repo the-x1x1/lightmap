@@ -52,6 +52,8 @@ export const GROUND_UNIFORM_DEFAULTS = {
   u_cloudTime: 0,
   /** How wet the ground is, 0–1 (the scenario's precipitation): wet ground is darker and duller. */
   u_wet: 0,
+  /** Hoar frost on the ground, 0–1: a clear, calm, cold night's rime, white and sparkling. */
+  u_frost: 0,
   /** The globe's directional and sky shares of the light (globeLightSplit), which the reflections divide out. */
   u_lambertMul: 0.9,
   u_ambientShare: 0.3,
@@ -190,6 +192,7 @@ uniform float u_cloudShadow;
 uniform float u_cloudTime;
 uniform float u_detail;
 uniform float u_wet;
+uniform float u_frost;
 uniform float u_lambertMul;
 uniform float u_ambientShare;
 uniform float u_shadowD;
@@ -694,6 +697,17 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         vec3 grey = vec3(dot(ground, vec3(0.3, 0.59, 0.11)));
         ground = mix(ground, grey, 0.25 * wetness) * (1.0 - 0.3 * wetness);
     }
+    // Hoar frost: after a clear, calm, cold night the dew has frozen as rime on the grass and
+    // the roofs - a pale, faintly blue grey-white, thinner on bare rock and sand that held the
+    // day's heat, none on cliffs, patchy with the grain - glittering in a low Sun like snow
+    // (its glint below) until the Sun has climbed high enough to melt it.
+    float frostW = 0.0;
+    if (u_frost > 0.0)
+    {
+        frostW = u_frost * (1.0 - snowy) * (1.0 - 0.7 * rocky) * (1.0 - 0.6 * shoreline)
+               * (1.0 - smoothstep(0.6, 1.0, slope)) * mix(0.7, 1.0, grain);
+        ground = mix(ground, vec3(0.80, 0.83, 0.88), 0.8 * frostW);
+    }
 
     material.diffuse = ground * u_brightness;
     // Wet, level ground mirrors the sky at a grazing view: a film of water on a street or a
@@ -775,7 +789,8 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         }
     }
     vec3 snowGlint = vec3(0.0);
-    if (u_glitter > 0.0 && snowy > 0.05)
+    float glintW = max(snowy, 0.7 * frostW);
+    if (u_glitter > 0.0 && glintW > 0.05)
     {
         vec3 n = materialInput.normalEC;
         vec3 toEye = normalize(materialInput.positionToEyeEC);
@@ -796,7 +811,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
             flash = step(0.994, u) * (0.35 + 0.65 * fract(u * 977.0)) * near;
         }
         float sheen = lmCoxMunk(czm_lightDirectionEC, toEye, n, 0.3) * 0.25;
-        snowGlint = czm_lightColor * u_glitter * snowy * sunOn * (2.5 * flash + sheen);
+        snowGlint = czm_lightColor * u_glitter * glintW * sunOn * (2.5 * flash + sheen);
     }
     // Rock and snow are what they are; open ground lets real imagery's own hue through. Over
     // the bundled coarse basemap the paint is all but opaque on land: that map's 500 m pixels
@@ -804,7 +819,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // 10 m, or finer) the paint carries the near field, where imagery pixels are metres wide
     // blurs, and gives way with distance, where the imagery shows the real fields, towns and
     // shores better than any rule.
-    float cover = max(rocky, max(snowy, max(alpine * 0.8, known * 0.9)));
+    float cover = max(rocky, max(max(snowy, frostW), max(alpine * 0.8, known * 0.9)));
     float nearPaint = 1.0 - smoothstep(150.0, 900.0, dist);
     float imageryAlpha = mix(mix(0.3, 0.55, cover), mix(0.75, 0.95, cover), nearPaint);
     float alpha = u_strength * mix(imageryAlpha, 0.985, u_coarseBasemap);
