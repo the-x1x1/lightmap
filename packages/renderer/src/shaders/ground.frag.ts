@@ -54,6 +54,8 @@ export const GROUND_UNIFORM_DEFAULTS = {
   u_wet: 0,
   /** Hoar frost on the ground, 0–1: a clear, calm, cold night's rime, white and sparkling. */
   u_frost: 0,
+  /** Dew on the grass, 0–1: a calm, clear, humid morning's beads, a sheen toward a low Sun. */
+  u_dew: 0,
   /** The globe's directional and sky shares of the light (globeLightSplit), which the reflections divide out. */
   u_lambertMul: 0.9,
   u_ambientShare: 0.3,
@@ -193,6 +195,7 @@ uniform float u_cloudTime;
 uniform float u_detail;
 uniform float u_wet;
 uniform float u_frost;
+uniform float u_dew;
 uniform float u_lambertMul;
 uniform float u_ambientShare;
 uniform float u_shadowD;
@@ -708,6 +711,12 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
                * (1.0 - smoothstep(0.6, 1.0, slope)) * mix(0.7, 1.0, grain);
         ground = mix(ground, vec3(0.80, 0.83, 0.88), 0.8 * frostW);
     }
+    // Dew: on a calm, clear, humid morning above freezing the grass is beaded with water - a
+    // silvery sheen looking toward a low Sun and a scatter of points of light, on vegetation
+    // only, until the Sun dries it. Its glint is the snow's (below), a third as strong, with a
+    // broad sheen of its own.
+    float dewW = u_dew * (1.0 - snowy) * (1.0 - frostW) * (1.0 - rocky) * (1.0 - shoreline)
+               * (1.0 - built) * (1.0 - bareC) * (1.0 - alpine);
 
     material.diffuse = ground * u_brightness;
     // Wet, level ground mirrors the sky at a grazing view: a film of water on a street or a
@@ -789,7 +798,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         }
     }
     vec3 snowGlint = vec3(0.0);
-    float glintW = max(snowy, 0.7 * frostW);
+    float glintW = max(max(snowy, 0.7 * frostW), 0.35 * dewW);
     if (u_glitter > 0.0 && glintW > 0.05)
     {
         vec3 n = materialInput.normalEC;
@@ -811,7 +820,9 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
             flash = step(0.994, u) * (0.35 + 0.65 * fract(u * 977.0)) * near;
         }
         float sheen = lmCoxMunk(czm_lightDirectionEC, toEye, n, 0.3) * 0.25;
-        snowGlint = czm_lightColor * u_glitter * glintW * sunOn * (2.5 * flash + sheen);
+        snowGlint = czm_lightColor * u_glitter * glintW * sunOn * (2.5 * flash + sheen)
+                  + czm_lightColor * u_glitter * dewW * sunOn * 0.12
+                    * lmCoxMunk(czm_lightDirectionEC, toEye, n, 0.12);
     }
     // Rock and snow are what they are; open ground lets real imagery's own hue through. Over
     // the bundled coarse basemap the paint is all but opaque on land: that map's 500 m pixels

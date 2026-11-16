@@ -10,6 +10,7 @@ import { OPEN_METEO_CAPABILITIES } from '@lightmap/weather';
 import {
   NEUTRAL_LAND_HINT,
   dayOfYearUtc,
+  dewFor,
   frostFor,
   groundTextureFor,
   landHintFromColor,
@@ -214,6 +215,25 @@ describe('groundTextureFor', () => {
     });
     expect(groundTextureFor(storm)!.wet).toBeGreaterThan(0.5);
     expect(groundTextureFor(storm)!.wet).toBeLessThanOrEqual(1);
+  });
+
+  it('dew on a calm, clear, humid morning above freezing, dried by a climbing Sun', () => {
+    const f = (o = {}) => ({
+      temperature: 14,
+      humidity: 98,
+      cloudCoverLow: 0,
+      cloudCoverMid: 0,
+      windSpeed: 1,
+      ...o,
+    });
+    expect(dewFor(f(), 4, 0)).toBe(1);
+    expect(dewFor(f({ temperature: 0 }), 4, 0)).toBe(0); // frost instead
+    expect(dewFor(f({ humidity: 70 }), 4, 0)).toBe(0);
+    expect(dewFor(f({ windSpeed: 6 }), 4, 0)).toBe(0);
+    expect(dewFor(f({ cloudCoverLow: 100 }), 4, 0)).toBe(0);
+    expect(dewFor(f(), 35, 0)).toBe(0); // dried
+    expect(dewFor(f(), 4, 0.5)).toBe(0); // rain
+    expect(dewFor(null, 4, 0)).toBe(0);
   });
 
   it('hoar frost after a clear, calm, cold night, melting as the Sun climbs', () => {

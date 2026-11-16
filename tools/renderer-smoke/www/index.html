@@ -1386,6 +1386,56 @@
             window.__takeShot = r;
           });
         }
+        // Dew: 7 am (the Sun just clear of the ridge) at 16 deg C and 98 % humidity, from the beach looking along the grass
+        // toward the low Sun - the grass beaded, a silvery sheen and points of light toward the Sun.
+        {
+          const at = (hour) => ({
+            timestamp: localSelectionToUtc(
+              { year: 2026, month: 5, day: 31 },
+              hour * 60,
+              beach.timeZone,
+            ).toISOString(),
+            cloudCoverTotal: 0,
+            cloudCoverLow: 0,
+            cloudCoverMid: 0,
+            cloudCoverHigh: 0,
+            precipitationProbability: 0,
+            precipitationAmount: 0,
+            humidity: 98,
+            visibility: 30000,
+            windSpeed: 1,
+            windDirection: 60,
+            weatherCode: 0,
+            temperature: 16,
+            dewPoint: 15.7,
+          });
+          controller.apply(
+            buildSceneState({
+              location: beach,
+              utc: localSelectionToUtc({ year: 2026, month: 5, day: 31 }, 7 * 60, beach.timeZone),
+              now: new Date('2026-05-31T15:00:00Z'),
+              camera: { ...defaultCamera(beach.point, 75), mode: 'viewpoint', pitchDeg: -6 },
+              environment: { ...env, terrainAvailable: true, terrainProviderId: 'synthetic' },
+              scenario: 'clear',
+              forceScenario: false,
+              weather: {
+                capabilities: OPEN_METEO_CAPABILITIES,
+                frames: [at(6.5), at(7.5)],
+                providerFailed: false,
+              },
+              render: DEFAULT_RENDER_SETTINGS,
+              includeLunar: true,
+              realReference: false,
+            }),
+          );
+          await wait(1500);
+          if (!(await settle())) log('synth-dew: not settled in 45 s');
+          await wait(500);
+          window.__smoke.shot = 'synth-dew';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+        }
         // After the rain: the plain at 7 am, looking east toward the low Sun from 300 m off, the
         // forecast's 3 mm of rain two hours gone and the sky clear now, against the same hour dry:
         // the ground still wet, puddles mirroring the sky and the Sun's glint.

@@ -4,6 +4,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Dew**: on a calm, clear, humid morning above freezing the grass is beaded with dew - a
+  silvery sheen and a scatter of sparkles looking toward a low Sun - until the Sun dries it.
 - **Hoar frost**: after a clear, calm night near or below freezing (from the forecast) the
   ground is rimed pale grey-white and glitters in the low Sun until it melts as the Sun climbs.
 - **Cloud base from the forecast**: the low clouds now sit at the height the forecast's

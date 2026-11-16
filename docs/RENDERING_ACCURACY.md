@@ -321,6 +321,14 @@ sparkles in a low Sun with the snow's glint at 70 % (`synth-frost`). **Caveat:**
 the forecast's 2 m air, not the ground's own temperature; frost hollows and shaded slopes keeping
 it longer are not modelled.
 
+**Dew.** On a calm, clear, humid morning above freezing the grass is beaded with dew (`dewFor`,
+`u_dew`): humidity 85–97 %, the low deck (plus half the mid) under 40–85 %, wind under 2–5 m/s,
+above 1–3 °C (below that it is frost), drying as the Sun climbs from 10° to 30°, none in rain.
+On vegetation only it adds the snow's glint at 35 % - points of light near the eye - and a
+broad sheen toward the Sun (Cox–Munk, mean square slope 0.12), both lit by the direct beam
+(`synth-dew`, looking along the grass toward a 16° Sun). **Caveat:** no heiligenschein (the
+bright glow round the shadow of one's head on dewy grass), and the paint's colour is unchanged.
+
 **The sky in the water.** The painted water mirrors the sky (`shaders/ground.frag.ts`, the water
 branch): the share reflected follows Fresnel's rule for water — 2 % looking straight down, rising
 toward a grazing view to seven tenths (ripples scatter a grazing reflection, so never a mirror's

@@ -191,6 +191,8 @@ export interface HostGroundTexture {
   wet: number;
   /** Hoar frost on the ground, 0–1; none when left out. */
   frost?: number;
+  /** Dew on the grass, 0–1; none when left out. */
+  dew?: number;
   detail: 0 | 1 | 2;
   /** The leaf season (leaf-season.ts); summer when left out. */
   leafOn?: number;
