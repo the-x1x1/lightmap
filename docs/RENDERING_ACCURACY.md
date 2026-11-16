@@ -487,8 +487,8 @@ the pin from the terrain's ellipsoidal height against the known elevation; a cli
 ground under the cursor, never a roof, so buildings do not skew it) — the shore, a band within
 6 m of it, only once that sea level has actually been measured; its lowest metre or so, the
 swash the waves run up, lies wet, a third darker and glazed like the wet film (a mirror of the
-sky at a grazing view, a low Sun's glare; not seen in the smoke harness, whose synthetic water
-mask is too sharp for the shore band to show) — and the night
+sky at a grazing view, a low Sun's glare; the dark strip at the water's edge in `synth-shallows`) —
+and the night
 chart's dimming applies to the surface as to the basemap. The quality rung sets its detail: Ultra and High carry everything, Balanced drops the
 per-fragment relief and the near grain, Battery keeps the base surface alone, Minimal turns it
 off with the shadows; the `groundTexture` flag turns it off everywhere. On bare ground within a few kilometres a **micro-relief** shading

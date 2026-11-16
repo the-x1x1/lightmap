@@ -147,18 +147,26 @@ export function createSyntheticTerrain(C, pin) {
         return new Uint16Array(out);
       };
       // The water mask: 256 x 256, the north row first, water where the ground is under the sea.
+      // Real terrain's mask comes with coarse tiles and is upsampled, so it runs a little way
+      // onto the land along every coast; a mask computed afresh at every level is sharp, and the
+      // material's shore band (which reads that soft edge) never showed. So the land's lowest
+      // three metres take a faint mask, falling off from a fifth: well under the material's water
+      // threshold, enough for its shore.
       let wet = 0;
+      let any = 0;
       const mask = new Uint8Array(256 * 256);
       for (let r = 0; r < 256; r++)
         for (let c = 0; c < 256; c++) {
           const lon = west + ((east - west) * (c + 0.5)) / 256;
           const lat = north - ((north - south) * (r + 0.5)) / 256;
-          const water = heightAt(lon, lat) < 0 ? 255 : 0;
+          const h = heightAt(lon, lat);
+          const water = h < 0 ? 255 : h < 3 ? Math.round(51 * (1 - h / 3)) : 0;
           mask[r * 256 + c] = water;
-          if (water) wet++;
+          if (water === 255) wet++;
+          if (water > 0) any++;
         }
       const waterMask =
-        wet === 0 ? new Uint8Array([0]) : wet === 256 * 256 ? new Uint8Array([255]) : mask;
+        any === 0 ? new Uint8Array([0]) : wet === 256 * 256 ? new Uint8Array([255]) : mask;
       const center = C.Cartesian3.fromRadians(
         (rect.west + rect.east) / 2,
         (rect.south + rect.north) / 2,
