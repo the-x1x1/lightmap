@@ -237,6 +237,55 @@
           await new Promise((r) => {
             window.__takeShot = r;
           });
+          // The same broken cloud from a forecast whose dew point puts its base at 600 m (26 deg C
+          // over a 21.2 deg C dew point) rather than the default 1.5 km: lower, larger cloud.
+          {
+            const utc = localSelectionToUtc(
+              { year: 2026, month: 5, day: 31 },
+              17.5 * 60,
+              kailua.timeZone,
+            );
+            const frame = (offsetH) => ({
+              timestamp: new Date(utc.getTime() + offsetH * 3_600_000).toISOString(),
+              cloudCoverTotal: 45,
+              cloudCoverLow: 45,
+              cloudCoverMid: 0,
+              cloudCoverHigh: 0,
+              precipitationProbability: 0,
+              precipitationAmount: 0,
+              humidity: 75,
+              visibility: 30000,
+              windSpeed: 6,
+              windDirection: 60,
+              weatherCode: 2,
+              temperature: 26,
+              dewPoint: 21.2,
+            });
+            controller.apply(
+              buildSceneState({
+                location: kailua,
+                utc,
+                now: new Date(utc.getTime() - 2 * 3_600_000),
+                camera: { ...defaultCamera(kailua.point, 292), mode: 'viewpoint', pitchDeg: 14 },
+                environment: env,
+                scenario: 'partly-cloudy',
+                forceScenario: false,
+                weather: {
+                  capabilities: OPEN_METEO_CAPABILITIES,
+                  frames: [frame(-1), frame(0), frame(1)],
+                  providerFailed: false,
+                },
+                render: DEFAULT_RENDER_SETTINGS,
+                includeLunar: true,
+                realReference: false,
+              }),
+            );
+            await wait(1500);
+            window.__smoke.shot = 'partly-low-base';
+            await new Promise((r) => {
+              window.__takeShot = r;
+            });
+          }
           const night = scene(23, 'clear', {
             ...defaultCamera(kailua.point, 120),
             mode: 'viewpoint',

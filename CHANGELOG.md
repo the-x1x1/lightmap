@@ -4,6 +4,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Cloud base from the forecast**: the low clouds now sit at the height the forecast's
+  temperature and dew point give (about 125 m per degree of spread, 0.3–2.5 km), so a humid day's
+  cumulus hang low and large and a dry day's high and small; their shadows follow.
 - **Silver linings**: broken cloud near the Sun is lit from behind - darker cores, bright
   margins, gold at a low Sun - instead of the same white as cloud elsewhere in the sky.
 - **After the rain**: with a forecast the ground stays wet for hours after the rain stops (each

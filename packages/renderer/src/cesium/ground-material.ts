@@ -54,6 +54,7 @@ export function groundMaterialUniforms(C: C, coarseBasemap: number): Record<stri
     u_sunENU: new C.Cartesian3(0, 0, 1),
     u_windToward: new C.Cartesian2(-0.92, -0.38),
     u_windMps: 5,
+    u_lowDeckKm: 1.5,
     u_cloudLowCov: 0,
     u_cloudMidCov: 0,
     u_deckBaseM: 0,

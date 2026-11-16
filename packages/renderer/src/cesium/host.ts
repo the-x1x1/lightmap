@@ -90,6 +90,8 @@ export interface HostGradeUniforms {
   /** Where the wind blows the cloud decks (east, north unit vector) and its speed, m/s. */
   u_windToward?: [number, number];
   u_windMps?: number;
+  /** The low deck's base over the place's ground, km (`LightingParameters.grade.lowDeckKm`). */
+  u_lowDeckKm?: number;
   /** Toward the Sun on the place's east/north/up frame (the cloud shadows' ray). */
   u_sunENU?: [number, number, number];
   u_horizonHaze: number;

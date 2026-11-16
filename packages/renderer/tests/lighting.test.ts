@@ -20,6 +20,7 @@ import {
   visibilityFromHaze,
   windTowardFor,
   mistFor,
+  cloudBaseKmFor,
 } from '../src/lighting.ts';
 import { azElFromEcefToward, type Vec3 } from '../src/sun-vector.ts';
 
@@ -81,6 +82,15 @@ describe('lightingFromScene', () => {
     // No rain; or rain with no Sun through it.
     expect(lightingFromScene(scene(17.5, 'clear')).grade.rainbow).toBe(0);
     expect(lightingFromScene(scene(17.5, 'storm')).grade.rainbow).toBe(0);
+  });
+
+  it('the low deck sits at the cloud base given by the dew point', () => {
+    expect(cloudBaseKmFor({ temperature: 26, dewPoint: 20 })).toBeCloseTo(0.75, 6);
+    expect(cloudBaseKmFor({ temperature: 30, dewPoint: 0 })).toBe(2.5);
+    expect(cloudBaseKmFor({ temperature: 15, dewPoint: 15 })).toBe(0.3);
+    expect(cloudBaseKmFor({ temperature: 15, dewPoint: null })).toBe(1.5);
+    expect(cloudBaseKmFor(null)).toBe(1.5);
+    expect(lightingFromScene(scene(12, 'partly-cloudy')).grade.lowDeckKm).toBe(1.5);
   });
 
   it('valley mist in calm near-saturated air before the Sun is up 15 deg, none without a forecast', () => {

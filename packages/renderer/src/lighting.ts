@@ -115,6 +115,12 @@ export interface LightingParameters {
     windToward: [number, number];
     windMps: number;
     /**
+     * The low deck's base over the place's ground, km: where rising air saturates, about 125 m
+     * for each degree between the forecast's temperature and dew point (Espy's rule), held to
+     * 0.3-2.5 km; 1.5 km without them.
+     */
+    lowDeckKm: number;
+    /**
      * Aerial perspective toward the horizon: the scenario's haze plus the longer atmospheric path
      * at low sun. Applied to ground pixels by depth in the grade shader; never to geometry.
      */
@@ -155,6 +161,20 @@ export const SCENARIO_TYPICAL_WIND_MPS: Record<WeatherScenarioId, number> = {
   overcast: 6,
   storm: 13,
 };
+
+/**
+ * The low deck's base over the ground, km, from a forecast frame's temperature and dew point:
+ * rising air cools about 8 deg C a kilometre and its dew point about 0.2, so it saturates some
+ * 125 m up for each degree of spread (Espy). Held to 0.3-2.5 km; 1.5 km without the two.
+ */
+export function cloudBaseKmFor(
+  frame: { temperature?: number | null; dewPoint?: number | null } | null,
+): number {
+  const t = frame?.temperature;
+  const td = frame?.dewPoint;
+  if (typeof t !== 'number' || typeof td !== 'number' || !Number.isFinite(t - td)) return 1.5;
+  return Math.round(Math.min(2.5, Math.max(0.3, 0.125 * (t - td))) * 100) / 100;
+}
 
 /** The WMO weather codes for fog and depositing rime fog. */
 const FOG_CODES = new Set([45, 48]);
@@ -467,6 +487,7 @@ export function lightingFromScene(s: SceneState): LightingParameters {
       mist: mistFor(atmosphere.frame ?? null, el, p.precipitation),
       windToward: windTowardFor(atmosphere.frame?.windDirection ?? null),
       windMps: wind ?? 5,
+      lowDeckKm: cloudBaseKmFor(atmosphere.frame ?? null),
       rays:
         smooth(-1, 1, el) *
         (1 - smooth(15, 25, el)) *

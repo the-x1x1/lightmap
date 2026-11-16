@@ -234,6 +234,7 @@ export class SceneController {
       u_mist: lighting.grade.mist,
       u_windToward: lighting.grade.windToward,
       u_windMps: lighting.grade.windMps,
+      u_lowDeckKm: lighting.grade.lowDeckKm,
       u_sunENU: (() => {
         const az = (scene.solar.azimuthDegrees * Math.PI) / 180;
         const el = (scene.solar.elevationDegrees * Math.PI) / 180;

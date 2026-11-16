@@ -223,6 +223,7 @@ uniform vec3 u_camFromAnchor;   // the camera from the frame's anchor (the place
 uniform vec3 u_sunENU;          // toward the Sun on the frame (east, north, up)
 uniform vec2 u_windToward;      // where the wind blows the decks, a unit vector east and north
 uniform float u_windMps;        // the wind's speed, m/s
+uniform float u_lowDeckKm;      // the low deck's base over the place's ground, km
 uniform float u_cloudLowCov;    // the low deck's cover, 0-1 (the grade's)
 uniform float u_cloudMidCov;    // the mid deck's cover, 0-1
 uniform float u_deckBaseM;      // the place's ground height, metres (the decks stand on it)
@@ -669,7 +670,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         float driftKm = mod(u_cloudTime, 5760.0) * u_windMps * 2.5 * 0.06;
         float shadeC = 0.0;
         if (u_cloudLowCov > 0.005) {
-            float climb = 1.5 - (materialInput.height - u_deckBaseM) / 1000.0;
+            float climb = u_lowDeckKm - (materialInput.height - u_deckBaseM) / 1000.0;
             vec2 d = fromPlace.xy / 1000.0 + sunRun * max(climb, 0.05);
             vec2 p = vec2(dot(d, wTo) - driftKm, dot(d, wAcross)) / 1.8;
             float n = lmCloudFbm(p);

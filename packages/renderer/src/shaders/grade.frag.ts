@@ -28,6 +28,7 @@ uniform vec3 u_eyeEastEC;       // the local east at the camera, in eye coordina
 uniform vec2 u_windToward;      // where the wind blows the decks, a unit vector east and north
 uniform vec2 u_eyeFromPlaceKm;  // the camera east and north of the place, km (per frame)
 uniform float u_windMps;        // the wind's speed, m/s
+uniform float u_lowDeckKm;      // the low deck's base over the place's ground, km
 uniform float u_eyeHeightM;     // the camera's height above the ellipsoid (per frame)
 uniform float u_hazeBaseM;      // the ground's height at the place (where its visibility is measured)
 uniform float u_cloudCoverage;
@@ -306,13 +307,13 @@ void main() {
     float sunUp   = smoothstep(-2.0, -0.5, u_sunElevation);
     float midLit  = smoothstep(-3.0, -1.5, u_sunElevation);
     float highLit = smoothstep(-4.5, -3.0, u_sunElevation);
-    // The decks' heights over the eye - low 1.5 km, mid 4 km, cirrus 9 km above the place's
-    // ground - and how much of each one's detail the view resolves: toward the horizon a deck
+    // The decks' heights over the eye - low at the forecast's cloud base (1.5 km without one),
+    // mid 4 km, cirrus 9 km above the place's ground - and how much of each one's detail the view resolves: toward the horizon a deck
     // is so foreshortened that it reads as its mean, and a deck at or below the eye (a camera
     // high over the ground) is not overhead at all.
     float groundKm = u_hazeBaseM / 1000.0;
     float eyeKm = u_eyeHeightM / 1000.0;
-    float hLow = 1.5 + groundKm - eyeKm;
+    float hLow = u_lowDeckKm + groundKm - eyeKm;
     float hMid = 4.0 + groundKm - eyeKm;
     float hHigh = 9.0 + groundKm - eyeKm;
     float detail = smoothstep(0.03, 0.14, dot(rayEC, u_eyeUpEC));
@@ -709,6 +710,7 @@ export const GRADE_UNIFORM_NAMES = [
   'u_windToward',
   'u_eyeFromPlaceKm',
   'u_windMps',
+  'u_lowDeckKm',
   'u_eyeHeightM',
   'u_starField',
   'u_atmosphereDark',

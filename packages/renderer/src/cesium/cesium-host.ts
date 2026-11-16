@@ -590,6 +590,7 @@ export class CesiumSceneHost implements SceneHost {
       u_mistFloorM: 0,
       u_windToward: new C.Cartesian2(-0.92, -0.38),
       u_windMps: 5,
+      u_lowDeckKm: 1.5,
       u_eyeFromPlaceKm: () => {
         const f = this.enuScratch;
         const out = this.eyeFromPlaceScratch;
@@ -1279,6 +1280,7 @@ export class CesiumSceneHost implements SceneHost {
       gu['u_cloudMidCov'] = u.u_cloudMid;
       gu['u_deckBaseM'] = u.u_hazeBaseM;
       gu['u_windMps'] = u.u_windMps ?? 5;
+      gu['u_lowDeckKm'] = u.u_lowDeckKm ?? 1.5;
       if (u.u_windToward)
         gu['u_windToward'] = new this.C.Cartesian2(u.u_windToward[0], u.u_windToward[1]);
       if (u.u_sunENU) gu['u_sunENU'] = new this.C.Cartesian3(...u.u_sunENU);
@@ -1306,6 +1308,7 @@ export class CesiumSceneHost implements SceneHost {
     if (u.u_windToward)
       g['u_windToward'] = new this.C.Cartesian2(u.u_windToward[0], u.u_windToward[1]);
     g['u_windMps'] = u.u_windMps ?? 5;
+    g['u_lowDeckKm'] = u.u_lowDeckKm ?? 1.5;
     g['u_horizonHaze'] = u.u_horizonHaze;
     g['u_sunElevation'] = u.u_sunElevation;
     g['u_time'] = u.u_time;

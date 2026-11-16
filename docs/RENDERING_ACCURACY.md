@@ -536,7 +536,12 @@ noise, not a forecast of where clouds will be.
 (stratus/cumulus — dark bases, thickness from the scenario density). Each deck's cover is the
 forecast's own layer (`cloud_cover_low/mid/high`, `AtmosphereParameters.cloudLayers`,
 `layersObserved: true`) or, for a scenario or a provider without layers, the scenario's
-representative split. Each deck is lit from the true Sun elevation: a cloud at height _h_ stays
+representative split. The low deck's base is the forecast's cloud base where it gives the
+temperature and dew point - about 125 m for each degree between them (Espy's rule for where rising
+air saturates), held to 0.3–2.5 km (`cloudBaseKmFor`, `u_lowDeckKm`; the ground's cloud shadows
+read the same height) - and 1.5 km otherwise; a humid trade-wind day's cumulus sit at 500–700 m,
+larger and nearer than at the default (`partly-low-base`). The mid and high decks stay at 4 km
+and 9 km. Each deck is lit from the true Sun elevation: a cloud at height _h_ stays
 sunlit until the Sun is `acos(R/(R+h))` below the horizon — 1.0° for a 1 km base, 2.0° at 4 km,
 3.2–3.5° at 10–12 km — plus ≈0.5° of refraction (≈1.5° / 2.5° / 3.7–4.0°), so at the same minute
 after sunset a low deck is in shadow
