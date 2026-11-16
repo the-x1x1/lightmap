@@ -873,6 +873,15 @@
           await new Promise((r) => {
             window.__takeShot = r;
           });
+          // The same cover under snow (the snowline brought below the shore): the forest
+          // quadrant must stand dark through it, not white.
+          probeMaterial.uniforms.u_snowlineM = -1000;
+          await wait(1500);
+          window.__smoke.shot = 'ground-texture-snow';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+          probeMaterial.uniforms.u_snowlineM = probeParams ? probeParams.snowlineM : 3000;
           // Close up: the camera 40 m from the pin, looking down at the probe — the atlas's
           // grass tile (the Kailua shore reads as turf at this height) with no visible grid, and
           // fixed to the ground as the orbit turns (two shots, same place).

@@ -4,6 +4,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Woods under snow stay dark**: where the land cover has forest, snow no longer paints it white;
+  the trees stand grey-green through it, whitest between the crowns, as winter forests look.
 - **Dew**: on a calm, clear, humid morning above freezing the grass is beaded with dew - a
   silvery sheen and a scatter of sparkles looking toward a low Sun - until the Sun dries it.
 - **Hoar frost**: after a clear, calm night near or below freezing (from the forecast) the

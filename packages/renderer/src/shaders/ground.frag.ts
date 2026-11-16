@@ -513,6 +513,14 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
             ground = mix(ground, field, open * crop);
             ground = mix(ground, forest, open * canopy);
             ground = mix(ground, town, open * built);
+            // A wood under snow is not white: the snow lies on the forest floor and in the crowns
+            // only in patches, so from above the trees stand dark and grey-green through it,
+            // whitest in the gaps between crowns - the snowfields' darker woods, as every winter
+            // photograph and satellite image shows them. Its glint and cover go with it.
+            float snowWood = known * snowy * canopy * (1.0 - rocky);
+            vec3 woodInSnow = mix(forest * 0.8, snow * 0.92, 0.2 + 0.35 * crowns);
+            ground = mix(ground, woodInSnow, snowWood);
+            snowy *= 1.0 - 0.65 * known * canopy;
             float icy = iceC * (1.0 - smoothstep(0.9, 1.2, slope));
             ground = mix(ground, snow * (0.95 + 0.05 * grain), icy);
             snowy = max(snowy, icy);

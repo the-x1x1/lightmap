@@ -464,7 +464,10 @@ own longitude and mercator latitude: closed and open forest darken and green the
 a crown-sized grain, cropland becomes a patchwork of field tones in cells ≈ 260 m across,
 built-up ground a warm grey with a block-sized grain, bare ground sand and rock by the
 region's aridity, permanent snow and ice snow at any height; grass and wetland leave the
-procedural open ground. Steep rock and the seasonal snow still win, water stays with the
+procedural open ground. Under seasonal snow a wood is not white: the trees stand dark and
+grey-green through it, whitest in the gaps between crowns (20–55 % snow over the forest
+colour at 80 %), with its sparkle and wetness cut by two thirds (`ground-texture-snow`).
+Steep rock and the seasonal snow otherwise win, water stays with the
 water mask, and a texel the palette did not know (no tile, a wrong palette, beyond the
 map's reach) changes nothing. The read is re-done when the pin moves more than 0.05°; the
 cover's attribution joins the footer. Within a few kilometres of the camera (texture pack
