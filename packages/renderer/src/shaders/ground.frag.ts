@@ -737,6 +737,12 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float dewW = u_dew * (1.0 - snowy) * (1.0 - frostW) * (1.0 - rocky) * (1.0 - shoreline)
                * (1.0 - built) * (1.0 - bareC) * (1.0 - alpine);
 
+    // The swash: the strip of beach the waves run up lies wet, darker than the dry sand above it
+    // (water in the pores: about a third) and glazed - mirroring the sky at a grazing view and
+    // a low Sun's glare, as the wet film below does - up to about a metre above the sea.
+    float swash = shoreline * (1.0 - smoothstep(0.4, 1.4, height)) * (1.0 - snowy);
+    ground *= 1.0 - 0.35 * swash;
+
     material.diffuse = ground * u_brightness;
     // Wet, level ground mirrors the sky at a grazing view: a film of water on a street or a
     // flat yard takes the overcast's grey (or a low Sun's glow) looking along it, as the sea
@@ -746,14 +752,14 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     float wetR = 0.0;
     vec3 wetSky = vec3(0.0);
     vec3 wetGlare = vec3(0.0);
-    if (u_wet > 0.0)
+    if (u_wet > 0.0 || swash > 0.0)
     {
         float wetness = u_wet * (1.0 - snowy);
         vec3 n = materialInput.normalEC;
         vec3 toEye = normalize(materialInput.positionToEyeEC);
         float grazing = pow(1.0 - clamp(dot(n, toEye), 0.0, 1.0), 5.0);
         float level = 1.0 - smoothstep(0.02, 0.08, slope);
-        float film = wetness * level * mix(0.35, 1.0, roadPaint);
+        float film = max(wetness * level * mix(0.35, 1.0, roadPaint), 0.8 * swash);
         // Puddles: on level ground the water gathers in the hollows - patches a few metres
         // across (two readings of the noise against repetition), more and larger the wetter it
         // is, on streets and bare ground more than on turf, which drinks it. A puddle is a still

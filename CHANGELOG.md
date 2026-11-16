@@ -4,6 +4,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Wet sand at the water's edge**: the strip of beach the waves run up is darker and glazed,
+  mirroring the sky and a low Sun's glare, as on any real shore.
 - **Whitecaps**: in a wind the sea is flecked with breaking foam, a share that climbs steeply
   with the wind (about 1 % at 10 m/s, more in a storm), lit white instead of mirroring the sky.
 - **Towns under snow**: snow no longer erases a town to an even white; roofs and parks go white
