@@ -1093,6 +1093,28 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
             float thr = mix(0.86, 0.76, sqrt(capCov / 0.08));
             caps = mix(capCov, 0.85 * smoothstep(thr, thr + 0.06, cn), 1.0 - smoothstep(2.0, 12.0, footprint));
         }
+        // Surf: where the floor shelves to within a couple of metres of the surface (sea level
+        // known and the terrain carrying the floor) the swell breaks - lines of white water
+        // running in toward the beach as the clock moves, broken along their length, and a
+        // churned band of foam in the last half metre. Stronger in a wind (a swell is assumed
+        // even in a calm). Its mean share where a pixel spans more than a few metres.
+        if (u_shore > 0.5 && height < -0.05)
+        {
+            float depth = -height;
+            float zone = 1.0 - smoothstep(1.2, 2.2, depth);
+            if (zone > 0.0)
+            {
+                float footprint = max(max(length(gdx), length(gdy)), 1e-4);
+                float swell = clamp(0.45 + u_windMps / 16.0, 0.0, 1.0);
+                float phase = depth / 0.55 + mod(u_cloudTime, 5760.0) * 0.35;
+                float line = smoothstep(0.72, 0.95, fract(phase)) * (1.0 - smoothstep(0.95, 1.0, fract(phase)));
+                float broken = smoothstep(0.35, 0.6, lmNoiseTex(g.xy, 240.0, gdx, gdy).g);
+                float churn = (1.0 - smoothstep(0.15, 0.6, depth)) * (0.5 + 0.5 * broken);
+                float surf = max(line * broken, churn) * zone * swell;
+                surf = mix(0.35 * zone * swell, surf, 1.0 - smoothstep(3.0, 15.0, footprint));
+                caps = max(caps, 0.9 * surf);
+            }
+        }
         reflectance *= 1.0 - caps;
         vec3 reflected = sky * reflectance + lmGlitterColour() * (glint + aureole) * 1.2 * (1.0 - caps);
         vec3 body = mix(sea * (1.0 - reflectance), vec3(0.80, 0.82, 0.83), caps) * u_brightness;

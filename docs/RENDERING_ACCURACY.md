@@ -397,6 +397,14 @@ and sand-bar light of a tropical coast, the band of paler water along any beach
 around. **Caveat:** a floor's colour is not known (sand, reef, weed and mud all read the same),
 and the water's clarity is not modelled.
 
+**Surf.** Where the same floor shelves to within about 2 m of the surface (fading 1.2–2.2 m), the
+swell breaks: lines of white water one per 0.55 m of depth, running in toward the beach as the
+scene's clock moves, broken along their length by noise, and a churned band of foam in the last
+half metre; stronger in a wind (0.45 + U/16, a swell assumed even in a calm), laid in as the
+whitecaps' foam is, its mean share where a pixel spans more than a few metres
+(`synth-shallows`). **Caveat:** no real swell height or direction (the forecast carries none),
+and the lines follow the floor's depth contours, not the waves' refraction.
+
 **Lake ice.** Through the season the snow lies on the land (the ground texture's `snowCover`,
 `u_lakeIce`), the painted lakes are frozen and snow-covered: white with grey-blue patches where
 the wind has swept the ice clear, nearly opaque over the imagery. Fresh water only - well above
