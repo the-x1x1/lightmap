@@ -626,8 +626,16 @@ in `tools/renderer-smoke` (`cirrus-sunset` vs `stratus-sunset` at 19:18, Sun −
 the CIE standard overcast sky's profile, 1 + 2 sin(elevation) — overhead three times the horizon —
 normalised to a view 15° up and held within 0.65–1.45 of it, so a storm or overcast sky darkens
 toward the horizon instead of reading as one flat grey (`storm-viewpoint`: 133 overhead to 94 at
-the horizon, was 114 throughout). **Caveat:** the CIE profile is the uniform overcast's; a storm's
-rain shafts and a brighter band under the deck's edge are not modelled.
+the horizon, was 114 throughout). **Caveat:** the CIE profile is the uniform overcast's; a
+brighter band under the deck's edge is not modelled.
+
+**Rain shafts.** While it rains (the scenario's or forecast's precipitation over 0.02, with a low
+deck), the rain hangs below the deck toward the horizon as grey curtains: distinct shafts round
+the horizon under broken shower cloud, a near-continuous veil as the low deck closes (60–95 %),
+darkest at the horizon and gone by about 8° up, streaked down their length and drifting round
+with the wind; in the low deck's grey (0.42–0.48), dimmed at night (`rainbow`, `storm-viewpoint`).
+**Caveat:** the shafts are placed by noise round the horizon, not under the deck's own clouds,
+and stop at the sky (they do not veil distant ground).
 
 **Silver linings.** Broken low cloud seen against the Sun is lit from behind: within about 15° of
 the Sun (an e-folding of 0.26 rad from it) a cloud's core is up to 45 % darker - the light has to

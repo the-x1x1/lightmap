@@ -458,6 +458,27 @@ void main() {
       sky = mix(sky, cloudCol, cloud * (0.75 + 0.25 * thickness));
       lowHere = cloud * thickness;
     }
+    // Rain shafts: while it rains, the rain falling from the low deck hangs toward the horizon
+    // as grey curtains - distinct shafts under broken shower cloud, a near-continuous veil under
+    // an overcast - darkest at the horizon and fading up to about 8 deg, streaked down their
+    // length, drifting with the wind round the horizon. In the low deck's grey, darkened by the
+    // rain's own depth.
+    if (u_precipitation > 0.02 && covLow > 0.05) {
+      float sinUp = dot(rayEC, u_eyeUpEC);
+      if (sinUp > -0.02 && sinUp < 0.16) {
+        vec3 northEC = cross(u_eyeUpEC, u_eyeEastEC);
+        float az = atan(dot(rayEC, u_eyeEastEC), dot(rayEC, northEC));
+        float drift = mod(u_time, 5760.0) * u_windMps * 0.0004;
+        float curtains = vnoise(vec2(az * 9.0 + drift, 3.7)) * 0.65 + vnoise(vec2(az * 23.0 - drift, 8.1)) * 0.35;
+        float showery = 1.0 - smoothstep(0.6, 0.95, covLow);
+        float shaft = smoothstep(mix(0.2, 0.55, showery), mix(0.35, 0.7, showery), curtains);
+        float streaks = 0.75 + 0.25 * vnoise(vec2(az * 260.0, sinUp * 6.0));
+        float height = 1.0 - smoothstep(0.0, 0.14, sinUp);
+        float rain = smoothstep(0.02, 0.25, u_precipitation) * (0.35 + 0.45 * covLow);
+        vec3 rainCol = vec3(0.42, 0.44, 0.48) * deckLum * mix(1.0, 0.15, u_nightFactor);
+        sky = mix(sky, rainCol, clamp(shaft * streaks * height * rain, 0.0, 0.8));
+      }
+    }
     // The Moon's aureole: moonlight scattered forward by the haze and by thin cloud around it -
     // a tight glow and a wide one, both stronger in haze and far stronger through cirrus or a
     // thin altostratus sheet (the halo a night photographer frames, or waits out), and muffled

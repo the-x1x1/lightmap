@@ -4,6 +4,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Rain shafts**: while it rains, grey curtains of rain hang from the clouds toward the horizon -
+  separate shafts under showers, a veil under an overcast.
 - **Shallows by depth**: water over a sea floor within a few metres shows its bottom - pale
   turquoise in the tropics, green elsewhere - deepening to the sea's blue by about 12 m.
 - **Frozen lakes**: through the snow season lakes are drawn frozen and snow-covered, swept
