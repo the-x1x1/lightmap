@@ -588,6 +588,7 @@ export class CesiumSceneHost implements SceneHost {
       u_rays: 0,
       u_mist: 0,
       u_mistFloorM: 0,
+      u_dust: 0,
       u_windToward: new C.Cartesian2(-0.92, -0.38),
       u_windMps: 5,
       u_lowDeckKm: 1.5,
@@ -1044,6 +1045,8 @@ export class CesiumSceneHost implements SceneHost {
     u['u_poleward'] = g.poleward;
     u['u_strength'] = g.strength;
     u['u_aridity'] = g.aridity;
+    // The haze over dry country is dust: the grade's aerial perspective takes its colour.
+    this.gradeUniforms['u_dust'] = g.aridity;
     u['u_ice'] = g.ice;
     u['u_brightness'] = g.brightness;
     u['u_seaLevelM'] = g.seaLevelM;

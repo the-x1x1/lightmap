@@ -200,6 +200,10 @@ by Rayleigh's coefficients (5.8 / 13.5 / 33.1 × 10⁻⁶ m⁻¹ for red, green,
 layer), the visibility (taken as green's) minus green's molecular share is grey haze, so red
 fades into the air more slowly than the visibility says and blue faster: on a clear day hills
 10–40 km off go blue before they go pale, and on a hazy one the haze's grey dominates as before.
+Over dry country the haze is dust: the haze's share of the extinction (not the molecules') takes
+a tan cast (1.12, 0.98, 0.78 at the haze colour's own luminance) by up to 60 % with the region's
+aridity (the ground texture's land hint, `u_dust`), so a desert's or a dry plain's distance reads
+beige while the molecules' blue stays blue.
 The light direction and terrain shading are untouched by either. Verified in
 `tools/renderer-smoke` (contact sheet `docs/media/renderer-smoke-2026-09-24c.png`).
 

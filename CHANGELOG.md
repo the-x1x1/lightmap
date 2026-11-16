@@ -4,6 +4,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Dusty haze over dry country**: in arid regions the distance fades toward a beige dust haze
+  rather than a pale blue-grey.
 - **Surf**: where the sea floor shelves to within a couple of metres of the surface, lines of
   breaking white water run in toward the beach, with a band of churned foam at the edge.
 - **Rain shafts**: while it rains, grey curtains of rain hang from the clouds toward the horizon -

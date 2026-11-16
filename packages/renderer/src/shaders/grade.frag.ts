@@ -29,6 +29,7 @@ uniform vec2 u_windToward;      // where the wind blows the decks, a unit vector
 uniform vec2 u_eyeFromPlaceKm;  // the camera east and north of the place, km (per frame)
 uniform float u_windMps;        // the wind's speed, m/s
 uniform float u_lowDeckKm;      // the low deck's base over the place's ground, km
+uniform float u_dust;           // the region's aridity, 0..1: how much of the haze is dust
 uniform float u_eyeHeightM;     // the camera's height above the ellipsoid (per frame)
 uniform float u_hazeBaseM;      // the ground's height at the place (where its visibility is measured)
 uniform float u_cloudCoverage;
@@ -582,6 +583,15 @@ void main() {
     // black at night (its faint glow cut to 6 %), so the night air is near black too: at 0.05
     // to 0.1 the far sea stood as a lit navy band under a black sky.
     hazeCol = mix(hazeCol, vec3(0.012, 0.016, 0.03), u_nightFactor);
+    // Over dry country the haze is dust, not droplets: its share of the extinction (the part
+    // that is not the molecules') takes a tan cast at the light's brightness - the beige
+    // distance of a desert or a dry summer's plain - while the molecules' blue stays blue.
+    if (u_dust > 0.0) {
+      float mieShare = mieBeta * layer / max(mieBeta * layer + rayleigh.g * layerR, 1e-9);
+      float lum = dot(hazeCol, vec3(0.2126, 0.7152, 0.0722));
+      vec3 dustCol = vec3(1.12, 0.98, 0.78) * lum;
+      hazeCol = mix(hazeCol, dustCol, 0.6 * clamp(u_dust, 0.0, 1.0) * mieShare);
+    }
     color = mix(color, hazeCol, clamp(distRGB * 0.85, 0.0, 0.85));
     // Valley mist: on a calm, near-saturated morning the air cooled on the ground overnight lies
     // in the low ground as a shallow white layer - full below the low ground about the place
@@ -732,6 +742,7 @@ export const GRADE_UNIFORM_NAMES = [
   'u_eyeFromPlaceKm',
   'u_windMps',
   'u_lowDeckKm',
+  'u_dust',
   'u_eyeHeightM',
   'u_starField',
   'u_atmosphereDark',
