@@ -4,6 +4,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Whitecaps**: in a wind the sea is flecked with breaking foam, a share that climbs steeply
+  with the wind (about 1 % at 10 m/s, more in a storm), lit white instead of mirroring the sky.
 - **Towns under snow**: snow no longer erases a town to an even white; roofs and parks go white
   while the streets stay a ploughed grey and garden trees dark, so the grid still reads.
 - **Woods under snow stay dark**: where the land cover has forest, snow no longer paints it white;

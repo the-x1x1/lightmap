@@ -378,6 +378,16 @@ colour at the horizon, not the dome pixel by pixel, so cloud shapes and the Sun'
 the water. The smoke harness draws the sea on a probe with the globe's own defines and lighting
 (`water-*` shots).
 
+**Whitecaps.** In a wind the waves break: foam covers a share of the water that climbs steeply
+with the wind at 10 m (Monahan and O'Muircheartaigh 1980, 3.84 × 10⁻⁶ U^3.41: under 0.1 % in a
+5 m/s breeze, 1 % at 10 m/s, 2.4 % in the storm scenario's 13 m/s, held to 8 %). The painted
+water draws it as flecks a few metres across, stretched about twice as long downwind (the baked
+noise at 400 m / 280 m repeats on the wind's frame, thresholded to that share), up to 85 %
+opaque, lit as a diffuse white (0.80–0.83) in place of the mirror, its reflection and glint taken
+out under the foam; where a pixel spans more than a few metres the flecks give way to their mean
+share (`synth-whitecaps`, 14 m/s). **Caveat:** no surf in the shallows, and the foam does not
+move.
+
 **The coastline** is that mask read through a small blur and sharpened again (`water-mask.ts`):
 finer tiles reuse a coarse ancestor's mask magnified, and read directly its texels drew every
 coast as a staircase 50–500 m to a step. Smoothed, a straight coast stays where the mask had it

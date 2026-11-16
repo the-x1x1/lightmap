@@ -1025,8 +1025,29 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         // scattering, which the sky stops keep clear of) mirrored as a wide, soft lobe.
         float aureole = exp(-dAz * dAz / 0.12 - dEl * dEl / 0.12) * grazing * 0.5 * u_glitter;
         // In the light's colour, lifted to a floor by moonlight, so a full Moon leaves a moon path.
-        vec3 reflected = sky * reflectance + lmGlitterColour() * (glint + aureole) * 1.2;
-        vec3 body = sea * u_brightness * (1.0 - reflectance);
+        // Whitecaps: in a wind the waves break, and the foam covers a share of the sea that
+        // climbs steeply with the wind (Monahan and O'Muircheartaigh: 3.84e-6 U^3.41 - none in
+        // a breeze, 1 % at 10 m/s, 4 % at 15) - flecks a few metres across, trailing downwind, lit like the land
+        // (a diffuse white, not a mirror), giving way to their share where a pixel spans more.
+        float capCov = clamp(3.84e-6 * pow(max(u_windMps, 0.0), 3.41), 0.0, 0.08);
+        float caps = 0.0;
+        if (capCov > 0.001)
+        {
+            float footprint = max(max(length(gdx), length(gdy)), 1e-4);
+            // On the wind's frame, stretched along it: the foam trails downwind of each breaker.
+            vec2 cw = normalize(u_windToward + vec2(1e-6, 0.0));
+            mat2 toWind = mat2(cw.x * 0.45, -cw.y, cw.y * 0.45, cw.x);
+            vec2 cp = toWind * g.xy;
+            vec2 cdx = toWind * gdx;
+            vec2 cdy = toWind * gdy;
+            float cn = 0.6 * lmNoiseTex(cp, 400.0, cdx, cdy).g
+                     + 0.4 * lmNoiseTex(vec2(cp.y, -cp.x), 280.0, vec2(cdx.y, -cdx.x), vec2(cdy.y, -cdy.x)).a;
+            float thr = mix(0.86, 0.76, sqrt(capCov / 0.08));
+            caps = mix(capCov, 0.85 * smoothstep(thr, thr + 0.06, cn), 1.0 - smoothstep(2.0, 12.0, footprint));
+        }
+        reflectance *= 1.0 - caps;
+        vec3 reflected = sky * reflectance + lmGlitterColour() * (glint + aureole) * 1.2 * (1.0 - caps);
+        vec3 body = mix(sea * (1.0 - reflectance), vec3(0.80, 0.82, 0.83), caps) * u_brightness;
 #ifdef ENABLE_VERTEX_LIGHTING
         // The body is lit as a level surface too: the globe's lighting by the floor's normal is
         // traded for the same lighting by the surface's.
