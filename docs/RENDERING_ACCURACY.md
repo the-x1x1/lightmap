@@ -682,6 +682,12 @@ building's base; corners can cut a window; which windows are lit is a hash, not 
 night (offices and homes go dark on no schedule here). The harness shows it at 19:45 on its
 test block (`buildings-dusk`).
 
+Through the lying snow's season (the ground texture's `snowCover`, `setSnow`) the buildings and
+trees carry it on whatever looks up: a roof goes white by the snow's extent wherever its face is
+within about 45–70° of level (steeper faces and walls shed it), a crown's top in patches at a
+little over half that, as conifers hold snow (`buildings-snow`). **Caveat:** no drifts, no
+melt from heated roofs, and the snow is all or nothing across the town.
+
 With the windows, the street lamps: along OpenStreetMap's roads within 1.5 km of the place (5 m
 wide and up; no paths, tracks or yards), one every 35 m, staggered either side and set back half
 the road's width plus a metre, 7 m over the ground (`street-lamps.ts`). Each is a soft point of

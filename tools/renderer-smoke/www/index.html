@@ -1172,11 +1172,11 @@
             },
           });
           const instancePrims = [];
-          const drawInstances = (share, skyLift = 1, lights = 0) => {
+          const drawInstances = (share, skyLift = 1, lights = 0, snow = 0) => {
             for (const p of instancePrims.splice(0)) host.scene.primitives.remove(p);
             for (const [instance, fs] of [
-              [blockInstance, litInstanceShader(1, 0, true, share, skyLift, lights)],
-              [crownInstance, treeFragmentShader(1, 0, 1, 0, 1, share)],
+              [blockInstance, litInstanceShader(1, 0, true, share, skyLift, lights, snow)],
+              [crownInstance, treeFragmentShader(1, 0, 1, 0, 1, share, 1, snow)],
             ])
               instancePrims.push(
                 host.scene.primitives.add(
@@ -1228,6 +1228,21 @@
             controller.apply(sc);
             await wait(1800);
             window.__smoke.shot = name;
+            await new Promise((r) => {
+              window.__takeShot = r;
+            });
+          }
+          // Under lying snow, seen from above: the block's roof white, the crown's top dusted.
+          {
+            const sc = scene(15, 'clear', null);
+            const scl = lightingFromScene(sc);
+            drawInstances(scl.globeLight.lambert / 0.9, scl.globeLight.skyLift, 0, 1);
+            host.setStreetLamps([]);
+            host.setTownGlow(null);
+            controller.apply(sc);
+            controller.setOrbit({ headingDeg: 120, pitchDeg: -35, rangeM: 160 });
+            await wait(1800);
+            window.__smoke.shot = 'buildings-snow';
             await new Promise((r) => {
               window.__takeShot = r;
             });

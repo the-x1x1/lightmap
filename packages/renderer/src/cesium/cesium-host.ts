@@ -1072,6 +1072,7 @@ export class CesiumSceneHost implements SceneHost {
     u['u_autumn'] = this.leaf.autumn;
     u['u_grassGreen'] = this.leaf.grassGreen;
     this.osmBuildings?.setSeason(this.leaf.leafOn, this.leaf.autumn, this.leaf.deciduous);
+    this.osmBuildings?.setSnow(this.snowCover);
     this.applyImagerySeason();
     this.scene.requestRender();
   }
@@ -2614,6 +2615,7 @@ export class CesiumSceneHost implements SceneHost {
         );
         this.osmBuildings.setLean(this.osmLean);
         this.osmBuildings.setSeason(this.leaf.leafOn, this.leaf.autumn, this.leaf.deciduous);
+        this.osmBuildings.setSnow(this.snowCover);
         const sm = this.scene.shadowMap;
         this.osmBuildings.setShadowMap(sm.enabled, sm.darkness, sm.maximumDistance);
         this.osmBuildings.setDirectShare(this.pinSplit.lambert / 0.9, this.skyLift);

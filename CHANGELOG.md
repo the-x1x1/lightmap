@@ -4,6 +4,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Snow on roofs and trees**: through the snow season, roofs go white and the tops of the trees
+  carry patches of snow, while walls and steep faces stay clear.
 - **Dusty haze over dry country**: in arid regions the distance fades toward a beige dust haze
   rather than a pale blue-grey.
 - **Surf**: where the sea floor shelves to within a couple of metres of the surface, lines of

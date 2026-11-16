@@ -101,6 +101,7 @@ export function litInstanceShader(
   directShare = 1,
   skyLift = 1,
   cityLights = 0,
+  snow = 0,
 ): string {
   const d = Math.max(0.05, Math.min(1, shadowD)).toFixed(3);
   // The share of the Sun's term that is direct (globeLightSplit's directional share against a
@@ -124,6 +125,15 @@ export function litInstanceShader(
     vec3 roofCol = vec3(0.30, 0.30, 0.31) * (0.75 + 0.6 * pick);
     color.rgb = mix(color.rgb, czm_gammaCorrect(vec4(roofCol, 1.0)).rgb, 0.7 * roofness);`
     : '';
+  // Lying snow (the ground texture's snowCover): it settles on whatever looks up - flat and
+  // gently pitched roofs, the tops of crowns - and slides off walls and steep faces.
+  const s = Math.max(0, Math.min(1, snow));
+  const snowCode =
+    s > 0
+      ? `
+    float snowUp = smoothstep(0.35, 0.8, dot(normalEC, upEC));
+    color.rgb = mix(color.rgb, czm_gammaCorrect(vec4(0.90, 0.92, 0.95, 1.0)).rgb, ${s.toFixed(2)} * snowUp);`
+      : '';
   return `
 in vec3 v_positionEC;
 in vec3 v_normalEC;
@@ -138,7 +148,7 @@ void main()
 #endif
     vec4 color = czm_gammaCorrect(v_color);
     vec3 positionWC = (czm_inverseView * vec4(v_positionEC, 1.0)).xyz;
-    vec3 upEC = normalize((czm_view * vec4(normalize(positionWC), 0.0)).xyz);${roofCode}
+    vec3 upEC = normalize((czm_view * vec4(normalize(positionWC), 0.0)).xyz);${roofCode}${snowCode}
     float sun = max(dot(normalEC, czm_lightDirectionEC), 0.0);
     float sky = 0.5 + 0.5 * dot(normalEC, upEC);
     float sunUp = clamp(dot(upEC, czm_lightDirectionEC), 0.0, 1.0);
@@ -238,6 +248,7 @@ export function treeFragmentShader(
   deciduous = 1,
   directShare = 1,
   skyLift = 1,
+  snow = 0,
 ): string {
   // Which crowns are deciduous: a hash of each crown's tone, so a crown keeps its kind.
   const pick = deciduous >= 1 ? '' : ` && fract(h * 11.1) < ${deciduous.toFixed(3)}`;
@@ -262,10 +273,16 @@ export function treeFragmentShader(
         color.a = 1.0;
     }`;
   const anchor = '    vec4 color = czm_gammaCorrect(v_color);';
-  return litInstanceShader(shadowD, shadowMaxM, false, directShare, skyLift).replace(
-    anchor,
-    anchor + season,
-  );
+  // Crowns hold snow only in patches (it sifts through and slides off the branches).
+  return litInstanceShader(
+    shadowD,
+    shadowMaxM,
+    false,
+    directShare,
+    skyLift,
+    0,
+    snow * 0.55,
+  ).replace(anchor, anchor + season);
 }
 
 /** Broad-leaf crowns' alpha: the mark `treeFragmentShader` looks for. */
@@ -444,6 +461,8 @@ export class OsmBuildingsLayer {
   private buildingAppearance: Cesium.PerInstanceColorAppearance | null = null;
   /** How far the town's lights are on (`setCityLights`), in tenths. */
   private cityLights = 0;
+  /** Lying snow on roofs and crowns, 0..1 in tenths (`setSnow`). */
+  private snow = 0;
   private readonly buildingPrims = new Set<Cesium.Primitive>();
   /** Tiles' merged building primitives still being built in the workers (hidden). */
   private readonly merging = new Set<Cesium.Primitive>();
@@ -583,6 +602,23 @@ export class OsmBuildingsLayer {
     this.scene.requestRender();
   }
 
+  /**
+   * Lying snow, 0..1 (the ground texture's `snowCover`): white on roofs and the tops of crowns.
+   * In tenths, so the shaders are swapped only as the season turns.
+   */
+  setSnow(level: number): void {
+    const next = Math.round(Math.max(0, Math.min(1, level)) * 10) / 10;
+    if (next === this.snow) return;
+    this.snow = next;
+    this.treeAppearance = null;
+    this.buildingAppearance = null;
+    const trees = this.appearanceForTrees();
+    for (const p of this.treePrims) p.appearance = trees;
+    const buildings = this.appearanceForBuildings();
+    for (const p of this.buildingPrims) p.appearance = buildings;
+    this.scene.requestRender();
+  }
+
   private appearanceForTrees(): Cesium.PerInstanceColorAppearance {
     this.treeAppearance ??= new this.C.PerInstanceColorAppearance({
       flat: false,
@@ -596,6 +632,7 @@ export class OsmBuildingsLayer {
         this.season.deciduous,
         this.directShare,
         this.skyLift,
+        this.snow,
       ),
     });
     return this.treeAppearance;
@@ -613,6 +650,7 @@ export class OsmBuildingsLayer {
         this.directShare,
         this.skyLift,
         this.cityLights,
+        this.snow,
       ),
     });
     return this.buildingAppearance;

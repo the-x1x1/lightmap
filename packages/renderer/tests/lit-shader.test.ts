@@ -80,4 +80,14 @@ describe('buildings and trees shader', () => {
     // Trees and the roof-less test block take none.
     expect(litInstanceShader(0.2, 8000, false, 0, 3, 1)).not.toContain('wallness');
   });
+
+  it('lying snow whitens what looks up - roofs fully, crowns in patches - and nothing without it', () => {
+    const roofs = litInstanceShader(0.2, 8000, true, 1, 1, 0, 0.8);
+    expect(roofs).toContain('float snowUp = smoothstep(0.35, 0.8, dot(normalEC, upEC));');
+    expect(roofs).toContain('0.80 * snowUp');
+    expect(treeFragmentShader(1, 0, 0.45, 20000, 1, 1, 1, 1)).toContain('0.55 * snowUp');
+    expect(litInstanceShader(0.2, 8000, true)).not.toContain('snowUp');
+    expect(treeFragmentShader(1, 0)).not.toContain('snowUp');
+    expect([...roofs].every((c) => c.charCodeAt(0) < 128)).toBe(true);
+  });
 });
