@@ -1560,6 +1560,21 @@
             });
             [gu.u_lakeIce, gu.u_seaLevelM, gu.u_shore] = was;
           }
+          // Shallows: the same sea with its level taken as measured (the synthetic run never
+          // measures it) - the water over the shelving floor pale turquoise near the beach,
+          // deepening to blue by 12 m.
+          {
+            const gu = host.scene.globe.material.uniforms;
+            const was = [gu.u_seaLevelM, gu.u_shore];
+            gu.u_seaLevelM = 0;
+            gu.u_shore = 1;
+            await wait(2500);
+            window.__smoke.shot = 'synth-shallows';
+            await new Promise((r) => {
+              window.__takeShot = r;
+            });
+            [gu.u_seaLevelM, gu.u_shore] = was;
+          }
         }
         // After the rain: the plain at 7 am, looking east toward the low Sun from 300 m off, the
         // forecast's 3 mm of rain two hours gone and the sky clear now, against the same hour dry:

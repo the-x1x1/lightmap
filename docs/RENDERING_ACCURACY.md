@@ -388,6 +388,15 @@ colour at the horizon, not the dome pixel by pixel, so cloud shapes and the Sun'
 the water. The smoke harness draws the sea on a probe with the globe's own defines and lighting
 (`water-*` shots).
 
+**Shallows by depth.** Where the terrain carries the sea floor (bathymetry near coasts) and the
+sea level has been measured, water over a floor within a few metres shows its bottom: the
+body colour goes up to 75 % toward pale turquoise over the tropics (0.14, 0.52, 0.55) or green
+over the temperate seas (0.10, 0.26, 0.24), fading out between 1 m and 12 m of depth - the reef
+and sand-bar light of a tropical coast, the band of paler water along any beach
+(`synth-shallows`). It sits beside OpenStreetMap's near-viewer shallows, which go by the land
+around. **Caveat:** a floor's colour is not known (sand, reef, weed and mud all read the same),
+and the water's clarity is not modelled.
+
 **Lake ice.** Through the season the snow lies on the land (the ground texture's `snowCover`,
 `u_lakeIce`), the painted lakes are frozen and snow-covered: white with grey-blue patches where
 the wind has swept the ice clear, nearly opaque over the imagery. Fresh water only - well above

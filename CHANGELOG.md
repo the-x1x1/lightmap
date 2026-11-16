@@ -4,6 +4,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Shallows by depth**: water over a sea floor within a few metres shows its bottom - pale
+  turquoise in the tropics, green elsewhere - deepening to the sea's blue by about 12 m.
 - **Frozen lakes**: through the snow season lakes are drawn frozen and snow-covered, swept
   grey-blue in patches, instead of open blue water in a white landscape.
 - **Fields keep the season**: cropland is a patchwork of green and ripe-gold fields while things

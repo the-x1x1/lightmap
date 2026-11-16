@@ -989,6 +989,16 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
             vec3 shoal = mix(vec3(0.10, 0.26, 0.24), vec3(0.12, 0.50, 0.53), tropical);
             sea = mix(sea, shoal * (0.9 + 0.2 * patches), shallow);
         }
+        // Shallows by depth: where the terrain carries the sea floor (bathymetry near coasts)
+        // and sea level is known, water over a floor within a few metres shows its bottom - pale
+        // turquoise over the tropics' sand, green over the temperate seas' - fading out by 12 m.
+        if (u_shore > 0.5 && height < -0.05)
+        {
+            float depthLight = 1.0 - smoothstep(1.0, 12.0, -height);
+            float tropicalD = 1.0 - smoothstep(0.42, 0.56, abs(u_upWC.z));
+            vec3 bottom = mix(vec3(0.10, 0.26, 0.24), vec3(0.14, 0.52, 0.55), tropicalD);
+            sea = mix(sea, bottom * (0.9 + 0.2 * patches), 0.75 * depthLight);
+        }
         sea = mix(sea, vec3(0.10, 0.17, 0.24), smoothstep(2000.0, 40000.0, dist));
         // The sky in the water. A flat sea is a mirror of the sky: little of it looking straight
         // down (2 %, Fresnel for water), most of it looking out toward the horizon - a view
