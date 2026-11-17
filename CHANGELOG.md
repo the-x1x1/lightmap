@@ -4,6 +4,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Far buildings no longer doubly hazed**: buildings and trees had a haze of their own on top of
+  the aerial perspective every pixel already takes, so a far skyline stood paler than the hills
+  behind it; now they take the same haze as the land.
 - **Wet buildings and trees**: while the ground is wet from rain, walls, roofs and leaves darken
   with it.
 - **Snow on roofs and trees**: through the snow season, roofs go white and the tops of the trees

@@ -165,12 +165,10 @@ void main()
     float diffuseSun = 0.55 * (1.0 - ${k}) * sunUp * (0.5 + 0.5 * sky);
     vec3 light = czm_lightColor * (0.55 * ${k} * sun + (0.16 + 0.14 * sky) * ${lift} + bounce + diffuseSun);
     vec3 lit = color.rgb * light;
-    // Aerial perspective: a far skyline takes the haze's colour as distant terrain does (the
-    // globe gets Cesium's fog; these primitives do not), from 1.5 km out.
-    float dist = length(v_positionEC);
-    float haze = clamp((dist - 1500.0) / 14000.0, 0.0, 0.55);
-    vec3 hazeColor = czm_lightColor * vec3(0.36, 0.40, 0.46);
-    vec3 outRgb = mix(lit, hazeColor, haze);${roofs && cityLights > 0 ? windowsCode(cityLights) : ''}
+    // No haze of their own: the grade's aerial perspective takes every pixel by its depth,
+    // these primitives' too (a haze here as well put a far skyline in twice the haze of the
+    // hills behind it).
+    vec3 outRgb = lit;${roofs && cityLights > 0 ? windowsCode(cityLights) : ''}
     // Cesium's factor for an unoccluded fragment: its normal shading over the first
     // PRIMITIVE_NORMAL_SHADING_SMOOTH of n.l, floored at the darkness; none beyond the shadow
     // distance.
@@ -227,7 +225,7 @@ function windowsCode(cityLights: number): string {
         // A window's mean over the grid: 38 % lit, 20 % of the wall glass, an average lamp.
         vec3 glowFar = vec3(0.93, 0.74, 0.52) * 0.78 * 0.38 * ${on} * 0.20;
         float far = smoothstep(0.25, 0.6, max(fw.x, fw.y));
-        outRgb += mix(glowNear, glowFar, far) * wallness * (1.0 - haze);
+        outRgb += mix(glowNear, glowFar, far) * wallness;
     }`;
 }
 
