@@ -1,7 +1,7 @@
 import { devicesRepo } from '@lightmap/database';
 import { HttpError, errorResponse, json, readJson } from '@/lib/server/http';
 import { getServices } from '@/lib/server/services';
-import { checkBurst, clientKey } from '@/lib/server/rate-limit';
+import { checkClientBurst } from '@/lib/server/rate-limit';
 import { requireBrowserUser, requireDb } from '@/lib/server/session';
 import {
   LINK_TTL_MS,
@@ -24,7 +24,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(req: Request) {
   try {
-    checkBurst(`desktop-link:${clientKey(req, null)}`, 10);
+    checkClientBurst(req, 'desktop-link', null, 10);
     const db = requireDb();
     const { deviceName } = await readJson(req, (b) => ({
       deviceName: cleanDeviceName((b as Record<string, unknown> | null)?.['deviceName']),

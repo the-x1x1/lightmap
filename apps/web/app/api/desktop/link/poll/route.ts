@@ -1,7 +1,7 @@
 import { auditRepo, devicesRepo } from '@lightmap/database';
 import { HttpError, errorResponse, json, readJson } from '@/lib/server/http';
 import { requireDb } from '@/lib/server/session';
-import { checkBurst, clientKey } from '@/lib/server/rate-limit';
+import { checkClientBurst } from '@/lib/server/rate-limit';
 import { DEVICE_TOKEN_PREFIX, newSecret, sha256 } from '@/lib/server/device-auth';
 
 export const dynamic = 'force-dynamic';
@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: Request) {
   try {
     // The app polls every 3 s; a guesser would need far more than this.
-    checkBurst(`desktop-poll:${clientKey(req, null)}`, 40);
+    checkClientBurst(req, 'desktop-poll', null, 40);
     const { pollSecret } = await readJson(req, (b) => {
       const s = (b as Record<string, unknown> | null)?.['pollSecret'];
       if (typeof s !== 'string' || s.length < 20 || s.length > 200) throw new Error('pollSecret');

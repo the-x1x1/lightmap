@@ -14,6 +14,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   them - a mackerel sky, lit warm from the side at sunset - instead of a torn grey sheet.
 - **Peaks in cloud**: ground that stands above the cloud base disappears into the low cloud -
   wholly under an overcast, through the gaps under broken cloud - at the forecast's cloud base.
+- **Rate limits a renamed browser cannot leave**: anonymous requests are counted per address as
+  well as per browser, so changing the User-Agent no longer gives a fresh allowance each time;
+  the limiter's memory is bounded under a flood of new clients.
 - **Glass catches the Sun**: windows mirror the Sun. From where a wall's reflection of a low Sun
   reaches the eye, a patch of its panes blazes - a tower catching the sunset - and the patch
   moves across the wall as you or the Sun move.

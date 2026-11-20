@@ -1,7 +1,7 @@
 import { cacheRepo } from '@lightmap/database';
 import { gridKey } from '@lightmap/geospatial';
 import { errorResponse, json, num } from '@/lib/server/http';
-import { checkBurst, clientKey } from '@/lib/server/rate-limit';
+import { checkClientBurst } from '@/lib/server/rate-limit';
 import { getServices } from '@/lib/server/services';
 import { requestContext } from '@/lib/server/session';
 import type { ReverseResponse } from '@/lib/api-types';
@@ -16,7 +16,7 @@ export async function GET(req: Request) {
     const lat = num(params, 'lat', -90, 90);
     const lng = num(params, 'lng', -180, 180);
     const ctx = await requestContext();
-    checkBurst(`reverse:${clientKey(req, ctx.user?.id ?? null)}`, 60);
+    checkClientBurst(req, 'reverse', ctx.user?.id ?? null, 60);
     const point = { latitude: lat, longitude: lng };
     const cache = s.db ? cacheRepo(s.db.db) : null;
     const cacheKey = gridKey(point, 0.01);

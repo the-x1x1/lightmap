@@ -1,7 +1,7 @@
 import { auditRepo, devicesRepo } from '@lightmap/database';
 import { HttpError, errorResponse, json, readJson } from '@/lib/server/http';
 import { requireBrowserUser, requireDb } from '@/lib/server/session';
-import { checkBurst, clientKey } from '@/lib/server/rate-limit';
+import { checkClientBurst } from '@/lib/server/rate-limit';
 import { networkKey, normaliseLinkCode, sameNetwork } from '@/lib/server/device-auth';
 import { getServices } from '@/lib/server/services';
 
@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: Request) {
   try {
     const ctx = await requireBrowserUser();
-    checkBurst(`desktop-approve:${clientKey(req, ctx.user.id)}`, 10);
+    checkClientBurst(req, 'desktop-approve', ctx.user.id, 10);
     const { code, typed } = await readJson(req, (b) => {
       const body = b as Record<string, unknown> | null;
       const raw = body?.['code'];

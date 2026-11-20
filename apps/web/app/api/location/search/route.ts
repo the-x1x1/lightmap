@@ -1,7 +1,7 @@
 import { parseCoordinates, type Place } from '@lightmap/geospatial';
 import { cacheRepo } from '@lightmap/database';
 import { errorResponse, json, str } from '@/lib/server/http';
-import { chargeBudget, checkBurst, clientKey } from '@/lib/server/rate-limit';
+import { chargeBudget, checkClientBurst } from '@/lib/server/rate-limit';
 import { getServices } from '@/lib/server/services';
 import { requestContext } from '@/lib/server/session';
 import type { LocationSearchResponse } from '@/lib/api-types';
@@ -30,8 +30,7 @@ export async function GET(req: Request) {
       return json(body);
     }
     const ctx = await requestContext();
-    const key = clientKey(req, ctx.user?.id ?? null);
-    checkBurst(`search:${key}`, 30);
+    const key = checkClientBurst(req, 'search', ctx.user?.id ?? null, 30);
     const norm = q.toLowerCase().replace(/\s+/g, ' ').trim();
     const cache = s.db ? cacheRepo(s.db.db) : null;
     let results: Place[] | null = cache ? await cache.get<Place[]>('geocode', norm) : null;

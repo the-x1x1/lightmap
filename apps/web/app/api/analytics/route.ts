@@ -1,5 +1,5 @@
 import { errorResponse, HttpError, requireSameOrigin } from '@/lib/server/http';
-import { checkBurst, clientKey } from '@/lib/server/rate-limit';
+import { checkClientBurst } from '@/lib/server/rate-limit';
 import { getServices } from '@/lib/server/services';
 import {
   MAX_ANALYTICS_BODY_BYTES,
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     if (s.env.ANALYTICS_SINK === 'none') return NO_CONTENT();
     if (req.headers.get('dnt') === '1' || req.headers.get('sec-gpc') === '1') return NO_CONTENT();
     requireSameOrigin(req);
-    checkBurst(`analytics:${clientKey(req, null)}`, 60);
+    checkClientBurst(req, 'analytics', null, 60);
     // The size check is on the body itself, not a header the sender controls.
     const text = await req.text();
     if (text.length > MAX_ANALYTICS_BODY_BYTES)

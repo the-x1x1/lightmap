@@ -169,6 +169,23 @@ Two layers in `apps/web/lib/server/rate-limit.ts`:
 Client keys are `u:<userId>` for signed-in users or a salted SHA-256 of IP + User-Agent for
 anonymous traffic; raw IPs are never stored.
 
+An anonymous client's own key is its to change - any User-Agent it likes gives it a fresh burst
+window - so anonymous traffic is also counted under its address alone (salted and hashed the same
+way; an IPv6 client by its /64), at five clients' worth of the route's limit
+(`checkClientBurst`, `burst.ts`). Where nothing reports the address there is no such window: on a
+computer serving itself every client would share it. The windows are kept to 10,000 keys, the
+expired and then the least recently used going first, so a flood of new keys cannot grow them.
+
+**Limits of this, to settle when the service is hosted.** (1) The address is the first entry of
+`X-Forwarded-For` (else `X-Real-IP`): right behind a proxy that overwrites the header, wrong
+behind one that appends to what the client sent - there the client chooses its address, and the
+deployment must take the address from the platform's own header or strip the client's. (2) The
+daily budgets of anonymous traffic are per client key only, so a renamed browser gets a new
+day's budget, bounded by the address's burst window alone (5 x 30 weather requests a minute); a
+per-address daily budget would lock out the people who share an address behind a carrier's NAT.
+What stands behind it is the providers' own quota and the alert on a key that dominates
+(RUNBOOKS); a service-wide daily ceiling per resource is the missing backstop.
+
 ## 9. Input validation
 
 Every API route parses its inputs through the helpers in `apps/web/lib/server/http.ts` (`num` with

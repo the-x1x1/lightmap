@@ -15,7 +15,7 @@ import {
 } from '@lightmap/weather';
 import { can } from '@lightmap/entitlements';
 import { HttpError, errorResponse, forbidByEntitlement, json, num, str } from '@/lib/server/http';
-import { chargeBudget, checkBurst, clientKey } from '@/lib/server/rate-limit';
+import { chargeBudget, checkClientBurst } from '@/lib/server/rate-limit';
 import { getServices } from '@/lib/server/services';
 import { requestContext } from '@/lib/server/session';
 import type { WeatherResponse } from '@/lib/api-types';
@@ -64,8 +64,7 @@ export async function GET(req: Request) {
       });
       if (!dateWindow.allowed) throw forbidByEntitlement(dateWindow);
     }
-    const key = clientKey(req, ctx.user?.id ?? null);
-    checkBurst(`weather:${key}`, 30);
+    const key = checkClientBurst(req, 'weather', ctx.user?.id ?? null, 30);
     const cell = gridKey({ latitude: lat, longitude: lng });
     const cacheKey = forecastCacheKey(
       caps.providerId,

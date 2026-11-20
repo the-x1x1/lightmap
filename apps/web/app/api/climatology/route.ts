@@ -8,7 +8,7 @@ import {
   type ClimatologySummary,
 } from '@lightmap/weather';
 import { HttpError, errorResponse, forbidByEntitlement, json, num, str } from '@/lib/server/http';
-import { chargeBudget, checkBurst, clientKey } from '@/lib/server/rate-limit';
+import { chargeBudget, checkClientBurst } from '@/lib/server/rate-limit';
 import { getServices } from '@/lib/server/services';
 import { requestContext } from '@/lib/server/session';
 import type { ClimatologyResponse } from '@/lib/api-types';
@@ -38,8 +38,7 @@ export async function GET(req: Request) {
     const ctx = await requestContext();
     const decision = can(ctx.entitlements, 'climatology');
     if (!decision.allowed) throw forbidByEntitlement(decision);
-    const key = clientKey(req, ctx.user?.id ?? null);
-    checkBurst(`climatology:${key}`, 10);
+    const key = checkClientBurst(req, 'climatology', ctx.user?.id ?? null, 10);
 
     const caps = s.climatology.getCapabilities();
     const toYear = new Date().getUTCFullYear() - 1;
