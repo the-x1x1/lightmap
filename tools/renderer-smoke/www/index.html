@@ -504,6 +504,21 @@
           await new Promise((r) => {
             window.__takeShot = r;
           });
+          // Cirrus in strands: 40 % high cloud alone with the Sun on the horizon, looking up
+          // the sky to the west - filaments drawn out along the wind, lit warm, in some parts of
+          // the veil and smooth in others (at 80 %, above, it is a sheet).
+          controller.apply(
+            forecastScene(
+              19.05,
+              { low: 0, mid: 0, high: 40 },
+              { ...defaultCamera(kailua.point, 265), mode: 'viewpoint', pitchDeg: 28 },
+            ),
+          );
+          await wait(1500);
+          window.__smoke.shot = 'cirrus-strands';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
           // A halo: a cirrostratus sheet (85 % high cloud) with the Sun about 24 deg up, looking
           // at it - the 22 deg ring round it, the sun dogs either side at its height.
           {

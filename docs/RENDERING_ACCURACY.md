@@ -683,6 +683,14 @@ base is left; the silver lining keeps to the deck's soft margin (`partly-viewpoi
 **Caveat:** a sheet's relief, not a volume: no towers, no anvils, no shadows from one cloud on
 the next.
 
+**Cirrus in strands.** High cloud short of a sheet (the high cover under about 45 %; cirrostratus,
+smooth, by 75 % - the sheet a halo needs) is drawn out into filaments: strands some 150-400 m
+across (1-2.5° from under them) and kilometres long, lying along the wind on a slow sideways
+wander - two fine noises stretched forty and ninety times along the wind - in some parts of the
+veil and not in others, the veil a little brighter in the strands and thinner between them at the
+same mean. Below 15° of elevation, where the strands could not be told apart, the veil is as it
+was (`cirrus-strands`, against the sheet of `cirrus-sunset` and `halo`).
+
 **Altocumulus.** Broken mid cloud (the mid cover under about 45 %, a sheet again by 75 %) is a
 field of cloudlets, not a torn sheet: a cell pattern in the wind's frame, some 300 m to a
 cloudlet (1-5° from under it), their places, sizes and outlines irregular - small and apart

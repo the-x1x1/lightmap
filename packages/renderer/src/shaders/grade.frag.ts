@@ -349,7 +349,23 @@ void main() {
       // sampled at a low x frequency and a high y frequency.
       float nh = mix(0.5, fbm(ph * vec2(0.5, 1.0) + vec2(3.1, 7.7)), detail) - step(hHigh, 0.0);
       float fibres = mix(0.5, fbm(ph * vec2(1.5, 3.0) + vec2(1.0, 2.0)), detail);
-      float veil = smoothstep(1.0 - covHigh - 0.18, 1.0 - covHigh + 0.18, nh) * (0.55 + 0.45 * fibres);
+      // Cirrus is drawn out into filaments: strands some 150-400 m across (1-2.5 deg from under
+      // them) and kilometres long, lying along the wind and bending gently with it - two fine
+      // noises stretched forty and ninety times along the wind, on a slow sideways wander - in
+      // some parts of the veil and not in others (a slower noise says where), the veil a
+      // little brighter in the strands and thinner between them, at the same mean. A cover
+      // closing past 45-75 % is cirrostratus, a smooth sheet again (the one a halo needs); and
+      // below 15 deg, where the strands could not be told apart, the veil is as it was.
+      float strandy = (1.0 - smoothstep(0.45, 0.75, covHigh)) * smoothstep(0.08, 0.25, dot(rayEC, u_eyeUpEC));
+      float body = 0.55 + 0.45 * fibres;
+      if (strandy > 0.01) {
+        strandy *= smoothstep(0.38, 0.62, fbm(ph * vec2(0.7, 1.1) + vec2(20.0, 4.0)));
+        vec2 pb = ph + vec2(0.0, 0.18 * (fbm(ph * vec2(0.5, 0.35) + vec2(7.0, 3.0)) - 0.5));
+        float strands = 0.6 * vnoise(pb * vec2(3.0, 38.0) + vec2(2.0, 9.0))
+                      + 0.4 * vnoise(pb * vec2(6.5, 90.0) + vec2(8.0, 4.0));
+        body = mix(body, (0.45 + 0.55 * fibres) * (0.62 + 0.8 * smoothstep(0.3, 0.75, strands)), strandy);
+      }
+      float veil = smoothstep(1.0 - covHigh - 0.18, 1.0 - covHigh + 0.18, nh) * clamp(body, 0.0, 1.0);
       vec3 cirrus = mix(vec3(0.92, 0.94, 0.98), warm, lowSun * 0.9);
       cirrus = mix(shade * 0.6, cirrus, highLit);
       cirrus *= deckLum * mix(1.0, 0.25, u_nightFactor * (1.0 - highLit));
