@@ -286,6 +286,8 @@ export class CesiumSceneHost implements SceneHost {
   private retireLayer: (() => void) | null = null;
   private retiringBase: Cesium.ImageryLayer | null = null;
   private osmBuildingsCheckAt = 0;
+  /** Whether the globe is lit, or shown as a flat chart (`setGlobeShading`). */
+  private globeLit = true;
   private osmLean = false;
   /** The street map near the place (`u_roadMap`) and its bounds. */
   private roadCanvas: HTMLCanvasElement | null = null;
@@ -485,7 +487,16 @@ export class CesiumSceneHost implements SceneHost {
     globe.showGroundAtmosphere = true;
     globe.showWaterEffect = true; // needs a terrain water mask (requested below); otherwise inert
     globe.depthTestAgainstTerrain = true;
-    globe.shadows = C.ShadowMode.ENABLED;
+    // The ground casts shadows only where it has relief to cast them with and normals to
+    // receive them by. Cesium keeps a receiver out of its own shadow by offsetting it along its
+    // normal; ground without normals is left a depth bias alone, and under a low Sun level
+    // ground then shadows itself in stripes (the harness's flat ground at 18:30 was a moire of
+    // them). The ellipsoid - the fallback when no terrain can be had - has neither: it takes
+    // the buildings' and trees' shadows and casts none. Nor does the flat chart of the night
+    // map (groundShadowMode). Decided again whenever the terrain changes, whoever changes it,
+    // and whenever the globe's shading does.
+    this.applyGroundShadows();
+    scene.terrainProviderChanged.addEventListener(() => this.applyGroundShadows());
     // Tile skirts - the walls Cesium hangs under each tile's edges to close the cracks between
     // tiles - only while they cast no shadow (skirt-shadows.ts): their own shadows drew long
     // black lines across the ground along tile edges under a low Sun (fjords, valleys, any
@@ -927,10 +938,20 @@ export class CesiumSceneHost implements SceneHost {
     }
   }
 
+  /** The globe's shadow mode for its terrain and shading (`groundShadowMode`). */
+  private applyGroundShadows(): void {
+    const globe = this.scene.globe as Cesium.Globe | undefined;
+    if (!globe) return;
+    const mode = groundShadowMode(this.C, this.scene.terrainProvider, this.globeLit);
+    if (globe.shadows !== mode) globe.shadows = mode;
+  }
+
   setGlobeShading(shading: HostGlobeShading): void {
     const globe = this.scene.globe as Cesium.Globe | undefined;
     if (!globe) return;
     globe.enableLighting = shading.lit;
+    this.globeLit = shading.lit;
+    this.applyGroundShadows();
     // Every imagery layer dims together, so a provider basemap and the Natural Earth fallback
     // underneath it read as one chart.
     this.basemapBrightness = shading.basemapBrightness;
@@ -3462,4 +3483,26 @@ export class CesiumSceneHost implements SceneHost {
     this.labelEntries = [];
     this.widget.destroy();
   }
+}
+/**
+ * Whether the globe casts shadows, or only receives them. It casts where it is lit and has
+ * relief to cast with:
+ *
+ * - not on the ellipsoid, which has no relief and no normals to keep its own shadow off it
+ *   (see the constructor);
+ * - not while the map is shown as a flat chart (`setGlobeShading` with `lit` false, the map view
+ *   at night). A globe that casts is lit by Cesium's shadow shader whatever `enableLighting`
+ *   says - it adds the globe's lighting to every receiver that also casts - so on a night when
+ *   the Moon was bright enough to cast shadows the chart was multiplied by the moonlight and
+ *   went all but black: the brighter the Moon, the darker the map. A chart has no light for its
+ *   hills to block; it still takes the buildings' shadows.
+ */
+export function groundShadowMode(
+  C: Pick<CesiumModule, 'ShadowMode' | 'EllipsoidTerrainProvider'>,
+  terrain: unknown,
+  lit = true,
+): Cesium.ShadowMode {
+  return !lit || terrain instanceof C.EllipsoidTerrainProvider
+    ? C.ShadowMode.RECEIVE_ONLY
+    : C.ShadowMode.ENABLED;
 }

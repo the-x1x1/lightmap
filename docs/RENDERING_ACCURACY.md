@@ -69,6 +69,16 @@ turned from the light still dark. **Claim:** direction and length of shadows;
 visible softening under cloud. **Verified:** the smoke harness renders a 20 m tower at Sun
 elevation ≈ 11° and measures the frame — the ground along the shadow line is < 70 % as bright as
 the Sun side and the point just beyond `h / tan(el)` is fully lit (`shadow-tower` scene).
+The ground casts shadows only where it is lit and has relief to cast with
+(`groundShadowMode`). On the ellipsoid - the fallback when no terrain can be had - it only
+receives them: Cesium keeps a receiver out of its own shadow by offsetting it along its normal,
+ground without normals has only a depth bias, and under a low Sun level ground then shadowed
+itself in a moire of stripes (`buildings-glint` measures the ground's evenness). And while the
+map is shown as a flat chart (the map view at night) it only receives them too: a globe that
+casts is lit by Cesium's shadow shader whatever its own lighting says, so on the nights the Moon
+was bright enough to cast shadows the chart was multiplied by the moonlight and went all but
+black - the brighter the Moon, the darker the map (`synth-map-moon` measures the chart's
+brightness; `shadow-moon` shows a building's Moon shadow on it).
 **Caveat:** buildings are OpenStreetMap's (by default from OpenFreeMap's vector tiles, loaded
 within about 2 km of where you stand or look, or Cesium OSM Buildings with an ion token): heights
 are often estimated or missing (a building without one is drawn 6 m tall), roofs are flat but
