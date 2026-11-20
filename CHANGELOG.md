@@ -8,6 +8,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   first at dawn - Sun-facing slopes above the place glow red, then orange, toward their crests.
 - **Cirrus in strands**: thin high cloud is drawn out into filaments along the wind, in parts of
   the veil, instead of an even haze (a closing sheet stays smooth, as a halo needs).
+- **A softer glow round a low Sun**: no white rim round the sunset's glow, and it fades into the
+  blue instead of ending at an edge.
 - **Altocumulus**: broken mid-level cloud is drawn as a field of cloudlets with blue between
   them - a mackerel sky, lit warm from the side at sunset - instead of a torn grey sheet.
 - **Peaks in cloud**: ground that stands above the cloud base disappears into the low cloud -

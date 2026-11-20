@@ -254,9 +254,23 @@ void main() {
     {
       float a = degrees(acos(clamp(dot(rayEC, u_sunDirEC), -1.0, 1.0)));
       // Only while the disc is up: under the horizon the glow's colour is the block above's.
-      float nearSun = (1.0 - smoothstep(0.5, 6.0, a)) * underDecks
-          * smoothstep(-1.5, -0.5, u_sunElevation);
+      float sunIsUp = underDecks * smoothstep(-1.5, -0.5, u_sunElevation);
+      float nearSun = (1.0 - smoothstep(0.5, 6.0, a)) * sunIsUp;
       dome = mix(dome, dome * u_sunTint, nearSun);
+      // The glare beyond that. Cesium's single-scattering dome comes in white where the Sun's
+      // forward-scattered light is strongest but less reddened than at the horizon - a white
+      // rim round a low Sun's cream glow, and a hard edge to the blue beyond it. Scattered
+      // sunlight is the Sun's colour: as far as the dome runs white within 35 deg of the Sun,
+      // it takes the Sun's tint at half strength (none from a high Sun, whose tint is white);
+      // and a wide, soft aureole in the same colour is laid round a low Sun (gone by 15 deg of
+      // elevation), over what the dome leaves dark, so the glow falls away into the blue instead
+      // of stopping at a line.
+      float whiteHere = smoothstep(0.7, 0.97, min(dome.r, min(dome.g, dome.b)));
+      vec3 glareTint = mix(vec3(1.0), u_sunTint, 0.5);
+      dome = mix(dome, dome * glareTint, whiteHere * (1.0 - smoothstep(12.0, 35.0, a)) * sunIsUp * (1.0 - nearSun));
+      float lowGlow = (1.0 - smoothstep(4.0, 15.0, u_sunElevation)) * sunIsUp;
+      float aureole = 0.22 * exp(-a / 9.0) + 0.10 * exp(-a / 22.0);
+      dome += glareTint * aureole * lowGlow * (1.0 - clamp(dot(dome, vec3(0.2126, 0.7152, 0.0722)), 0.0, 1.0));
     }
     // Darken the atmospheric glow but keep bright point sources (stars, moon) readable.
     float domeLum = dot(dome, vec3(0.2126, 0.7152, 0.0722));

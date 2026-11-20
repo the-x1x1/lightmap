@@ -691,6 +691,16 @@ veil and not in others, the veil a little brighter in the strands and thinner be
 same mean. Below 15° of elevation, where the strands could not be told apart, the veil is as it
 was (`cirrus-strands`, against the sheet of `cirrus-sunset` and `halo`).
 
+**A low Sun's glare.** Cesium's single-scattering dome comes in white where the Sun's
+forward-scattered light is strongest but less reddened than at the horizon: a white rim round a
+low Sun's cream glow, and a hard edge to the blue beyond it. Scattered sunlight is the Sun's own
+colour, so as far as the dome runs white within 35° of the Sun it takes the Sun's tint at half
+strength (none from a high Sun, whose tint is white), and a wide, soft aureole in the same colour
+is laid round a Sun under 15° (two exponentials, 9° and 22°, over what the dome leaves dark): the
+glow falls away into the blue instead of stopping at a line (`golden-viewpoint`,
+`water-golden-toward`). **Caveat:** a correction to the picture, not a second scattering order;
+the mound of the glow is still Cesium's.
+
 **Altocumulus.** Broken mid cloud (the mid cover under about 45 %, a sheet again by 75 %) is a
 field of cloudlets, not a torn sheet: a cell pattern in the wind's frame, some 300 m to a
 cloudlet (1-5° from under it), their places, sizes and outlines irregular - small and apart
