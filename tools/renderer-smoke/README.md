@@ -37,6 +37,17 @@ host and stopped before drawing. `docs/media/renderer-smoke-2026-10-19.png` is t
 the last full run (CesiumJS 1.146, SwiftShader): fifteen shots, no errors, the globe program
 compiled and linked, the shadow probe and the terrain horizon passing.
 
+**The buildings layer, end to end.** After the hand-made blocks (boxes drawn with the layer's
+shaders) a stage runs the app's own `OsmBuildingsLayer` on a made-up town
+(`www/synthetic-town.js`): OpenMapTiles vector tiles encoded in the page and handed to `fetch`, so
+the TileJSON, the tiles' decoding, the ground under each footprint, the geometry built in Cesium's
+workers, the tree pattern, the layer's shaders and the roof heights the horizon reads all run as
+they do in the app. It is checked, not just looked at: the layer must settle, hold a footprint
+exactly where the town has a building (none in the street, the courtyard, or where the map says
+not to draw one) and read every roof within 1.5 m of its mapped height through
+`sampleSurfaceHeights` (`town-street`, `town-street-dusk`, `town-above`). `SMOKE_ONLY=town` starts
+the run at this stage.
+
 `www/index.html` uses an import map so the emitted packages and Cesium load as native ES modules;
 nothing is bundled. The `cesium` meta-package is a **devDependency only**, used for its prebuilt
 `Build/Cesium` bundle here; application code imports `@cesium/engine` (ADR-0002).

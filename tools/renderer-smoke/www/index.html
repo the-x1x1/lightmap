@@ -1428,6 +1428,140 @@
           host.setTownGlow(null);
           log('buildings and trees drawn');
         }
+        // The app's own buildings layer, end to end, on a made-up town (synthetic-town.js): the
+        // TileJSON and tiles through `fetch`, decoded, each footprint set on the ground, built in
+        // Cesium's workers, drawn with the layer's shaders under the scene's light - and read
+        // back as the horizon reads roofs. (The stage above draws hand-made boxes with those
+        // shaders; this is the layer itself. SMOKE_ONLY=town starts here.)
+        if (!window.__synthOnly || window.__townOnly) {
+          const { installSyntheticTown, TOWN_PROBES } = await import('/synthetic-town.js');
+          const town = installSyntheticTown(kailua.point);
+          const fail = (m) => window.__smoke.errors.push('town: ' + m);
+          await controller.setProviders(
+            { kind: 'ellipsoid', attribution: '' },
+            { kind: 'cesium-natural-earth', attribution: 'NE' },
+            { kind: 'vector-tiles', url: town.url, attribution: 'made up' },
+          );
+          const tLat = 1 / 111320;
+          const tLon = tLat / Math.cos((kailua.point.latitude * Math.PI) / 180);
+          const at = (east, north) => ({
+            latitude: kailua.point.latitude + north * tLat,
+            longitude: kailua.point.longitude + east * tLon,
+          });
+          // Standing in the street south of the houses, looking up it at the blocks and towers.
+          const street = (hour, scenario) =>
+            scene(hour, scenario, {
+              ...defaultCamera(at(0, -110), 0),
+              mode: 'viewpoint',
+              pitchDeg: 6,
+            });
+          controller.apply(street(15, 'clear'));
+          // Wait for the layer: its tiles round the town fetched and decoded, every primitive
+          // (the buildings' merged one, the trees') built by the workers and ready to draw.
+          const settled = async (capMs) => {
+            const t0 = performance.now();
+            while (performance.now() - t0 < capMs) {
+              const layer = host.osmBuildings;
+              if (layer) {
+                await layer
+                  .loadAround(kailua.point.longitude, kailua.point.latitude)
+                  .catch(() => undefined);
+                const prims = [];
+                for (let i = 0; i < layer.collection.length; i++)
+                  prims.push(layer.collection.get(i));
+                if (
+                  layer.primitiveCount > 0 &&
+                  layer.treePrimitives().length > 0 &&
+                  layer.merging.size === 0 &&
+                  prims.every((q) => q.ready)
+                )
+                  return Math.round(performance.now() - t0);
+              }
+              await wait(500);
+            }
+            return null;
+          };
+          const tookMs = await settled(180000);
+          const layer = host.osmBuildings;
+          if (tookMs === null) fail('the layer did not settle in 180 s');
+          const withData = town.asked.filter((t) => t.bytes > 0).length;
+          if (withData === 0) fail('no tile with the town in it was asked for');
+          // The footprints the layer holds: a building where the town has one, none in the
+          // street, the courtyard or where the map said not to draw one.
+          const names = Object.keys(TOWN_PROBES);
+          const points = names.map((k) => at(TOWN_PROBES[k].east, TOWN_PROBES[k].north));
+          const has = names.map((k, i) => host.hasBuildingAt(points[i]));
+          names.forEach((k, i) => {
+            const want = TOWN_PROBES[k].heightM !== null;
+            if (has[i] !== want) fail(`hasBuildingAt(${k}) is ${has[i]}, should be ${want}`);
+          });
+          await wait(2500);
+          window.__smoke.shot = 'town-street';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+          // The roofs as the horizon reads them (picked from the drawn buildings, not the
+          // footprints): each within 1.5 m of the height the town gave it, nothing where there
+          // is no building. Where the renderer cannot sample heights there is nothing to compare.
+          const roofs = await host.sampleSurfaceHeights(points).catch((e) => {
+            fail('sampleSurfaceHeights threw: ' + ((e && e.message) || e));
+            return null;
+          });
+          if (roofs)
+            names.forEach((k, i) => {
+              const want = TOWN_PROBES[k].heightM;
+              const tol = TOWN_PROBES[k].tolM ?? 1.5;
+              const got = roofs[i];
+              const says = (v) => (v === null ? 'nothing' : v.toFixed(1) + ' m');
+              if (want === null ? got !== null : got === null || Math.abs(got - want) > tol)
+                fail(`roof at ${k} reads ${says(got)}, should be ${says(want)}`);
+            });
+          window.__smoke.town = {
+            settledMs: tookMs,
+            tilesAsked: town.asked.length,
+            tilesWithData: withData,
+            buildingPrimitives: layer ? layer.primitiveCount : 0,
+            drawn: layer ? layer.collection.length : 0,
+            treePrimitives: layer ? layer.treePrimitives().length : 0,
+            footprints: Object.fromEntries(names.map((k, i) => [k, has[i]])),
+            roofs: roofs
+              ? Object.fromEntries(
+                  names.map((k, i) => [k, roofs[i] === null ? null : +roofs[i].toFixed(2)]),
+                )
+              : 'heights cannot be sampled here',
+          };
+          log('town: ' + JSON.stringify(window.__smoke.town));
+          // The same street at the blue hour - the layer takes the town's lights from the scene
+          // itself here - and the town from above.
+          controller.apply(street(19.75, 'clear'));
+          await wait(2500);
+          window.__smoke.shot = 'town-street-dusk';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+          controller.apply(scene(15, 'clear', null));
+          controller.setOrbit({ headingDeg: 20, pitchDeg: -28, rangeM: 520 });
+          await wait(4000);
+          window.__smoke.shot = 'town-above';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+          await controller.setProviders(
+            { kind: 'ellipsoid', attribution: '' },
+            { kind: 'cesium-natural-earth', attribution: 'NE' },
+          );
+          town.restore();
+          // Nothing of the town may stay behind. The street map the host draws from the same
+          // tiles once did: it called the ground round the pin "known, no water", and the
+          // synthetic terrain's sea came up as a slab of sand at the next stage's first shot.
+          if (host.roadCanvas || host.roadTemplate || host.roadBounds)
+            fail('the street map outlived the tiles it was drawn from');
+          // And the view as the stage before left it, so the next stage starts as it always has.
+          controller.apply(scene(15, 'overcast', null));
+          controller.setOrbit({ headingDeg: 120, pitchDeg: -35, rangeM: 160 });
+          await wait(1800);
+          log('town drawn by the buildings layer');
+        }
         // Synthetic terrain (synthetic-terrain.js): quantized-mesh tiles with vertex normals and
         // a water mask, so the globe itself applies the ground material and draws water - the
         // real globe program, not a probe. Sea to the west (the sunset's side in May), a beach

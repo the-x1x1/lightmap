@@ -63,6 +63,12 @@ if (process.env.SMOKE_ONLY === 'synthetic')
   await page.addInitScript(() => {
     window.__synthOnly = true;
   });
+// SMOKE_ONLY=town: the same, by way of the made-up town the buildings layer draws.
+if (process.env.SMOKE_ONLY === 'town')
+  await page.addInitScript(() => {
+    window.__synthOnly = true;
+    window.__townOnly = true;
+  });
 if (process.env.SMOKE_DEBUG === 'water')
   await page.addInitScript(() => {
     window.__synthDebug = true;
