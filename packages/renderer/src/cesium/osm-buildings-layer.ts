@@ -216,7 +216,7 @@ void main()
     // No haze of their own: the grade's aerial perspective takes every pixel by its depth,
     // these primitives' too (a haze here as well put a far skyline in twice the haze of the
     // hills behind it).
-    vec3 outRgb = lit;${roofs ? windowsCode(cityLights, lift) : ''}
+    vec3 outRgb = lit;${roofs ? windowsCode(cityLights, lift, k) : ''}
     // Cesium's factor for an unoccluded fragment: its normal shading over the first
     // PRIMITIVE_NORMAL_SHADING_SMOOTH of n.l, floored at the darkness; none beyond the shadow
     // distance.
@@ -236,8 +236,11 @@ void main()
  * (two fifths); or a curtain wall, glass from slab to slab (three quarters). By day a window is
  * glass: darker than its wall (a third to a half of it, pane by pane), with the sky's light
  * glancing off it - more the more obliquely the wall is seen, as glass mirrors at a grazing
- * angle; so a wall has a scale, and a building is not a painted box. From the dusk on
- * (`cityLights`, 0..1) up to 38 % of them are lit, each its own warm-to-cool white and
+ * angle; so a wall has a scale, and a building is not a painted box. And it mirrors the Sun:
+ * where the eye stands in a pane's mirrored beam the pane blazes, each pane a little off true,
+ * so a wall turned to a low Sun shows a patch of blazing panes about the mirror's place (the
+ * direct beam's share `direct` of it; a sheen once the panes cannot be told apart). From the
+ * dusk on (`cityLights`, 0..1) up to 38 % of them are lit, each its own warm-to-cool white and
  * brightness, picked by a hash of the window and the building's tone so a window stays lit or
  * dark; that light is the window's own: added after the shading, not scaled by the scene's
  * light. Where a pixel spans more than about half a window the grid gives way to its mean - the
@@ -251,7 +254,7 @@ void main()
  * height above the ellipsoid (the eye's height plus the offset). Storeys count from sea level,
  * not each building's base. ASCII only.
  */
-function windowsCode(cityLights: number, lift = '1.00'): string {
+function windowsCode(cityLights: number, lift = '1.00', direct = '1.00'): string {
   const on = Math.max(0, Math.min(1, cityLights));
   const onS = on.toFixed(2);
   return `
@@ -296,7 +299,21 @@ function windowsCode(cityLights: number, lift = '1.00'): string {
         vec3 pane = lit * (0.34 + 0.22 * mix(fract(hsh * 5.9), 0.5, far))
                   + czm_lightColor * vec3(0.07, 0.09, 0.12) * (0.4 + 0.6 * sky) * ${lift}
                     * (1.0 + 0.8 * curtain + 3.0 * graze);
-        outRgb = mix(outRgb, pane, glass * wallness);${
+        outRgb = mix(outRgb, pane, glass * wallness);
+        // The Sun in the glass. A pane mirrors the Sun to an eye that stands where the mirrored
+        // beam goes - a low Sun, a wall turned to it, the eye on the Sun's side: a tower
+        // catching the sunset. No pane hangs quite true (each is off by up to a degree, its own
+        // way), so a wall does not flash as one mirror: panes blaze singly in a patch about the
+        // mirror's place, and the patch moves over the wall as the eye or the Sun does. Past
+        // telling the panes apart the patch is its mean, a sheen. Only the Sun's own beam is
+        // mirrored - none under an overcast, none from a Sun below the horizon.
+        vec3 paneTilt = (vec3(fract(hsh * 13.1), fract(hsh * 29.7), fract(hsh * 47.3)) - 0.5) * 0.02;
+        vec3 mirrored = reflect(normalize(v_positionEC), normalize(normalEC + paneTilt * (1.0 - far)));
+        float offSun = sqrt(max(2.0 * (1.0 - dot(mirrored, czm_lightDirectionEC)), 0.0));
+        float blaze = mix(1.0 - smoothstep(0.006, 0.016, offSun),
+                          0.22 * (1.0 - smoothstep(0.012, 0.045, offSun)), far);
+        float sunOver = smoothstep(0.0, 0.03, dot(upEC, czm_lightDirectionEC));
+        outRgb += czm_lightColor * (4.0 * ${direct} * blaze * sunOver * glass * wallness);${
           on > 0
             ? `
         float litW = step(hsh, 0.38 * ${onS});

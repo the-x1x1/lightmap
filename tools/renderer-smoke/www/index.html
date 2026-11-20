@@ -1397,6 +1397,98 @@
               window.__takeShot = r;
             });
           }
+          // The Sun in the glass. At 18:30 the eye is put where the curtain tower's west wall
+          // mirrors the low Sun from 40 m up: panes round that place must blaze, and the same
+          // wall 28 m lower, five degrees off the mirror's line, must not. Measured, since it
+          // tests the mirror's geometry: which way the reflection goes.
+          {
+            const g0 = scene(18.5, 'clear');
+            const gAz = (g0.solar.azimuthDegrees * Math.PI) / 180;
+            const gEl = (g0.solar.elevationDegrees * Math.PI) / 180;
+            // Toward the Sun: east, north, up.
+            const toSun = [
+              Math.sin(gAz) * Math.cos(gEl),
+              Math.cos(gAz) * Math.cos(gEl),
+              Math.sin(gEl),
+            ];
+            // The wall's middle is 47 m east and 174 m north of the pin and faces west, so the
+            // beam mirrored from 40 m up it goes on west, south where the Sun is north, and down.
+            const mirrorH = 40;
+            const run = (mirrorH - 1.7) / toSun[2];
+            const eyeEast = 47 + run * toSun[0];
+            const eyeNorth = 174 - run * toSun[1];
+            const heading = (Math.atan2(47 - eyeEast, 174 - eyeNorth) * 180) / Math.PI;
+            const sc = scene(18.5, 'clear', {
+              ...defaultCamera(
+                { latitude: kLat + eyeNorth * mLat, longitude: kLon + eyeEast * mLon },
+                (heading + 360) % 360,
+              ),
+              mode: 'viewpoint',
+              pitchDeg: 6,
+            });
+            const scl = lightingFromScene(sc);
+            drawInstances(scl.globeLight.lambert / 0.9, scl.globeLight.skyLift, scl.cityLights);
+            host.setStreetLamps([]);
+            host.setTownGlow(null);
+            controller.apply(sc);
+            await wait(2500);
+            const onWall = (h) =>
+              Cesium.SceneTransforms.worldToWindowCoordinates(
+                host.scene,
+                Cesium.Cartesian3.fromDegrees(kLon + 47 * mLon, kLat + 174 * mLat, h),
+              );
+            const spots = { mirror: onWall(mirrorH), below: onWall(mirrorH - 28) };
+            const dataUrl = await host.captureThumbnail(4096);
+            const bright = await new Promise((resolve) => {
+              const img = new Image();
+              img.onload = () => {
+                const cv = document.createElement('canvas');
+                cv.width = img.width;
+                cv.height = img.height;
+                const ctx = cv.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                const sx = img.width / host.scene.canvas.clientWidth;
+                const sy = img.height / host.scene.canvas.clientHeight;
+                // Pixels brighter than 0.8 in a 40 px square about a spot.
+                const count = (p) => {
+                  if (!p) return null;
+                  const d = ctx.getImageData(
+                    Math.round((p.x - 20) * sx),
+                    Math.round((p.y - 20) * sy),
+                    Math.round(40 * sx),
+                    Math.round(40 * sy),
+                  ).data;
+                  let n = 0;
+                  for (let i = 0; i < d.length; i += 4)
+                    if ((0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255 > 0.8) n++;
+                  return n;
+                };
+                resolve({ mirror: count(spots.mirror), below: count(spots.below) });
+              };
+              img.src = dataUrl;
+            });
+            window.__smoke.glint = {
+              sunAzDeg: g0.solar.azimuthDegrees,
+              sunElDeg: g0.solar.elevationDegrees,
+              eyeEast,
+              eyeNorth,
+              spots,
+              bright,
+            };
+            log('glint: ' + JSON.stringify(window.__smoke.glint));
+            if (!(bright.mirror >= 20))
+              window.__smoke.errors.push(
+                `glint: ${bright.mirror} bright pixels where the tower mirrors the Sun (20 or more expected)`,
+              );
+            else if (!(bright.below * 10 <= bright.mirror))
+              window.__smoke.errors.push(
+                `glint: ${bright.below} bright pixels off the mirror's line against ${bright.mirror} on it`,
+              );
+            window.__smoke.shot = 'buildings-glint';
+            await new Promise((r) => {
+              window.__takeShot = r;
+            });
+          }
           // Under lying snow, seen from above: the block's roof white, the crown's top dusted.
           {
             const sc = scene(15, 'clear', null);

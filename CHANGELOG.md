@@ -14,6 +14,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   them - a mackerel sky, lit warm from the side at sunset - instead of a torn grey sheet.
 - **Peaks in cloud**: ground that stands above the cloud base disappears into the low cloud -
   wholly under an overcast, through the gaps under broken cloud - at the forecast's cloud base.
+- **Glass catches the Sun**: windows mirror the Sun. From where a wall's reflection of a low Sun
+  reaches the eye, a patch of its panes blazes - a tower catching the sunset - and the patch
+  moves across the wall as you or the Sun move.
 - **Houses have roofs**: a low, plain rectangular building gets a hip roof - slopes rising from
   all four eaves to a ridge, the eaves standing out from the walls - in one of six roofings,
   where every building had a flat top. The mapped height is the ridge's, so nothing stands

@@ -811,6 +811,19 @@ and wall, every pane alike, so it neither shimmers nor changes brightness with d
 building's glazing is a guess from its height, not its own - a church tower over 35 m is glazed
 like an office - and there is no reflection of what stands opposite.
 
+Glass mirrors the Sun. Where the eye stands in a pane's mirrored beam - the view ray reflected
+in the pane within 0.34° of the Sun's direction, fading out by 0.9° - the pane blazes in the
+Sun's own colour (the direct beam's share of it: none under an overcast, none from a Sun under
+the horizon). No pane hangs quite true: each is off by up to a degree, its own way and always
+the same, so a wall turned to a low Sun does not flash as one mirror but shows a patch of
+blazing panes some five degrees across about the mirror's place, which moves over the wall as
+the eye or the Sun does; past telling the panes apart the patch is its mean, a sheen. The
+harness measures it (`buildings-glint`): the eye is put where a tower's west wall mirrors the Sun
+at 18:30 from 40 m up, and the panes there must blaze where the wall 28 m lower does not.
+**Caveat:** which panes blaze is a pattern, and a pane in another building's shadow blazes
+(dimmed, not put out); walls and roofs do not glint, nor does water here (the sea has its own
+glitter).
+
 A house has a roof (`house-roofs.ts`). Where a footprint is plainly a house - no courtyard, not
 a part set on another, 3.5-13 m tall, four corners within 15° of square, 3.5-14 m wide and at
 most 30 m long - its walls stop at the eaves and a hip roof rises from all four of them at 30°

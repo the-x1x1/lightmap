@@ -118,6 +118,37 @@ describe('buildings and trees shader', () => {
     expect(treeFragmentShader(1, 0, 0.45, 20000)).not.toContain('curtain');
   });
 
+  it('mirrors the Sun in the glass: panes blaze where the eye stands in their beam', () => {
+    const day = litInstanceShader(0.2, 8000, true, 0.7, 1, 0);
+    // The view ray mirrored in the pane, set against the light's direction.
+    expect(day).toContain('reflect(normalize(v_positionEC), normalize(normalEC + paneTilt');
+    expect(day).toContain('dot(mirrored, czm_lightDirectionEC)');
+    // The Sun's disc is 0.27 deg in radius: a pane blazes fully within 0.34 deg of the mirror's
+    // line and not at all past 0.92 deg.
+    const deg = (rad: number) => (rad * 180) / Math.PI;
+    expect(deg(0.006)).toBeGreaterThan(0.27);
+    expect(deg(0.006)).toBeLessThan(0.4);
+    expect(deg(0.016)).toBeLessThan(1);
+    // Each pane off true by up to a degree, the same way every frame (its own hash).
+    expect(day).toContain(
+      'vec3 paneTilt = (vec3(fract(hsh * 13.1), fract(hsh * 29.7), fract(hsh * 47.3)) - 0.5) * 0.02;',
+    );
+    expect(deg(Math.hypot(0.01, 0.01, 0.01))).toBeCloseTo(0.99, 1);
+    // Only the direct beam is mirrored: scaled by its share, gone with a Sun under the horizon.
+    expect(day).toContain('4.0 * 0.70 * blaze * sunOver * glass * wallness');
+    expect(litInstanceShader(0.2, 8000, true, 0, 1, 0)).toContain('4.0 * 0.00 * blaze');
+    expect(day).toContain(
+      'float sunOver = smoothstep(0.0, 0.03, dot(upEC, czm_lightDirectionEC));',
+    );
+    // Past telling the panes apart: no tilt, a wide dim sheen.
+    expect(day).toContain('paneTilt * (1.0 - far)');
+    expect(day).toContain('0.22 * (1.0 - smoothstep(0.012, 0.045, offSun)), far);');
+    // Trees and plain blocks have no glass.
+    expect(treeFragmentShader(1, 0, 0.45, 20000)).not.toContain('blaze');
+    expect(LIT_INSTANCE_FS).not.toContain('blaze');
+    expect([...day].every((c) => c.charCodeAt(0) < 128)).toBe(true);
+  });
+
   it("draws a house's pitched roof in its own roofing and turns a flat roof to tar", () => {
     const fs = litInstanceShader(0.2, 8000, true);
     // The roof's mark sits under the glazings' in the alpha, a byte's rounding clear of them.
