@@ -4,6 +4,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Wet ground knows last night's rain**: the weather request now includes the day before, so the
+  ground is still wet at dawn after evening rain in every time zone (before, the day's frames
+  began at midnight UTC, which left places near Greenwich with no memory of the night).
 - **Far buildings no longer doubly hazed**: buildings and trees had a haze of their own on top of
   the aerial perspective every pixel already takes, so a far skyline stood paler than the hills
   behind it; now they take the same haze as the land.

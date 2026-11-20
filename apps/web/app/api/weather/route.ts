@@ -7,7 +7,12 @@ import {
 } from '@lightmap/astronomy';
 import { cacheRepo } from '@lightmap/database';
 import { gridKey } from '@lightmap/geospatial';
-import { decideWeatherMode, forecastCacheKey, type WeatherSeries } from '@lightmap/weather';
+import {
+  decideWeatherMode,
+  forecastCacheKey,
+  splitForecastHistory,
+  type WeatherSeries,
+} from '@lightmap/weather';
 import { can } from '@lightmap/entitlements';
 import { HttpError, errorResponse, forbidByEntitlement, json, num, str } from '@/lib/server/http';
 import { chargeBudget, checkBurst, clientKey } from '@/lib/server/rate-limit';
@@ -73,10 +78,21 @@ export async function GET(req: Request) {
     if (!series) {
       await chargeBudget(key, 'weather', ctx.planForBudget);
       const [clat, clng] = cell.split(',').map(Number) as [number, number];
+      // From a day before the day wanted: the scene shows what the weather left behind (the
+      // ground still wet from the night's rain), which a day cut at its own midnight cannot.
+      // Except on the last day the forecast model's own past covers: the provider judges archive
+      // or model from the first day asked for, and the day before would tip that one day into
+      // the archive (fewer fields) - it is asked for alone, as it was.
+      const dayBefore = new Date(start.getTime() - 86_400_000);
+      const tipsIntoArchive =
+        decision.mode === 'RECENT_PAST' &&
+        !archiveDay &&
+        Date.now() - dayBefore.getTime() > caps.historicalDays * 86_400_000;
+      const from = tipsIntoArchive ? start : dayBefore;
       series =
         decision.mode === 'RECENT_PAST'
-          ? await s.weather.getHistorical(clat, clng, start, end)
-          : await s.weather.getForecast(clat, clng, start, end);
+          ? await s.weather.getHistorical(clat, clng, from, end)
+          : await s.weather.getForecast(clat, clng, from, end);
       // Recent past can still be revised by the model for a few hours; reanalysis is settled.
       const ttl = archiveDay
         ? 30 * 86_400
@@ -85,10 +101,14 @@ export async function GET(req: Request) {
           : caps.updateIntervalMinutes * 60;
       if (cache) await cache.set('weather', cacheKey, series, ttl);
     }
+    // `frames` stays the day's own request (entries cached before the history was asked for have
+    // none, and split to the same frames).
+    const { history, frames } = splitForecastHistory(series.frames, start);
     const body: WeatherResponse = {
       providerId: series.providerId,
       mode: decision.mode,
-      frames: series.frames,
+      frames,
+      history,
       issuedAt: series.issuedAt,
       fetchedAt: series.fetchedAt,
       cached,

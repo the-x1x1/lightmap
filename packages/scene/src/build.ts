@@ -60,6 +60,11 @@ export interface SceneInputs {
   weather: {
     capabilities: WeatherCapabilities | null;
     frames: readonly WeatherFrame[];
+    /**
+     * The hours before `frames` (the day before), when the weather came with them: only for what
+     * the weather left behind - how wet the ground still is - never for the light.
+     */
+    history?: readonly WeatherFrame[];
     providerFailed: boolean;
     /** The weather was refused for the plan's date window (a 403): not a failure, not loading. */
     outsidePlanWindow?: boolean;
@@ -299,7 +304,12 @@ export function deriveAtmosphere(
       mode: decision.mode,
       scenario,
       frame,
-      groundWetness: groundWetnessAt(inputs.weather.frames, inputs.utc),
+      groundWetness: groundWetnessAt(
+        inputs.weather.history?.length
+          ? [...inputs.weather.history, ...inputs.weather.frames]
+          : inputs.weather.frames,
+        inputs.utc,
+      ),
       parameters: parametersForForecast(frame),
       colorTemperatureK: kelvin,
       warmth,

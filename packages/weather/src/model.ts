@@ -127,6 +127,23 @@ export function groundWetnessAt(frames: readonly WeatherFrame[], at: Date): numb
   return water > 0 ? 1 - Math.exp(-water / 1) : 0;
 }
 
+/**
+ * A series asked for from a day before the day wanted (so the scene knows the rain of the night
+ * before: `groundWetnessAt`), split where the day's own request would have begun - 00:00 UTC of
+ * the date `dayStart` falls on, as the providers serve whole UTC dates. `frames` is then exactly
+ * what a request for the day alone gives; `history` the hours before it, oldest first.
+ */
+export function splitForecastHistory(
+  frames: readonly WeatherFrame[],
+  dayStart: Date,
+): { history: WeatherFrame[]; frames: WeatherFrame[] } {
+  const cut = Date.UTC(dayStart.getUTCFullYear(), dayStart.getUTCMonth(), dayStart.getUTCDate());
+  const history: WeatherFrame[] = [];
+  const day: WeatherFrame[] = [];
+  for (const f of frames) (Date.parse(f.timestamp) < cut ? history : day).push(f);
+  return { history, frames: day };
+}
+
 /** Linear interpolation between the two frames bracketing `at`; null fields interpolate as null. */
 export function interpolateFrame(frames: readonly WeatherFrame[], at: Date): WeatherFrame | null {
   if (frames.length === 0) return null;

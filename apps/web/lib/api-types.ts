@@ -34,6 +34,11 @@ export interface WeatherResponse {
   providerId: string;
   mode: WeatherMode;
   frames: WeatherFrame[];
+  /**
+   * The hours of the day before `frames` (oldest first), for what the weather left behind (wet
+   * ground after the night's rain). Absent from responses cached before it existed.
+   */
+  history?: WeatherFrame[];
   issuedAt: string;
   fetchedAt: string;
   cached: boolean;

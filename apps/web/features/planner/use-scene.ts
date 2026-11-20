@@ -141,6 +141,10 @@ export function useScene(
   const frames: readonly WeatherFrame[] = dateSettled
     ? (weatherQuery.data?.frames ?? EMPTY_FRAMES)
     : EMPTY_FRAMES;
+  // The hours before them, for the ground still wet from the night's rain.
+  const history: readonly WeatherFrame[] = dateSettled
+    ? (weatherQuery.data?.history ?? EMPTY_FRAMES)
+    : EMPTY_FRAMES;
   // A 403 is the plan's date window (the paywall is already on screen), not a provider failure.
   const outsidePlanWindow = Boolean(
     dateSettled &&
@@ -165,7 +169,7 @@ export function useScene(
       environment,
       scenario,
       forceScenario,
-      weather: { capabilities: weatherCaps, frames, providerFailed, outsidePlanWindow },
+      weather: { capabilities: weatherCaps, frames, history, providerFailed, outsidePlanWindow },
       render: opts.render ?? DEFAULT_RENDER_SETTINGS,
       includeLunar: opts.includeLunar ?? true,
       realReference: false,
@@ -185,6 +189,7 @@ export function useScene(
     forceScenario,
     weatherCaps,
     frames,
+    history,
     providerFailed,
     outsidePlanWindow,
     opts.render,

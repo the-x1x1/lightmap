@@ -641,3 +641,52 @@ describe('camera roll in the frame', () => {
       }
   });
 });
+
+describe('buildSceneState — what the weather left behind', () => {
+  const frame = (iso: string, mm: number) => ({
+    timestamp: iso,
+    cloudCoverTotal: 10,
+    cloudCoverLow: 10,
+    cloudCoverMid: 0,
+    cloudCoverHigh: 0,
+    precipitationProbability: 0,
+    precipitationAmount: mm,
+    humidity: 70,
+    visibility: 30000,
+    windSpeed: 3,
+    windDirection: 60,
+    weatherCode: 1,
+  });
+  // 07:00 in Kailua on 31 May is 17:00 UTC; the day's own frames begin at 00:00 UTC that date.
+  const utc = localSelectionToUtc({ year: 2026, month: 5, day: 31 }, 7 * 60, kailua.timeZone);
+  const day = [
+    frame('2026-05-31T16:00:00Z', 0),
+    frame('2026-05-31T17:00:00Z', 0),
+    frame('2026-05-31T18:00:00Z', 0),
+  ];
+  const at = (history?: ReturnType<typeof frame>[]) =>
+    buildSceneState(
+      inputs({
+        utc,
+        now: new Date('2026-05-31T12:00:00Z'),
+        scenario: 'clear',
+        weather: {
+          capabilities: OPEN_METEO_CAPABILITIES,
+          frames: day,
+          ...(history ? { history } : {}),
+          providerFailed: false,
+        },
+      }),
+    ).atmosphere;
+
+  it('the ground is still wet from the rain of the hours before the day’s frames', () => {
+    expect(at().mode).toBe('FORECAST');
+    expect(at().groundWetness).toBe(0);
+    // 4 mm in the hour ending 15:00 UTC, two hours before: 4 exp(-2/4) mm still lying.
+    const wet = at([frame('2026-05-30T14:00:00Z', 0), frame('2026-05-31T15:00:00Z', 4)]);
+    expect(wet.groundWetness).toBeCloseTo(1 - Math.exp(-4 * Math.exp(-0.5)), 6);
+    // The history never changes the light: the frame in force is the day's own.
+    expect(wet.frame?.precipitationAmount).toBe(0);
+    expect(at([]).groundWetness).toBe(0);
+  });
+});
