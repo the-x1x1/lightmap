@@ -152,6 +152,38 @@ void main() {
   vec3 rayEC = normalize(nearEC.xyz / nearEC.w);
   float horizonDip = sqrt(2.0 * max(u_eyeHeightM, 0.0) / 6371000.0);
   bool hitsEarth = asin(clamp(dot(rayEC, u_eyeUpEC), -1.0, 1.0)) < -horizonDip;
+  // Pinholes: where the host draws no skirts under the terrain tiles (its fallback when their
+  // shadows cannot be kept out of the shadow map, skirt-shadows.ts), tiles do not meet to the
+  // last bit - each quantises its own heights, and a fine tile's edge has vertices its coarser
+  // neighbour's does not - so here and there a pixel on a tile's edge is drawn by neither: the
+  // sky behind, with no depth, in the middle of the ground - dotted pale lines along the tile
+  // edges. Below the horizon, where no sky belongs, such a pixel takes its colour and depth
+  // from whatever ground lies one pixel out (else two). Ground that is simply not drawn yet has
+  // none within reach and stays as it was; with skirts drawn there is nothing to fill.
+  if (noDepth && hitsEarth) {
+    vec2 uv0 = v_textureCoordinates;
+    vec2 ox = vec2(1.0 / czm_viewport.z, 0.0);
+    vec2 oy = vec2(0.0, 1.0 / czm_viewport.w);
+    float reach = 1.0;
+    vec4 d = vec4(texture(depthTexture, uv0 - ox).r, texture(depthTexture, uv0 + ox).r,
+                  texture(depthTexture, uv0 - oy).r, texture(depthTexture, uv0 + oy).r);
+    vec4 g = 1.0 - step(vec4(1.0 - 1e-6), d);
+    if (g.x + g.y + g.z + g.w < 0.5) {
+      reach = 2.0;
+      d = vec4(texture(depthTexture, uv0 - 2.0 * ox).r, texture(depthTexture, uv0 + 2.0 * ox).r,
+               texture(depthTexture, uv0 - 2.0 * oy).r, texture(depthTexture, uv0 + 2.0 * oy).r);
+      g = 1.0 - step(vec4(1.0 - 1e-6), d);
+    }
+    float n = g.x + g.y + g.z + g.w;
+    if (n > 0.5) {
+      color = (g.x * texture(colorTexture, uv0 - reach * ox).rgb
+             + g.y * texture(colorTexture, uv0 + reach * ox).rgb
+             + g.z * texture(colorTexture, uv0 - reach * oy).rgb
+             + g.w * texture(colorTexture, uv0 + reach * oy).rgb) / n;
+      storedDepth = dot(g, d) / n;
+      noDepth = false;
+    }
+  }
   bool isSky = noDepth && !hitsEarth;
   // The decks are a sky seen from under them: from above ~10 km (an orbit) there are none, and
   // space around the globe stays dark.

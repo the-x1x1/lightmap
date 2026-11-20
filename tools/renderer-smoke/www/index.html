@@ -1542,56 +1542,6 @@
             window.__takeShot = r;
           });
         }
-        // Dew: 7 am (the Sun just clear of the ridge) at 16 deg C and 98 % humidity, from the beach looking along the grass
-        // toward the low Sun - the grass beaded, a silvery sheen and points of light toward the Sun.
-        {
-          const at = (hour) => ({
-            timestamp: localSelectionToUtc(
-              { year: 2026, month: 5, day: 31 },
-              hour * 60,
-              beach.timeZone,
-            ).toISOString(),
-            cloudCoverTotal: 0,
-            cloudCoverLow: 0,
-            cloudCoverMid: 0,
-            cloudCoverHigh: 0,
-            precipitationProbability: 0,
-            precipitationAmount: 0,
-            humidity: 98,
-            visibility: 30000,
-            windSpeed: 1,
-            windDirection: 60,
-            weatherCode: 0,
-            temperature: 16,
-            dewPoint: 15.7,
-          });
-          controller.apply(
-            buildSceneState({
-              location: beach,
-              utc: localSelectionToUtc({ year: 2026, month: 5, day: 31 }, 7 * 60, beach.timeZone),
-              now: new Date('2026-05-31T15:00:00Z'),
-              camera: { ...defaultCamera(beach.point, 75), mode: 'viewpoint', pitchDeg: -6 },
-              environment: { ...env, terrainAvailable: true, terrainProviderId: 'synthetic' },
-              scenario: 'clear',
-              forceScenario: false,
-              weather: {
-                capabilities: OPEN_METEO_CAPABILITIES,
-                frames: [at(6.5), at(7.5)],
-                providerFailed: false,
-              },
-              render: DEFAULT_RENDER_SETTINGS,
-              includeLunar: true,
-              realReference: false,
-            }),
-          );
-          await wait(1500);
-          if (!(await settle())) log('synth-dew: not settled in 45 s');
-          await wait(500);
-          window.__smoke.shot = 'synth-dew';
-          await new Promise((r) => {
-            window.__takeShot = r;
-          });
-        }
         // The hot spot: 10 am seen from above with the Sun behind the camera (Sun about 55 deg up
         // in the east, the view 55 deg down to the west), the antisolar point at the view's
         // centre on the shore - the grass brighter round it.
@@ -1787,6 +1737,59 @@
         });
         await synthShot('synth-golden-sea', 18.75, 'clear', look(290, 0));
         await synthShot('synth-golden-ridge', 18.75, 'clear', look(80, 4));
+        // Dew: 7 am (the Sun just clear of the ridge) at 16 deg C and 98 % humidity, from the beach looking along the grass
+        // toward the low Sun - the grass beaded, a silvery sheen and points of light toward the Sun.
+        {
+          const at = (hour) => ({
+            timestamp: localSelectionToUtc(
+              { year: 2026, month: 5, day: 31 },
+              hour * 60,
+              beach.timeZone,
+            ).toISOString(),
+            cloudCoverTotal: 0,
+            cloudCoverLow: 0,
+            cloudCoverMid: 0,
+            cloudCoverHigh: 0,
+            precipitationProbability: 0,
+            precipitationAmount: 0,
+            humidity: 98,
+            visibility: 30000,
+            windSpeed: 1,
+            windDirection: 60,
+            weatherCode: 0,
+            temperature: 16,
+            dewPoint: 15.7,
+          });
+          controller.apply(
+            buildSceneState({
+              location: beach,
+              utc: localSelectionToUtc({ year: 2026, month: 5, day: 31 }, 7 * 60, beach.timeZone),
+              now: new Date('2026-05-31T15:00:00Z'),
+              camera: { ...defaultCamera(beach.point, 75), mode: 'viewpoint', pitchDeg: -6 },
+              environment: { ...env, terrainAvailable: true, terrainProviderId: 'synthetic' },
+              scenario: 'clear',
+              forceScenario: false,
+              weather: {
+                capabilities: OPEN_METEO_CAPABILITIES,
+                frames: [at(6.5), at(7.5)],
+                providerFailed: false,
+              },
+              render: DEFAULT_RENDER_SETTINGS,
+              includeLunar: true,
+              realReference: false,
+            }),
+          );
+          await wait(1500);
+          if (!(await settle())) log('synth-dew: not settled in 45 s');
+          await wait(500);
+          window.__smoke.shot = 'synth-dew';
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+        }
+        // (After the two views above from the same spot, so its tiles are in hand: as the first
+        // view from the ground after the orbits it was still loading at any wait this run can
+        // afford, its ridge half a coarse tile's slab.)
         await synthShot('synth-dusk-ridge', 19.4, 'clear', look(80, 4));
         // Alpenglow: the Sun 0.6 deg down at the pin - its own beam all but gone - and still up
         // for the ridge, whose top looks 0.9 deg past the pin's horizon: the plain in the
@@ -1848,6 +1851,43 @@
           if (!(await settle())) log(name + ': not settled in 45 s');
           await wait(500);
           window.__smoke.shot = name;
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+        }
+        // Tile edges under a grazing Sun: from above the low hills on the plain (800 m east and
+        // 660 m north of the pin) half an hour after sunrise, the light skimming their slopes.
+        // The terrain's tiles are drawn with their skirts, so no sky shows between them; and the
+        // skirts are kept out of the shadow map (skirt-shadows.ts), so no dark line runs along a
+        // tile's edge (with skirts casting, three ran across this view).
+        {
+          const hillPoint = {
+            latitude: beach.point.latitude + 660 / 111_320,
+            longitude:
+              kailua.point.longitude +
+              800 / (111_320 * Math.cos((kailua.point.latitude * Math.PI) / 180)),
+          };
+          const hill = { ...beach, point: hillPoint };
+          controller.apply(
+            buildSceneState({
+              location: hill,
+              utc: localSelectionToUtc({ year: 2026, month: 5, day: 31 }, 6.2 * 60, hill.timeZone),
+              now: new Date('2026-05-01T00:00:00Z'),
+              camera: defaultCamera(hillPoint, 90),
+              environment: { ...env, terrainAvailable: true, terrainProviderId: 'synthetic' },
+              scenario: 'clear',
+              forceScenario: true,
+              weather: { capabilities: OPEN_METEO_CAPABILITIES, frames: [], providerFailed: false },
+              render: DEFAULT_RENDER_SETTINGS,
+              includeLunar: true,
+              realReference: false,
+            }),
+          );
+          controller.setOrbit({ headingDeg: 270, pitchDeg: -40, rangeM: 700 });
+          await wait(1500);
+          if (!(await settle())) log('synth-tile-edges: not settled in 45 s');
+          await wait(500);
+          window.__smoke.shot = 'synth-tile-edges';
           await new Promise((r) => {
             window.__takeShot = r;
           });

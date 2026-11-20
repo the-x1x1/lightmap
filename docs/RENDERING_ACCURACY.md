@@ -257,6 +257,23 @@ directional share in their own shader (`litInstanceShader`, in tenths), the ligh
 the Sun's term coming back from the sky by how much a face looks up, so a flat roof keeps exactly
 the level it had.
 
+**Tile edges.** Terrain tiles do not meet to the last bit: neighbours at different detail levels
+do not share their edge vertices, and each tile quantises its own heights. Cesium closes the cracks
+with skirts, walls hung under every tile's edges; but a skirt is drawn into the shadow map with
+its tile, and where it stands a little proud of its neighbour a low Sun drew its shadow as a long
+black line along the tile edge, so the host had turned skirts off - and single pixels of sky then
+showed between the tiles, pale dotted lines across the ground (found in the harness's synthetic
+terrain; they would show on any real terrain between detail levels). Skirts are drawn again, and
+kept out of the shadow map instead (`cesium/skirt-shadows.ts`): every vertex of a skirt lies on
+its tile's edge, so across a skirt one of the tile's texture coordinates is exactly 0 or 1, and
+the globe's shadow-cast shader discards such fragments (a strip 1e-5 of a tile wide goes with
+them, centimetres, far under a shadow texel). Checked both ways over the harness's low hills with
+the Sun 5° up (`synth-tile-edges`): with skirts casting, three dark lines ran across the view
+along tile edges; with the discard, none, and no sky between the tiles. Where the wrap cannot be
+proven on Cesium's cast shader (a later Cesium that writes it differently) skirts stay off, the
+host says so, and the grade fills the no-depth pixels it finds below the horizon from the ground
+beside them (`grade.frag.ts`), which hides the fully open ones.
+
 **Night sky.** The grade's twilight treatment (darkening and cooling the dome while Cesium still
 lights its atmosphere from a Sun held at the horizon) is for the atmosphere only: the stars' light
 is separated out first (a pixel standing clear above a ring two star-widths out, its sky from a ring

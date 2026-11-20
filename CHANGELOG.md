@@ -14,6 +14,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   them - a mackerel sky, lit warm from the side at sunset - instead of a torn grey sheet.
 - **Peaks in cloud**: ground that stands above the cloud base disappears into the low cloud -
   wholly under an overcast, through the gaps under broken cloud - at the forecast's cloud base.
+- **No dotted lines along terrain tile edges**: single pixels of sky showed between terrain tiles
+  as pale dotted lines across the ground. The tiles' skirts are drawn again and close them; the
+  skirts are kept out of the shadow map, so the dark lines they once cast under a low Sun do not
+  come back.
 - **Snowfall**: when the forecast says snow, flakes fall through the picture instead of rain's
   streaks (and there is no rainbow in a snow shower).
 - **Cumulus with a body**: broken low cloud now has firmer, ragged edges, a greyer base and a
