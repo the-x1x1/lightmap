@@ -286,6 +286,55 @@
               window.__takeShot = r;
             });
           }
+          // Snow falling: a forecast frame whose weather code says moderate snow, at -2 deg C under
+          // a closed deck - flakes in the air, not rain's streaks.
+          {
+            const utc = localSelectionToUtc(
+              { year: 2026, month: 5, day: 31 },
+              14 * 60,
+              kailua.timeZone,
+            );
+            const frame = (offsetH) => ({
+              timestamp: new Date(utc.getTime() + offsetH * 3_600_000).toISOString(),
+              cloudCoverTotal: 100,
+              cloudCoverLow: 100,
+              cloudCoverMid: 80,
+              cloudCoverHigh: 0,
+              precipitationProbability: 90,
+              precipitationAmount: 1.5,
+              humidity: 92,
+              visibility: 4000,
+              windSpeed: 3,
+              windDirection: 60,
+              weatherCode: 73,
+              temperature: -2,
+              dewPoint: -3,
+            });
+            controller.apply(
+              buildSceneState({
+                location: kailua,
+                utc,
+                now: new Date(utc.getTime() - 2 * 3_600_000),
+                camera: { ...defaultCamera(kailua.point, 292), mode: 'viewpoint', pitchDeg: 4 },
+                environment: env,
+                scenario: 'overcast',
+                forceScenario: false,
+                weather: {
+                  capabilities: OPEN_METEO_CAPABILITIES,
+                  frames: [frame(-1), frame(0), frame(1)],
+                  providerFailed: false,
+                },
+                render: DEFAULT_RENDER_SETTINGS,
+                includeLunar: true,
+                realReference: false,
+              }),
+            );
+            await wait(1500);
+            window.__smoke.shot = 'snowfall';
+            await new Promise((r) => {
+              window.__takeShot = r;
+            });
+          }
           const night = scene(23, 'clear', {
             ...defaultCamera(kailua.point, 120),
             mode: 'viewpoint',

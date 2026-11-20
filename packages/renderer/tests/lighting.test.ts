@@ -20,6 +20,7 @@ import {
   visibilityFromHaze,
   windTowardFor,
   mistFor,
+  snowShareFor,
   cloudBaseKmFor,
 } from '../src/lighting.ts';
 import { azElFromEcefToward, type Vec3 } from '../src/sun-vector.ts';
@@ -91,6 +92,38 @@ describe('lightingFromScene', () => {
     expect(cloudBaseKmFor({ temperature: 15, dewPoint: null })).toBe(1.5);
     expect(cloudBaseKmFor(null)).toBe(1.5);
     expect(lightingFromScene(scene(12, 'partly-cloudy')).grade.lowDeckKm).toBe(1.5);
+  });
+
+  it('what falls is snow by the weather code, or by the cold where the code does not say', () => {
+    expect(snowShareFor({ weatherCode: 73, temperature: 3 })).toBe(1); // the code says snow
+    expect(snowShareFor({ weatherCode: 61, temperature: -3 })).toBe(0); // rain, whatever the cold
+    expect(snowShareFor({ weatherCode: 66, temperature: -1 })).toBe(0); // freezing rain is liquid
+    expect(snowShareFor({ weatherCode: 85 })).toBe(1); // snow showers
+    expect(snowShareFor({ weatherCode: null, temperature: -4 })).toBe(1);
+    expect(snowShareFor({ weatherCode: null, temperature: 1 })).toBeCloseTo(0.5, 6); // sleet
+    expect(snowShareFor({ weatherCode: 3, temperature: 5 })).toBe(0);
+    expect(snowShareFor({ weatherCode: null })).toBe(0);
+    expect(snowShareFor(null)).toBe(0);
+    // A scenario's rain is rain in Kailua: no flakes.
+    const storm = lightingFromScene(scene(12, 'storm')).grade;
+    expect(storm.snowfall).toBe(0);
+    expect(storm.precipitation).toBeGreaterThan(0);
+    // In Fairbanks in January a scenario's storm is snow (the lying snow's season), and a snow
+    // shower throws no rainbow; in July it is rain again.
+    const fairbanks = {
+      ...kailua,
+      point: { latitude: 64.84, longitude: -147.72, elevationM: 136 },
+      timeZone: 'America/Anchorage',
+    };
+    const winter = lightingFromScene(
+      scene(12, 'storm', { location: fairbanks, utc: new Date('2026-01-15T21:00:00Z') }),
+    ).grade;
+    expect(winter.snowfall).toBeCloseTo(winter.precipitation, 6);
+    expect(winter.rainbow).toBe(0);
+    const summer = lightingFromScene(
+      scene(12, 'storm', { location: fairbanks, utc: new Date('2026-07-15T21:00:00Z') }),
+    ).grade;
+    expect(summer.snowfall).toBe(0);
   });
 
   it('valley mist in calm near-saturated air before the Sun is up 15 deg, none without a forecast', () => {

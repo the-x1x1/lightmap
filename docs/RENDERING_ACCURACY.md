@@ -663,6 +663,17 @@ base is left; the silver lining keeps to the deck's soft margin (`partly-viewpoi
 **Caveat:** a sheet's relief, not a volume: no towers, no anvils, no shadows from one cloud on
 the next.
 
+**Snowfall.** What falls is snow where the forecast's weather code says so (71–77, 85–86), rain
+where it says drizzle, rain, showers or thunder, and otherwise by the 2 m temperature (snow at
+0 °C and below, rain from 2 °C; `snowShareFor`). Snow is drawn as flakes, not streaks: soft pale
+specks at three depths over the frame, as pale as the sky that lights them (so they show against
+anything darker and are lost against the sky), dim by night; rain's streaks take only the liquid
+share, and a rainbow needs rain (`snowfall`). A scenario has no thermometer: its precipitation
+falls as snow through the lying snow's own season at the place (`lowlandSnowCover`'s reliable
+core: a January storm in Fairbanks is a snowstorm) and as rain otherwise.
+**Caveat:** the flakes are an overlay on the picture, not a volume: they do not thin with
+distance or hide the far shore (the forecast's visibility does that through the haze).
+
 **Silver linings.** Broken low cloud seen against the Sun is lit from behind: within about 15° of
 the Sun (an e-folding of 0.26 rad from it) a cloud's core is up to 45 % darker - the light has to
 get through it - while its thin margins (where the cover's edge runs, 4c(1−c) of the cloud's

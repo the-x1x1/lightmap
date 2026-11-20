@@ -6,6 +6,8 @@ import type { SceneState } from '@lightmap/scene';
 import { kelvinToRgb, type WeatherScenarioId } from '@lightmap/weather';
 import { shadowOnGround, sunLightDirectionEcef, type Vec3 } from './sun-vector.ts';
 import { BETA_MIE, clearSkyStops, mieScaleForHaze, type SkyStops } from './sky-model.ts';
+import { dayOfYearUtc } from './ground-texture.ts';
+import { lowlandSnowCover } from './snow-season.ts';
 
 /**
  * The Sun elevation below which the star field is drawn, degrees. It is drawn faint at first
@@ -88,6 +90,12 @@ export interface LightingParameters {
     skyLuminance: number;
     nightFactor: number;
     precipitation: number;
+    /**
+     * Snow falling, 0..1: `precipitation` times the share of it that is snow (`snowShareFor`: the
+     * forecast's weather code, or its temperature where the code does not say; in a scenario,
+     * the lying snow's season at the place). Flakes are drawn for it, rain streaks for the rest.
+     */
+    snowfall: number;
     /**
      * A rainbow's strength, 0..1: showers falling (precipitation 0.05-0.15) while the Sun's beam
      * gets through (transmittance 0.25-0.55) and the Sun is up but under 42 deg, below which the
@@ -174,6 +182,28 @@ export function cloudBaseKmFor(
   const td = frame?.dewPoint;
   if (typeof t !== 'number' || typeof td !== 'number' || !Number.isFinite(t - td)) return 1.5;
   return Math.round(Math.min(2.5, Math.max(0.3, 0.125 * (t - td))) * 100) / 100;
+}
+
+/** The WMO weather codes for snow: snowfall slight to heavy, snow grains, snow showers. */
+const SNOW_CODES = new Set([71, 73, 75, 77, 85, 86]);
+
+/**
+ * The share of what is falling that is snow, 0..1, from a forecast frame: all of it when the
+ * weather code says snow, none when it says drizzle, rain, showers or a thunderstorm (51-67,
+ * 80-82, 95-99: freezing rain is liquid as it falls); where the code does not say, by the 2 m
+ * temperature - snow at 0 deg C and below, rain from 2, sleet between. 0 with no frame.
+ */
+export function snowShareFor(
+  frame: { weatherCode: number | null; temperature?: number | null } | null,
+): number {
+  if (!frame) return 0;
+  const code = frame.weatherCode;
+  if (code !== null) {
+    if (SNOW_CODES.has(code)) return 1;
+    if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code >= 95) return 0;
+  }
+  const t = frame.temperature;
+  return typeof t === 'number' && Number.isFinite(t) ? 1 - smooth(0, 2, t) : 0;
 }
 
 /** The WMO weather codes for fog and depositing rime fog. */
@@ -422,6 +452,16 @@ export function lightingFromScene(s: SceneState): LightingParameters {
   const disc = moonlit && el < -12 ? throughCloud : smooth(-1, 0.5, el) * throughCloud;
   const glitter = Math.round(disc * 100) / 100;
   const wind = atmosphere.frame?.windSpeed ?? SCENARIO_TYPICAL_WIND_MPS[atmosphere.scenario];
+  // What falls: by the forecast where there is one; in a scenario, snow through the lying
+  // snow's own season at the place (its reliable core: `lowlandSnowCover`), rain otherwise.
+  const snowShare = atmosphere.frame
+    ? snowShareFor(atmosphere.frame)
+    : lowlandSnowCover(
+        location.point.latitude,
+        location.point.longitude,
+        dayOfYearUtc(s.utc),
+        location.point.elevationM ?? 0,
+      );
   const seaSlopeVariance = seaSlopeVarianceFor(wind ?? 5);
 
   return {
@@ -479,7 +519,9 @@ export function lightingFromScene(s: SceneState): LightingParameters {
       skyLuminance: p.skyLuminance,
       nightFactor,
       precipitation: p.precipitation,
+      snowfall: p.precipitation * snowShare,
       rainbow:
+        (1 - snowShare) *
         smooth(0.05, 0.15, p.precipitation) *
         smooth(0.25, 0.55, p.sunTransmittance) *
         (1 - smooth(38, 42, el)) *

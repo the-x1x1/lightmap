@@ -4,6 +4,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Snowfall**: when the forecast says snow, flakes fall through the picture instead of rain's
+  streaks (and there is no rainbow in a snow shower).
 - **Cumulus with a body**: broken low cloud now has firmer, ragged edges, a greyer base and a
   sunlit and a shaded side, instead of soft smears.
 - **Wet ground knows last night's rain**: the weather request now includes the day before, so the

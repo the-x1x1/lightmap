@@ -229,6 +229,7 @@ export class SceneController {
       u_skyLuminance: lighting.grade.skyLuminance,
       u_nightFactor: lighting.grade.nightFactor,
       u_precipitation: lighting.grade.precipitation,
+      u_snowfall: lighting.grade.snowfall,
       u_rainbow: lighting.grade.rainbow,
       u_rays: lighting.grade.rays,
       u_mist: lighting.grade.mist,

@@ -41,6 +41,7 @@ uniform float u_cloudHigh;
 uniform float u_skyLuminance;
 uniform float u_nightFactor;
 uniform float u_precipitation;
+uniform float u_snowfall;        // the share of the precipitation falling as snow, times it: 0..1
 uniform float u_rainbow;         // a rainbow's strength, 0..1 (showers in sunlight)
 uniform float u_rays;            // sunbeams' strength, 0..1 (a low Sun through hazy air)
 uniform float u_mist;            // valley mist's strength, 0..1 (calm, near-saturated early air)
@@ -708,11 +709,35 @@ void main() {
   float tintAmount = mix(0.35, 0.12, u_cloudOpacity);
   color *= mix(vec3(1.0), u_tint, tintAmount);
 
-  // Rain streaks.
-  if (u_precipitation > 0.01) {
+  // Rain streaks (the liquid share of what falls).
+  float rainFall = max(u_precipitation - u_snowfall, 0.0);
+  if (rainFall > 0.01) {
     vec2 r = v_textureCoordinates * vec2(220.0, 18.0) + vec2(0.0, -u_time * 3.0);
     float streak = smoothstep(0.93, 1.0, vnoise(r)) * smoothstep(0.6, 1.0, vnoise(r * 0.37 + 11.0));
-    color = mix(color, color * 0.8 + vec3(0.18), streak * u_precipitation * 0.8);
+    color = mix(color, color * 0.8 + vec3(0.18), streak * rainFall * 0.8);
+  }
+  // Snowfall: flakes, not streaks - soft pale specks at three depths, the near ones few and
+  // large, the far ones a fine dust, a little taller than wide (they fall while the shutter is
+  // open), re-dealt as the clock moves. As pale as the snow-laden sky that lights them, so they
+  // show against anything darker and are lost against the sky itself; dim grey by night.
+  if (u_snowfall > 0.01) {
+    vec2 suv = vec2(v_textureCoordinates.x * czm_viewport.z / max(czm_viewport.w, 1.0), v_textureCoordinates.y);
+    float fall = mod(u_time, 5760.0);
+    float flakes = 0.0;
+    for (int k = 0; k < 3; k++) {
+      float fk = float(k);
+      vec2 q = suv * 15.0 * pow(2.1, fk) + vec2(fk * 19.7, fall * 2.3 / (1.0 + fk) + fk * 7.1);
+      vec2 cell = floor(q);
+      vec2 f = fract(q);
+      vec2 c = 0.25 + 0.5 * vec2(hash(cell + 3.1), hash(cell + 7.3));
+      float r = mix(0.07, 0.2, hash(cell + 11.9));
+      float present = step(1.0 - (0.07 + 0.3 * u_snowfall), hash(cell));
+      vec2 d = (f - c) * vec2(1.0, 0.6);
+      flakes += present * (1.0 - smoothstep(r * 0.3, r, length(d)))
+              * (0.5 + 0.5 * hash(cell + 17.3)) * (0.95 - 0.2 * fk);
+    }
+    vec3 flakeCol = vec3(0.93, 0.95, 0.98) * mix(1.0, u_skyLuminance, 0.6) * mix(1.0, 0.18, u_nightFactor);
+    color = mix(color, max(color, flakeCol), clamp(flakes, 0.0, 1.0) * 0.8);
   }
 
   // No green sky: Cesium's single-scattering dome runs a low Sun's pale horizon to a mint
@@ -761,6 +786,7 @@ export const GRADE_UNIFORM_NAMES = [
   'u_skyLuminance',
   'u_nightFactor',
   'u_precipitation',
+  'u_snowfall',
   'u_rainbow',
   'u_rays',
   'u_mist',
