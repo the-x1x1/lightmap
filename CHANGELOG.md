@@ -14,6 +14,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   them - a mackerel sky, lit warm from the side at sunset - instead of a torn grey sheet.
 - **Peaks in cloud**: ground that stands above the cloud base disappears into the low cloud -
   wholly under an overcast, through the gaps under broken cloud - at the forecast's cloud base.
+- **Farmland in rectangular fields**: painted cropland is a patchwork of rectangular parcels with
+  field edges, where it was triangles and lozenges.
 - **No dotted lines along terrain tile edges**: single pixels of sky showed between terrain tiles
   as pale dotted lines across the ground. The tiles' skirts are drawn again and close them; the
   skirts are kept out of the shadow map, so the dark lines they once cast under a low Sun do not

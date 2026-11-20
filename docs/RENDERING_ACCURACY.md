@@ -553,7 +553,11 @@ stage 2; `land-cover.ts`), nine tiles of ESA WorldCover or the Copernicus Global
 around the pin (zoom 12 near the equator, ≈ 38 m per pixel, reaching ≥ 12 km each way) are
 classified by their legend colours into a cover map the material samples by the fragment's
 own longitude and mercator latitude: closed and open forest darken and green the ground with
-a crown-sized grain, cropland becomes a patchwork of field tones in cells ≈ 260 m across that keeps the season
+a crown-sized grain, cropland becomes a patchwork of fields that keeps the season - rectangular
+parcels 256 m by 512 m along the ground frame, each row set off by half a field like bricks,
+over a third of them worked as two strips, with a darker line a few metres wide along every edge
+(a track, a ditch, a hedge) while the view is near enough to tell it; cells of the Earth-fixed
+axes, as it was, cut the tilted ground into triangles and lozenges
 (while things grow, green fields and ripe gold ones about 60:40; dormant, mostly bare ploughed soil
 with a quarter in winter-crop green; by the grass's greening, field by field),
 built-up ground a warm grey with a block-sized grain, bare ground sand and rock by the

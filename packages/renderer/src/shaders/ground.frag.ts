@@ -509,16 +509,35 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
             float open = known * (1.0 - snowy) * (1.0 - rocky * 0.7);
             float crowns = lmNoiseTex(g.xy, ${f(P.crowns)}, gdx, gdy).b;
             vec3 forest = lmSeasonCanopy(mix(vec3(0.13, 0.25, 0.10), vec3(0.27, 0.38, 0.17), crowns), crowns) * (0.9 + 0.2 * grain);
-            float fieldTone = lmHash(floor(positionWC / 260.0) + 7.0);
+            // Fields are parcels on the ground: rectangles 256 m by 512 m laid along the ground
+            // frame (east and north), each row set off by half a field from the last like
+            // bricks, and rather more than a third of them worked as two strips. (Cells of the
+            // fixed frame's own axes, as this was, cut the tilted ground into triangles and
+            // lozenges - a harlequin's coat, not farmland.) The numbering wraps with the frame
+            // (64 by 32 fields to its 16 km), so the patchwork never jumps as the camera moves.
+            float fieldRow = floor(g.y / 512.0);
+            float fieldX = (g.x + 128.0 * mod(fieldRow, 2.0)) / 256.0;
+            float fieldCol = floor(fieldX);
+            vec3 fieldId = vec3(mod(fieldCol, 64.0), mod(fieldRow, 32.0), 0.0);
+            float strips = step(0.62, lmHash(fieldId + 3.0));
+            float inX = fract(fieldX) * (1.0 + strips);
+            fieldId.z = strips * floor(inX);
+            // A field's edge - a track, a ditch, a hedge - is a darker line a few metres wide,
+            // while the view is near enough to tell it.
+            float toEdge = min(min(fract(inX), 1.0 - fract(inX)) * 256.0 / (1.0 + strips),
+                               min(fract(g.y / 512.0), 1.0 - fract(g.y / 512.0)) * 512.0);
+            float fieldEdge = (1.0 - smoothstep(1.5, 4.5, toEdge)) * (1.0 - smoothstep(700.0, 2500.0, dist));
+            float fieldTone = lmHash(fieldId + 7.0);
             vec3 field = mix(vec3(0.50, 0.52, 0.28), vec3(0.72, 0.64, 0.40), fieldTone) * (0.9 + 0.2 * grain);
             // The crops keep the season: while things grow, a patchwork of green fields and
             // ripe gold ones; through the dormant season mostly bare, ploughed soil with a few
             // fields of winter crop green - by field, so the patchwork changes field by field.
-            float fieldCrop = lmHash(floor(positionWC / 260.0) + 13.0);
+            float fieldCrop = lmHash(fieldId + 13.0);
             vec3 growingField = mix(vec3(0.33, 0.45, 0.20), vec3(0.74, 0.64, 0.38), step(fieldCrop, 0.4));
             vec3 dormantField = mix(vec3(0.44, 0.37, 0.28), vec3(0.30, 0.40, 0.20), step(fieldCrop, 0.25));
             vec3 seasonField = mix(dormantField, growingField, u_grassGreen) * (0.9 + 0.2 * grain);
             field = mix(field, seasonField, 0.7);
+            field = mix(field, vec3(0.30, 0.33, 0.20) * (0.9 + 0.2 * grain), 0.55 * fieldEdge);
             vec3 town = vec3(0.50, 0.48, 0.45) * (0.9 + 0.15 * grain);
             vec3 sand = mix(vec3(0.60, 0.56, 0.48), vec3(0.76, 0.66, 0.46), u_aridity) * (0.86 + 0.28 * grain);
             ground = mix(ground, sand, open * bareC);
