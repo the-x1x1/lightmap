@@ -48,6 +48,14 @@ not to draw one) and read every roof within 1.5 m of its mapped height through
 `sampleSurfaceHeights` (`town-street`, `town-street-dusk`, `town-above`). `SMOKE_ONLY=town` starts
 the run at this stage.
 
+**On a real GPU, without Playwright.** Opened as `index.html?drive=self`, the page drives
+itself: it captures each shot from its own canvas and posts it, and at the end its result (the
+steps, errors, the console's complaints, the GPU's name and the run's length), to the server it
+came from (`POST /__shot/<name>`, `POST /__result/result`). The local runner
+(`tools/local-runner`) serves the page that way and keeps what it posts, so the whole run can be
+made in any browser on the machine's own graphics card - where the shaders meet the driver they
+will ship to, which SwiftShader cannot show.
+
 `www/index.html` uses an import map so the emitted packages and Cesium load as native ES modules;
 nothing is bundled. The `cesium` meta-package is a **devDependency only**, used for its prebuilt
 `Build/Cesium` bundle here; application code imports `@cesium/engine` (ADR-0002).

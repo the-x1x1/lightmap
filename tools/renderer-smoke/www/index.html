@@ -47,6 +47,20 @@
     <div id="credits"></div>
     <script type="module">
       window.__smoke = { errors: [], steps: [], done: false };
+      const selfDriven = new URLSearchParams(location.search).get('drive') === 'self';
+      if (selfDriven) {
+        // What a runner would have read from the browser: the console's complaints.
+        window.__smoke.shots = [];
+        window.__smoke.console = [];
+        for (const level of ['error', 'warn']) {
+          const real = console[level].bind(console);
+          console[level] = (...args) => {
+            if (window.__smoke.console.length < 200)
+              window.__smoke.console.push(level + ': ' + args.map(String).join(' ').slice(0, 400));
+            real(...args);
+          };
+        }
+      }
       const log = (s) => {
         window.__smoke.steps.push(s);
         console.log('[smoke]', s);
@@ -104,6 +118,50 @@
             window.__smoke.errors.push('host: ' + m + ' ' + ((e && e.message) || e)),
         });
         log('host created');
+        // Self-driven (?drive=self): the page saves its own shots and result to the server it
+        // came from, so a run needs no Playwright - any browser will do, on a real GPU. The
+        // local runner (tools/local-runner) serves the page and keeps what it posts.
+        if (selfDriven) {
+          const gl = host.scene.context._gl;
+          const info = gl.getExtension('WEBGL_debug_renderer_info');
+          window.__smoke.gpu = String(
+            gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER),
+          );
+          const post = (to, body, type) =>
+            fetch(to, { method: 'POST', headers: { 'Content-Type': type }, body }).catch(
+              () => undefined,
+            );
+          const snap = () => {
+            // As the host's own capture: a frame at the planned time, read back at once.
+            host.scene.requestRender();
+            host.scene.render(host.widget.clock.currentTime);
+            const src = host.scene.canvas;
+            const copy = document.createElement('canvas');
+            copy.width = src.width;
+            copy.height = src.height;
+            copy.getContext('2d').drawImage(src, 0, 0);
+            return new Promise((resolve) => copy.toBlob(resolve, 'image/png'));
+          };
+          const started = performance.now();
+          const drive = async () => {
+            const name = window.__smoke.shot;
+            if (name) {
+              const png = await snap().catch(() => null);
+              if (png) await post('/__shot/' + name, png, 'image/png');
+              window.__smoke.shots.push(name);
+              window.__smoke.shot = null;
+              if (window.__takeShot) window.__takeShot();
+            }
+            if (window.__smoke.done) {
+              window.__smoke.seconds = Math.round((performance.now() - started) / 1000);
+              await post('/__result/result', JSON.stringify(window.__smoke), 'application/json');
+              document.title = 'LightMap renderer smoke - done';
+              return;
+            }
+            setTimeout(drive, 150);
+          };
+          drive();
+        }
         const controller = new SceneController(host, { aspect: () => 960 / 600 });
         await controller.setProviders(
           { kind: 'ellipsoid', attribution: '' },
