@@ -2621,6 +2621,19 @@ export class CesiumSceneHost implements SceneHost {
       }
       this.osmBuildings?.destroy();
       this.osmBuildings = null;
+      // The street map was drawn from the same tiles (`loadStreetsAround`) and goes with them:
+      // left behind, it kept its streets, lamps and shoreline on the ground - and kept
+      // following the camera, fetching from a source that had been taken away. The next
+      // source's cover pass draws its own.
+      this.roadLoadSeq++;
+      this.roadTemplate = null;
+      this.roadCentre = null;
+      if (this.roadCanvas || this.roadBounds) {
+        this.roadCanvas = null;
+        this.roadBounds = null;
+        this.applyRoadMap();
+        this.setStreetLamps([]);
+      }
       if (b.kind === 'none') return;
       if (b.kind === 'vector-tiles') {
         if (!b.url) return;
