@@ -1292,8 +1292,11 @@
           const ribbonInstance = blockOf(47, 68, 28, 26, [0.74, 0.76, 0.78, 0.98]);
           const curtainInstance = blockOf(60, 174, 26, 80, [0.62, 0.68, 0.74, 0.96]);
           const crownInstance = new Cesium.GeometryInstance({
+            // The layer's own crown: a coarse mesh (5 stacks, 7 slices), not a fine sphere.
             geometry: new Cesium.EllipsoidGeometry({
               radii: new Cesium.Cartesian3(6, 6, 7),
+              stackPartitions: 5,
+              slicePartitions: 7,
               vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
             }),
             modelMatrix: Cesium.Transforms.eastNorthUpToFixedFrame(
@@ -1309,6 +1312,24 @@
               ),
             },
           });
+          // And a conifer's crown, the layer's own cone (7 slices), nearer and to the right.
+          const coniferInstance = new Cesium.GeometryInstance({
+            geometry: new Cesium.CylinderGeometry({
+              length: 12,
+              topRadius: 0,
+              bottomRadius: 3,
+              slices: 7,
+              vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
+            }),
+            modelMatrix: Cesium.Transforms.eastNorthUpToFixedFrame(
+              Cesium.Cartesian3.fromDegrees(kLon + 50 * mLon, kLat - 70 * mLat, 7.5),
+            ),
+            attributes: {
+              color: Cesium.ColorGeometryInstanceAttribute.fromColor(
+                new Cesium.Color(0.15, 0.25, 0.13, 1),
+              ),
+            },
+          });
           const instancePrims = [];
           const drawInstances = (share, skyLift = 1, lights = 0, snow = 0, wet = 0) => {
             for (const p of instancePrims.splice(0)) host.scene.primitives.remove(p);
@@ -1317,7 +1338,10 @@
                 [blockInstance, ribbonInstance, curtainInstance],
                 litInstanceShader(1, 0, true, share, skyLift, lights, snow, wet),
               ],
-              [crownInstance, treeFragmentShader(1, 0, 1, 0, 1, share, 1, snow, wet)],
+              [
+                [crownInstance, coniferInstance],
+                treeFragmentShader(1, 0, 1, 0, 1, share, 1, snow, wet),
+              ],
             ])
               instancePrims.push(
                 host.scene.primitives.add(

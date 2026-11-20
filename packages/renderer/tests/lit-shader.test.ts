@@ -161,6 +161,79 @@ describe('buildings and trees shader', () => {
     expect([...roofs].every((c) => c.charCodeAt(0) < 128)).toBe(true);
   });
 
+  it('crowns are foliage - clumps in relief, a lobed outline - and buildings are not', () => {
+    const tree = treeFragmentShader(1, 0, 0.45, 20000);
+    // The noise is defined once, before main, and read in it.
+    expect(tree.indexOf('float lmLeafNoise(vec3 p, float n)')).toBeGreaterThan(0);
+    expect(tree.indexOf('float lmLeafNoise(vec3 p, float n)')).toBeLessThan(
+      tree.indexOf('void main()'),
+    );
+    expect(tree.split('void main()').length).toBe(2);
+    expect(tree.indexOf('leafTex')).toBeGreaterThan(tree.indexOf('void main()'));
+    // Crowns only (a trunk's bark is redder than it is green), with an outline that is cut:
+    // never where the crown faces the eye, always at its very limb.
+    expect(tree.split('if (v_color.g > v_color.r + 0.01) {').length).toBe(3);
+    expect(tree).toContain(
+      'float leafCut = clamp(0.42 - 0.9 * clumpTex - 0.3 * fineTex, 0.24, 0.8);',
+    );
+    const cut = 'if (leafFacing < leafCut) discard;';
+    expect(tree).toContain(cut);
+    expect(tree).toContain('float leafFacing = dot(normalEC, normalize(-v_positionEC));');
+    expect(Math.sqrt(1 - 0.8 ** 2)).toBeCloseTo(0.6, 6);
+    expect(Math.sqrt(1 - 0.24 ** 2)).toBeGreaterThan(0.97);
+    // The relief turns the normal the lighting reads (not the one the shadow is biased by),
+    // before the Sun's and the sky's terms are taken from it.
+    const bump = tree.indexOf('if (leafN2 > 0.0) normalEC = leafN * inversesqrt(leafN2);');
+    expect(bump).toBeGreaterThan(0);
+    expect(bump).toBeLessThan(tree.indexOf('float sun = max(dot(normalEC'));
+    expect(tree).not.toMatch(/shadeNormalEC = leafN/);
+    // Every derivative is read before a fragment can be discarded - the outline's cut and the
+    // bare crown's dither both - so no neighbour differences against a fragment that stopped.
+    const firstDiscard = tree.indexOf('discard;');
+    expect(firstDiscard).toBe(tree.indexOf(cut) + cut.length - 'discard;'.length);
+    expect(tree.lastIndexOf('dFdx(')).toBeLessThan(firstDiscard);
+    expect(tree.lastIndexOf('dFdy(')).toBeLessThan(firstDiscard);
+    // The tone comes after the season has coloured the crown, so autumn keeps its mottle.
+    expect(tree.indexOf('color.rgb *= (0.70 + 0.60 * leafTex) * leafShade;')).toBeGreaterThan(
+      tree.indexOf('float turn = '),
+    );
+    // Fixed to the ground: the camera's own low part, wrapped where its high part steps.
+    expect(tree).toContain('mod(czm_encodedCameraPositionMCLow + leafRel, 51.2)');
+    expect(65536 / 51.2).toBe(1280);
+    expect(LIT_INSTANCE_FS).not.toContain('leafTex');
+    expect(litInstanceShader(0.2, 8000, true)).not.toContain('lmLeafNoise');
+  });
+
+  it('a conifer carries its boughs in tiers: a saw-edged cone, banded, and no eaten side', () => {
+    const tree = treeFragmentShader(1, 0, 0.45, 20000);
+    // Conifers are the crowns without the broad-leaf mark in their alpha.
+    const at = tree.indexOf('if (v_color.a > 0.995) {');
+    expect(at).toBeGreaterThan(tree.indexOf('float leafCut = '));
+    expect(at).toBeLessThan(tree.indexOf('if (leafFacing < leafCut) discard;'));
+    // Tiers 1.3 m apart by height above the ellipsoid, swayed by the clumps.
+    expect(tree).toContain(
+      'float tier = fract((czm_eyeHeight + dot(v_positionEC, leafUpEC)) / 1.3 + 0.9 * clumpTex);',
+    );
+    // The cone keeps to its edge: with no noise the cut lies between 0.03 and 0.41 of facing
+    // across a tier (a round crown's starts at 0.42), and never below 0.10.
+    const cutAt = (tier: number) => 0.16 + 0.38 * (tier - 0.35);
+    expect(cutAt(0)).toBeCloseTo(0.027, 3);
+    expect(cutAt(1)).toBeCloseTo(0.407, 3);
+    expect(tree).toContain('- 0.5 * clumpTex - 0.3 * fineTex, 0.10, 0.8);');
+    // The tiers' shade keeps the cone's mean brightness: +12 % at the foot, less the shade
+    // toward the top (the mean of smoothstep(0.45, 1, t) over a tier is 0.275).
+    let mean = 0;
+    const smooth = (a: number, b: number, x: number) => {
+      const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+      return t * t * (3 - 2 * t);
+    };
+    for (let i = 0; i < 1000; i++) mean += (0.12 - 0.45 * smooth(0.45, 1, (i + 0.5) / 1000)) / 1000;
+    expect(Math.abs(mean)).toBeLessThan(0.01);
+    // Past telling (a pixel over half a tier) the tiers are gone.
+    expect(tree).toContain('float tierSeen = 1.0 - smoothstep(0.26, 0.59, leafPx);');
+    expect(0.59 / 1.3).toBeLessThan(0.5);
+  });
+
   it('rain-wet walls, roofs and leaves darken by up to a quarter', () => {
     expect(litInstanceShader(0.2, 8000, true, 1, 1, 0, 0, 1)).toContain('color.rgb *= 0.750;');
     expect(treeFragmentShader(1, 0, 0.45, 20000, 1, 1, 1, 0, 0.4)).toContain('color.rgb *= 0.900;');

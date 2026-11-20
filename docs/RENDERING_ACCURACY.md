@@ -810,6 +810,24 @@ and wall, every pane alike, so it neither shimmers nor changes brightness with d
 building's glazing is a guess from its height, not its own - a church tower over 35 m is glazed
 like an office - and there is no reflection of what stands opposite.
 
+A crown is foliage, not a smooth green ball (`treeFragmentShader`, `FOLIAGE_GLSL`): two noises
+fixed to the ground - leaf clumps 1.6 m across and leaves 0.4 m across - give it relief, an
+outline and tone. The clumps stand about 0.6 m proud of the gaps between them and the light takes
+each by the way it faces (the noise's slope turns the normal the Sun's and the sky's terms read),
+so a crown's sunny side has lit clumps and shaded hollows and lying snow settles on the clumps'
+tops. Toward the crown's limb the thinner clumps are cut away, so its edge runs in lobes a clump
+wide with the sky between them: never within 0.6 of its radius, always beyond 0.97. The clumps
+are a little lighter and yellower than the gaps (±30 %). Each noise fades to its mean as a pixel
+grows past its cells, so a far wood does not shimmer. Crowns only; a crown's shadow is still the
+whole shape's. A conifer's cone carries its boughs in tiers 1.3 m apart, their heights swayed by
+the clumps: each a skirt, wide at its foot where it turns up to the light, drawn in toward its
+top in the shade of the skirt above, so the cone has a fir's saw-edged outline and banded flank;
+the tiers fade as a pixel nears half of one, the mean brightness kept (`buildings-clear` has one
+of each). **Caveat:** the crown under the texture is still an ellipsoid or a cone - no boughs of
+its own, no gaps through its middle in leaf - and its lobes belong to the view: as the eye moves
+round a crown they change with it. Every conifer is a fir; a pine's open head and a cypress's
+column are not told apart.
+
 Through the lying snow's season (the ground texture's `snowCover`, `setSnow`) the buildings and
 trees carry it on whatever looks up: a roof goes white by the snow's extent wherever its face is
 within about 45–70° of level (steeper faces and walls shed it), a crown's top in patches at a

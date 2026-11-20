@@ -342,17 +342,112 @@ export function treeFragmentShader(
     }`;
   const anchor = '    vec4 color = czm_gammaCorrect(v_color);';
   // Crowns hold snow only in patches (it sifts through and slides off the branches).
-  return litInstanceShader(
-    shadowD,
-    shadowMaxM,
-    false,
-    directShare,
-    skyLift,
-    0,
-    snow * 0.55,
-    wet,
-  ).replace(anchor, anchor + season);
+  return litInstanceShader(shadowD, shadowMaxM, false, directShare, skyLift, 0, snow * 0.55, wet)
+    .replace(anchor, anchor + FOLIAGE_GLSL + season + FOLIAGE_TONE_GLSL)
+    .replace('void main()', `${FOLIAGE_NOISE_GLSL}\nvoid main()`);
 }
+
+/**
+ * A crown is foliage, not a smooth green ball. Two noises fixed to the ground - leaf clumps
+ * 1.6 m across and leaves 0.4 m across - give it three things. Relief: the clumps stand some
+ * 0.6 m proud of the gaps between them and the light takes each by the way it faces, so a
+ * crown has lit clumps and shaded hollows on its sunny side and catches the sky on the clumps'
+ * tops in shade (and lying snow settles on those tops). An outline: toward the crown's limb
+ * the thinner clumps are cut away, so its edge runs in lobes a clump wide with the sky between
+ * them instead of a drawn curve - never within the inner three fifths of its radius, where a
+ * crown is not seen through, and always in its last few hundredths, where the surface is seen
+ * edge-on and the noise on it would be drawn out into arcs. And tone: the clumps a little
+ * lighter and yellower, the gaps darker. Each noise fades to its mean as a pixel grows past
+ * its cells (a far wood does not shimmer; its crowns are smooth with a trimmed, even outline).
+ * Crowns only - the instance's own colour is green before the season turns it, a trunk's is
+ * bark - and their shadows stay the whole crown's.
+ *
+ * A conifer's cone (the crowns without the broad-leaf mark) carries its boughs in tiers 1.3 m
+ * apart, their heights swayed by the clumps: each a skirt, wide at its foot where it turns up
+ * to the light, drawn in toward its top in the shade of the skirt above - a fir's saw-edged
+ * outline and banded flank. A round crown's cut would eat a cone's side whole (along a cone's
+ * limb the facing does not change with height), so the cone keeps to within a few hundredths
+ * of its edge. The tiers fade as a pixel nears half of one, the mean brightness kept.
+ *
+ * The noise is laid in the primitive's own frame from the camera's position as Cesium splits
+ * it (the low part, exact, plus the fragment's offset from the eye), wrapped every 51.2 m,
+ * which the high part's 65,536 m steps are multiples of: fixed to the ground wherever the
+ * camera is. The relief is taken from the noise's screen-space derivatives (Mikkelsen's bump
+ * mapping of unparametrised surfaces), all of them read before the outline's discard.
+ * ASCII only.
+ */
+export const FOLIAGE_NOISE_GLSL = `
+float lmLeafHash(vec3 c)
+{
+    c = fract(c * vec3(0.1031, 0.1030, 0.0973));
+    c += dot(c, c.yxz + 33.33);
+    return fract((c.x + c.y) * c.z);
+}
+// Value noise on cells that wrap every n.
+float lmLeafNoise(vec3 p, float n)
+{
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = mix(lmLeafHash(mod(i, n)), lmLeafHash(mod(i + vec3(1.0, 0.0, 0.0), n)), f.x);
+    float b = mix(lmLeafHash(mod(i + vec3(0.0, 1.0, 0.0), n)), lmLeafHash(mod(i + vec3(1.0, 1.0, 0.0), n)), f.x);
+    float c = mix(lmLeafHash(mod(i + vec3(0.0, 0.0, 1.0), n)), lmLeafHash(mod(i + vec3(1.0, 0.0, 1.0), n)), f.x);
+    float d = mix(lmLeafHash(mod(i + vec3(0.0, 1.0, 1.0), n)), lmLeafHash(mod(i + vec3(1.0, 1.0, 1.0), n)), f.x);
+    return mix(mix(a, b, f.y), mix(c, d, f.y), f.z);
+}`;
+
+/** The crown's shape - relief and outline - before the season: it sets `leafTex`. */
+export const FOLIAGE_GLSL = `
+    float leafTex = 0.5;
+    float leafShade = 1.0;
+    if (v_color.g > v_color.r + 0.01) {
+        vec3 leafRel = (czm_inverseModelView * vec4(v_positionEC, 0.0)).xyz;
+        float leafPx = max(length(dFdx(leafRel)), length(dFdy(leafRel)));
+        vec3 leafP = mod(czm_encodedCameraPositionMCLow + leafRel, 51.2);
+        float clumpSeen = 1.0 - smoothstep(0.5, 1.6, leafPx);
+        float leafSeen = 1.0 - smoothstep(0.12, 0.4, leafPx);
+        float clumpTex = (lmLeafNoise(leafP / 1.6, 32.0) - 0.5) * clumpSeen;
+        float fineTex = (lmLeafNoise(leafP / 0.4 + 7.0, 128.0) - 0.5) * leafSeen;
+        leafTex = 0.5 + 0.6 * clumpTex + 0.4 * fineTex;
+        // The relief, in metres, and the slope it gives the surface.
+        float leafH = 2.0 * clumpTex + 0.2 * fineTex;
+        vec3 leafDx = dFdx(v_positionEC);
+        vec3 leafDy = dFdy(v_positionEC);
+        vec3 leafR1 = cross(leafDy, normalEC);
+        vec3 leafR2 = cross(normalEC, leafDx);
+        float leafDet = dot(leafDx, leafR1);
+        vec3 leafN = abs(leafDet) * normalEC
+            - sign(leafDet) * (dFdx(leafH) * leafR1 + dFdy(leafH) * leafR2);
+        // The outline: a crown is whole where it faces the eye (to 0.6 of its radius at the
+        // least), gone at its very limb (past 0.97), and between them the clumps decide. The
+        // facing is signed: a crown is a coarse mesh, and along its silhouette a face turned
+        // to the eye can carry a smoothed normal turned away - that is limb too, not crown.
+        float leafFacing = dot(normalEC, normalize(-v_positionEC));
+        float leafCut = clamp(0.42 - 0.9 * clumpTex - 0.3 * fineTex, 0.24, 0.8);
+        if (v_color.a > 0.995) {
+            // A conifer (the broad-leaf crowns carry their mark in the alpha): boughs in tiers
+            // 1.3 m apart up the cone, their heights swayed by the clumps. Each tier is a skirt:
+            // wide at its foot, where it turns up to the light, drawn in toward its top, which
+            // lies in the shade of the skirt above. So the cone's edge is a saw's.
+            vec3 leafUpEC = normalize((czm_view * vec4(normalize((czm_inverseView * vec4(v_positionEC, 1.0)).xyz), 0.0)).xyz);
+            float tierSeen = 1.0 - smoothstep(0.26, 0.59, leafPx);
+            float tier = fract((czm_eyeHeight + dot(v_positionEC, leafUpEC)) / 1.3 + 0.9 * clumpTex);
+            leafCut = clamp(0.16 + 0.38 * (tier - 0.35) * tierSeen - 0.5 * clumpTex - 0.3 * fineTex, 0.10, 0.8);
+            leafN += abs(leafDet) * (0.5 - tier) * 1.6 * tierSeen
+                * (leafUpEC - dot(leafUpEC, normalEC) * normalEC);
+            leafShade = 1.0 + (0.12 - 0.45 * smoothstep(0.45, 1.0, tier)) * tierSeen;
+        }
+        if (leafFacing < leafCut) discard;
+        float leafN2 = dot(leafN, leafN);
+        if (leafN2 > 0.0) normalEC = leafN * inversesqrt(leafN2);
+    }`;
+
+/** The crown's tone, after the season has coloured it. */
+export const FOLIAGE_TONE_GLSL = `
+    if (v_color.g > v_color.r + 0.01) {
+        color.rgb *= (0.70 + 0.60 * leafTex) * leafShade;
+        color.rgb = mix(color.rgb, color.rgb * vec3(1.12, 1.08, 0.85), smoothstep(0.55, 0.9, leafTex));
+    }`;
 
 /** Broad-leaf crowns' alpha: the mark `treeFragmentShader` looks for. */
 const BROADLEAF_ALPHA = 0.99;

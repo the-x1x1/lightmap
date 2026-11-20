@@ -14,6 +14,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   them - a mackerel sky, lit warm from the side at sunset - instead of a torn grey sheet.
 - **Peaks in cloud**: ground that stands above the cloud base disappears into the low cloud -
   wholly under an overcast, through the gaps under broken cloud - at the forecast's cloud base.
+- **Leafy trees**: a tree's crown is a mass of leaf clumps - lit on their sunny side, shaded in
+  the gaps between - with a lobed outline, where it was a smooth green ball. A conifer has tiers
+  of boughs and a saw-edged outline, where it was a smooth cone.
 - **Windows by day**: building walls carry their windows in daylight too - dark glass with a
   glint of sky - not only when lit at night, and not all alike: houses and most blocks have
   windows punched in the wall, some mid-rise blocks have ribbon windows, and glass towers have
