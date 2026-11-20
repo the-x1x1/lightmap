@@ -117,6 +117,8 @@ describe('hip roofs for houses', () => {
   });
 
   it('leaves everything that is not plainly a house flat', () => {
+    // One piece of a house its tile cut in two (the other piece is in the next tile).
+    expect(hipRoofFor({ ...footprint(rect(8, 12), 7), atTileEdge: true })).toBeNull();
     // Too tall, a part set on another, a courtyard.
     expect(hipRoofFor(footprint(rect(8, 12), 13.5))).toBeNull();
     expect(hipRoofFor(footprint(rect(8, 12), 9, { minHeightM: 3 }))).toBeNull();

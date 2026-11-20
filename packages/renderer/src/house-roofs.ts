@@ -90,12 +90,16 @@ function corners(ring: readonly XY[]): XY[] {
 /**
  * The hip roof a footprint takes, or null where it is not a house: anything with a hole or set
  * on another part, taller or lower than a house, not four-cornered and square-angled (within
- * 15 deg), or wider or longer than a house.
+ * 15 deg), wider or longer than a house, or a piece cut off by its tile's edge.
  */
 export function hipRoofFor(
-  b: Pick<BuildingFootprint, 'outer' | 'holes' | 'heightM' | 'minHeightM' | 'centre'>,
+  b: Pick<BuildingFootprint, 'outer' | 'holes' | 'heightM' | 'minHeightM' | 'centre'> &
+    Pick<Partial<BuildingFootprint>, 'atTileEdge'>,
 ): HipRoof | null {
   if (b.holes.length > 0 || b.minHeightM > 0) return null;
+  // One piece of a house its tile cut in two: each piece would get a roof of its own, two
+  // ridges on one house along every tile edge. Both pieces keep the flat top, at one height.
+  if (b.atTileEdge) return null;
   if (!(b.heightM >= HOUSE_HEIGHT_M[0] && b.heightM <= HOUSE_HEIGHT_M[1])) return null;
   const [lon0, lat0] = b.centre;
   const ky = 111_320;

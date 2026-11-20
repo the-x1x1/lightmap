@@ -849,7 +849,9 @@ tile does not stall a frame), with the same shader, shadows and picking: one slo
 reads a ridge as it reads a parapet (`town-above`, `town-street`). **Caveat:** a guess - the map
 seldom says a roof's shape. A gabled, mansard or flat-roofed house is drawn hipped all the same,
 its ridge along its length; anything larger, taller or not a plain rectangle (a terrace mapped as
-one long outline, an L-shaped house) keeps a flat top; the roofings are not the region's.
+one long outline, an L-shaped house) keeps a flat top, and so does a house its map tile cuts in
+two (each piece would get a roof of its own - a few houses along every tile edge, about 2.4 km
+apart at the equator); the roofings are not the region's.
 
 A crown is foliage, not a smooth green ball (`treeFragmentShader`, `FOLIAGE_GLSL`): two noises
 fixed to the ground - leaf clumps 1.6 m across and leaves 0.4 m across - give it relief, an

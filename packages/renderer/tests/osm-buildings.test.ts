@@ -163,6 +163,30 @@ describe('OSM buildings from a tile', () => {
     expect(lonLatToTile(14, lon, lat)).toEqual({ x: 4093, y: 7277 });
   });
 
+  it('marks a footprint its tile cut, and no other', () => {
+    const t = tile(
+      [
+        // Inside the tile; across its east edge (into the buffer); across its north edge.
+        { rings: [square(100, 100, 200)], tags: [] },
+        { rings: [square(4000, 500, 200)], tags: [] },
+        { rings: [square(900, -50, 120)], tags: [] },
+      ],
+      [],
+      [],
+    );
+    const [inside, east, north] = buildingsFromTile(t, 14, 8000, 5000);
+    expect(inside?.atTileEdge).toBeUndefined();
+    expect('atTileEdge' in (inside ?? {})).toBe(false);
+    expect(east?.atTileEdge).toBe(true);
+    expect(north?.atTileEdge).toBe(true);
+    // The cut piece ends at the edge: 96 of the 200 units wide.
+    const lons = (east?.outer ?? []).map((p) => p[0]);
+    const [w] = tilePointToLonLat(14, 8000, 5000, 4096, 4000, 0);
+    const [e] = tilePointToLonLat(14, 8000, 5000, 4096, 4096, 0);
+    expect(Math.min(...lons)).toBeCloseTo(w, 9);
+    expect(Math.max(...lons)).toBeCloseTo(e, 9);
+  });
+
   it('skips outlines marked hide_3d (their parts are drawn instead)', () => {
     const t = tile([{ rings: [square(0, 0, 40)], tags: [0, 0] }], ['hide_3d'], [[...key(7, 0), 1]]);
     expect(buildingsFromTile(t, 14, 0, 0)).toEqual([]);

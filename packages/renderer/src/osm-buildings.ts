@@ -32,6 +32,12 @@ export interface BuildingFootprint {
   colour: string | null;
   /** The footprint's centre (vertex mean), where the ground height is read. */
   centre: [number, number];
+  /**
+   * The outline reaches its tile's edge: it is (or may be) one piece of a building the tile cut
+   * in two, the other piece in the neighbouring tile. Whatever is shaped to a whole building's
+   * outline (a house's roof) must leave such a piece alone.
+   */
+  atTileEdge?: true;
 }
 
 const num = (v: VectorValue | undefined): number | null =>
@@ -125,6 +131,8 @@ export function* buildingsFromTileSteps(
         cx += lon;
         cy += lat;
       }
+      // Clipping lays the cut along the tile's edge, so a vertex there marks a cut piece.
+      const atEdge = outerTile.some((v) => v <= 0 || v >= e);
       out.push({
         outer,
         holes,
@@ -132,6 +140,7 @@ export function* buildingsFromTileSteps(
         minHeightM,
         colour,
         centre: [cx / outer.length, cy / outer.length],
+        ...(atEdge ? { atTileEdge: true as const } : {}),
       });
     }
   }
