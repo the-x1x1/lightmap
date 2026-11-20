@@ -647,6 +647,59 @@ void main() {
       mistCol *= 1.05 + 0.15 * glowSide;
       color = mix(color, mistCol, clamp(mist, 0.0, 0.92));
     }
+    // Ground in cloud: the low deck has a base (the forecast's, or 1.5 km over the place's
+    // ground), and ground that stands above it is in the cloud - under a low overcast the valley
+    // sides run up into the grey and the peaks are gone; under broken cloud a summit shows
+    // through the gaps. From under the deck, the ray to such ground runs through cloud from the
+    // base up to the point, or to the deck's top (300 m over the base for thin cloud, 1.2 km
+    // for a dense deck), a 120 m visibility inside it; and the cloud it meets is the one the sky
+    // draws - the same field, read where the ray crosses the base, in the deck's own grey - so
+    // the clouds beside a mountain carry on across its face. Where the cloud is dense its base
+    // hangs up to 120 m lower, and it is ragged: it rises and falls by some 70 m along the
+    // slope (two noises over the ground point's own place, 300 m and 90 m long), so the cloud
+    // meets the mountain in wisps and not along a ruled line. Heights are over the place's
+    // ground, the Earth's curve counted in (a peak 50 km off stands 200 m lower against a level
+    // line than it is).
+    {
+      float noBandsG = step(u_cloudLow + u_cloudMid + u_cloudHigh, 0.001);
+      float covG = clamp(max(u_cloudLow, u_cloudCoverage * noBandsG), 0.0, 1.0);
+      float baseM = u_lowDeckKm * 1000.0;
+      float pointM = h0 - dh + distM * distM / 12742000.0;
+      if (covG > 0.05 && underDecks > 0.0 && h0 < baseM - 200.0 && pointM > baseM - 200.0) {
+        vec2 wToG = normalize(u_windToward + vec2(1e-6, 0.0));
+        vec2 wAcrossG = vec2(-wToG.y, wToG.x);
+        float driftG = mod(u_time, 5760.0) * u_windMps * 2.5 * 0.06;
+        vec2 dlG = deckPoint(rayEC, max((baseM - h0) / 1000.0, 0.3));
+        vec2 pG = vec2(dot(dlG, wToG) - driftG, dot(dlG, wAcrossG)) / 1.8;
+        float detailG = smoothstep(0.03, 0.14, dot(rayEC, u_eyeUpEC));
+        float nG = mix(0.5, fbm(pG), detailG);
+        float cloudG = smoothstep(1.0 - covG - 0.15, 1.0 - covG + 0.15, nG);
+        float thickG = clamp(u_cloudDensity * (0.5 + 0.5 * u_cloudOpacity), 0.0, 1.0);
+        vec3 eastG = normalize(u_eyeEastEC - dot(u_eyeEastEC, u_eyeUpEC) * u_eyeUpEC);
+        vec2 ptKm = u_eyeFromPlaceKm
+            + vec2(dot(rayEC, eastG), dot(rayEC, cross(u_eyeUpEC, eastG))) * distM / 1000.0;
+        float lowM = baseM - 120.0 * clamp((nG - (1.0 - covG)) / 0.3, 0.0, 1.0)
+            + 90.0 * (vnoise(ptKm * 3.3 + vec2(2.0, 7.0)) - 0.5)
+            + 50.0 * (vnoise(ptKm * 11.0 + vec2(6.0, 1.0)) - 0.5);
+        float topM = baseM + mix(300.0, 1200.0, thickG);
+        float inM = min(pointM, topM) - lowM;
+        if (cloudG > 0.0 && inM > 0.0) {
+          float pathM = distM * inM / max(pointM - h0, 1.0);
+          float sunUpG = smoothstep(-2.0, -0.5, u_sunElevation);
+          float lowSunG = 1.0 - smoothstep(-1.0, 8.0, u_sunElevation);
+          vec3 cloudColG = mix(vec3(1.0), vec3(0.55, 0.58, 0.62), thickG);
+          cloudColG *= 1.0 + (fbm(pG * 2.7 + vec2(5.0, 3.0)) - 0.5) * 0.28 * thickG;
+          cloudColG *= mix(1.0, 0.78, thickG * smoothstep(0.55, 0.9, nG));
+          cloudColG = mix(cloudColG, cloudColG * vec3(1.0, 0.62, 0.42), lowSunG * sunUpG * 0.7 * (1.0 - thickG));
+          cloudColG = mix(cloudColG, cloudColG * u_tint, 0.35 * (1.0 - thickG) * sunUpG);
+          cloudColG = mix(vec3(0.35, 0.40, 0.55) * 0.45, cloudColG, sunUpG);
+          float sinViewG = clamp(dot(rayEC, u_eyeUpEC), 0.0, 1.0);
+          cloudColG *= mix(1.0, clamp((1.0 + 2.0 * sinViewG) / 1.52, 0.65, 1.45), smoothstep(0.6, 0.95, covG));
+          cloudColG *= mix(1.0, u_skyLuminance, 0.6) * mix(1.0, 0.15, u_nightFactor * (1.0 - sunUpG));
+          color = mix(color, cloudColG, cloudG * (1.0 - exp(-pathM / 120.0)) * underDecks);
+        }
+      }
+    }
   }
 
   // Sunbeams: with a low Sun hidden behind a ridge, buildings or trees, the hazy air between is

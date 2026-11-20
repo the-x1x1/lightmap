@@ -683,6 +683,23 @@ base is left; the silver lining keeps to the deck's soft margin (`partly-viewpoi
 **Caveat:** a sheet's relief, not a volume: no towers, no anvils, no shadows from one cloud on
 the next.
 
+**Ground in cloud.** The low deck has a base - the forecast's (`cloudBaseKmFor`), or 1.5 km over
+the place's ground - and ground that stands above it is in the cloud: under a low overcast the
+valley sides run up into the grey and the peaks are gone; under broken cloud a summit shows
+through the gaps. For a ground pixel above the base, seen from under the deck, the grade lays the
+deck's own grey over it by the length of the ray inside the cloud (from the base up to the point,
+or to the deck's top: 300 m over the base for thin cloud, 1.2 km for a dense deck; a 120 m
+visibility inside), where the sky's cloud field - read where the ray crosses the base, as for the
+sky beside it - has cloud; where the cloud is dense its base hangs up to 120 m lower, and it
+rises and falls by some 70 m along the slope (two noises over the ground point's own place), so
+the cloud meets the mountain in wisps and not along a ruled line. Heights are over the place's
+ground with the Earth's curve counted in (`synth-ridge-in-cloud`, `synth-ridge-in-gaps`: a 380 m
+base on the 800 m ridge).
+**Caveat:** only from under the deck: a camera above the base (an orbit, or a summit over the
+cloud) sees no cloud below it - there is no sea of cloud yet; the mid and high decks hide
+nothing; and the ground in the cloud is lit as the rest is (no dimming of what shows through a
+thin edge).
+
 **Snowfall.** What falls is snow where the forecast's weather code says so (71–77, 85–86), rain
 where it says drizzle, rain, showers or thunder, and otherwise by the 2 m temperature (snow at
 0 °C and below, rain from 2 °C; `snowShareFor`). Snow is drawn as flakes, not streaks: soft pale

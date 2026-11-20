@@ -1721,6 +1721,65 @@
         // twilight's shade, the ridge's western face lit red toward its crest.
         await synthShot('synth-alpenglow', 19.135, 'clear', look(80, 4));
         await synthShot('synth-overcast-ridge', 12.5, 'overcast', look(80, 4));
+        // Ground in cloud: a forecast with the air 3 deg C off its dew point - a cloud base
+        // 380 m over the plain, half-way up the ridge - under a closed low deck (the ridge runs
+        // up into the grey and its crest is gone) and under a broken one (the crest shows
+        // through the gaps, the clouds beside it carrying on across its face).
+        for (const [name, cover] of [
+          ['synth-ridge-in-cloud', 100],
+          ['synth-ridge-in-gaps', 45],
+        ]) {
+          const at = (hour) => ({
+            timestamp: localSelectionToUtc(
+              { year: 2026, month: 5, day: 31 },
+              hour * 60,
+              beach.timeZone,
+            ).toISOString(),
+            cloudCoverTotal: cover,
+            cloudCoverLow: cover,
+            cloudCoverMid: 0,
+            cloudCoverHigh: 0,
+            precipitationProbability: 0,
+            precipitationAmount: 0,
+            temperature: 20,
+            dewPoint: 17,
+            humidity: 83,
+            visibility: 20000,
+            windSpeed: 3,
+            windDirection: 90,
+            weatherCode: 3,
+          });
+          controller.apply(
+            buildSceneState({
+              location: beach,
+              utc: localSelectionToUtc(
+                { year: 2026, month: 5, day: 31 },
+                12.5 * 60,
+                beach.timeZone,
+              ),
+              now: new Date('2026-05-30T00:00:00Z'),
+              camera: look(80, 4),
+              environment: { ...env, terrainAvailable: true, terrainProviderId: 'synthetic' },
+              scenario: 'clear',
+              forceScenario: false,
+              weather: {
+                capabilities: OPEN_METEO_CAPABILITIES,
+                frames: [at(12), at(13)],
+                providerFailed: false,
+              },
+              render: DEFAULT_RENDER_SETTINGS,
+              includeLunar: true,
+              realReference: false,
+            }),
+          );
+          await wait(1500);
+          if (!(await settle())) log(name + ': not settled in 45 s');
+          await wait(500);
+          window.__smoke.shot = name;
+          await new Promise((r) => {
+            window.__takeShot = r;
+          });
+        }
         // From the ridge's summit (~817 m) looking west down over the plain and out to sea: the
         // haze thins with height above the place (u_hazeBaseM, the summit's ground), so the
         // plain and the sea below sink into it while the sky over the far horizon stays clear.

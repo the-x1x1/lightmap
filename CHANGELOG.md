@@ -6,6 +6,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 - **Alpenglow**: high ground keeps the Sun after it has set where you stand, and catches it
   first at dawn - Sun-facing slopes above the place glow red, then orange, toward their crests.
+- **Peaks in cloud**: ground that stands above the cloud base disappears into the low cloud -
+  wholly under an overcast, through the gaps under broken cloud - at the forecast's cloud base.
 - **Snowfall**: when the forecast says snow, flakes fall through the picture instead of rain's
   streaks (and there is no rainbow in a snow shower).
 - **Cumulus with a body**: broken low cloud now has firmer, ragged edges, a greyer base and a
