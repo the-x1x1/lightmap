@@ -81,6 +81,18 @@ describe('buildings and trees shader', () => {
     expect(litInstanceShader(0.2, 8000, false, 0, 3, 1)).not.toContain('wallness');
   });
 
+  it("numbers a building's windows by its colour's bytes, so a window is lit all over", () => {
+    // A wall's colour is one value at every vertex, yet interpolated it can differ in its last
+    // bit from pixel to pixel; the windows' hash multiplies that by tens of thousands. The
+    // bytes are exact (the attribute is one), and their weights are the old ones over 255.
+    const night = litInstanceShader(0.2, 8000, true, 0, 3, 1);
+    expect(night).toContain('vec2 own = floor(v_color.rb * 255.0 + 0.5);');
+    expect(night).toContain('dot(own, vec2(0.3596, 0.1463))');
+    expect(night).not.toMatch(/sin\([^;]*v_color/);
+    expect(0.3596 * 255).toBeCloseTo(91.7, 1);
+    expect(0.1463 * 255).toBeCloseTo(37.3, 1);
+  });
+
   it('lying snow whitens what looks up - roofs fully, crowns in patches - and nothing without it', () => {
     const roofs = litInstanceShader(0.2, 8000, true, 1, 1, 0, 0.8);
     expect(roofs).toContain('float snowUp = smoothstep(0.35, 0.8, dot(normalEC, upEC));');

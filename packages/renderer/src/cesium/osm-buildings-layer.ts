@@ -217,7 +217,11 @@ function windowsCode(cityLights: number): string {
         vec2 fw = max(fwidth(cell), vec2(1e-4));
         float inX = smoothstep(0.30 - fw.x, 0.30 + fw.x, f.x) - smoothstep(0.70 - fw.x, 0.70 + fw.x, f.x);
         float inY = smoothstep(0.30 - fw.y, 0.30 + fw.y, f.y) - smoothstep(0.80 - fw.y, 0.80 + fw.y, f.y);
-        float hsh = fract(sin(dot(id, vec2(12.9898, 78.233)) + v_color.r * 91.7 + v_color.b * 37.3) * 43758.5453);
+        // The building's own number, from its colour's bytes: the interpolated colour of a
+        // one-coloured wall can differ in its last bit from pixel to pixel, which the hash
+        // would turn into a window lit in specks.
+        vec2 own = floor(v_color.rb * 255.0 + 0.5);
+        float hsh = fract(sin(dot(id, vec2(12.9898, 78.233)) + dot(own, vec2(0.3596, 0.1463))) * 43758.5453);
         float litW = step(hsh, 0.38 * ${on});
         float hue = fract(hsh * 7.31);
         vec3 lamp = mix(vec3(1.0, 0.70, 0.40), vec3(0.88, 0.90, 1.0), hue * hue) * (0.55 + 0.45 * fract(hsh * 3.7));
