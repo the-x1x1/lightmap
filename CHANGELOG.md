@@ -14,6 +14,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   them - a mackerel sky, lit warm from the side at sunset - instead of a torn grey sheet.
 - **Peaks in cloud**: ground that stands above the cloud base disappears into the low cloud -
   wholly under an overcast, through the gaps under broken cloud - at the forecast's cloud base.
+- **Windows by day**: building walls carry their windows in daylight too - dark glass with a
+  glint of sky - not only when lit at night, and not all alike: houses and most blocks have
+  windows punched in the wall, some mid-rise blocks have ribbon windows, and glass towers have
+  curtain walls.
 - **Lit windows are whole**: at night the lit windows on some walls broke up into specks of light
   and dark. Each window is now lit or dark all over.
 - **Farmland in rectangular fields**: painted cropland is a patchwork of rectangular parcels with

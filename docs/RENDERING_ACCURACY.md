@@ -794,6 +794,22 @@ building's base; corners can cut a window; which windows are lit is a hash, not 
 night (offices and homes go dark on no schedule here). The harness shows it at 19:45 on its
 test block (`buildings-dusk`).
 
+By day the same grid is glass: a window is darker than its wall - a third to a half of it, pane
+by pane (most of the light goes in and does not come back) - with a little of the sky's light
+glancing off it, more the more obliquely the wall is seen (glass mirrors at a grazing angle), so
+a wall has a scale and a building is not a painted box. The grid is glazed in one of three ways,
+which a building carries in its colour's alpha (`FACADE_ALPHA`, `facadeKind`): windows punched in
+a wall (a fifth of it glass); ribbons of glass from mullion to mullion between bands of wall (two
+fifths); or a curtain wall, glass from slab to slab (three quarters). A tower over 35 m takes its
+material's - curtain walls for the glass towers, ribbons for steel and glass, punched windows for
+concrete; a quarter of the blocks between 12 m and 35 m have ribbons; everything lower has
+punched windows. At night the same panes are the ones lit, so a curtain-walled tower shows whole
+lit bays. Where a pixel spans more than about half a window the wall takes the mean of its glass
+and wall, every pane alike, so it neither shimmers nor changes brightness with distance
+(`buildings-clear`: a punched block, a ribbon block and a curtain-walled tower). **Caveat:** a
+building's glazing is a guess from its height, not its own - a church tower over 35 m is glazed
+like an office - and there is no reflection of what stands opposite.
+
 Through the lying snow's season (the ground texture's `snowCover`, `setSnow`) the buildings and
 trees carry it on whatever looks up: a roof goes white by the snow's extent wherever its face is
 within about 45–70° of level (steeper faces and walls shed it), a crown's top in patches at a

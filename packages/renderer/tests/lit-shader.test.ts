@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  FACADE_ALPHA,
   LIT_INSTANCE_FS,
   PRIMITIVE_NORMAL_SHADING_SMOOTH,
+  facadeKind,
   litInstanceShader,
   treeFragmentShader,
 } from '../src/cesium/osm-buildings-layer.ts';
@@ -71,14 +73,70 @@ describe('buildings and trees shader', () => {
     expect(treeFragmentShader(1, 0, 0.2, 8000)).not.toContain('roofness');
   });
 
-  it('lights windows in the buildings from the dusk only, in ASCII', () => {
-    expect(litInstanceShader(0.2, 8000, true, 1, 1, 0)).not.toContain('wallness');
+  it('gives the buildings glass windows by day and lights them from the dusk only, in ASCII', () => {
+    // By day: the grid and its glass, no lamps.
+    const day = litInstanceShader(0.2, 8000, true, 1, 1, 0);
+    expect(day).toContain('wallness');
+    expect(day).toContain('outRgb = mix(outRgb, pane, glass * wallness);');
+    expect(day).not.toContain('litW');
+    expect([...day].every((c) => c.charCodeAt(0) < 128)).toBe(true);
+    // The glass takes the sky's light with the sky terms' own lift.
+    expect(litInstanceShader(0.2, 8000, true, 0, 3, 0)).toContain('(0.4 + 0.6 * sky) * 3.00');
     const night = litInstanceShader(0.2, 8000, true, 0, 3, 1);
     expect(night).toContain('wallness');
+    expect(night).toContain('glass * wallness');
     expect(night).toContain('0.38 * 1.00');
     expect([...night].every((c) => c.charCodeAt(0) < 128)).toBe(true);
     // Trees and the roof-less test block take none.
     expect(litInstanceShader(0.2, 8000, false, 0, 3, 1)).not.toContain('wallness');
+    expect(litInstanceShader(0.2, 8000, false, 1, 1, 0)).not.toContain('wallness');
+  });
+
+  it('glazes a building by the mark in its alpha: punched windows, ribbons or a curtain wall', () => {
+    const day = litInstanceShader(0.2, 8000, true, 1, 1, 0);
+    // The marks are read between their steps, and the buildings are drawn opaque.
+    expect(day).toContain('float ribbon = step(v_color.a, 0.99);');
+    expect(day).toContain('float curtain = step(v_color.a, 0.97);');
+    expect(day.indexOf('color.a = 1.0;')).toBeLessThan(day.indexOf('out_FragColor'));
+    // A colour attribute is a byte: each mark must land on its own side of the steps.
+    const byte = (a: number) => (a === 1 ? 255 : Math.floor(a * 256)) / 255;
+    expect(byte(FACADE_ALPHA.punched)).toBeGreaterThan(0.99);
+    expect(byte(FACADE_ALPHA.ribbon)).toBeLessThan(0.99);
+    expect(byte(FACADE_ALPHA.ribbon)).toBeGreaterThan(0.97);
+    expect(byte(FACADE_ALPHA.curtain)).toBeLessThan(0.97);
+    // The wall's share of glass: a fifth punched, about two fifths in ribbons, three quarters
+    // as a curtain wall - and a far wall and a far town's lamps both take that share.
+    expect((0.7 - 0.3) * (0.8 - 0.3)).toBeCloseTo(0.2, 9);
+    expect((0.97 - 0.03) * (0.8 - 0.34)).toBeCloseTo(0.43, 2);
+    expect((0.96 - 0.04) * (0.91 - 0.09)).toBeCloseTo(0.75, 2);
+    expect(day).toContain('float glass = mix(inX * inY, share, far);');
+    expect(litInstanceShader(0.2, 8000, true, 0, 3, 1)).toContain('* 0.38 * 1.00 * share;');
+    // Every pane alike once the grid is past telling (no shimmer on a far glass tower).
+    expect(day).toContain('mix(fract(hsh * 5.9), 0.5, far)');
+    // The trees' alpha is theirs (the broad-leaf mark): no glazing is read from it.
+    expect(treeFragmentShader(1, 0, 0.45, 20000)).not.toContain('curtain');
+  });
+
+  it('picks the glazing by height: towers by their material, some mid-rise in ribbons', () => {
+    // Towers, in the order of their materials: blue glass, steel and glass, concrete, dark glass.
+    expect(facadeKind(80, 0.1)).toBe('curtain');
+    expect(facadeKind(80, 0.3)).toBe('ribbon');
+    expect(facadeKind(80, 0.6)).toBe('punched');
+    expect(facadeKind(80, 0.9)).toBe('curtain');
+    expect(facadeKind(80, 1)).toBe('curtain');
+    // Houses: always punched.
+    for (let i = 0; i < 100; i++) expect(facadeKind(9, i / 100)).toBe('punched');
+    // Mid-rise: about a quarter in ribbons, none curtain-walled.
+    let ribbons = 0;
+    for (let i = 0; i < 1000; i++) {
+      const k = facadeKind(20, (i + 0.5) / 1000);
+      expect(k).not.toBe('curtain');
+      if (k === 'ribbon') ribbons++;
+    }
+    expect(ribbons).toBeGreaterThan(220);
+    expect(ribbons).toBeLessThan(280);
+    expect(facadeKind(35, 0.1)).not.toBe('curtain');
+    expect(facadeKind(Number.NaN, 0.1)).toBe('punched');
   });
 
   it("numbers a building's windows by its colour's bytes, so a window is lit all over", () => {

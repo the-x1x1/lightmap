@@ -77,6 +77,32 @@ const SINK_M = 2;
 export const PRIMITIVE_NORMAL_SHADING_SMOOTH = 0.05;
 
 /**
+ * How a building's walls are glazed, carried in its colour's alpha (the buildings are drawn
+ * opaque, so alpha is free; the shader reads it and writes 1): windows punched in a wall,
+ * ribbons of glass between bands of wall, or a curtain wall - glass from slab to slab. The
+ * steps are five of a byte's 255 apart, so the colour attribute's rounding keeps them.
+ */
+export const FACADE_ALPHA = { punched: 1, ribbon: 0.98, curtain: 0.96 } as const;
+export type FacadeKind = keyof typeof FACADE_ALPHA;
+
+/** The towers' glazing, in the order of their materials (`HIGH_RISE`). */
+const HIGH_RISE_KIND: FacadeKind[] = ['curtain', 'ribbon', 'punched', 'curtain'];
+
+/**
+ * A building's glazing from its height and its own number `h` (0..1, the one its facade's
+ * colour is picked by): a tower over 35 m takes its material's - curtain walls for the glass
+ * towers, ribbons for steel and glass, punched windows for concrete; a quarter of the blocks
+ * between 12 m and 35 m (offices, schools, flats of the last sixty years) have ribbons; houses
+ * and everything else have windows punched in their walls.
+ */
+export function facadeKind(heightM: number, h: number): FacadeKind {
+  const u = Math.min(0.999999, Math.max(0, h));
+  if (heightM > 35) return HIGH_RISE_KIND[Math.floor(u * HIGH_RISE_KIND.length)] ?? 'punched';
+  if (heightM > 12 && (u * 13.7) % 1 < 0.25) return 'ribbon';
+  return 'punched';
+}
+
+/**
  * The buildings' and trees' fragment shader: Cesium's per-instance colour appearance lights
  * every face from the camera (a headlight), which would light a wall facing away from the Sun
  * as brightly as one facing it. Here the Sun (the scene light) lights the faces that face it,
@@ -168,7 +194,7 @@ void main()
     // No haze of their own: the grade's aerial perspective takes every pixel by its depth,
     // these primitives' too (a haze here as well put a far skyline in twice the haze of the
     // hills behind it).
-    vec3 outRgb = lit;${roofs && cityLights > 0 ? windowsCode(cityLights) : ''}
+    vec3 outRgb = lit;${roofs ? windowsCode(cityLights, lift) : ''}
     // Cesium's factor for an unoccluded fragment: its normal shading over the first
     // PRIMITIVE_NORMAL_SHADING_SMOOTH of n.l, floored at the darkness; none beyond the shadow
     // distance.
@@ -181,13 +207,20 @@ void main()
 }
 
 /**
- * Lit windows, from the dusk on (`cityLights`, 0..1): the walls carry a grid of windows - bays
- * 3.6 m wide, storeys 3.2 m tall, each window 40 % of its bay's width and half its storey's
- * height - of which up to 38 % are lit, each its own warm-to-cool white and brightness, picked
- * by a hash of the window and the building's tone so a window stays lit or dark. The light is
- * the window's own: added after the shading, not scaled by the scene's light. Where a pixel
- * spans more than about half a window the grid gives way to its mean glow, so a far town is a
- * haze of warm light rather than shimmering dots.
+ * Windows. The walls carry a grid of them - bays 3.6 m wide, storeys 3.2 m tall - glazed in one
+ * of three ways, which a building carries in its colour's alpha (`FACADE_ALPHA`; the shader
+ * writes 1): windows punched in a wall, each 40 % of its bay's width and half its storey's
+ * height (a fifth of the wall); ribbons of glass from mullion to mullion between bands of wall
+ * (two fifths); or a curtain wall, glass from slab to slab (three quarters). By day a window is
+ * glass: darker than its wall (a third to a half of it, pane by pane), with the sky's light
+ * glancing off it - more the more obliquely the wall is seen, as glass mirrors at a grazing
+ * angle; so a wall has a scale, and a building is not a painted box. From the dusk on
+ * (`cityLights`, 0..1) up to 38 % of them are lit, each its own warm-to-cool white and
+ * brightness, picked by a hash of the window and the building's tone so a window stays lit or
+ * dark; that light is the window's own: added after the shading, not scaled by the scene's
+ * light. Where a pixel spans more than about half a window the grid gives way to its mean - the
+ * wall's share of glass, every pane alike - and a far town at night is a haze of warm light
+ * rather than shimmering dots.
  *
  * The grid is anchored to the world, not the eye: across a wall by the wall's horizontal
  * direction (rounded to 1/1024, so every fragment of a wall takes the same) dotted with the
@@ -196,9 +229,13 @@ void main()
  * height above the ellipsoid (the eye's height plus the offset). Storeys count from sea level,
  * not each building's base. ASCII only.
  */
-function windowsCode(cityLights: number): string {
-  const on = Math.max(0, Math.min(1, cityLights)).toFixed(2);
+function windowsCode(cityLights: number, lift = '1.00'): string {
+  const on = Math.max(0, Math.min(1, cityLights));
+  const onS = on.toFixed(2);
   return `
+    float ribbon = step(v_color.a, ${((FACADE_ALPHA.punched + FACADE_ALPHA.ribbon) / 2).toFixed(2)});
+    float curtain = step(v_color.a, ${((FACADE_ALPHA.ribbon + FACADE_ALPHA.curtain) / 2).toFixed(2)});
+    color.a = 1.0;
     float wallness = 1.0 - smoothstep(0.35, 0.6, abs(dot(normalEC, upEC)));
     if (wallness > 0.0)
     {
@@ -215,21 +252,40 @@ function windowsCode(cityLights: number): string {
         vec2 id = floor(cell);
         vec2 f = fract(cell);
         vec2 fw = max(fwidth(cell), vec2(1e-4));
-        float inX = smoothstep(0.30 - fw.x, 0.30 + fw.x, f.x) - smoothstep(0.70 - fw.x, 0.70 + fw.x, f.x);
-        float inY = smoothstep(0.30 - fw.y, 0.30 + fw.y, f.y) - smoothstep(0.80 - fw.y, 0.80 + fw.y, f.y);
+        // A window's place in its bay and storey: punched, a ribbon, or a curtain wall's pane.
+        vec2 wLo = mix(vec2(0.30, 0.30), mix(vec2(0.03, 0.34), vec2(0.04, 0.09), curtain), ribbon);
+        vec2 wHi = mix(vec2(0.70, 0.80), mix(vec2(0.97, 0.80), vec2(0.96, 0.91), curtain), ribbon);
+        float inX = smoothstep(wLo.x - fw.x, wLo.x + fw.x, f.x) - smoothstep(wHi.x - fw.x, wHi.x + fw.x, f.x);
+        float inY = smoothstep(wLo.y - fw.y, wLo.y + fw.y, f.y) - smoothstep(wHi.y - fw.y, wHi.y + fw.y, f.y);
+        float share = (wHi.x - wLo.x) * (wHi.y - wLo.y);
         // The building's own number, from its colour's bytes: the interpolated colour of a
         // one-coloured wall can differ in its last bit from pixel to pixel, which the hash
         // would turn into a window lit in specks.
         vec2 own = floor(v_color.rb * 255.0 + 0.5);
         float hsh = fract(sin(dot(id, vec2(12.9898, 78.233)) + dot(own, vec2(0.3596, 0.1463))) * 43758.5453);
-        float litW = step(hsh, 0.38 * ${on});
+        float far = smoothstep(0.25, 0.6, max(fw.x, fw.y));
+        // By day a window is glass: darker than its wall - most of the light goes in and does
+        // not come back - with the sky's light glancing off it, a little differently pane by
+        // pane (blinds, curtains) and more at a grazing angle. A far wall takes the mean of its
+        // glass and wall, every pane alike.
+        float glass = mix(inX * inY, share, far);
+        float graze = 1.0 - abs(dot(normalEC, normalize(-v_positionEC)));
+        graze = graze * graze * graze;
+        vec3 pane = lit * (0.34 + 0.22 * mix(fract(hsh * 5.9), 0.5, far))
+                  + czm_lightColor * vec3(0.07, 0.09, 0.12) * (0.4 + 0.6 * sky) * ${lift}
+                    * (1.0 + 0.8 * curtain + 3.0 * graze);
+        outRgb = mix(outRgb, pane, glass * wallness);${
+          on > 0
+            ? `
+        float litW = step(hsh, 0.38 * ${onS});
         float hue = fract(hsh * 7.31);
         vec3 lamp = mix(vec3(1.0, 0.70, 0.40), vec3(0.88, 0.90, 1.0), hue * hue) * (0.55 + 0.45 * fract(hsh * 3.7));
         vec3 glowNear = lamp * litW * inX * inY;
-        // A window's mean over the grid: 38 % lit, 20 % of the wall glass, an average lamp.
-        vec3 glowFar = vec3(0.93, 0.74, 0.52) * 0.78 * 0.38 * ${on} * 0.20;
-        float far = smoothstep(0.25, 0.6, max(fw.x, fw.y));
-        outRgb += mix(glowNear, glowFar, far) * wallness;
+        // A window's mean over the grid: 38 % lit, the wall's share of glass, an average lamp.
+        vec3 glowFar = vec3(0.93, 0.74, 0.52) * 0.78 * 0.38 * ${onS} * share;
+        outRgb += mix(glowNear, glowFar, far) * wallness;`
+            : ''
+        }
     }`;
 }
 
@@ -1331,7 +1387,7 @@ function facadeColour(C: CesiumModule, b: BuildingFootprint): Cesium.Color {
   const [r, g, bl] = set[Math.floor(h * set.length) % set.length] ?? [0.8, 0.78, 0.74];
   // A little per-building shade so neighbours of one material still differ.
   const shade = 0.92 + 0.12 * ((h * 7.31) % 1);
-  return new C.Color(r * shade, g * shade, bl * shade, 1);
+  return new C.Color(r * shade, g * shade, bl * shade, FACADE_ALPHA[facadeKind(b.heightM, h)]);
 }
 
 /** OSM's own colour when mapped (tempered toward the facade so it reads under any light), else a facade colour. */
@@ -1341,7 +1397,10 @@ function buildingColour(C: CesiumModule, b: BuildingFootprint): Cesium.Color {
   try {
     const c = C.Color.fromCssColorString(b.colour);
     if (!c) return facade;
-    return C.Color.lerp(facade, c, 0.6, new C.Color());
+    const mixed = C.Color.lerp(facade, c, 0.6, new C.Color());
+    // The alpha is the glazing's mark, not a colour's.
+    mixed.alpha = facade.alpha;
+    return mixed;
   } catch {
     return facade;
   }
