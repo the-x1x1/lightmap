@@ -233,7 +233,10 @@ export const TOWN_PROBES = {
   towerBlue: { east: 30, north: 290, heightM: 110 },
   podiumTower: { east: -80, north: 260, heightM: 60 },
   podium: { east: -66, north: 246, heightM: 12 },
+  // The fifth house on the west side stands square to the street, 9 m wide and 5.5 m to its
+  // ridge: 3 m down its east slope a hip roof at 30 deg is 3.77 m up (a flat top would be 5.5).
   house: { east: -16, north: 0, heightM: 5.5 },
+  houseSlope: { east: -13, north: 0, heightM: 5.5 - 3 * Math.tan(Math.PI / 6), tolM: 0.6 },
   shed: { east: -40, north: -60, heightM: 6 },
   hidden: { east: -40, north: -20, heightM: null },
   courtyard: { east: 80, north: 190, heightM: null },

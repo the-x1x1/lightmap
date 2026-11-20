@@ -26,6 +26,15 @@ import {
   type TreeSpot,
 } from '../osm-buildings.ts';
 import { lonLatToTile, tilePointToLonLat } from '../vector-tile.ts';
+import {
+  HIP_ROOF_VERTICES,
+  HOUSE_ROOFS,
+  hipRoofFor,
+  hipRoofIndices,
+  hipRoofMesh,
+  roofShade,
+  type HipRoof,
+} from '../house-roofs.ts';
 import { deciduousCrown } from '../leaf-season.ts';
 import { bridgeAt, bridgeLinesFromTile, type BridgeLine } from '../vector-cover.ts';
 
@@ -51,6 +60,11 @@ const SLICE = 250;
  * is spent and the rest waits for the next frame.
  */
 const SLICE_BUDGET_MS = 6;
+/**
+ * Pitched roofs to a primitive (42,000 vertices): what the main thread prepares in the one frame
+ * that first draws it.
+ */
+const ROOFS_PER_PRIMITIVE = 1500;
 /** A tile's merge not ready by then is given up (its slices stay). */
 const MERGE_TIMEOUT_MS = 60_000;
 
@@ -84,6 +98,12 @@ export const PRIMITIVE_NORMAL_SHADING_SMOOTH = 0.05;
  */
 export const FACADE_ALPHA = { punched: 1, ribbon: 0.98, curtain: 0.96 } as const;
 export type FacadeKind = keyof typeof FACADE_ALPHA;
+
+/**
+ * A house's pitched roof (house-roofs.ts) carries this in its alpha: its colour is its roofing
+ * and is drawn as it is, where a flat roof's is its building's walls' and is turned to tar.
+ */
+export const ROOF_ALPHA = 0.94;
 
 /** The towers' glazing, in the order of their materials (`HIGH_RISE`). */
 const HIGH_RISE_KIND: FacadeKind[] = ['curtain', 'ribbon', 'punched', 'curtain'];
@@ -144,13 +164,15 @@ export function litInstanceShader(
   // Buildings: a flat roof is tar, gravel or membrane, a pitched one shingle or tile - darker
   // than the walls, and from a viewpoint stood on a roof or a map view the roofs are most of
   // what shows (V&V: every roof the colour of its walls). Each building's own tone picks a
-  // shade of grey; tile colours are regional and left to OSM's own roof colour some day.
+  // shade of grey; tile colours are regional and left to OSM's own roof colour some day. A
+  // house's pitched roof is drawn in its own colour, its roofing (ROOF_ALPHA).
   const roofCode = roofs
     ? `
     float roofness = smoothstep(0.55, 0.85, dot(normalEC, upEC));
     float pick = fract(v_color.r * 97.0 + v_color.g * 13.0);
     vec3 roofCol = vec3(0.30, 0.30, 0.31) * (0.75 + 0.6 * pick);
-    color.rgb = mix(color.rgb, czm_gammaCorrect(vec4(roofCol, 1.0)).rgb, 0.7 * roofness);`
+    color.rgb = mix(color.rgb, czm_gammaCorrect(vec4(roofCol, 1.0)).rgb,
+        0.7 * roofness * step(${((ROOF_ALPHA + FACADE_ALPHA.curtain) / 2).toFixed(2)}, v_color.a));`
     : '';
   // Lying snow (the ground texture's snowCover): it settles on whatever looks up - flat and
   // gently pitched roofs, the tops of crowns - and slides off walls and steep faces.
@@ -1097,6 +1119,10 @@ export class OsmBuildingsLayer {
           i = slice.next;
         }
         if (slices.length > 1) void this.mergeSlices(state, slices, again);
+        // The houses' pitched roofs over the walls just built (near tiles: the far ring keeps
+        // only tall buildings, and no house is tall).
+        if (state.near) await this.loadRoofs(state, buildings, grounds);
+        if (state.cancelled || this.destroyed) return;
       }
 
       // The trees after the buildings, not awaited: `done` (which the horizon's building pass
@@ -1335,24 +1361,142 @@ export class OsmBuildingsLayer {
     const C = this.C;
     const g = gr ?? { centre: 0, low: 0, high: 0 };
     const ground = g.centre;
+    const roof = this.roofOf(b, gr);
     const hierarchy = new C.PolygonHierarchy(
       C.Cartesian3.fromDegreesArray(b.outer.flat()),
       b.holes.map((h) => new C.PolygonHierarchy(C.Cartesian3.fromDegreesArray(h.flat()))),
     );
     const description = new C.PolygonGeometry({
       polygonHierarchy: hierarchy,
-      // On a slope the walls start under the lowest corner, and the roof stands clear of the
-      // highest (V&V: Kyoto's Higashiyama, where the hillside came up through roofs in a
-      // saw-tooth of terrain triangles). A part lifted off the ground keeps its own heights from
-      // the centre.
+      // On a slope the walls start under the lowest corner, and the top stands clear of the
+      // highest (`buildingTop`). A part lifted off the ground keeps its own heights from the
+      // centre.
       height: b.minHeightM > 0 ? ground + b.minHeightM : g.low - SINK_M,
-      extrudedHeight:
-        b.minHeightM > 0
-          ? ground + b.heightM
-          : Math.max(ground + b.heightM, g.high + Math.min(b.heightM, 2.5)),
+      // Under a pitched roof the walls stop at the eaves.
+      extrudedHeight: roof ? roof.eaveM : buildingTop(b, g),
       vertexFormat: C.PerInstanceColorAppearance.VERTEX_FORMAT,
     });
     return { description, colour: buildingColour(C, b) };
+  }
+
+  /**
+   * The pitched roof a house takes (house-roofs.ts) and its eaves' height above the ellipsoid,
+   * or null where the building keeps a flat top: its ridge is where the flat top would be, and
+   * on a slope the eaves must still clear the ground at the highest corner by a storey's wall.
+   */
+  private roofOf(
+    b: BuildingFootprint,
+    gr: FootprintGround | undefined,
+  ): { plan: HipRoof; eaveM: number } | null {
+    const plan = hipRoofFor(b);
+    if (!plan) return null;
+    const g = gr ?? { centre: 0, low: 0, high: 0 };
+    const eaveM = buildingTop(b, g) - plan.riseM;
+    return eaveM >= g.high + 1.8 ? { plan, eaveM } : null;
+  }
+
+  /**
+   * A tile's pitched roofs: every house's faces meshed here, a frame's budget at a time (a few
+   * multiplications a roof; Cesium's workers have no shape for them), gathered by roofing so a
+   * primitive has one instance a colour, and drawn with the buildings' own shader, shadows and
+   * picking - the horizon reads a ridge as it reads a parapet. A primitive is prepared on the
+   * main thread in the frame that first draws it, so a tile's roofs go ROOFS_PER_PRIMITIVE to a
+   * primitive, each in a frame of its own: a city tile of ten thousand houses does not stall
+   * one frame for all of them.
+   */
+  private async loadRoofs(
+    state: TileState,
+    buildings: readonly BuildingFootprint[],
+    grounds: readonly FootprintGround[],
+  ): Promise<void> {
+    const C = this.C;
+    const fresh = () =>
+      HOUSE_ROOFS.map(() => ({ positions: [] as number[], normals: [] as number[] }));
+    let batches = fresh();
+    let pending = 0;
+    const scratch = new C.Cartesian3();
+    const toWorld = (lon: number, lat: number, heightM: number): [number, number, number] => {
+      const p = C.Cartesian3.fromDegrees(lon, lat, heightM, undefined, scratch);
+      return [p.x, p.y, p.z];
+    };
+    const flush = (): boolean => {
+      const instances: Cesium.GeometryInstance[] = [];
+      batches.forEach((batch, k) => {
+        if (batch.positions.length === 0) return;
+        const [r, g, bl] = HOUSE_ROOFS[k] as readonly [number, number, number];
+        const attributes = new C.GeometryAttributes();
+        attributes.position = new C.GeometryAttribute({
+          componentDatatype: C.ComponentDatatype.DOUBLE,
+          componentsPerAttribute: 3,
+          values: new Float64Array(batch.positions),
+        });
+        attributes.normal = new C.GeometryAttribute({
+          componentDatatype: C.ComponentDatatype.FLOAT,
+          componentsPerAttribute: 3,
+          values: new Float32Array(batch.normals),
+        });
+        instances.push(
+          new C.GeometryInstance({
+            geometry: new C.Geometry({
+              attributes,
+              indices: hipRoofIndices(batch.positions.length / 3 / HIP_ROOF_VERTICES),
+              primitiveType: C.PrimitiveType.TRIANGLES,
+              boundingSphere: C.BoundingSphere.fromVertices(batch.positions),
+            }),
+            attributes: {
+              color: C.ColorGeometryInstanceAttribute.fromColor(new C.Color(r, g, bl, ROOF_ALPHA)),
+            },
+          }),
+        );
+      });
+      batches = fresh();
+      pending = 0;
+      if (instances.length === 0) return true;
+      try {
+        this.adopt(
+          state,
+          new C.Primitive({
+            geometryInstances: instances,
+            appearance: this.appearanceForBuildings(),
+            shadows: C.ShadowMode.ENABLED,
+            asynchronous: false,
+            releaseGeometryInstances: true,
+            allowPicking: true,
+          }),
+        );
+        return true;
+      } catch (error) {
+        // The houses keep their walls and go without roofs.
+        this.report(error);
+        return false;
+      }
+    };
+    for (let i = 0; i < buildings.length;) {
+      await this.nextSlot();
+      if (state.cancelled || this.destroyed) return;
+      const started = performance.now();
+      for (
+        ;
+        i < buildings.length &&
+        pending < ROOFS_PER_PRIMITIVE &&
+        performance.now() - started < SLICE_BUDGET_MS;
+        i++
+      ) {
+        const b = buildings[i] as BuildingFootprint;
+        const roof = this.roofOf(b, grounds[i]);
+        if (!roof) continue;
+        const batch = batches[roofShade(b.centre)];
+        if (!batch) continue;
+        hipRoofMesh(roof.plan, roof.eaveM, toWorld, batch.positions, batch.normals);
+        pending++;
+      }
+      // A primitive's worth: into the scene, and the next roofs wait a frame for it.
+      if (pending >= ROOFS_PER_PRIMITIVE && !flush()) return;
+    }
+    if (pending === 0) return;
+    await this.nextSlot();
+    if (state.cancelled || this.destroyed) return;
+    flush();
   }
 
   /**
@@ -1454,6 +1598,18 @@ export class OsmBuildingsLayer {
     this.buildingPrims.clear();
     this.scene.primitives.remove(this.collection); // destroys it and its primitives
   }
+}
+
+/**
+ * The top of a building above the ellipsoid. On a slope it stands clear of the ground at the
+ * highest corner (V&V: Kyoto's Higashiyama, where the hillside came up through roofs in a
+ * saw-tooth of terrain triangles); a part lifted off the ground keeps its own height from the
+ * centre.
+ */
+function buildingTop(b: BuildingFootprint, g: FootprintGround): number {
+  return b.minHeightM > 0
+    ? g.centre + b.heightM
+    : Math.max(g.centre + b.heightM, g.high + Math.min(b.heightM, 2.5));
 }
 
 /**

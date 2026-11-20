@@ -71,9 +71,10 @@ elevation ≈ 11° and measures the frame — the ground along the shadow line i
 the Sun side and the point just beyond `h / tan(el)` is fully lit (`shadow-tower` scene).
 **Caveat:** buildings are OpenStreetMap's (by default from OpenFreeMap's vector tiles, loaded
 within about 2 km of where you stand or look, or Cesium OSM Buildings with an ion token): heights
-are often estimated or missing (a building without one is drawn 6 m tall), roofs are flat and
-facade colours are a pattern unless mapped; they cast and receive the terrain's shadows and are
-lit by the same light. Trees are a pattern: OpenStreetMap's woods filled and its parks scattered
+are often estimated or missing (a building without one is drawn 6 m tall), roofs are flat but
+for the houses' (a hip roof on every low, plain rectangle: a guess, see Buildings) and facade
+colours are a pattern unless mapped; they cast and receive the terrain's shadows and are lit by
+the same light. Trees are a pattern: OpenStreetMap's woods filled and its parks scattered
 with generic trees, not the trees that stand there, so their shadows show the light's direction
 and length but not a real tree's; street trees and single mapped trees are not drawn. The
 terrain horizon and the ridge markers take the mapped buildings in within 2.5 km of the pin and
@@ -809,6 +810,23 @@ and wall, every pane alike, so it neither shimmers nor changes brightness with d
 (`buildings-clear`: a punched block, a ribbon block and a curtain-walled tower). **Caveat:** a
 building's glazing is a guess from its height, not its own - a church tower over 35 m is glazed
 like an office - and there is no reflection of what stands opposite.
+
+A house has a roof (`house-roofs.ts`). Where a footprint is plainly a house - no courtyard, not
+a part set on another, 3.5-13 m tall, four corners within 15° of square, 3.5-14 m wide and at
+most 30 m long - its walls stop at the eaves and a hip roof rises from all four of them at 30°
+to a ridge along the middle (a pyramid on a square). The eaves stand 0.35 m out from the walls,
+the slope carried on down past them, with an underside, so a wall's top lies in the eaves'
+shadow under a high Sun. The ridge is at the mapped height, so
+nothing stands taller than the map said; where that would leave less than 2.4 m of wall the
+pitch is lower, and on a slope whose ground would stand within 1.8 m of the eaves the house
+stays flat. Each house takes one of six roofings - slates, shingles, one muted clay - by where
+it stands, drawn as it is (a flat roof is its walls' colour turned to tar). The roofs are meshed
+a tile at a time into primitives of their own beside the walls' (1,500 roofs to each, so a city
+tile does not stall a frame), with the same shader, shadows and picking: one slope takes the Sun and the other does not, snow lies on them, and the horizon
+reads a ridge as it reads a parapet (`town-above`, `town-street`). **Caveat:** a guess - the map
+seldom says a roof's shape. A gabled, mansard or flat-roofed house is drawn hipped all the same,
+its ridge along its length; anything larger, taller or not a plain rectangle (a terrace mapped as
+one long outline, an L-shaped house) keeps a flat top; the roofings are not the region's.
 
 A crown is foliage, not a smooth green ball (`treeFragmentShader`, `FOLIAGE_GLSL`): two noises
 fixed to the ground - leaf clumps 1.6 m across and leaves 0.4 m across - give it relief, an

@@ -14,6 +14,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   them - a mackerel sky, lit warm from the side at sunset - instead of a torn grey sheet.
 - **Peaks in cloud**: ground that stands above the cloud base disappears into the low cloud -
   wholly under an overcast, through the gaps under broken cloud - at the forecast's cloud base.
+- **Houses have roofs**: a low, plain rectangular building gets a hip roof - slopes rising from
+  all four eaves to a ridge, the eaves standing out from the walls - in one of six roofings,
+  where every building had a flat top. The mapped height is the ridge's, so nothing stands
+  taller than before. A guess: the map seldom says what roof a house has.
 - **Leafy trees**: a tree's crown is a mass of leaf clumps - lit on their sunny side, shaded in
   the gaps between - with a lobed outline, where it was a smooth green ball. A conifer has tiers
   of boughs and a saw-edged outline, where it was a smooth cone.

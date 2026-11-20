@@ -3,6 +3,7 @@ import {
   FACADE_ALPHA,
   LIT_INSTANCE_FS,
   PRIMITIVE_NORMAL_SHADING_SMOOTH,
+  ROOF_ALPHA,
   facadeKind,
   litInstanceShader,
   treeFragmentShader,
@@ -115,6 +116,25 @@ describe('buildings and trees shader', () => {
     expect(day).toContain('mix(fract(hsh * 5.9), 0.5, far)');
     // The trees' alpha is theirs (the broad-leaf mark): no glazing is read from it.
     expect(treeFragmentShader(1, 0, 0.45, 20000)).not.toContain('curtain');
+  });
+
+  it("draws a house's pitched roof in its own roofing and turns a flat roof to tar", () => {
+    const fs = litInstanceShader(0.2, 8000, true);
+    // The roof's mark sits under the glazings' in the alpha, a byte's rounding clear of them.
+    expect(fs).toContain('0.7 * roofness * step(0.95, v_color.a));');
+    const byte = (a: number) => (a === 1 ? 255 : Math.floor(a * 256)) / 255;
+    expect(byte(ROOF_ALPHA)).toBeLessThan(0.95);
+    expect(byte(FACADE_ALPHA.curtain)).toBeGreaterThan(0.95);
+    // At the houses' pitch a slope is all roof to the shader and no wall: it holds snow like a
+    // flat roof and carries no windows.
+    const smooth = (a: number, b: number, x: number) => {
+      const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+      return t * t * (3 - 2 * t);
+    };
+    const up = Math.cos((30 * Math.PI) / 180);
+    expect(smooth(0.55, 0.85, up)).toBe(1);
+    expect(1 - smooth(0.35, 0.6, up)).toBe(0);
+    expect(smooth(0.35, 0.8, up)).toBe(1);
   });
 
   it('picks the glazing by height: towers by their material, some mid-rise in ribbons', () => {
