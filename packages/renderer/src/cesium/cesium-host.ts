@@ -1296,6 +1296,8 @@ export class CesiumSceneHost implements SceneHost {
       if (u.u_windToward)
         gu['u_windToward'] = new this.C.Cartesian2(u.u_windToward[0], u.u_windToward[1]);
       if (u.u_sunENU) gu['u_sunENU'] = new this.C.Cartesian3(...u.u_sunENU);
+      // The beam high ground still has when the place's has gone (alpenglow).
+      gu['u_alpenglow'] = u.u_alpenglow ?? 0;
     }
     g['u_saturation'] = u.u_saturation;
     g['u_contrast'] = u.u_contrast;

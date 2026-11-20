@@ -111,6 +111,26 @@ sky light, steep slopes come out darker than the ground about them (the syntheti
 about 4 % darker overcast). **Caveat:** an open-sky estimate from the local slope alone; a gully's
 walls hide more sky than its floor's tilt says, and that is not modelled.
 
+**Alpenglow, and first and last light.** The scene has one light, the place's: its beam is gone
+when the Sun is 0.83° under the place's horizon. But ground above the place sees past that
+horizon, by its dip, sqrt(2 h / R): 0.9° from 800 m up, 1.6° from 2.5 km. So the Sun is still up
+for a peak when it has set in the valley, and rises on it first. The ground material
+(`ground.frag.ts`, `u_alpenglow`) gives each fragment standing higher than the place's ground the
+beam the place would have with the Sun that much higher, less the place's own, on the faces
+turned to the Sun (the true Sun, not the light held at the horizon), in the scene's own exposure
+(`grade.alpenglow`: the twilight is shown some three times brighter than it is, and this beam
+with it) and cut by cloud as the beam is. Its colour is that of light come the long way through
+the air: red at the edge of the Earth's shadow, which climbs the slope as the Sun sinks, turning
+to the low Sun's orange above it. On the harness's 800 m ridge with the Sun 0.6° down at the pin
+(`synth-alpenglow`) the crest's western face is about half as bright again as the shaded plain's
+light would leave it; a 2.5 km wall would be twice as bright. Faded out as the Sun climbs from 2°
+to 6°, by when a peak's share is the place's to a few per cent. **Caveats:** the horizon is taken
+level with the place's ground all round (a sea horizon from a coast; inland the real one is
+whatever stands to the west); no shadow is cast on it - a lower peak behind a higher one glows as
+if it stood alone, where the terrain shadows have already gone with the place's beam; buildings
+and trees do not take it; and the purple afterglow that can follow, sunlight scattered back down
+from high haze, is not modelled.
+
 ### Terrain horizon
 
 The land horizon around the viewpoint is sampled from the same DEM the preview renders

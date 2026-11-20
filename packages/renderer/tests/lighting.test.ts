@@ -126,6 +126,26 @@ describe('lightingFromScene', () => {
     expect(summer.snowfall).toBe(0);
   });
 
+  it("alpenglow: the beam on high ground is shown through the place's sunset, in its exposure", () => {
+    // Kailua, 31 May: the Sun is 0.9 deg down at 19:09:36 (the place's own beam has just gone),
+    // 4.3 deg up at 18:45, 11 deg down at 20:00.
+    const justDown = lightingFromScene(scene(19.16)).grade.alpenglow;
+    // The twilight is shown some three times brighter than it is, and the peaks' beam with it.
+    expect(justDown).toBeGreaterThan(2);
+    expect(justDown).toBeLessThan(5);
+    // With the Sun 4 deg up the peaks' share is nearly the place's: fading (gone by 6 deg).
+    const low = lightingFromScene(scene(18.75)).grade.alpenglow;
+    expect(low).toBeGreaterThan(0);
+    expect(low).toBeLessThan(0.6);
+    expect(lightingFromScene(scene(12)).grade.alpenglow).toBe(0);
+    // No ground on Earth stands high enough to see a Sun 11 deg down.
+    expect(lightingFromScene(scene(20)).grade.alpenglow).toBe(0);
+    // Cloud takes it as it takes the beam.
+    expect(lightingFromScene(scene(19.16, 'overcast')).grade.alpenglow).toBeLessThan(
+      0.25 * justDown,
+    );
+  });
+
   it('valley mist in calm near-saturated air before the Sun is up 15 deg, none without a forecast', () => {
     const f = (o: Partial<Parameters<typeof mistFor>[0] & object> = {}) => ({
       humidity: 97,

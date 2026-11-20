@@ -58,6 +58,8 @@ export function groundMaterialUniforms(C: C, coarseBasemap: number): Record<stri
     u_cloudLowCov: 0,
     u_cloudMidCov: 0,
     u_deckBaseM: 0,
+    // The beam high ground still has when the place's has gone (`setGrade`).
+    u_alpenglow: 0,
     [GROUND_TOWN_GRID.cellUniform]: new C.Cartesian3(0, 0, 0),
     [GROUND_TOWN_GRID.fracUniform]: new C.Cartesian3(0, 0, 0),
   };

@@ -85,6 +85,8 @@ export interface HostGradeUniforms {
   u_rays?: number;
   /** Snow falling, 0..1 (`LightingParameters.grade.snowfall`); none when left out. */
   u_snowfall?: number;
+  /** Alpenglow's strength (`LightingParameters.grade.alpenglow`), for the ground; none when left out. */
+  u_alpenglow?: number;
   /** Valley mist's strength (`LightingParameters.grade.mist`). */
   u_mist?: number;
   /** The low ground about the place, where the mist lies (ellipsoid metres; `u_hazeBaseM` when absent). */

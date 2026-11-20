@@ -236,6 +236,7 @@ uniform float u_lowDeckKm;      // the low deck's base over the place's ground, 
 uniform float u_cloudLowCov;    // the low deck's cover, 0-1 (the grade's)
 uniform float u_cloudMidCov;    // the mid deck's cover, 0-1
 uniform float u_deckBaseM;      // the place's ground height, metres (the decks stand on it)
+uniform float u_alpenglow;      // alpenglow's strength (the grade's): the beam shown on ground above the place
 
 // The grade's cloud noise, the same to the bit, so the shadow a deck casts is the one the sky
 // draws (grade.frag.ts hash / vnoise / fbm).
@@ -755,6 +756,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     ground *= 1.0 - 0.35 * swash;
 
     material.diffuse = ground * u_brightness;
+    vec3 lit = material.diffuse; // the paint as laid, before shadows and glints: what a beam lights
     // Wet, level ground mirrors the sky at a grazing view: a film of water on a street or a
     // flat yard takes the overcast's grey (or a low Sun's glow) looking along it, as the sea
     // does but weaker (a film, not a body of water: a third at grazing, where the sea takes
@@ -914,6 +916,31 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     if (vegGlow.r + vegGlow.g + vegGlow.b > 0.0)
         material.diffuse += lmUnlit(vegGlow * cloudK, materialInput.normalEC, materialInput.positionToEyeEC.z)
             / max(alpha, 0.05);
+#ifdef ENABLE_VERTEX_LIGHTING
+    // Alpenglow, and first and last light: ground above the place sees past the place's horizon -
+    // by the horizon's dip, sqrt(2 h / R): 1 deg at 1 km up, 1.6 deg at 2.5 km - so the Sun is
+    // up for it while it is down, or lower, for the place. The scene's one light is the place's
+    // (gone at -0.83 deg); here a face turned to the Sun takes the beam the place would have
+    // with the Sun that much higher, less the place's own, in the colour of light that has come
+    // the long way through the air: red at the edge of the Earth's shadow, which climbs the
+    // slope as the Sun sinks, turning to the low Sun's orange above it.
+    if (u_alpenglow > 0.0)
+    {
+        float sunEl = degrees(asin(clamp(u_sunENU.z, -1.0, 1.0)));
+        float over = max(materialInput.height - u_deckBaseM, 0.0);
+        float elHere = sunEl + degrees(sqrt(over / 3185500.0));
+        float more = smoothstep(-0.833, 4.0, elHere) * (0.55 + 0.45 * smoothstep(4.0, 25.0, elHere))
+                   - smoothstep(-0.833, 4.0, sunEl) * (0.55 + 0.45 * smoothstep(4.0, 25.0, sunEl));
+        float facing = clamp(dot(nF, u_sunENU), 0.0, 1.0);
+        float glow = 2.2 * max(more, 0.0) * u_alpenglow * facing;
+        if (glow > 0.002)
+        {
+            vec3 tint = mix(vec3(1.0, 0.36, 0.30), vec3(1.0, 0.70, 0.42), smoothstep(-0.833, 4.0, elHere));
+            material.diffuse += lmUnlit(lit * tint * glow, materialInput.normalEC, materialInput.positionToEyeEC.z)
+                / max(alpha, 0.05);
+        }
+    }
+#endif
 #ifdef HAS_WATER_MASK
     // Water, from the terrain's own mask - which arrives with coarse tiles and is upsampled for
     // finer ones, so its edge runs in 50-100 m stair steps. A water surface in the elevation

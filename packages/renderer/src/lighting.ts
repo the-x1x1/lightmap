@@ -97,6 +97,16 @@ export interface LightingParameters {
      */
     snowfall: number;
     /**
+     * Alpenglow's strength: how much of the beam that high ground still has (or already has) is
+     * shown, 0 when there is none to show. Ground above the place sees past the place's horizon
+     * (the dip of the horizon, 1 deg at 1 km up, 1.6 deg at 2.5 km), so the Sun is up for it
+     * when it is down, or lower, for the place: the ground material adds the difference, in the
+     * scene's own exposure - this is the cloud's transmittance times that exposure (the twilight
+     * is shown brighter than it is, and the beam on the peaks with it), faded out as the Sun
+     * climbs from 2 to 6 deg (by then the peaks' share is the place's to a few per cent).
+     */
+    alpenglow: number;
+    /**
      * A rainbow's strength, 0..1: showers falling (precipitation 0.05-0.15) while the Sun's beam
      * gets through (transmittance 0.25-0.55) and the Sun is up but under 42 deg, below which the
      * bow stands above the horizon opposite it.
@@ -520,6 +530,15 @@ export function lightingFromScene(s: SceneState): LightingParameters {
       nightFactor,
       precipitation: p.precipitation,
       snowfall: p.precipitation * snowShare,
+      alpenglow:
+        el > -4.5 && sunAndSky > 1e-4
+          ? Math.round(
+              p.sunTransmittance *
+                ((sunIntensity - moonlight) / sunAndSky) *
+                (1 - smooth(2, 6, el)) *
+                1000,
+            ) / 1000
+          : 0,
       rainbow:
         (1 - snowShare) *
         smooth(0.05, 0.15, p.precipitation) *
