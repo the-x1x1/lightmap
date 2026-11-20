@@ -409,8 +409,58 @@ void main() {
       vec2 dm = deckPoint(rayEC, max(hMid, 0.3));
       vec2 pm = vec2(dot(dm, wTo) - driftKm, dot(dm, wAcross)) / 5.5;
       float nm = mix(0.5, fbm(pm + vec2(11.0, 5.0)), detail) - step(hMid, 0.0);
+      // Broken mid cloud is altocumulus: not a torn sheet but a field of cloudlets, each some
+      // 300 m across (1-5 deg from under it), blue sky in the lanes between - a mackerel sky. A
+      // cell pattern in the wind's frame (cells longer across the wind, their places, sizes and
+      // outlines all irregular, the whole bent by a slower noise): the sheet shows only in the
+      // cloudlets, small and apart where it is thin (which, at a broken cover, is most of it)
+      // and run together where it is thick - each cloudlet opaque as the thick sheet is, so the
+      // sky is covered by about the forecast's share still. A sheet closing past 45-75 % is
+      // altostratus again; and below 17 deg, where the cloudlets could not be told apart, the
+      // field fades to the sheet it was.
+      float acu = 1.0 - smoothstep(0.45, 0.75, covMid);
       float sheet = smoothstep(1.0 - covMid - 0.2, 1.0 - covMid + 0.2, nm);
+      float acuCore = 0.0;
+      float acuSide = 0.0;
+      if (acu > 0.01 && sheet > 0.0) {
+        float seen = smoothstep(0.10, 0.30, dot(rayEC, u_eyeUpEC));
+        vec2 w = vec2(dot(dm, wTo) - driftKm, dot(dm, wAcross));
+        vec2 q = w * vec2(3.4, 2.4)
+               + 0.8 * vec2(vnoise(w * 0.8 + vec2(4.0, 1.0)), vnoise(w * 0.8 + vec2(9.0, 6.0)));
+        vec2 ci = floor(q);
+        vec2 cf = fract(q);
+        float d1 = 8.0;
+        vec2 toCentre = vec2(0.0);
+        for (int j = -1; j <= 1; j++) {
+          for (int i = -1; i <= 1; i++) {
+            vec2 o = vec2(float(i), float(j));
+            vec2 c = o + 0.5 + 0.9 * (vec2(hash(ci + o), hash(ci + o + 17.3)) - 0.5) - cf;
+            float dc = length(c) / (0.7 + 0.6 * hash(ci + o + 31.7));
+            if (dc < d1) {
+              d1 = dc;
+              toCentre = c;
+            }
+          }
+        }
+        float rag = 0.30 * (vnoise(q * 2.7 + vec2(3.0, 5.0)) - 0.5)
+                  + 0.18 * (vnoise(q * 6.1 + vec2(8.0, 2.0)) - 0.5);
+        float reach = mix(0.38, 0.72, sheet);
+        float cell = (1.0 - smoothstep(reach - 0.3, reach + 0.06, d1 + rag)) * smoothstep(0.02, 0.3, sheet);
+        sheet = mix(sheet, mix(sheet, cell, seen), acu);
+        // Its middle, and which side of it this is: toward the Sun or away.
+        acuCore = (1.0 - smoothstep(0.0, 0.45, d1)) * acu * seen;
+        vec3 upV = u_eyeUpEC;
+        vec3 eastV = normalize(u_eyeEastEC - dot(u_eyeEastEC, upV) * upV);
+        vec2 sunEN = vec2(dot(u_sunDirEC, eastV), dot(u_sunDirEC, cross(upV, eastV)));
+        vec2 sunW = normalize(vec2(dot(sunEN, wTo), dot(sunEN, wAcross)) * vec2(3.4, 2.4) + 1e-5);
+        acuSide = -dot(toCentre, sunW) / max(length(toCentre), 0.05)
+                * smoothstep(0.1, 0.4, d1) * acu * seen;
+      }
       vec3 alto = mix(vec3(0.86, 0.87, 0.90), vec3(0.62, 0.64, 0.68), covMid * 0.7);
+      // From under it a cloudlet is a little greyer in its middle; and it is lit from the Sun's
+      // side - brighter on the flank turned to a low Sun, in its own shade on the other.
+      alto *= 1.0 - 0.07 * acuCore;
+      alto *= 1.0 + midLit * (1.0 - smoothstep(10.0, 40.0, u_sunElevation)) * acuSide * (acuSide > 0.0 ? 0.10 : 0.16);
       alto = mix(alto, alto * warm * 1.1, lowSun * 0.5 * midLit);
       alto = mix(shade * 0.5, alto, midLit);
       alto *= deckLum * mix(1.0, 0.2, u_nightFactor * (1.0 - midLit));

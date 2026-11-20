@@ -683,6 +683,17 @@ base is left; the silver lining keeps to the deck's soft margin (`partly-viewpoi
 **Caveat:** a sheet's relief, not a volume: no towers, no anvils, no shadows from one cloud on
 the next.
 
+**Altocumulus.** Broken mid cloud (the mid cover under about 45 %, a sheet again by 75 %) is a
+field of cloudlets, not a torn sheet: a cell pattern in the wind's frame, some 300 m to a
+cloudlet (1-5° from under it), their places, sizes and outlines irregular - small and apart
+where the sheet's own noise is thin, run together where it is thick, so the sky is covered by
+about the forecast's share still - each a little greyer in its middle and, under a Sun below 40°,
+brighter on the flank turned to it and shaded on the other. Below 17° of elevation, where the
+cloudlets could not be told apart, the field fades to the plain sheet (`altocumulus`,
+`altocumulus-sunset`).
+**Caveat:** one kind of mid cloud by its cover alone; the forecast does not say altocumulus or
+altostratus, and the ground's cloud shadows still read the plain sheet.
+
 **Ground in cloud.** The low deck has a base - the forecast's (`cloudBaseKmFor`), or 1.5 km over
 the place's ground - and ground that stands above it is in the cloud: under a low overcast the
 valley sides run up into the grey and the peaks are gone; under broken cloud a summit shows

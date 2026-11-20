@@ -335,6 +335,63 @@
               window.__takeShot = r;
             });
           }
+          // Altocumulus: a forecast with broken mid cloud alone (45 %) - a field of cloudlets
+          // in ranks, blue between them - in the afternoon looking up at it, and at a low Sun
+          // looking toward it, the cloudlets lit warm from under.
+          for (const [name, hour, heading, pitch] of [
+            ['altocumulus', 14, 200, 38],
+            ['altocumulus-sunset', 18.75, 292, 16],
+          ]) {
+            const utc = localSelectionToUtc(
+              { year: 2026, month: 5, day: 31 },
+              hour * 60,
+              kailua.timeZone,
+            );
+            const frame = (offsetH) => ({
+              timestamp: new Date(utc.getTime() + offsetH * 3_600_000).toISOString(),
+              cloudCoverTotal: 45,
+              cloudCoverLow: 0,
+              cloudCoverMid: 45,
+              cloudCoverHigh: 0,
+              precipitationProbability: 0,
+              precipitationAmount: 0,
+              humidity: 55,
+              visibility: 30000,
+              windSpeed: 4,
+              windDirection: 60,
+              weatherCode: 2,
+              temperature: 24,
+              dewPoint: 14,
+            });
+            controller.apply(
+              buildSceneState({
+                location: kailua,
+                utc,
+                now: new Date(utc.getTime() - 2 * 3_600_000),
+                camera: {
+                  ...defaultCamera(kailua.point, heading),
+                  mode: 'viewpoint',
+                  pitchDeg: pitch,
+                },
+                environment: env,
+                scenario: 'partly-cloudy',
+                forceScenario: false,
+                weather: {
+                  capabilities: OPEN_METEO_CAPABILITIES,
+                  frames: [frame(-1), frame(0), frame(1)],
+                  providerFailed: false,
+                },
+                render: DEFAULT_RENDER_SETTINGS,
+                includeLunar: true,
+                realReference: false,
+              }),
+            );
+            await wait(1500);
+            window.__smoke.shot = name;
+            await new Promise((r) => {
+              window.__takeShot = r;
+            });
+          }
           const night = scene(23, 'clear', {
             ...defaultCamera(kailua.point, 120),
             mode: 'viewpoint',
