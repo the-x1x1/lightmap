@@ -2155,7 +2155,10 @@ export class CesiumSceneHost implements SceneHost {
           fetch(tileUrl(template, z, x, y))
             .then(async (r) => (r.ok ? new Uint8Array(await r.arrayBuffer()) : null))
             .then((data) => {
-              if (!data) return;
+              // A tile with nothing in it (a 204, as a server answers past its coverage and
+              // some do for bare country) says nothing about water: the ground keeps the
+              // terrain's own word there, as it does beyond the map.
+              if (!data || data.length === 0) return;
               known.push({ x, y });
               lines.push(...streetLinesFromTile(data, z, x, y));
               for (const shape of coverShapesFromTile(data, z, x, y))
