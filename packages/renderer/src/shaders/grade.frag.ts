@@ -421,14 +421,45 @@ void main() {
     if (covLow > 0.005) {
       vec2 dl = deckPoint(rayEC, max(hLow, 0.3));
       vec2 p = vec2(dot(dl, wTo) - driftKm, dot(dl, wAcross)) / 1.8;
-      float n = mix(0.5, fbm(p), detail) - step(hLow, 0.0);
-      float cloud = smoothstep(1.0 - covLow - 0.15, 1.0 - covLow + 0.15, n);
+      float nRaw = fbm(p);
+      // Broken low cloud is cumulus, not a smear: its edge is ragged - three finer octaves (down
+      // to 30 m, mean zero, so the cover is the forecast's still) fray it into wisps - and a
+      // little firmer than a closing deck's. A deck closing past 45-70 % goes back to stratus's
+      // soft edge and even base (the overcast scenario's 75 % is a deck, as bright as it was),
+      // and toward the horizon the detail gives way to the mean as before.
+      float cumulus = (1.0 - smoothstep(0.45, 0.7, covLow)) * detail;
+      float rag = 0.0;
+      if (cumulus > 0.01) {
+        rag = 0.5 * (vnoise(p * 6.1 + vec2(3.1, 7.7)) - 0.5)
+            + 0.3 * (vnoise(p * 13.7 + vec2(9.4, 1.3)) - 0.5)
+            + 0.2 * (vnoise(p * 29.3 + vec2(5.6, 2.9)) - 0.5);
+      }
+      float n = mix(0.5, nRaw + 0.14 * cumulus * rag, detail) - step(hLow, 0.0);
+      float edge = mix(0.15, 0.10, cumulus);
+      float cloud = smoothstep(1.0 - covLow - edge, 1.0 - covLow + edge, n);
+      // How deep in the cloud this is: 0 at its edge, 1 well inside.
+      float depth = clamp((n - (1.0 - covLow)) / 0.25, 0.0, 1.0);
       float thickness = clamp(u_cloudDensity * (0.5 + 0.5 * u_cloudOpacity), 0.0, 1.0);
       vec3 cloudCol = mix(vec3(1.0, 1.0, 1.0), vec3(0.55, 0.58, 0.62), thickness);
       // Thick decks are not flat: a low-contrast second octave keeps overcast reading as cloud, not fog.
-      cloudCol *= 1.0 + (fbm(p * 2.7 + vec2(5.0, 3.0)) - 0.5) * 0.28 * thickness;
+      float lumps = fbm(p * 2.7 + vec2(5.0, 3.0));
+      cloudCol *= 1.0 + (lumps - 0.5) * 0.28 * thickness;
       // Dense cores are darker than the sunlit edges.
       cloudCol *= mix(1.0, 0.78, thickness * smoothstep(0.55, 0.9, n));
+      // A cumulus has a body: its thin margins are white with the light scattered through
+      // them, and seen from below it greys toward its middle (the light has been spent on the
+      // way down), in lumps; and it is lit from the Sun's side - where the cloud thins toward
+      // the Sun its face is in sunlight, where it thickens it is in its own shade. One more
+      // reading of the field 0.4 km toward the Sun gives which; with the Sun overhead the step
+      // shrinks to nothing and only the grey base is left, as from under a noon cumulus.
+      if (cumulus > 0.01) {
+        cloudCol *= 1.0 - cumulus * 0.3 * depth * (0.6 + 0.8 * lumps);
+        vec3 upV = u_eyeUpEC;
+        vec3 eastV = normalize(u_eyeEastEC - dot(u_eyeEastEC, upV) * upV);
+        vec2 sunEN = vec2(dot(u_sunDirEC, eastV), dot(u_sunDirEC, cross(upV, eastV)));
+        float relief = clamp((nRaw - fbm(p + vec2(dot(sunEN, wTo), dot(sunEN, wAcross)) * 0.22)) * 4.0, -1.0, 1.0);
+        cloudCol *= 1.0 + cumulus * sunUp * relief * (relief > 0.0 ? 0.12 : 0.24);
+      }
       // Broken low cloud catches warm light on its undersides while the Sun is low but up.
       cloudCol = mix(cloudCol, cloudCol * warm, lowSun * sunUp * 0.7 * (1.0 - thickness));
       cloudCol = mix(cloudCol, cloudCol * u_tint, 0.35 * (1.0 - thickness) * sunUp);
@@ -450,7 +481,10 @@ void main() {
         float broken = sunUp * (1.0 - smoothstep(0.6, 0.95, covLow)) * detail;
         float back = exp(-aSun / 0.26) * broken;
         float rim = exp(-aSun / 0.14) * broken;
-        float margin = 4.0 * cloud * (1.0 - cloud);
+        // The margin by the deck's own soft edge, whatever the cumulus's firmer one: a lining
+        // is a glow along the rim, not a line drawn round it.
+        float soft = smoothstep(1.0 - covLow - 0.15, 1.0 - covLow + 0.15, n);
+        float margin = 4.0 * soft * (1.0 - soft);
         float core = smoothstep(0.35, 0.8, cloud);
         cloudCol *= 1.0 - 0.45 * back * core * (0.5 + 0.5 * thickness);
         cloudCol += mix(vec3(1.0), warm, lowSun) * 0.9 * rim * margin;

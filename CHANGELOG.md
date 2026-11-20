@@ -4,6 +4,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Cumulus with a body**: broken low cloud now has firmer, ragged edges, a greyer base and a
+  sunlit and a shaded side, instead of soft smears.
 - **Wet ground knows last night's rain**: the weather request now includes the day before, so the
   ground is still wet at dawn after evening rain in every time zone (before, the day's frames
   began at midnight UTC, which left places near Greenwich with no memory of the night).

@@ -651,6 +651,18 @@ with the wind; in the low deck's grey (0.42–0.48), dimmed at night (`rainbow`,
 **Caveat:** the shafts are placed by noise round the horizon, not under the deck's own clouds,
 and stop at the sky (they do not veil distant ground).
 
+**Cumulus.** Broken low cloud (the low cover under about 45 %, giving way to a deck's soft edge
+by 70 %) is drawn as cumulus rather than a smear: its edge is firmer (a threshold band two thirds
+as wide) and ragged, three finer octaves of noise (mean zero, so the cover stays the forecast's)
+eating into it; its base greys toward the middle, by up to 30 % and more in the lumps than between
+them, as from below; and it is lit from the Sun's side - one more reading of the field 0.4 km
+toward the Sun brightens the face where the cloud thins that way (up to 12 %) and shades it where
+it thickens (up to 24 %). With the Sun overhead the step shrinks to nothing and only the grey
+base is left; the silver lining keeps to the deck's soft margin (`partly-viewpoint`,
+`partly-sunward`).
+**Caveat:** a sheet's relief, not a volume: no towers, no anvils, no shadows from one cloud on
+the next.
+
 **Silver linings.** Broken low cloud seen against the Sun is lit from behind: within about 15° of
 the Sun (an e-folding of 0.26 rad from it) a cloud's core is up to 45 % darker - the light has to
 get through it - while its thin margins (where the cover's edge runs, 4c(1−c) of the cloud's
