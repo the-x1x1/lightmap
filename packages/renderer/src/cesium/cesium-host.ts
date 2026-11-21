@@ -23,7 +23,11 @@ import {
   GRADE_FRAGMENT_SHADER,
   GRADE_RAYS_FRAGMENT_SHADER,
 } from '../shaders/grade.frag.ts';
-import { OsmBuildingsLayer, PRIMITIVE_NORMAL_SHADING_SMOOTH } from './osm-buildings-layer.ts';
+import {
+  groundCaughtUp,
+  OsmBuildingsLayer,
+  PRIMITIVE_NORMAL_SHADING_SMOOTH,
+} from './osm-buildings-layer.ts';
 import {
   buildingPointsFromTile,
   coverShapesFromTile,
@@ -226,6 +230,11 @@ function prefersReducedMotion(): boolean {
   }
 }
 
+/** Lamps whose ground is checked against the terrain drawn before they show (`holdStreetLamps`). */
+const STREET_LAMP_GROUND_SAMPLES = 12;
+/** The longest new lamps wait for the terrain drawn under them to catch up. */
+const STREET_LAMP_GROUND_WAIT_MS = 30_000;
+
 export class CesiumSceneHost implements SceneHost {
   private readonly C: CesiumModule;
   private readonly widget: Cesium.CesiumWidget;
@@ -270,6 +279,18 @@ export class CesiumSceneHost implements SceneHost {
   /** The street lamps along the mapped roads near the place, lit from the dusk. */
   private streetLamps: Cesium.BillboardCollection | null = null;
   private streetLampsShownAt = -1;
+  /**
+   * The lamps held hidden until the terrain drawn under them has caught up (`groundCaughtUp`,
+   * as the trees are): a few lamps' places, their ground from the finest terrain (once sampled),
+   * and when the wait began. Clamped to the coarse terrain drawn on arrival, a hillside town's
+   * lamps hung over its roofs until it refined (V&V: Trocadero on arrival).
+   */
+  private streetLampsWait: {
+    at: Cesium.Cartographic[];
+    groundM: number[] | null;
+    since: number;
+  } | null = null;
+  private streetLampsWaitTimer: ReturnType<typeof setTimeout> | null = null;
   /** The visibility the lamps last faded by (`fogLamps`), and the scene's now. */
   private streetLampsFoggedAt = -1;
   private visibilityM = Infinity;
@@ -724,6 +745,7 @@ export class CesiumSceneHost implements SceneHost {
     if (this.detailAtlasUrl) this.loadDetailAtlas(this.detailAtlasUrl);
     if (options.placeLabelsUrl) void this.loadPlaceLabels(options.placeLabelsUrl);
     this.preRenderGroundRemover = scene.preRender.addEventListener(() => {
+      this.releaseStreetLamps();
       this.glideEye();
       this.glideLight();
       this.keepEyeAboveGlobe();
@@ -2295,6 +2317,7 @@ export class CesiumSceneHost implements SceneHost {
       this.streetLamps = null;
     }
     this.streetLampsShownAt = -1;
+    this.streetLampsWait = null;
     if (lamps.length === 0 || typeof document === 'undefined') return;
     const sprite = document.createElement('canvas');
     sprite.width = 32;
@@ -2331,6 +2354,7 @@ export class CesiumSceneHost implements SceneHost {
     });
     lampsOut.show = false;
     this.streetLamps = this.scene.primitives.add(lampsOut) as Cesium.BillboardCollection;
+    this.holdStreetLamps(lampsOut, lamps);
     this.streetLampsFoggedAt = -1;
     this.fogLamps();
     this.showStreetLamps();
@@ -2355,6 +2379,71 @@ export class CesiumSceneHost implements SceneHost {
     this.scene.requestRender();
   }
 
+  /**
+   * Holds a new set of lamps hidden while the finest terrain under a dozen of them is sampled,
+   * then until the terrain drawn there agrees (`releaseStreetLamps`). A failed sample lets them
+   * show at once.
+   */
+  private holdStreetLamps(collection: Cesium.BillboardCollection, lamps: [number, number][]): void {
+    const C = this.C;
+    const step = Math.max(1, Math.floor(lamps.length / STREET_LAMP_GROUND_SAMPLES));
+    const at: Cesium.Cartographic[] = [];
+    for (let i = 0; i < lamps.length && at.length < STREET_LAMP_GROUND_SAMPLES; i += step)
+      at.push(C.Cartographic.fromDegrees(lamps[i]![0], lamps[i]![1]));
+    const wait = { at, groundM: null as number[] | null, since: performance.now() };
+    this.streetLampsWait = wait;
+    const release = () => {
+      if (this.streetLampsWait !== wait) return;
+      this.streetLampsWait = null;
+      this.streetLampsShownAt = -1;
+      this.showStreetLamps();
+    };
+    C.sampleTerrainMostDetailed(
+      this.scene.terrainProvider,
+      at.map((c) => c.clone()),
+    ).then((sampled) => {
+      if (this.destroyed || this.streetLamps !== collection || this.streetLampsWait !== wait)
+        return;
+      wait.groundM = sampled.map((c) => c.height);
+      this.scene.requestRender();
+    }, release);
+  }
+
+  /** Shows the held lamps once the drawn terrain has caught up, or after the wait's cap. */
+  private releaseStreetLamps(): void {
+    const wait = this.streetLampsWait;
+    if (!wait) return;
+    const now = performance.now();
+    const over = now - wait.since > STREET_LAMP_GROUND_WAIT_MS;
+    if (wait.groundM || over) {
+      const C = this.C;
+      const globe = this.scene.globe as Cesium.Globe | undefined;
+      const eye = this.scene.camera.positionWC;
+      const groundM = wait.groundM;
+      const caught =
+        !globe ||
+        !groundM ||
+        groundCaughtUp(
+          wait.at.map((c, i) => ({
+            groundM: groundM[i]!,
+            drawnM: globe.getHeight(c),
+            distanceM: C.Cartesian3.distance(eye, C.Cartographic.toCartesian(c)),
+          })),
+        );
+      if (caught || over) {
+        this.streetLampsWait = null;
+        this.streetLampsShownAt = -1;
+        this.showStreetLamps();
+        return;
+      }
+    }
+    if (this.streetLampsWaitTimer === null)
+      this.streetLampsWaitTimer = setTimeout(() => {
+        this.streetLampsWaitTimer = null;
+        if (!this.destroyed) this.scene.requestRender();
+      }, 250);
+  }
+
   /** The lamps on as far as the town's lights are (in tenths, so the colours are set a few times a dusk). */
   private showStreetLamps(): void {
     const lamps = this.streetLamps;
@@ -2362,7 +2451,7 @@ export class CesiumSceneHost implements SceneHost {
     const on = Math.round(this.cityLights * 10) / 10;
     if (on === this.streetLampsShownAt) return;
     this.streetLampsShownAt = on;
-    lamps.show = on > 0;
+    lamps.show = on > 0 && this.streetLampsWait === null;
     for (let i = 0; i < lamps.length; i++) {
       const b = lamps.get(i);
       b.color = new this.C.Color(b.color.red, b.color.green, b.color.blue, on);
