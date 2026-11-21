@@ -225,7 +225,12 @@ function DesktopSignIn({ reason }: { reason?: string | undefined }) {
   );
 }
 
-export function SignInPrompt({ reason }: { reason?: string }) {
+/**
+ * `asked`: what the person had just asked for when this came up instead (a paywall's reason:
+ * "Planning-card export is part of Pro."). It is said even where there is nothing to sign in to;
+ * `reason`, an invitation to sign in, is not.
+ */
+export function SignInPrompt({ reason, asked }: { reason?: string; asked?: string }) {
   const caps = useCapabilities();
   const methods = caps.data?.authMethods;
   const [email, setEmail] = useState('');
@@ -241,12 +246,21 @@ export function SignInPrompt({ reason }: { reason?: string }) {
   if (caps.data?.desktopAccounts) return <DesktopSignIn reason={reason} />;
   if (!methods || (!methods.email && !methods.google && !methods.devLogin)) {
     return (
-      <p className="text-sm text-[var(--lm-text-muted)]" data-testid="accounts-unavailable">
-        {caps.data?.desktopApp
-          ? // A desktop app with no hosted service to sign in to yet: not a server fault.
-            `Signing in and saved projects come to the app once the LightMap service opens. Meanwhile it plans on the free plan: anywhere, up to ${PLANS.free.limits.futureDateWindowDays ?? 14} days ahead.`
-          : 'Accounts are not available on this server (no database configured). Exploring the map still works.'}
-      </p>
+      <div className="space-y-1">
+        {/* What was asked for, first: "Export card" answered only by a note on signing in read as
+            if the button had done something else. */}
+        {asked ? (
+          <p className="text-sm" data-testid="accounts-unavailable-asked">
+            {asked}
+          </p>
+        ) : null}
+        <p className="text-sm text-[var(--lm-text-muted)]" data-testid="accounts-unavailable">
+          {caps.data?.desktopApp
+            ? // A desktop app with no hosted service to sign in to yet: not a server fault.
+              `Signing in and saved projects come to the app once the LightMap service opens. Meanwhile it plans on the free plan: anywhere, up to ${PLANS.free.limits.futureDateWindowDays ?? 14} days ahead.`
+            : 'Accounts are not available on this server (no database configured). Exploring the map still works.'}
+        </p>
+      </div>
     );
   }
   return (

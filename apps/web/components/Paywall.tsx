@@ -15,7 +15,12 @@ export function Paywall({ reason, compact }: { reason?: string; compact?: boolea
   const checkout = useCheckout();
   const pro = PLANS.pro;
   if (!account.signedIn)
-    return <SignInPrompt reason={reason ?? `${brand.billing.proName} needs an account.`} />;
+    return (
+      <SignInPrompt
+        reason={reason ?? `${brand.billing.proName} needs an account.`}
+        {...(reason ? { asked: reason } : {})}
+      />
+    );
   const configured = caps.data?.billingConfigured ?? false;
   return (
     <div
