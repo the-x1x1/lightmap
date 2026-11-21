@@ -4,6 +4,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Choosing a place no longer crashes the development build**: the towns' night glow was handed
+  to a renderer React had already torn down, and its scene threw. Found by running the
+  end-to-end suite on the local runner.
 - **The local runner can run CI's integration job**: asked through its inbox, it starts
   PostgreSQL 16 in Docker, runs the migrations, the database's integration tests and the
   Playwright suite (in the machine's own Edge), and removes the database afterwards.

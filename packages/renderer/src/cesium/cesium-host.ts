@@ -973,6 +973,10 @@ export class CesiumSceneHost implements SceneHost {
    * strongest glow as a level direction at the place.
    */
   setTownGlow(glow: HostTownGlow | null): void {
+    // Called from a React effect, which can run against a host already destroyed (React's
+    // development double mount): its scene then throws on any use (E2E: every test that picked a
+    // place failed, the page's error boundary reloading it).
+    if (this.destroyed) return;
     const C = this.C;
     if (!glow || (!glow.city && glow.index < 0.03)) {
       this.townGlow = null;
