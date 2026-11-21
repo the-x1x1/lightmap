@@ -1685,7 +1685,7 @@ export class OsmBuildingsLayer {
         return;
       }
       // Broad-leaf: an oval footprint, turned, set off the trunk, its height its own.
-      const crownH = t.heightM * (0.55 + 0.2 * s);
+      const crownH = t.heightM * (0.5 + 0.15 * s);
       const crownBase = t.heightM - crownH;
       const r = t.radiusM;
       const off = 0.18 * r;
@@ -1705,39 +1705,35 @@ export class OsmBuildingsLayer {
         );
         return;
       }
-      // Standing alone: a main mass and two lobes, one high on one side, one low on the other.
+      // Standing alone, seen whole: a broad main mass, wider than it is deep, and two lobes
+      // thrown out to either side, one high and one low, each borne on its own limb - the
+      // spreading, uneven outline of an oak, a mango or a plane tree in the open.
       blob(
         'c',
-        r * 0.82,
-        r * (0.95 - 0.2 * s),
-        crownH * 0.42,
+        r,
+        r * (0.9 - 0.15 * s),
+        crownH * 0.4,
         ox,
         oy,
-        crownBase + crownH * 0.45,
+        crownBase + crownH * 0.5,
         turn,
+        broadLeaf,
+        7,
+        10,
       );
-      const a1 = turn + 0.9;
-      blob(
-        'c1',
-        r * 0.6,
-        r * 0.55,
-        crownH * 0.34,
-        ox + Math.cos(a1) * r * 0.45,
-        oy + Math.sin(a1) * r * 0.45,
-        crownBase + crownH * 0.64,
-        a1,
-      );
-      const a2 = a1 + 2.5;
-      blob(
-        'c2',
-        r * 0.55,
-        r * 0.5,
-        crownH * 0.3,
-        ox + Math.cos(a2) * r * 0.5,
-        oy + Math.sin(a2) * r * 0.5,
-        crownBase + crownH * 0.36,
-        a2,
-      );
+      const fork = crownBase * 0.8;
+      const lobes: [string, number, number, number, number][] = [
+        // part, direction, reach (x r), height (x crownH), size (x r)
+        ['c1', turn + 0.9, 0.62, 0.62, 0.6],
+        ['c2', turn + 3.4, 0.66, 0.34, 0.55],
+      ];
+      lobes.forEach(([part, a, reach, up, size], k) => {
+        const e = ox + Math.cos(a) * r * reach;
+        const n = oy + Math.sin(a) * r * reach;
+        const z = crownBase + crownH * up;
+        blob(part, r * size, r * size * 0.9, crownH * size * 0.55, e, n, z, a, broadLeaf, 5, 8);
+        limb(`b${k}`, fork, e * 0.7, n * 0.7, z - crownH * 0.1, girth * 0.6);
+      });
     });
   }
 
