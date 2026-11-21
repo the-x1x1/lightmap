@@ -27,7 +27,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const RUNNER_VERSION = 2;
+export const RUNNER_VERSION = 3;
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const WIN = process.platform === 'win32';
 const E = process.env;
@@ -580,6 +580,16 @@ let harnessRoot = null;
 let harnessOut = null;
 
 /** Where a request's path lands under `root`, or null when it would leave it. */
+/**
+ * Whether a failed step's log shows only Node crashing on its way out on Windows - libuv's
+ * `!(handle->flags & UV_HANDLE_CLOSING)` assertion in async.c, exit 0xC0000409 - after the step
+ * itself had finished (seen once on the env check, which had printed OK). Such a step is run
+ * once more before it is called a failure.
+ */
+export function crashedOnExit(logText) {
+  return /Assertion failed: !\(handle->flags & UV_HANDLE_CLOSING\)/.test(logText);
+}
+
 export function safeJoin(root, urlPath) {
   let rel;
   try {
@@ -788,14 +798,30 @@ async function checkCommit(commit, newest, total) {
   for (const [name, argv, env] of checkSteps(pnpm, newest)) {
     setStatus({ state: 'checking', message: `${commit.n}/${total} ${name}: ${commit.subject}` });
     const log = `logs/check-${short}-${name}.log`;
-    const r = await run(argv, {
-      cwd: CHECK,
-      env: { CI: 'true', ...env },
-      log: path.join(CFG.dir, log),
-      timeoutMs: 30 * 60_000,
-    });
+    const runStep = () =>
+      run(argv, {
+        cwd: CHECK,
+        env: { CI: 'true', ...env },
+        log: path.join(CFG.dir, log),
+        timeoutMs: 30 * 60_000,
+      });
+    let r = await runStep();
+    let retried = false;
+    if (r.code !== 0) {
+      let text = '';
+      try {
+        text = fs.readFileSync(path.join(CFG.dir, log), 'utf8');
+      } catch {
+        // No log: not the crash this looks for.
+      }
+      if (crashedOnExit(text)) {
+        say(`${commit.n}/${total} ${name}: Node crashed on exit; running it once more`);
+        retried = true;
+        r = await runStep();
+      }
+    }
     const ok = r.code === 0;
-    result.steps.push({ name, ok, code: r.code, ms: r.ms, log });
+    result.steps.push({ name, ok, code: r.code, ms: r.ms, log, ...(retried ? { retried } : {}) });
     // A passing log is noise; a failing one is what is wanted.
     if (ok) fs.rmSync(path.join(CFG.dir, log), { force: true });
     else

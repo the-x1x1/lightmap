@@ -26,7 +26,8 @@ Each time the patch changes, the runner:
 3. runs CI's checks on every commit, newest first - `format:check`, `lint`, `typecheck`,
    `test:unit` - and on the newest also the rest of CI's validate job (env, attribution,
    licences, secrets, migrations, `pnpm build`, the bundle gate). A tree checked once is not
-   checked again.
+   checked again. A step whose only fault is Node crashing on its way out (libuv's
+   `UV_HANDLE_CLOSING` assertion on Windows) is run once more before it counts as failed.
 
 It writes beside itself: `status.json` (what it is doing, what is served, which commits fail
 which checks), `results.json` (every step of every commit), `logs/` (a failing step's log, and
