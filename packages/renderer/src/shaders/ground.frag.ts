@@ -684,7 +684,10 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // place (about 1.5 m texels). Inside it they replace the town grid's pattern of a city.
     if (roadsKnown > 0.0)
     {
-        vec3 asphalt = vec3(0.21, 0.21, 0.22) * (0.88 + 0.24 * grain);
+        // Weathered asphalt, as most streets are (reflectance 0.12-0.17; fresh tarmac's 0.05 is
+        // a new road's for a year or two): a mid grey from the air, about a lawn's brightness.
+        // At 0.21 here - fresh tarmac - every street drew as a near-black line from above.
+        vec3 asphalt = vec3(0.33, 0.33, 0.34) * (0.88 + 0.24 * grain);
         vec3 paving = vec3(0.55, 0.52, 0.48) * (0.88 + 0.24 * grain);
         // Under snow a road is ploughed to a slushy grey and a path mostly buried.
         float onRoad = rv.r;
