@@ -518,7 +518,22 @@ export const FOLIAGE_TONE_GLSL = `
     }`;
 
 /** The ids of a tree's parts after its number (`treeInstances`). */
-const TREE_PARTS = ['t', 'c', 'c1', 'c2', 'f0', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6'] as const;
+const TREE_PARTS = [
+  't',
+  'c',
+  'c1',
+  'c2',
+  'b0',
+  'b1',
+  'b2',
+  'f0',
+  'f1',
+  'f2',
+  'f3',
+  'f4',
+  'f5',
+  'f6',
+] as const;
 
 /** Broad-leaf crowns' alpha: the mark `treeFragmentShader` looks for. */
 const BROADLEAF_ALPHA = 0.99;
@@ -1433,9 +1448,11 @@ export class OsmBuildingsLayer {
    *   uneven, as an oak's or a mango's is;
    * - conifer: a cone (the shader tiers its boughs); columnar: a narrow spire over a short
    *   bare trunk;
-   * - umbrella: a long bare trunk under a wide, flat crown (monkeypod, acacia, stone pine);
+   * - umbrella: a short stout bole forking into three limbs under a deep, wide dome
+   *   (monkeypod, rain tree, stone pine);
    * - palm: a slim stem, a knot of frond bases, and seven fronds arching out and down.
-   * Ids `<n>t` (trunk) and `<n>` + `TREE_PARTS` for the rest, so single trees can be hidden
+   * Trunks thicken with height. Ids are the tree's number and a part (`TREE_PARTS`: `t` the
+   * trunk, `c..c2` crowns, `b0..b2` limbs, `f0..f6` fronds), so single trees can be hidden
    * (`hideTreesNear`) by their attributes.
    */
   private treeInstances(
@@ -1485,6 +1502,48 @@ export class OsmBuildingsLayer {
             attributes: { color: colour, show: shown() },
           }),
         );
+      // A limb: a tapering cylinder from (0, 0, fromUp) out to (e, n, toUp).
+      const limb = (
+        part: string,
+        fromUp: number,
+        e: number,
+        n: number,
+        toUp: number,
+        radius: number,
+      ) => {
+        const flat = Math.hypot(e, n);
+        const length = Math.hypot(flat, toUp - fromUp);
+        const tilt = Math.atan2(flat, toUp - fromUp);
+        const rot = C.Matrix3.multiply(
+          C.Matrix3.fromRotationZ(Math.atan2(n, e)),
+          C.Matrix3.fromRotationY(tilt),
+          new C.Matrix3(),
+        );
+        out.push(
+          new C.GeometryInstance({
+            geometry: new C.CylinderGeometry({
+              length,
+              topRadius: radius * 0.6,
+              bottomRadius: radius,
+              slices: 5,
+              vertexFormat,
+            }),
+            modelMatrix: C.Matrix4.multiply(
+              enu,
+              C.Matrix4.fromRotationTranslation(
+                rot,
+                new C.Cartesian3(e / 2, n / 2, (fromUp + toUp) / 2),
+                new C.Matrix4(),
+              ),
+              new C.Matrix4(),
+            ),
+            id: `${id}${part}`,
+            attributes: { color: bark, show: shown() },
+          }),
+        );
+      };
+      // A trunk thickens with the tree's height (a 15 m tree's is near a metre across).
+      const girth = 0.14 + 0.02 * t.heightM;
       const g = 0.27 + 0.12 * t.tone;
       const broadLeaf = C.ColorGeometryInstanceAttribute.fromColor(
         new C.Color(0.2 + 0.08 * t.tone, g, 0.12 + 0.03 * t.tone, BROADLEAF_ALPHA),
@@ -1564,7 +1623,7 @@ export class OsmBuildingsLayer {
           out.push(
             new C.GeometryInstance({
               geometry: new C.EllipsoidGeometry({
-                radii: new C.Cartesian3(len * 0.5, 0.42, 0.07),
+                radii: new C.Cartesian3(len * 0.5, 0.75, 0.1),
                 stackPartitions: 3,
                 slicePartitions: 6,
                 vertexFormat,
@@ -1578,18 +1637,37 @@ export class OsmBuildingsLayer {
         return;
       }
       if (t.form === 'umbrella') {
-        const crownH = t.heightM * 0.3;
+        // A monkeypod or a rain tree: a short stout bole forking low into three great limbs
+        // that hold up a deep, wide dome - not a disc on a pole.
+        const crownH = t.heightM * (0.5 + 0.1 * s);
         const crownBase = t.heightM - crownH;
-        trunk(crownBase + crownH * 0.4, 0.22, 0.32);
+        const fork = Math.max(2, crownBase * 0.55);
+        trunk(fork + 0.4, girth * 1.1, girth * 1.5);
+        for (let k = 0; k < 3; k++) {
+          const a = turn + (k * 2 * Math.PI) / 3 + 0.4 * s;
+          const reach = t.radiusM * (0.35 + 0.1 * k * s);
+          limb(
+            `b${k}`,
+            fork,
+            Math.cos(a) * reach,
+            Math.sin(a) * reach,
+            crownBase + crownH * 0.3,
+            girth * 0.8,
+          );
+        }
+        // The dome: flatter below than above, so its centre sits low in the crown.
         blob(
           'c',
           t.radiusM,
           t.radiusM * (0.8 + 0.2 * s),
-          crownH / 2,
+          crownH * 0.55,
           0,
           0,
-          crownBase + crownH / 2,
+          crownBase + crownH * 0.45,
           turn,
+          broadLeaf,
+          6,
+          9,
         );
         if (t.park) {
           const a = turn + 1.3;
@@ -1597,10 +1675,10 @@ export class OsmBuildingsLayer {
             'c1',
             t.radiusM * 0.55,
             t.radiusM * 0.5,
-            crownH * 0.45,
-            Math.cos(a) * t.radiusM * 0.45,
-            Math.sin(a) * t.radiusM * 0.45,
-            crownBase + crownH * 0.75,
+            crownH * 0.4,
+            Math.cos(a) * t.radiusM * 0.5,
+            Math.sin(a) * t.radiusM * 0.5,
+            crownBase + crownH * 0.55,
             a,
           );
         }
@@ -1613,7 +1691,7 @@ export class OsmBuildingsLayer {
       const off = 0.18 * r;
       const ox = Math.cos(turn * 1.7) * off;
       const oy = Math.sin(turn * 1.7) * off;
-      trunk(crownBase + crownH * 0.35, 0.18, 0.26);
+      trunk(crownBase + crownH * 0.35, girth * 0.7, girth);
       if (!t.park) {
         blob(
           'c',
