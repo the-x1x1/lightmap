@@ -188,7 +188,8 @@ export const TREE_FORMS: readonly TreeForm[] = [
  * (Hawaii, the Caribbean): no conifers; palms and spreading umbrella trees in parks and along
  * streets, broad-leaf canopy in the woods. The subtropics and the Mediterranean: cypresses,
  * umbrella pines, some palms in parks; pine woods. The temperate belt: broad-leaf, conifers in
- * the forests. The boreal north (past 55 degrees): spruce spires and pines, some birch.
+ * the forests, but mostly conifers in the Pacific Northwest, the Rockies, the Alps and
+ * Carpathians, and half pine on the US south-east's coastal plain. The boreal north (past 55 degrees): spruce spires and pines, some birch.
  */
 export function treeMix(
   latitudeDeg: number,
@@ -207,6 +208,10 @@ export function treeMix(
   if (a < 23.5) return park ? mix(0.3, 0, 0, 0.35, 0.35) : mix(0.6, 0, 0, 0.25, 0.15);
   if (a < 32 || inMediterraneanClimate(latitudeDeg, longitudeDeg))
     return park ? mix(0.45, 0.05, 0.2, 0.15, 0.15) : mix(0.45, 0.3, 0.05, 0.2, 0);
+  if (a < 55 && inConiferBelt(latitudeDeg, longitudeDeg))
+    return park ? mix(0.55, 0.3, 0.15, 0, 0) : mix(0.2, 0.45, 0.35, 0, 0);
+  if (a < 55 && inPineBelt(latitudeDeg, longitudeDeg))
+    return park ? mix(0.7, 0.25, 0.05, 0, 0) : mix(0.4, 0.55, 0.05, 0, 0);
   if (a < 55)
     return park
       ? mix(0.85, 0.1, 0.05, 0, 0)
@@ -214,6 +219,27 @@ export function treeMix(
         ? mix(0.5, 0.35, 0.15, 0, 0)
         : mix(0.85, 0.1, 0.05, 0, 0);
   return park ? mix(0.65, 0.2, 0.15, 0, 0) : mix(0.25, 0.3, 0.45, 0, 0);
+}
+
+/**
+ * Temperate places whose woods are mostly needle-leaf: the Pacific Northwest's rain forest of
+ * Douglas fir, cedar and hemlock (northern California to the Alaska panhandle, west of the
+ * Cascades and on through the Rockies), and the Alps and Carpathians' spruce and fir.
+ * Rough boxes `[latMin, latMax, lonMin, lonMax]`.
+ */
+const CONIFER_BELT: readonly (readonly [number, number, number, number])[] = [
+  [40, 60, -136, -116],
+  [36, 55, -116, -104],
+  [45.5, 48, 6, 16],
+  [45, 50, 21, 27],
+];
+function inConiferBelt(lat: number, lon: number): boolean {
+  return CONIFER_BELT.some((b) => lat >= b[0] && lat < b[1] && lon >= b[2] && lon < b[3]);
+}
+
+/** The south-eastern United States' coastal plain, whose woods are half pine (loblolly, longleaf). */
+function inPineBelt(lat: number, lon: number): boolean {
+  return lat >= 29 && lat < 37 && lon >= -96 && lon < -75;
 }
 
 /** The build a share `r` (0..1) falls on in a mix. */

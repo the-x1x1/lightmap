@@ -7,6 +7,7 @@ import {
   DEFAULT_BUILDING_HEIGHT_M,
   tileUrl,
   treesFromTile,
+  treeMix,
 } from '../src/osm-buildings.ts';
 import {
   classifyRings,
@@ -264,6 +265,26 @@ describe('trees from land cover', () => {
     );
     expect(share(boreal, 'columnar') + share(boreal, 'conifer')).toBeGreaterThan(0.65);
     expect(boreal.some((t) => t.form === 'palm')).toBe(false);
+    // Seattle's woods are mostly fir, cedar and hemlock; Ohio's mostly broad-leaf.
+    expect(
+      treeMix(47.66, -122.41, false, false).conifer +
+        treeMix(47.66, -122.41, false, false).columnar,
+    ).toBeGreaterThan(0.6);
+    expect(treeMix(40.0, -83.0, false, false).broadleaf).toBeGreaterThan(0.6);
+    const places: [number, number][] = [
+      [21.3, -157.8],
+      [43.7, 7.3],
+      [47.66, -122.41],
+      [33.7, -84.4],
+      [48.9, 2.3],
+      [69.6, 18.9],
+    ];
+    for (const [lat, lon] of places) {
+      for (const park of [true, false]) {
+        const m = treeMix(lat, lon, park, false);
+        expect(Object.values(m).reduce((a, b) => a + b, 0)).toBeCloseTo(1, 6);
+      }
+    }
     // Each build keeps its proportions: a spire is narrow, an umbrella wide, a palm's crown its fronds.
     for (const t of [...tropicPark, ...boreal].slice(0, 400)) {
       if (t.form === 'columnar') expect(t.radiusM / t.heightM).toBeLessThan(0.16);
