@@ -26,6 +26,9 @@
  * stand alone. Still a texture, not a classification of the pixel under the camera:
  * `RENDERING_ACCURACY.md` says so.
  */
+/** The ground material's global holding the light's own image in its colour (see its source). */
+export const SUN_IMAGE_GLOBAL = 'lm_sunImage';
+
 export const GROUND_MATERIAL_TYPE = 'LightMapGround';
 
 /** Uniforms the material takes, with their defaults; `groundTextureFor()` sets them per scene. */
@@ -184,6 +187,11 @@ const f = (n: number) => n.toFixed(1);
 const f3 = (n: number) => n.toFixed(3);
 
 export const GROUND_MATERIAL_SOURCE = /* glsl */ `
+// The part of the colour that is an image of the light itself - the Sun's (or the Moon's) glint
+// on water, a wet road's glare, snow and dew sparkle, the sheen on leaves - as it comes out on
+// the screen. The shadow pass takes it away where the light is hidden (shadow-tint.ts);
+// everything else is only darkened there.
+vec3 ${SUN_IMAGE_GLOBAL} = vec3(0.0);
 uniform float u_snowlineM;
 uniform float u_treelineM;
 uniform float u_poleward;
@@ -926,15 +934,19 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // The wet film's reflection, as a share of what is seen: the paint is blended over the
     // imagery by its opacity, so the reflected light is put in at its full strength over it.
     if (wetR > 0.0)
+    {
         material.diffuse = material.diffuse * (1.0 - wetR)
             + lmUnlit(wetSky * wetR + wetGlare, materialInput.normalEC, materialInput.positionToEyeEC.z)
             / max(alpha, 0.05);
+        ${SUN_IMAGE_GLOBAL} += wetGlare;
+    }
     if (snowGlint.r + snowGlint.g + snowGlint.b > 0.0)
         material.diffuse += lmUnlit(snowGlint * cloudK, materialInput.normalEC, materialInput.positionToEyeEC.z)
             / max(alpha, 0.05);
     if (vegGlow.r + vegGlow.g + vegGlow.b > 0.0)
         material.diffuse += lmUnlit(vegGlow * cloudK, materialInput.normalEC, materialInput.positionToEyeEC.z)
             / max(alpha, 0.05);
+    ${SUN_IMAGE_GLOBAL} += (snowGlint + vegGlow) * cloudK;
 #ifdef ENABLE_VERTEX_LIGHTING
     // Alpenglow, and first and last light: ground above the place sees past the place's horizon -
     // by the horizon's dip, sqrt(2 h / R): 1 deg at 1 km up, 1.6 deg at 2.5 km - so the Sun is
@@ -997,6 +1009,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         float swept = smoothstep(0.55, 0.75, 0.6 * patches + 0.4 * grain);
         vec3 ice = mix(snow * (0.93 + 0.05 * grain), vec3(0.55, 0.63, 0.70), swept);
         material.diffuse = mix(material.diffuse, ice * u_brightness, water * lakeIce);
+        ${SUN_IMAGE_GLOBAL} *= 1.0 - water * lakeIce;
         alpha = mix(alpha, 0.95 * u_strength, water * lakeIce);
         water *= 1.0 - lakeIce;
     }
@@ -1162,7 +1175,9 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
             }
         }
         reflectance *= 1.0 - caps;
-        vec3 reflected = sky * reflectance + lmGlitterColour() * (glint + aureole) * 1.2 * (1.0 - caps);
+        vec3 sunInWater = lmGlitterColour() * (glint + aureole) * 1.2 * (1.0 - caps);
+        vec3 reflected = sky * reflectance + sunInWater;
+        ${SUN_IMAGE_GLOBAL} = mix(${SUN_IMAGE_GLOBAL}, sunInWater, water);
         vec3 body = mix(sea * (1.0 - reflectance), vec3(0.80, 0.82, 0.83), caps) * u_brightness;
 #ifdef ENABLE_VERTEX_LIGHTING
         // The body is lit as a level surface too: the globe's lighting by the floor's normal is

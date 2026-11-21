@@ -14,6 +14,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   them - a mackerel sky, lit warm from the side at sunset - instead of a torn grey sheet.
 - **Peaks in cloud**: ground that stands above the cloud base disappears into the low cloud -
   wholly under an overcast, through the gaps under broken cloud - at the forecast's cloud base.
+- **No glitter where the Sun does not reach**: in a ridge's or a building's shadow the sea
+  still sparkled, the Sun's glint only dimmed to a third. The light's own image on water, wet
+  roads, snow, dew and leaves now goes with the light: none in full shadow, part-way along a
+  soft edge.
 - **A clear sky as bright as a real one**: from the ground the sky darkened to navy a few
   degrees above the horizon, as if through a polariser. It now holds its brightness up the dome
   as a real clear sky does (measured: 15 degrees up keeps 0.5-0.75 of the horizon's light,

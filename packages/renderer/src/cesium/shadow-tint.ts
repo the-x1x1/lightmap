@@ -6,7 +6,19 @@
  * the sky's light relative to the scene's light (`czm_lightColor`), at its own luminance: a
  * gentle blue at noon, a strong one at golden hour, none where the shade is all but gone (an
  * overcast's darkness near 1 leaves nothing to tint) and none outside the shadow.
+ *
+ * And no glitter where the light does not reach. The visibility bottoms out at the shadow's
+ * darkness (0.3-0.4) so that shade keeps the sky's light: right for the ground's own colour,
+ * wrong for an image of the light itself. The Sun's glitter path on the sea is many times
+ * brighter than white, and a third of it is still blinding: in a ridge's shadow at evening the
+ * sea sparkled as if in full sun. The ground material records that image, as it comes out on
+ * the screen, in a global (`SUN_IMAGE_GLOBAL`: glint and aureole on water, a wet road's glare,
+ * snow and dew sparkle, leaf sheen). Where a receive shader carries it, the image is taken out
+ * before the shade and put back by how much of the light reaches the spot (1 - the shaded
+ * fraction): none in full shadow, all in full light, between along a soft edge. It is never
+ * taken as more than the colour holds (fog and the atmosphere come after the material).
  */
+import { SUN_IMAGE_GLOBAL } from '../shaders/ground.frag.ts';
 
 /** The receive shader's last line, as Cesium 1.146 writes it. */
 export const SHADOW_APPLY_LINE = 'out_FragColor.rgb *= visibility;';
@@ -25,6 +37,22 @@ export const SHADOW_TINT_GLSL = `{
         out_FragColor.rgb *= visibility * mix(vec3(1.0), lmTint, 0.6 * lmShade);
     }`;
 
+/** The same for a shader whose material records the light's image (`SUN_IMAGE_GLOBAL`). ASCII only. */
+export const SHADOW_TINT_SUN_IMAGE_GLSL = `{
+        float lmDark = shadowMap_normalOffsetScaleDistanceMaxDistanceAndDarkness.w;
+        float lmShade = clamp((1.0 - visibility) / max(1.0 - lmDark, 1e-3), 0.0, 1.0);
+        vec3 lmTint = vec3(0.80, 0.90, 1.05) / max(czm_lightColor, vec3(0.05));
+        lmTint /= max(dot(lmTint, vec3(0.2126, 0.7152, 0.0722)), 1e-3);
+        vec3 lmImage = clamp(${SUN_IMAGE_GLOBAL}, vec3(0.0), max(out_FragColor.rgb, vec3(0.0)));
+        out_FragColor.rgb = (out_FragColor.rgb - lmImage) * visibility * mix(vec3(1.0), lmTint, 0.6 * lmShade)
+            + lmImage * (1.0 - lmShade);
+    }`;
+
+/** Whether a receive shader's sources (before its main) declare the ground material's light image. */
+export function carriesSunImage(sources: string[]): boolean {
+  return sources.slice(0, -1).some((s) => s.includes(`vec3 ${SUN_IMAGE_GLOBAL} `));
+}
+
 interface ShaderSourceLike {
   sources?: string[];
 }
@@ -40,7 +68,10 @@ export function tintShadowSource(source: ShaderSourceLike): ShaderSourceLike {
   if (!sources || sources.length === 0) return source;
   const last = sources[sources.length - 1]!;
   if (!last.includes(SHADOW_APPLY_LINE)) return source;
-  sources[sources.length - 1] = last.replace(SHADOW_APPLY_LINE, SHADOW_TINT_GLSL);
+  sources[sources.length - 1] = last.replace(
+    SHADOW_APPLY_LINE,
+    carriesSunImage(sources) ? SHADOW_TINT_SUN_IMAGE_GLSL : SHADOW_TINT_GLSL,
+  );
   return source;
 }
 
