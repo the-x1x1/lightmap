@@ -14,6 +14,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   them - a mackerel sky, lit warm from the side at sunset - instead of a torn grey sheet.
 - **Peaks in cloud**: ground that stands above the cloud base disappears into the low cloud -
   wholly under an overcast, through the gaps under broken cloud - at the forecast's cloud base.
+- **The light's colour follows the cloud**: the Light figure - and the colour temperature in
+  the details, the explanation and the export card - was the clear Sun's whatever the weather:
+  5 100 K under a full overcast. Under cloud it now reads the cloud's cooler light (about
+  6 200 K there), as the preview has always drawn it; an overcast golden hour is not golden.
 - **The map no longer flies out to space on a short move**: moving the pin nearby, or going
   from the viewpoint to the map, sent the camera up to 2 000 km and back in a second or three.
   A short move now stays near the ground; only a flight across an ocean climbs.

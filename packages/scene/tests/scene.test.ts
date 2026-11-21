@@ -558,6 +558,29 @@ describe('explanation', () => {
       /^3\d° up in the S(SW|W) — astronomical night, Moon down$/,
     );
   });
+
+  it('gives the colour of the light the scene has: the Sun’s when clear, the cloud’s under cloud', () => {
+    // 18:30 HST on 31 May: the Sun about 8° up, its own light warm.
+    const evening = localSelectionToUtc(
+      { year: 2026, month: 5, day: 31 },
+      18 * 60 + 30,
+      kailua.timeZone,
+    );
+    const colour = (scenario: SceneInputs['scenario']) =>
+      explainScene(buildSceneState(inputs({ utc: evening, scenario }))).find(
+        (l) => l.label === 'Colour',
+      )!;
+    const clear = colour('clear');
+    expect(clear.value).toMatch(/^4\d\d\d K — warm$/);
+    expect(clear.basis).toBe('astronomy');
+    // The same Sun behind an overcast: the cloud's cooler light, said to be the cloud's, with
+    // the Sun's own figure beside it.
+    const overcast = colour('overcast');
+    expect(overcast.value).toMatch(
+      /^(5[6-9]|6[0-4])\d\d K — (neutral daylight|cool) under the cloud \(the Sun’s own light is 4\d\d\d K\)$/,
+    );
+    expect(overcast.basis).toBe('weather');
+  });
 });
 
 describe('directionFromFrame', () => {

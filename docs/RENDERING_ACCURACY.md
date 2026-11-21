@@ -170,8 +170,12 @@ for every sample, so no profile is produced and nothing is claimed.
 A configurable curve of elevation → Kelvin (`weather/src/scenarios.ts`,
 `DEFAULT_COLOR_TEMPERATURE_CURVE`): 2900 K on the horizon, ~3800 K at 5°, neutral 5400–5600 K above
 20°, 7800–9000 K in blue hour/twilight. Applied as the light's colour and as a frame tint, weakened
-under cloud (diffuse light is whiter). **Claim:** the trend — golden low, neutral high, blue after
-sunset. **Caveat:** real values vary with aerosol, altitude and humidity by hundreds of Kelvin.
+under cloud (diffuse light is whiter). The figure shown for the light follows the cloud too
+(`sceneLightKelvin`): the Sun's Kelvin mixed toward an overcast's 6500 K by the share of the beam
+the cloud stops, in mireds - 5100 K under a clear afternoon sky reads about 6200 K under a full
+overcast. **Claim:** the trend — golden low, neutral high, blue after sunset, cooler under cloud.
+**Caveat:** real values vary with aerosol, altitude, humidity and the cloud's thickness by
+hundreds of Kelvin.
 
 ### Sky and atmosphere
 

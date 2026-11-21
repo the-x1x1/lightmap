@@ -4,9 +4,10 @@
  */
 import { formatWallTime } from '@lightmap/astronomy';
 import { compassLabel } from '@lightmap/geospatial';
-import { scenarioById } from '@lightmap/weather';
+import { scenarioById, warmthFromKelvin } from '@lightmap/weather';
 import { SOURCE_MODE_LABEL } from './confidence.ts';
 import { lightingGeometry } from './camera.ts';
+import { sceneLightKelvin } from './exposure.ts';
 import type { SceneState } from './types.ts';
 
 export interface ExplanationLine {
@@ -41,10 +42,17 @@ export function explainScene(s: SceneState): ExplanationLine[] {
       value: `toward the ${compassLabel((s.solar.azimuthDegrees + 180) % 360)}, ${shadowLengthText(el)}${shaded ? '; the pin itself is in the shadow of the terrain' : ''}`,
       basis: 'astronomy',
     });
+    // The light's colour on the scene: the Sun's under a clear sky, the cloud's under cloud
+    // (sceneLightKelvin) - and the words for it from the same figure.
+    const sunK = s.atmosphere.colorTemperatureK;
+    const lightK = sceneLightKelvin(sunK, s.atmosphere.parameters.sunTransmittance);
+    const clouded = lightK - sunK >= 200;
     lines.push({
       label: 'Colour',
-      value: `${Math.round(s.atmosphere.colorTemperatureK)} K — ${warmthText(s.atmosphere.warmth)}`,
-      basis: 'astronomy',
+      value: clouded
+        ? `${Math.round(lightK)} K — ${warmthText(warmthFromKelvin(lightK))} under the cloud (the Sun’s own light is ${Math.round(sunK)} K)`
+        : `${Math.round(sunK)} K — ${warmthText(s.atmosphere.warmth)}`,
+      basis: clouded ? 'weather' : 'astronomy',
     });
   }
   // At night the Moon is the light, and the sky's darkness is what the night shooter asks about.

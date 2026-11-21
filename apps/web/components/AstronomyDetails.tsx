@@ -4,6 +4,7 @@ import {
   describeExposure,
   describeLightKelvin,
   profileCaveat,
+  sceneLightKelvin,
   shadeOf,
   skylineOf,
   describeSeasonalEnvelope,
@@ -592,7 +593,10 @@ export function AstronomyDetails({
         <Row
           label="Colour temp."
           value={describeLightKelvin(
-            scene.atmosphere.colorTemperatureK,
+            sceneLightKelvin(
+              scene.atmosphere.colorTemperatureK,
+              scene.atmosphere.parameters.sunTransmittance,
+            ),
             exposure,
             scene.terrainHorizon?.moonAboveTerrain ?? null,
           )}

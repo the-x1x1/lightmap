@@ -234,6 +234,26 @@ export function estimateExposure(input: ExposureInput): ExposureEstimate {
  */
 export const MOONLIGHT_KELVIN = 4100;
 
+/** The light of an overcast sky by day, Kelvin (D65: the daylight an overcast is the model of). */
+export const OVERCAST_KELVIN = 6500;
+
+/**
+ * The colour temperature of the light on the scene, to set a white balance by. Under a clear
+ * sky it is the Sun's by its height (the atmosphere's `colorTemperatureK`). Cloud stops the
+ * Sun's beam and leaves the light of the cloud itself, near 6 500 K by day whatever the Sun's
+ * height - an overcast golden hour is not golden - so the two are mixed by the share of the beam
+ * the cloud stops, in mireds (10^6 / K), where mixtures of light add evenly. The preview's light
+ * is whitened by cloud in the same way; the figure beside it was the clear Sun's all the same
+ * (5 100 K under a full overcast that wants 6 200 K). Light already bluer than an overcast -
+ * twilight's - is left as it is.
+ */
+export function sceneLightKelvin(sunKelvin: number, sunTransmittance: number): number {
+  const stopped = 1 - Math.min(1, Math.max(0, sunTransmittance));
+  if (!(sunKelvin < OVERCAST_KELVIN) || stopped === 0) return sunKelvin;
+  const mired = 1e6 / sunKelvin + (1e6 / OVERCAST_KELVIN - 1e6 / sunKelvin) * stopped;
+  return 1e6 / mired;
+}
+
 /**
  * The light's colour line: the sky's colour temperature, and the moonlit ground's when the Moon
  * is what lights the scene ("11000 K · moonlit ground ~4100 K") - not when it is behind the

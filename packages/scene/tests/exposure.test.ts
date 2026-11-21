@@ -9,6 +9,8 @@ import {
   formatShutter,
   moonlightLux,
   nearestShutter,
+  OVERCAST_KELVIN,
+  sceneLightKelvin,
 } from '../src/exposure.ts';
 
 describe('clear-sky illuminance', () => {
@@ -186,5 +188,31 @@ describe('in a ridge’s shadow', () => {
     const behind = estimateExposure({ ...night, shade: { moon: true } });
     expect(open.ev100 - behind.ev100).toBeGreaterThan(2);
     expect(behind.basis).toBe('moon');
+  });
+});
+
+describe('the light’s colour under cloud', () => {
+  it('is the Sun’s own under a clear sky', () => {
+    for (const k of [2900, 3800, 5100, 5600]) expect(sceneLightKelvin(k, 1)).toBe(k);
+  });
+  it('goes to the cloud’s as the cloud stops the beam', () => {
+    // A full overcast in the afternoon, the tile's own case: 5 100 K read as 6 200 K.
+    expect(sceneLightKelvin(5100, 0.2)).toBeGreaterThan(6100);
+    expect(sceneLightKelvin(5100, 0.2)).toBeLessThan(6300);
+    // An overcast golden hour is not golden.
+    expect(sceneLightKelvin(3800, 0.2)).toBeGreaterThan(5500);
+    // More cloud, cooler; never past the cloud's own colour.
+    const ks = [1, 0.9, 0.6, 0.2, 0.08, 0].map((t) => sceneLightKelvin(3800, t));
+    for (let i = 1; i < ks.length; i++) expect(ks[i]!).toBeGreaterThan(ks[i - 1]!);
+    expect(ks.at(-1)).toBeCloseTo(OVERCAST_KELVIN, 6);
+    // Mixed in mireds: half the beam stopped is half way in 1/K, not in K.
+    expect(1e6 / sceneLightKelvin(3250, 0.5)).toBeCloseTo((1e6 / 3250 + 1e6 / 6500) / 2, 6);
+  });
+  it('leaves twilight, already bluer than an overcast, as it is', () => {
+    for (const k of [6500, 8000, 11000]) expect(sceneLightKelvin(k, 0.1)).toBe(k);
+  });
+  it('takes a share out of range as the nearest in range', () => {
+    expect(sceneLightKelvin(5000, 1.4)).toBe(5000);
+    expect(sceneLightKelvin(5000, -1)).toBeCloseTo(OVERCAST_KELVIN, 6);
   });
 });

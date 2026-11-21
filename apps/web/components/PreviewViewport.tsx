@@ -4,7 +4,7 @@
  * scenario, sunrise/sunset. The 3D view itself IS the preview; this frames it with the facts and
  * offers "expand" for full-screen on mobile.
  */
-import { SENSOR_PRESETS, type SceneState } from '@lightmap/scene';
+import { SENSOR_PRESETS, sceneLightKelvin, type SceneState } from '@lightmap/scene';
 import { formatWallTime } from '@lightmap/astronomy';
 import { compassLabel } from '@lightmap/geospatial';
 import { scenarioById } from '@lightmap/weather';
@@ -195,7 +195,12 @@ export function PreviewViewport({
         />
         <Stat
           label="Light"
-          value={`${Math.round(scene.atmosphere.colorTemperatureK)} K`}
+          value={`${Math.round(
+            sceneLightKelvin(
+              scene.atmosphere.colorTemperatureK,
+              scene.atmosphere.parameters.sunTransmittance,
+            ),
+          )} K`}
           sub={s.phase.replace('-', ' ')}
           testId="preview-light"
         />
