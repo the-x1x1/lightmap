@@ -89,6 +89,8 @@ while (Date.now() - start < capMs) {
     shot: window.__smoke.shot,
   }));
   if (state.shot && !shots[state.shot]) {
+    // The camera arrives first (index.html says why a shot waits for it).
+    await page.evaluate(() => (window.__cameraIdle ? window.__cameraIdle() : undefined));
     await page.screenshot({ path: `shot-${state.shot}.png`, timeout: 240000 });
     shots[state.shot] = true;
     await page.evaluate(() => {

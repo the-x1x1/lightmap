@@ -146,6 +146,7 @@
           const drive = async () => {
             const name = window.__smoke.shot;
             if (name) {
+              if (window.__cameraIdle) await window.__cameraIdle();
               const png = await snap().catch(() => null);
               if (png) await post('/__shot/' + name, png, 'image/png');
               window.__smoke.shots.push(name);
@@ -163,6 +164,24 @@
           drive();
         }
         const controller = new SceneController(host, { aspect: () => 960 / 600 });
+        // A shot waits for the camera to arrive. A flight under way - or the controller's own
+        // retry of an orbit asked for during one - would be photographed half way: on a real
+        // GPU a frame is quick enough to fall inside a flight (under SwiftShader none ever
+        // did, which is how a flight to space and back went unseen). Idle for four looks in a
+        // row, to span the gap between a camera being asked for and its flight beginning.
+        window.__cameraIdle = async () => {
+          const busy = () =>
+            host.scene.camera._currentFlight !== undefined ||
+            controller.pendingCameraRetry !== null;
+          const deadline = performance.now() + 20_000;
+          let idle = 0;
+          while (idle < 4 && performance.now() < deadline) {
+            idle = busy() ? 0 : idle + 1;
+            host.scene.requestRender();
+            await new Promise((r) => setTimeout(r, 150));
+          }
+          if (busy()) log('camera still moving after 20 s');
+        };
         await controller.setProviders(
           { kind: 'ellipsoid', attribution: '' },
           { kind: 'cesium-natural-earth', attribution: 'NE' },

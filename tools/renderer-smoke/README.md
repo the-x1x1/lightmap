@@ -15,7 +15,8 @@ along the shadow line must be < 70 % of the Sun side, and the point just beyond 
 be as bright as the Sun side (direction, length and "no fade at low Sun" in one check). Then the
 same tower under the full Moon at 23:00 (`shadow-moon`), its shade and the moonlit ground toward
 the Moon logged as the moon shadow probe. Any runtime exception, shader compile error or missing screenshot
-fails the run. `docs/media/renderer-smoke-2026-09-24c.png` is the contact sheet from the run that
+fails the run. A shot waits for the camera to arrive (no flight under way, no orbit waiting on
+one): a real GPU draws frames quickly enough to photograph a flight half way. `docs/media/renderer-smoke-2026-09-24c.png` is the contact sheet from the run that
 validated the layered cloud decks (SwiftShader software GL, so colours are exact but performance is not).
 
 ```sh
