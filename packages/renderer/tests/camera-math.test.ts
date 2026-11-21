@@ -7,6 +7,7 @@ import {
   eyeDistanceM,
   eyeGlideDurationMs,
   eyeLift,
+  flightCeilingM,
   glideEyeAt,
   normalizeHeadingDegrees,
   orbitSightLine,
@@ -61,6 +62,20 @@ describe('orbit terrain clearance', () => {
     expect((target.latitude - cam.latitude) * 111_320).toBeCloseTo(1732, 0);
     expect(line).toHaveLength(4);
     expect(line.at(-1)!.heightM).toBeCloseTo(1200 + 250, 6);
+  });
+
+  it('gives a flight a ceiling only when the hop is long enough to need one', () => {
+    // Cesium climbs to a ceiling it is given: a nearby pin, a change of mode and a corrected
+    // pitch are short hops and get none, at any range a pin is looked at from.
+    expect(flightCeilingM(0, 520)).toBeUndefined();
+    expect(flightCeilingM(500, 520)).toBeUndefined();
+    expect(flightCeilingM(150_000, 60_000)).toBeUndefined();
+    expect(flightCeilingM(2e6, 520)).toBeUndefined();
+    // Across an ocean: 2 000 km, as before; from far out, four ranges.
+    expect(flightCeilingM(6_200_000, 520)).toBe(2e6);
+    expect(flightCeilingM(12_000_000, 1_500_000)).toBe(6e6);
+    // And only ever to a hop longer than itself.
+    for (const hopM of [2_000_001, 5e6, 2e7]) expect(flightCeilingM(hopM, 800)! < hopM).toBe(true);
   });
 
   it('steepens until the camera and its sight line clear the ground (a valley wall)', () => {

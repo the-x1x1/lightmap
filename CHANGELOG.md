@@ -14,6 +14,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   them - a mackerel sky, lit warm from the side at sunset - instead of a torn grey sheet.
 - **Peaks in cloud**: ground that stands above the cloud base disappears into the low cloud -
   wholly under an overcast, through the gaps under broken cloud - at the forecast's cloud base.
+- **The map no longer flies out to space on a short move**: moving the pin nearby, or going
+  from the viewpoint to the map, sent the camera up to 2 000 km and back in a second or three.
+  A short move now stays near the ground; only a flight across an ocean climbs.
 - **The night map no longer goes black under a bright Moon**: on nights when the Moon was bright
   enough to cast shadows, the map view was multiplied by the moonlight and went all but black -
   the brighter the Moon, the darker the map. It stays the dimmed chart it is on other nights,

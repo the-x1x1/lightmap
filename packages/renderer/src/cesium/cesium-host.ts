@@ -38,6 +38,7 @@ import {
   eyeDistanceM,
   eyeGlideDurationMs,
   eyeLift,
+  flightCeilingM,
   glideEyeAt,
   orbitSightLine,
   steeperPitches,
@@ -1656,11 +1657,13 @@ export class CesiumSceneHost implements SceneHost {
         cam.cancelFlight();
         cam.lookAtTransform(C.Matrix4.IDENTITY);
         const sphere = new C.BoundingSphere(target, Math.max(1, c.rangeM * 0.15));
-        // Cesium sizes the flight to the distance (a hop along a coast is quick, orbit to a
-        // street several seconds), which gives the terrain time to load on the way in.
+        // Cesium times the flight itself (three seconds at most), which gives the terrain time
+        // to load on the way in, and arcs it by its length; a ceiling only for a hop long
+        // enough to need one (flightCeilingM says what a ceiling does to a short one).
+        const ceilingM = flightCeilingM(C.Cartesian3.distance(cam.positionWC, target), c.rangeM);
         cam.flyToBoundingSphere(sphere, {
           offset,
-          maximumHeight: Math.max(c.rangeM * 4, 2e6),
+          ...(ceilingM === undefined ? {} : { maximumHeight: ceilingM }),
           ...(c.fly ? {} : { duration: 1 }),
         });
       } else {

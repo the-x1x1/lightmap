@@ -1719,7 +1719,41 @@
           });
           controller.apply(scene(15, 'clear', null));
           controller.setOrbit({ headingDeg: 20, pitchDeg: -28, rangeM: 520 });
-          await wait(4000);
+          // From the street to the map over it is a flight of a few hundred metres, and it
+          // stays that near the ground: stepped through here by the tweens' own clock, so it
+          // is measured the same on any machine. (Given a ceiling of 2 000 km, as every flight
+          // once was, Cesium climbs to it: the map flashed out to space and back.)
+          {
+            const cam = host.scene.camera;
+            let flight;
+            for (let i = 0; i < 80 && !(flight = cam._currentFlight); i++) await wait(50);
+            if (!flight) window.__smoke.errors.push('hop: no flight to the map began');
+            else {
+              const t0 = Cesium.getTimestamp() / 1000;
+              const durationS = Number(flight.duration) || 3;
+              const startM = cam.positionCartographic.height;
+              let peakM = startM;
+              host.scene.tweens.update(t0);
+              for (const f of [0.1, 0.25, 0.4, 0.5, 0.6, 0.75, 0.9]) {
+                host.scene.tweens.update(t0 + f * durationS);
+                peakM = Math.max(peakM, cam.positionCartographic.height);
+              }
+              host.scene.tweens.update(t0 + durationS + 0.5);
+              const endM = cam.positionCartographic.height;
+              window.__smoke.hop = {
+                durationS,
+                startM: Math.round(startM),
+                peakM: Math.round(peakM),
+                endM: Math.round(endM),
+              };
+              log('hop: ' + JSON.stringify(window.__smoke.hop));
+              if (!(peakM < 5000))
+                window.__smoke.errors.push(
+                  'hop: a flight of a few hundred metres climbed to ' + Math.round(peakM) + ' m',
+                );
+            }
+          }
+          await wait(1500);
           window.__smoke.shot = 'town-above';
           await new Promise((r) => {
             window.__takeShot = r;

@@ -127,6 +127,21 @@ export function steeperPitches(pitchDeg: number): number[] {
   return out;
 }
 
+/**
+ * The ceiling to give a camera flight to an orbit view, metres above the ellipsoid, or undefined
+ * for none. Cesium does not treat a flight's `maximumHeight` as a limit: given one, the flight
+ * climbs to it, however short the hop (a move of 500 m with a 2 000 km ceiling passed through
+ * 2 000 km: the map flashed out to space and back on every nearby pin and every change of mode).
+ * Left alone, Cesium arcs a flight to a height in proportion to its length - under the length
+ * itself at any screen up to 2.8 times as wide as tall - so only a hop longer than the ceiling
+ * can pass it, and only such a hop is given one: the higher of 2 000 km and four ranges, as
+ * before, which keeps a flight half way round the world from backing off to a dot.
+ */
+export function flightCeilingM(hopM: number, rangeM: number): number | undefined {
+  const ceilingM = Math.max(rangeM * 4, 2e6);
+  return hopM > ceilingM ? ceilingM : undefined;
+}
+
 /** Where a viewpoint's eye stands: degrees and metres above the ellipsoid. */
 export interface EyePosition {
   longitude: number;

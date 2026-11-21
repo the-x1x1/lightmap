@@ -48,6 +48,12 @@ not to draw one) and read every roof within 1.5 m of its mapped height through
 `sampleSurfaceHeights` (`town-street`, `town-street-dusk`, `town-above`). `SMOKE_ONLY=town` starts
 the run at this stage.
 
+**A short flight stays near the ground.** From the street to the map over the town the camera
+flies a few hundred metres. The flight is stepped through by its tweens' own clock, so it is
+measured the same on any machine, and must stay under 5 km (`hop` in the result): given a
+ceiling, Cesium climbs to it, and with the 2 000 km every flight once carried this one went by
+way of space.
+
 **On a real GPU, without Playwright.** Opened as `index.html?drive=self`, the page drives
 itself: it captures each shot from its own canvas and posts it, and at the end its result (the
 steps, errors, the console's complaints, the GPU's name and the run's length), to the server it
