@@ -179,6 +179,19 @@ describe('buildSceneState — Kailua Beach, 31 May 2026, 12:30 (acceptance case)
     expect(s.atmosphere.summary).toBe('Forecast loading — scenario: Partly Cloudy');
   });
 
+  it('says recent conditions are loading, not missing, before they arrive (V&V)', () => {
+    // Seen live: "Observed conditions not loaded - scenario: Clear" for the seconds before the
+    // archive answered with an overcast.
+    const at = localSelectionToUtc(
+      { year: 2026, month: 5, day: 31 },
+      12 * 60 + 30,
+      kailua.timeZone,
+    );
+    const s = buildSceneState(inputs({ now: new Date(at.getTime() + 6 * 3_600_000) }));
+    expect(s.atmosphere.mode).toBe('SCENARIO');
+    expect(s.atmosphere.summary).toBe('Recent conditions loading — scenario: Partly Cloudy');
+  });
+
   it("says a date beyond the plan's window is that, not unloaded weather", () => {
     const s = buildSceneState(
       inputs({

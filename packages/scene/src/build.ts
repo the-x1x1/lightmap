@@ -330,7 +330,10 @@ export function deriveAtmosphere(
         : decision.mode === 'PAST'
           ? 'Historical weather not loaded'
           : decision.mode === 'RECENT_PAST'
-            ? 'Observed conditions not loaded'
+            ? // Always fetched: with nothing back yet, it is on its way (the forecast's case below).
+              inputs.weather.frames.length === 0
+              ? 'Recent conditions loading'
+              : 'No observed conditions for this hour'
             : decision.mode === 'SCENARIO' && caps
               ? 'Forecast unavailable this far ahead'
               : decision.fetchWorthwhile && inputs.weather.frames.length === 0
