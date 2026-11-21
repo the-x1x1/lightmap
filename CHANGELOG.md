@@ -14,6 +14,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   them - a mackerel sky, lit warm from the side at sunset - instead of a torn grey sheet.
 - **Peaks in cloud**: ground that stands above the cloud base disappears into the low cloud -
   wholly under an overcast, through the gaps under broken cloud - at the forecast's cloud base.
+- **Trees and buildings fade into fog with the ground**: Cesium fogs the terrain it draws but
+  not the town's trees and buildings, so in thick weather they stood out sharper than the
+  ground beside them. They now take the same fog as the ground does.
 - **Comparing a sky keeps the ground of the date**: picking "Clear" or another scenario over a
   forecast dropped what lay on the ground with the forecast - Yosemite's 14 cm of snow went bare,
   and the wet ground after rain dried. The sky now changes and the snow and wetness stay.

@@ -140,6 +140,35 @@ export function facadeKind(heightM: number, h: number): FacadeKind {
  * light but something hides still darkens as the ground's shadows do.
  * ASCII only (some drivers reject anything else in shader source).
  */
+/**
+ * The globe's fog on a tree or a building. Cesium fogs the ground it draws (1 - exp(-(density *
+ * distance)^2), toward the ground atmosphere's colour) but not primitives; so in a drizzle, with
+ * the visibility at a kilometre or two, the hillside behind a town went into the grey while its
+ * woods stood out on nothing - dark balls hung in the sky (V&V: Tromsø, November). Each fragment
+ * takes the same fog, by the same uniforms, as the ground beside it, as Cesium's own models do
+ * (its FogStage): the ground atmosphere's colour at the fragment, shifted as the globe's is,
+ * darkened by the light's height, tonemapped as without HDR. The globe's fog is computed before
+ * its shadow is laid, and so is this. ASCII only.
+ */
+export const PRIMITIVE_FOG_GLSL = `
+    {
+        vec3 fogLight = czm_getDynamicAtmosphereLightDirection(positionWC, czm_atmosphereDynamicLighting);
+        vec3 rayleighColor;
+        vec3 mieColor;
+        float fogOpacity;
+        czm_computeGroundAtmosphereScattering(positionWC, fogLight, rayleighColor, mieColor, fogOpacity);
+        rayleighColor = czm_applyHSBShift(rayleighColor, czm_atmosphereHsbShift, true);
+        mieColor = czm_applyHSBShift(mieColor, czm_atmosphereHsbShift, true);
+        vec3 fogColor = czm_computeAtmosphereColor(positionWC, fogLight, rayleighColor, mieColor, fogOpacity).rgb;
+        if (czm_atmosphereDynamicLighting != 0.0) {
+            fogColor *= clamp(dot(normalize(czm_viewerPositionWC), fogLight), czm_fogMinimumBrightness, 1.0);
+        }
+#ifndef HDR
+        fogColor = czm_inverseGamma(czm_pbrNeutralTonemapping(fogColor));
+#endif
+        outRgb = czm_fog(length(v_positionEC), outRgb, fogColor, czm_fogVisualDensityScalar);
+    }`;
+
 export function litInstanceShader(
   shadowD = 1,
   shadowMaxM = 0,
@@ -213,10 +242,10 @@ void main()
     float diffuseSun = 0.55 * (1.0 - ${k}) * sunUp * (0.5 + 0.5 * sky);
     vec3 light = czm_lightColor * (0.55 * ${k} * sun + (0.16 + 0.14 * sky) * ${lift} + bounce + diffuseSun);
     vec3 lit = color.rgb * light;
-    // No haze of their own: the grade's aerial perspective takes every pixel by its depth,
-    // these primitives' too (a haze here as well put a far skyline in twice the haze of the
-    // hills behind it).
-    vec3 outRgb = lit;${roofs ? windowsCode(cityLights, lift, k) : ''}
+    // The grade's aerial perspective takes every pixel by its depth, these primitives' too; and
+    // the globe's own fog, which the ground under them is drawn through, is laid on them here
+    // as Cesium lays it on the ground (PRIMITIVE_FOG_GLSL) - not a haze of their own.
+    vec3 outRgb = lit;${roofs ? windowsCode(cityLights, lift, k) : ''}${PRIMITIVE_FOG_GLSL}
     // Cesium's factor for an unoccluded fragment: its normal shading over the first
     // PRIMITIVE_NORMAL_SHADING_SMOOTH of n.l, floored at the darkness; none beyond the shadow
     // distance.

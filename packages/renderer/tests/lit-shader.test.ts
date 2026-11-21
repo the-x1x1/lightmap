@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   FACADE_ALPHA,
   LIT_INSTANCE_FS,
+  PRIMITIVE_FOG_GLSL,
   PRIMITIVE_NORMAL_SHADING_SMOOTH,
   ROOF_ALPHA,
   facadeKind,
@@ -289,5 +290,20 @@ describe('buildings and trees shader', () => {
     expect(litInstanceShader(0.2, 8000, true, 1, 1, 0, 0, 1)).toContain('color.rgb *= 0.750;');
     expect(treeFragmentShader(1, 0, 0.45, 20000, 1, 1, 1, 0, 0.4)).toContain('color.rgb *= 0.900;');
     expect(litInstanceShader(0.2, 8000, true)).not.toContain('color.rgb *= 0.');
+  });
+
+  it('lays the globe fog on buildings and trees, before the shadow is divided out', () => {
+    for (const src of [
+      LIT_INSTANCE_FS,
+      litInstanceShader(0.2, 8000, true, 1, 1, 0.6),
+      treeFragmentShader(0.3, 0.7, 0.45, 20000),
+    ]) {
+      const fog = src.indexOf(PRIMITIVE_FOG_GLSL);
+      expect(fog).toBeGreaterThan(-1);
+      expect(src.indexOf('outRgb /= expected')).toBeGreaterThan(fog);
+    }
+    expect(PRIMITIVE_FOG_GLSL).toContain(
+      'czm_fog(length(v_positionEC), outRgb, fogColor, czm_fogVisualDensityScalar)',
+    );
   });
 });
