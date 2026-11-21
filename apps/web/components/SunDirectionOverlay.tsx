@@ -138,7 +138,7 @@ export function SunDirectionOverlay({ scene, compact }: { scene: SceneState; com
     <figure
       className={
         compact
-          ? 'pointer-events-none absolute right-3 top-3 z-10'
+          ? 'lm-below-top-bar pointer-events-none absolute right-3 z-10'
           : 'pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-4 p-6'
       }
       aria-label="Sun direction"

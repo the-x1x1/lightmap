@@ -115,9 +115,17 @@ main {
     font-size: 1rem !important;
   }
 }
+/* Just under the top bar (its padding, its 44 px buttons, a gap): the sun compass sat on the
+   location and account buttons, at every width. */
+.lm-below-top-bar {
+  top: calc(0.75rem + 44px + 0.5rem);
+}
 @media (max-width: 1023px) {
   .lm-safe-top {
     padding-top: max(1.5rem, calc(env(safe-area-inset-top, 0px) + 0.5rem));
+  }
+  .lm-below-top-bar {
+    top: calc(max(1.5rem, calc(env(safe-area-inset-top, 0px) + 0.5rem)) + 44px + 0.5rem);
   }
   .lm-safe-bottom {
     padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));

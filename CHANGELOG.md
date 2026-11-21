@@ -14,6 +14,8 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   them - a mackerel sky, lit warm from the side at sunset - instead of a torn grey sheet.
 - **Peaks in cloud**: ground that stands above the cloud base disappears into the low cloud -
   wholly under an overcast, through the gaps under broken cloud - at the forecast's cloud base.
+- **The sun compass clears the top bar**: it was drawn under the location and account buttons
+  at every screen width (on a phone, half of it). It now sits just below them.
 - **Recent weather says it is loading**: for the seconds before the weather archive answered,
   the details read "Observed conditions not loaded — scenario: Clear", as if the data were
   missing and the sky clear. They now read "Recent conditions loading", as the forecast does.
