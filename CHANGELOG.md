@@ -14,6 +14,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   them - a mackerel sky, lit warm from the side at sunset - instead of a torn grey sheet.
 - **Peaks in cloud**: ground that stands above the cloud base disappears into the low cloud -
   wholly under an overcast, through the gaps under broken cloud - at the forecast's cloud base.
+- **Comparing a sky keeps the ground of the date**: picking "Clear" or another scenario over a
+  forecast dropped what lay on the ground with the forecast - Yosemite's 14 cm of snow went bare,
+  and the wet ground after rain dried. The sky now changes and the snow and wetness stay.
 - **A rainbow only as sure as the showers**: any hour with a 60 % chance of showers drew a
   full-strength rainbow whenever the Sun was out - on a windward coast, most evenings. The bow
   now follows the odds (none at 30 %, full when certain or when rain is measured), and under a

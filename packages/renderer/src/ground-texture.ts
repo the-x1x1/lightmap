@@ -221,7 +221,11 @@ export function groundTextureFor(
   const day = dayOfYearUtc(scene.utc);
   // Inside the forecast horizon the frame's snow depth decides (a thaw is bare, a snowfall
   // white), so the far imagery agrees with the painted ground.
-  const depth = scene.atmosphere.frame?.snowDepth;
+  // The forecast's snow, kept when a sky scenario is compared (groundSnowDepthM).
+  const depth =
+    scene.atmosphere.groundSnowDepthM !== undefined
+      ? scene.atmosphere.groundSnowDepthM
+      : scene.atmosphere.frame?.snowDepth;
   const snowCover =
     depth === null || depth === undefined
       ? lowlandSnowCover(lat, scene.location.point.longitude, day, context.groundHeightM ?? 0)
@@ -232,7 +236,7 @@ export function groundTextureFor(
     snowlineM: Math.round(
       snowlineWithForecast(
         snowlineWithLowlandSnow(snowlineM(lat, day), snowCover, context.groundHeightM),
-        scene.atmosphere.frame?.snowDepth,
+        depth,
         context.groundHeightM,
       ),
     ),

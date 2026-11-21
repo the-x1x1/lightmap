@@ -79,9 +79,15 @@ export interface AtmosphereState {
   frame: WeatherFrame | null;
   /**
    * How wet the ground still is from the forecast's recent rain, 0..1 (`groundWetnessAt`);
-   * absent when scenario-driven.
+   * absent without a forecast hour (kept when a scenario is compared against one).
    */
   groundWetness?: number;
+  /**
+   * The forecast's snow on the ground at this hour, metres (null when the hour gives none);
+   * absent without a forecast hour, and kept when a scenario is compared: the ground's facts
+   * stay with the date whatever sky is chosen.
+   */
+  groundSnowDepthM?: number | null;
   parameters: AtmosphereParameters;
   /** Direct sunlight colour temperature, Kelvin, from solar elevation. */
   colorTemperatureK: number;

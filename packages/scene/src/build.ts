@@ -290,6 +290,23 @@ export function deriveAtmosphere(
       decision.mode === 'EXTENDED_FORECAST' ||
       decision.mode === 'RECENT_PAST');
 
+  // What lies on the ground at this hour by the forecast - recent rain's wetness, snow - is a
+  // fact of the date whatever sky is chosen to compare: picking "Clear" over a snowy morning
+  // changes the sky, it does not melt the snow (it did: the ground fell back to the season's
+  // snowline and Yosemite's 14 cm went bare). Kept for a compared scenario too.
+  const groundFacts =
+    frame === null
+      ? {}
+      : {
+          groundWetness: groundWetnessAt(
+            inputs.weather.history?.length
+              ? [...inputs.weather.history, ...inputs.weather.frames]
+              : inputs.weather.frames,
+            inputs.utc,
+          ),
+          groundSnowDepthM: frame.snowDepth ?? null,
+        };
+
   if (useForecast) {
     const scenario = scenarioForConditions(frame.cloudCoverTotal, frame);
     const label =
@@ -304,12 +321,7 @@ export function deriveAtmosphere(
       mode: decision.mode,
       scenario,
       frame,
-      groundWetness: groundWetnessAt(
-        inputs.weather.history?.length
-          ? [...inputs.weather.history, ...inputs.weather.frames]
-          : inputs.weather.frames,
-        inputs.utc,
-      ),
+      ...groundFacts,
       parameters: parametersForForecast(frame),
       colorTemperatureK: kelvin,
       warmth,
@@ -346,6 +358,7 @@ export function deriveAtmosphere(
     mode: 'SCENARIO',
     scenario: s.id,
     frame: null,
+    ...groundFacts,
     parameters: s.parameters,
     colorTemperatureK: kelvin,
     warmth,

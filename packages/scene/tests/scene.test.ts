@@ -161,6 +161,42 @@ describe('buildSceneState — Kailua Beach, 31 May 2026, 12:30 (acceptance case)
     expect(s.confidence.weather).toBe('SCENARIO');
   });
 
+  it('keeps the ground of the date when a sky is compared: its snow and its wetness (V&V)', () => {
+    // Seen live at Yosemite: the forecast's 14 cm of snow, gone the moment "Clear" was picked.
+    const at = localSelectionToUtc(
+      { year: 2026, month: 5, day: 31 },
+      12 * 60 + 30,
+      kailua.timeZone,
+    );
+    const frame = (hoursFrom: number, o: Record<string, number>) => ({
+      timestamp: new Date(at.getTime() + hoursFrom * 3_600_000).toISOString(),
+      cloudCoverTotal: 100,
+      ...o,
+    });
+    const frames = [
+      frame(-3, { snowDepth: 0.14, precipitationAmount: 3 }),
+      frame(0, { snowDepth: 0.14 }),
+      frame(1, { snowDepth: 0.14 }),
+    ] as never;
+    const weather = { capabilities: OPEN_METEO_CAPABILITIES, frames, providerFailed: false };
+    const now = new Date(at.getTime() - 12 * 3_600_000);
+    const forecast = buildSceneState(inputs({ now, weather }));
+    const compared = buildSceneState(
+      inputs({ now, weather, scenario: 'clear', forceScenario: true }),
+    );
+    expect(forecast.atmosphere.groundSnowDepthM).toBeCloseTo(0.14, 6);
+    expect(compared.atmosphere.mode).toBe('SCENARIO');
+    expect(compared.atmosphere.scenario).toBe('clear');
+    expect(compared.atmosphere.groundSnowDepthM).toBeCloseTo(0.14, 6);
+    expect(compared.atmosphere.groundWetness).toBe(forecast.atmosphere.groundWetness);
+    // With no forecast hour at all (the provider down), there are no ground facts to keep.
+    const down = buildSceneState(
+      inputs({ now, weather: { ...weather, providerFailed: true }, scenario: 'clear' }),
+    );
+    expect(down.atmosphere.groundSnowDepthM).toBeUndefined();
+    expect(down.atmosphere.groundWetness).toBeUndefined();
+  });
+
   it('falls back to the scenario when the provider fails, without pretending', () => {
     const s = buildSceneState(
       inputs({

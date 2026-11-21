@@ -217,6 +217,20 @@ describe('groundTextureFor', () => {
     expect(groundTextureFor(storm)!.wet).toBeLessThanOrEqual(1);
   });
 
+  it('keeps the forecast’s snow under a compared sky', () => {
+    const base = sceneAt(37.7, new Date('2026-11-21T19:30:00Z'));
+    const compared = {
+      ...base,
+      atmosphere: { ...base.atmosphere, frame: null, groundSnowDepthM: 0.14 },
+    };
+    const bare = { ...base, atmosphere: { ...base.atmosphere, frame: null, groundSnowDepthM: 0 } };
+    const ctx = { brightness: 1, seaLevelM: 0, groundHeightM: 1340 };
+    expect(groundTextureFor(compared, undefined, ctx)!.snowCover).toBe(1);
+    expect(groundTextureFor(compared, undefined, ctx)!.snowlineM).toBeLessThan(1340);
+    expect(groundTextureFor(bare, undefined, ctx)!.snowCover).toBe(0);
+    expect(groundTextureFor(bare, undefined, ctx)!.snowlineM).toBeGreaterThan(1340);
+  });
+
   it('dew on a calm, clear, humid morning above freezing, dried by a climbing Sun', () => {
     const f = (o = {}) => ({
       temperature: 14,
