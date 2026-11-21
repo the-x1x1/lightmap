@@ -61,7 +61,9 @@ steps, errors, the console's complaints, the GPU's name and the run's length), t
 came from (`POST /__shot/<name>`, `POST /__result/result`). The local runner
 (`tools/local-runner`) serves the page that way and keeps what it posts, so the whole run can be
 made in any browser on the machine's own graphics card - where the shaders meet the driver they
-will ship to, which SwiftShader cannot show.
+will ship to, which SwiftShader cannot show. A tab that is not in front gets no animation frames;
+in this mode the page takes them from a timer when the browser gives none, so the run goes on
+in the background.
 
 `www/index.html` uses an import map so the emitted packages and Cesium load as native ES modules;
 nothing is bundled. The `cesium` meta-package is a **devDependency only**, used for its prebuilt

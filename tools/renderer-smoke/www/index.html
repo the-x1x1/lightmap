@@ -49,6 +49,22 @@
       window.__smoke = { errors: [], steps: [], done: false };
       const selfDriven = new URLSearchParams(location.search).get('drive') === 'self';
       if (selfDriven) {
+        // A tab that is not being shown gets no animation frames, and Cesium draws on them:
+        // each frame asked for is given by the browser or, failing that within 40 ms, by a
+        // timer - so the run goes on behind other tabs and windows, at the display's own rate
+        // when it is in front.
+        const native = window.requestAnimationFrame.bind(window);
+        window.requestAnimationFrame = (callback) => {
+          let done = false;
+          const once = (t) => {
+            if (done) return;
+            done = true;
+            callback(t);
+          };
+          native(once);
+          setTimeout(() => once(performance.now()), 40);
+          return 0;
+        };
         // What a runner would have read from the browser: the console's complaints.
         window.__smoke.shots = [];
         window.__smoke.console = [];
