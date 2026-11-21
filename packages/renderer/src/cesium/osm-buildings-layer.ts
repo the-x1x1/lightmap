@@ -522,6 +522,36 @@ const BROADLEAF_ALPHA = 0.99;
 
 /** Trees described per frame (their geometry is built in Cesium's workers). */
 const TREE_SLICE = 1500;
+/** Trees per tile whose ground is checked against the terrain drawn (`groundCaughtUp`). */
+const TREE_GROUND_SAMPLES = 12;
+/** The longest a tile's trees wait for the terrain drawn under them to catch up. */
+const TREE_GROUND_WAIT_MS = 30_000;
+
+/** A tree's ground (from the finest terrain), the terrain drawn there now, and its distance. */
+export interface TreeGroundSample {
+  groundM: number;
+  drawnM: number | undefined;
+  distanceM: number;
+}
+
+/**
+ * Whether the terrain drawn has caught up with the ground a tile's trees stand on: three in
+ * four of the sampled trees have terrain drawn under them within 3 m, plus 4 m a kilometre
+ * (a far tile is drawn at a coarser level for good, and a few metres there do not show).
+ * Each tree stands on the terrain's finest tiles (sampleTerrainMostDetailed); on arrival the
+ * globe draws coarse ones, which over a hilly place can lie tens of metres under a slope, and
+ * a wood stood out over the town as dark crowns hung in the sky until they refined (V&V:
+ * Tromsø on arrival).
+ */
+export function groundCaughtUp(samples: readonly TreeGroundSample[]): boolean {
+  if (samples.length === 0) return true;
+  let close = 0;
+  for (const t of samples) {
+    if (t.drawnM === undefined) continue;
+    if (Math.abs(t.drawnM - t.groundM) <= 3 + 0.004 * t.distanceM) close++;
+  }
+  return close >= 0.75 * samples.length;
+}
 
 interface TileState {
   key: string;
@@ -698,6 +728,15 @@ export class OsmBuildingsLayer {
   /** Rain-wet surfaces, 0..1 in tenths (`setWet`). */
   private wet = 0;
   private readonly buildingPrims = new Set<Cesium.Primitive>();
+  /**
+   * Tree primitives hidden until the terrain drawn under them has caught up (`groundCaughtUp`):
+   * a few of their trees' positions and grounds, and when the wait began.
+   */
+  private readonly treesWaiting = new Map<
+    Cesium.Primitive,
+    { at: Cesium.Cartographic[]; groundM: number[]; since: number }
+  >();
+  private treeWaitTimer: ReturnType<typeof setTimeout> | null = null;
   /** Tiles' merged building primitives still being built in the workers (hidden). */
   private readonly merging = new Set<Cesium.Primitive>();
   private readonly removeGuard: () => void;
@@ -728,7 +767,43 @@ export class OsmBuildingsLayer {
           this.merging.delete(p);
           if (!p.isDestroyed()) this.collection.remove(p);
         }
+      this.releaseTrees();
     });
+  }
+
+  /**
+   * Shows each waiting tile's trees once the terrain drawn under them has caught up, or after
+   * TREE_GROUND_WAIT_MS. While any wait, the scene is asked to draw again a quarter-second on
+   * (it draws on demand, and the check runs as it draws).
+   */
+  private releaseTrees(): void {
+    if (this.treesWaiting.size === 0) return;
+    const C = this.C;
+    const globe = this.scene.globe as Cesium.Globe | undefined;
+    const eye = this.scene.camera.positionWC;
+    const now = performance.now();
+    for (const [prim, wait] of this.treesWaiting) {
+      if (prim.isDestroyed() || !this.treePrims.has(prim)) {
+        this.treesWaiting.delete(prim);
+        continue;
+      }
+      const samples = wait.at.map((c, i) => ({
+        groundM: wait.groundM[i]!,
+        drawnM: globe?.getHeight(c),
+        distanceM: C.Cartesian3.distance(eye, C.Cartographic.toCartesian(c)),
+      }));
+      if (!globe || groundCaughtUp(samples) || now - wait.since > TREE_GROUND_WAIT_MS) {
+        this.treesWaiting.delete(prim);
+        prim.show = !this.lean;
+        this.scene.requestRender();
+      }
+    }
+    if (this.treesWaiting.size > 0 && this.treeWaitTimer === null) {
+      this.treeWaitTimer = setTimeout(() => {
+        this.treeWaitTimer = null;
+        if (!this.destroyed) this.scene.requestRender();
+      }, 250);
+    }
   }
 
   /** Whether a picked primitive is one of these buildings. */
@@ -751,7 +826,7 @@ export class OsmBuildingsLayer {
   setLean(lean: boolean): void {
     if (lean === this.lean) return;
     this.lean = lean;
-    for (const p of this.treePrims) p.show = !lean;
+    for (const p of this.treePrims) p.show = !lean && !this.treesWaiting.has(p);
     if (lean) for (const [key, state] of this.tiles) if (!state.near) this.drop(key, state);
     this.lastFocus = null; // the next update reconsiders the rings
     this.scene.requestRender();
@@ -1188,8 +1263,9 @@ export class OsmBuildingsLayer {
    */
   private async loadTrees(state: TileState, trees: readonly TreeSpot[]): Promise<void> {
     try {
-      const grounds = await this.groundHeights(trees.map((t) => [t.lon, t.lat]));
+      const sampled = await this.groundHeightsOrNull(trees.map((t) => [t.lon, t.lat]));
       if (state.cancelled || this.destroyed) return;
+      const grounds = sampled.map((h) => h ?? 0);
       const all: Cesium.GeometryInstance[] = [];
       const records: { id: number; base: Cesium.Cartesian3 }[] = [];
       for (let i = 0; i < trees.length; i += TREE_SLICE) {
@@ -1204,7 +1280,23 @@ export class OsmBuildingsLayer {
       }
       if (all.length === 0) return;
       const whole = await this.mergeSlices(state, [], all, true);
-      if (whole) for (const r of records) state.trees.push({ prim: whole, ...r });
+      if (!whole) return;
+      for (const r of records) state.trees.push({ prim: whole, ...r });
+      // A few of the trees, spread through the tile, to check the terrain drawn against.
+      const step = Math.max(1, Math.floor(trees.length / TREE_GROUND_SAMPLES));
+      const at: Cesium.Cartographic[] = [];
+      const groundM: number[] = [];
+      for (let i = 0; i < trees.length && at.length < TREE_GROUND_SAMPLES; i += step) {
+        const g = sampled[i];
+        if (g === null || g === undefined) continue;
+        at.push(this.C.Cartographic.fromDegrees(trees[i]!.lon, trees[i]!.lat));
+        groundM.push(g);
+      }
+      if (at.length > 0) {
+        whole.show = false;
+        this.treesWaiting.set(whole, { at, groundM, since: performance.now() });
+        this.releaseTrees();
+      }
     } catch (error) {
       this.report(error);
     }
@@ -1636,6 +1728,8 @@ export class OsmBuildingsLayer {
     if (this.destroyed) return;
     this.destroyed = true;
     this.removeGuard();
+    if (this.treeWaitTimer !== null) clearTimeout(this.treeWaitTimer);
+    this.treesWaiting.clear();
     this.merging.clear();
     for (const s of this.tiles.values()) s.cancelled = true;
     this.tiles.clear();
