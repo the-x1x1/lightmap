@@ -890,7 +890,10 @@ void main() {
   // secondary from 50.4 (red, inside) to 53.4 (violet, outside), the sky brighter inside the
   // primary and darker between the two (Alexander's band). Its colours washed by the Sun's
   // half-degree disc. Over the sky (where a shower's curtain stands against it), opposite a
-  // Sun under 42 deg.
+  // Sun under 42 deg. A shower stands under its cloud: under a mostly clear sky the showers
+  // are a few scattered curtains, and the bow shows as its lower legs against them, its top
+  // gone into the clear blue (the whole arch drawn across a clear sky looked painted on); the
+  // more of the sky is cloud, the more of the arch has rain behind it.
   if (isSky && u_rainbow > 0.0) {
     float th = degrees(acos(clamp(-dot(rayEC, u_sunDirEC), -1.0, 1.0)));
     float t1 = (th - 40.4) / 2.1;
@@ -902,7 +905,10 @@ void main() {
     vec3 bow = mix(h1, vec3(1.0), 0.3) * b1 * 0.16 + mix(h2, vec3(1.0), 0.4) * b2 * 0.06;
     float inside = 1.0 - smoothstep(39.5, 40.8, th);
     float alexander = smoothstep(42.4, 43.4, th) * (1.0 - smoothstep(49.6, 50.6, th));
-    color = color * (1.0 + u_rainbow * (0.07 * inside - 0.06 * alexander)) + bow * u_rainbow;
+    float bowEl = degrees(asin(clamp(dot(rayEC, u_eyeUpEC), -1.0, 1.0)));
+    float rainBehind = clamp(u_cloudCoverage * 1.4, 0.0, 1.0);
+    float legs = u_rainbow * (1.0 - smoothstep(8.0, 30.0, bowEl) * (1.0 - rainBehind));
+    color = color * (1.0 + legs * (0.07 * inside - 0.06 * alexander)) + bow * legs;
   }
 
   // Global grade.

@@ -22,6 +22,7 @@ import {
   mistFor,
   snowShareFor,
   cloudBaseKmFor,
+  rainbowOdds,
 } from '../src/lighting.ts';
 import { azElFromEcefToward, type Vec3 } from '../src/sun-vector.ts';
 
@@ -83,6 +84,19 @@ describe('lightingFromScene', () => {
     // No rain; or rain with no Sun through it.
     expect(lightingFromScene(scene(17.5, 'clear')).grade.rainbow).toBe(0);
     expect(lightingFromScene(scene(17.5, 'storm')).grade.rainbow).toBe(0);
+  });
+
+  it('a rainbow as sure as the showers behind it', () => {
+    // A chosen scenario is taken as given.
+    expect(rainbowOdds(null)).toBe(1);
+    // A forecast hour: nothing at a 30 % chance, full when certain - 82 % is most of it.
+    expect(rainbowOdds({ precipitationProbability: 30 })).toBe(0);
+    expect(rainbowOdds({ precipitationProbability: 60 })).toBeCloseTo(0.429, 3);
+    expect(rainbowOdds({ precipitationProbability: 82 })).toBeCloseTo(0.743, 3);
+    expect(rainbowOdds({ precipitationProbability: 100 })).toBe(1);
+    // Or rain measured in the hour, whatever the stated chance.
+    expect(rainbowOdds({ precipitationProbability: 20, precipitationAmount: 1.5 })).toBe(1);
+    expect(rainbowOdds({ precipitationProbability: null, precipitationAmount: 0.2 })).toBe(0);
   });
 
   it('the low deck sits at the cloud base given by the dew point', () => {

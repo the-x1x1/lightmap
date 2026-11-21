@@ -14,6 +14,10 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   them - a mackerel sky, lit warm from the side at sunset - instead of a torn grey sheet.
 - **Peaks in cloud**: ground that stands above the cloud base disappears into the low cloud -
   wholly under an overcast, through the gaps under broken cloud - at the forecast's cloud base.
+- **A rainbow only as sure as the showers**: any hour with a 60 % chance of showers drew a
+  full-strength rainbow whenever the Sun was out - on a windward coast, most evenings. The bow
+  now follows the odds (none at 30 %, full when certain or when rain is measured), and under a
+  mostly clear sky only its lower legs show against the scattered showers.
 - **The forecast comes back after a network drop**: if the weather service failed once, the
   planner kept "Live forecast unavailable" and a scenario sky until the place or date changed.
   It now asks again every minute until the forecast arrives.

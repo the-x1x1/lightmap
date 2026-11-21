@@ -109,7 +109,7 @@ export interface LightingParameters {
     /**
      * A rainbow's strength, 0..1: showers falling (precipitation 0.05-0.15) while the Sun's beam
      * gets through (transmittance 0.25-0.55) and the Sun is up but under 42 deg, below which the
-     * bow stands above the horizon opposite it.
+     * bow stands above the horizon opposite it - times how sure the showers are (`rainbowOdds`).
      */
     rainbow: number;
     /**
@@ -192,6 +192,25 @@ export function cloudBaseKmFor(
   const td = frame?.dewPoint;
   if (typeof t !== 'number' || typeof td !== 'number' || !Number.isFinite(t - td)) return 1.5;
   return Math.round(Math.min(2.5, Math.max(0.3, 0.125 * (t - td))) * 100) / 100;
+}
+
+/**
+ * How sure a rainbow is, 0..1, from the forecast hour behind it. Any hour with a 60 % chance of
+ * showers reads as showers (the ground goes wet), and the bow came out at full strength with
+ * it - on the windward side of an island that is most sunny evenings, a rainbow promised every
+ * time. The bow now goes with the odds: from nothing at a 30 % chance to full at certain, or
+ * with a measurable fall (half a millimetre in the hour, full at 1.5 mm). A scenario chosen by
+ * hand (no frame) is taken as given.
+ */
+export function rainbowOdds(
+  frame: { precipitationProbability?: number | null; precipitationAmount?: number | null } | null,
+): number {
+  if (!frame) return 1;
+  const p = frame.precipitationProbability;
+  const byChance = typeof p === 'number' ? Math.min(1, Math.max(0, (p - 30) / 70)) : 0;
+  const amount = frame.precipitationAmount ?? 0;
+  const byAmount = Math.min(1, Math.max(0, (amount - 0.5) / 1.0));
+  return Math.round(Math.max(byChance, byAmount) * 1000) / 1000;
 }
 
 /** The WMO weather codes for snow: snowfall slight to heavy, snow grains, snow showers. */
@@ -541,6 +560,7 @@ export function lightingFromScene(s: SceneState): LightingParameters {
           : 0,
       rainbow:
         (1 - snowShare) *
+        rainbowOdds(atmosphere.frame ?? null) *
         smooth(0.05, 0.15, p.precipitation) *
         smooth(0.25, 0.55, p.sunTransmittance) *
         (1 - smooth(38, 42, el)) *
