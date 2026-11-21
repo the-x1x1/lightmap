@@ -34,12 +34,20 @@ which checks), `results.json` (every step of every commit), `logs/` (a failing s
 its last 120 lines as `.tail.txt`), `harness/<tree>/` (the smoke page's shots) and `runner.log`.
 
 A file dropped in `inbox\` asks for something: `rebuild.json` (build and serve again),
-`recheck.json` (forget the results; `{"tree": "<sha>"}` for one commit), `stop.json`. Replacing
+`recheck.json` (forget the results; `{"tree": "<sha>"}` for one commit), `integration.json`
+(CI's integration job on the newest commit, below), `stop.json`. Replacing
 `runner.mjs` makes the runner start again with the new one (the window you started keeps a
 worker running and starts the new file when the old worker leaves).
 
-It needs Node 22, git, and pnpm (or corepack, which Node ships). Not run by it: the database
-integration tests and the Playwright suite, which need PostgreSQL (CI's `integration` job).
+It needs Node 22, git, and pnpm (or corepack, which Node ships). CI's `integration` job - the
+migrations, the database's integration tests and the Playwright suite - runs only when asked
+(`inbox\integration.json`) and needs Docker Desktop running: it pulls `postgres:16` (once,
+about 150 MB), runs it as the container `lightmap-runner-pg` on a free port of 127.0.0.1 and removes it
+afterwards (PostGIS, CI's image, is optional to the migrations), and runs the Playwright suite
+in this machine's Microsoft Edge rather than downloading Chromium. Results in
+`integration.json` and `logs/integration-*.log`; each failing test's page snapshot, and the
+first one's trace, in `e2e-results\`. `{"grep": "Kailua", "project": "desktop-chromium"}` in the
+request runs part of the suite.
 
 Settings, as environment variables: `LM_PATCH`, `LM_META`, `LM_SOURCE`, `LM_WORK`,
 `LM_APP_PORT`, `LM_HARNESS_PORT`, `LM_ENV_FILE`, `LM_PNPM`.

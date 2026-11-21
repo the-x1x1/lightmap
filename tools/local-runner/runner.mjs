@@ -27,7 +27,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const RUNNER_VERSION = 3;
+export const RUNNER_VERSION = 4;
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const WIN = process.platform === 'win32';
 const E = process.env;
@@ -784,6 +784,7 @@ async function checkCommit(commit, newest, total) {
   };
   mustGit(CHECK, 'checkout', '--quiet', '--force', '--detach', commit.sha);
   mustGit(CHECK, 'clean', '-fd', '--quiet');
+  clearE2eOutput();
   const inst = await install(CHECK, `check-${short}`);
   if (inst.code !== 0) {
     result.steps.push({
@@ -850,7 +851,7 @@ let lastPatch = null;
 let lastMeta = null;
 const patchChanged = () => sha256(CFG.patch) !== lastPatch || sha256(CFG.meta) !== lastMeta;
 const selfChanged = () => sha256(fileURLToPath(import.meta.url)) !== selfHash;
-/** Named requests dropped in inbox/ as <name>.json: rebuild, recheck, stop. */
+/** Named requests dropped in inbox/ as <name>.json: rebuild, recheck, integration, stop. */
 function takeRequests() {
   let names = [];
   try {
@@ -863,8 +864,14 @@ function takeRequests() {
     const body = readJson(path.join(INBOX, n), {});
     fs.rmSync(path.join(INBOX, n), { force: true });
     const cmd = String(body.cmd ?? n.replace(/\.json$/, ''));
-    if (['rebuild', 'recheck', 'stop'].includes(cmd))
-      out.push({ cmd, tree: typeof body.tree === 'string' ? body.tree : null });
+    if (['rebuild', 'recheck', 'integration', 'stop'].includes(cmd))
+      out.push({
+        cmd,
+        tree: typeof body.tree === 'string' ? body.tree : null,
+        // integration: Playwright's --grep and --project, to run part of the suite.
+        grep: typeof body.grep === 'string' ? body.grep : null,
+        project: typeof body.project === 'string' ? body.project : null,
+      });
   }
   return out;
 }
@@ -1014,6 +1021,224 @@ async function pass() {
   });
 }
 
+/**
+ * Playwright's report and results in the check tree (git ignores them, so `git clean -fd` keeps
+ * them): left there, the next commit's lint read the report's minified scripts - 3334 errors in
+ * a commit that had none.
+ */
+function clearE2eOutput() {
+  for (const d of ['playwright-report', 'test-results'])
+    fs.rmSync(path.join(CHECK, 'apps', 'web', d), { recursive: true, force: true });
+}
+
+// --- CI's integration job, on request ---------------------------------------------------------
+const PG_IMAGE = 'postgres:16';
+const PG_NAME = 'lightmap-runner-pg';
+const INTEGRATION = path.join(CFG.dir, 'integration.json');
+/** Playwright with the machine's own Edge: nothing to download (CI fetches Chromium). */
+const E2E_CONFIG = 'playwright.runner.config.ts';
+const E2E_CONFIG_TEXT = `import base from './playwright.config';
+
+// Written by the local runner: the suite as configured, in this machine's Microsoft Edge.
+export default {
+  ...base,
+  projects: (base.projects ?? []).map((p) => ({ ...p, use: { ...p.use, channel: 'msedge' } })),
+};
+`;
+
+/**
+ * CI's integration job (.github/workflows/ci.yml "Integration · E2E") on the newest commit, when
+ * asked (inbox/integration.json): PostgreSQL 16 in Docker (${PG_IMAGE}, on a port of 127.0.0.1
+ * Docker picks - Windows reserves ranges a fixed port can fall in - removed afterwards; PostGIS is optional to the migrations), the migrations, the database's
+ * integration tests, and the Playwright suite against `next dev` with the fixture providers,
+ * in Edge. Results in integration.json and logs/integration-*.log.
+ */
+async function runIntegration(only = {}) {
+  const head = status.stack?.head;
+  const out = { startedAt: now(), head: head ?? null, steps: [], ok: false, reason: null };
+  const finish = () => {
+    out.ok = out.reason === null && out.steps.length > 0 && out.steps.every((s) => s.ok);
+    out.finishedAt = now();
+    writeJson(INTEGRATION, out);
+    setStatus({
+      integration: {
+        ok: out.ok,
+        reason: out.reason,
+        failing: out.steps.filter((s) => !s.ok).map((s) => s.name),
+        at: out.finishedAt,
+        head: head ? `${head.n} ${head.subject}` : null,
+      },
+    });
+    say(
+      `integration: ${
+        out.ok
+          ? 'ok'
+          : `FAIL ${
+              out.reason ??
+              out.steps
+                .filter((s) => !s.ok)
+                .map((s) => s.name)
+                .join(', ')
+            }`
+      }`,
+    );
+  };
+  if (!head) {
+    out.reason = 'no stack applied';
+    finish();
+    return;
+  }
+  const step = async (name, argv, opts = {}) => {
+    setStatus({ state: 'integration', message: `integration ${name}: ${head.subject}` });
+    const log = `logs/integration-${name}.log`;
+    const r = await run(argv, {
+      cwd: opts.cwd ?? CHECK,
+      env: { CI: 'true', ...opts.env },
+      log: path.join(CFG.dir, log),
+      timeoutMs: opts.timeoutMs ?? 30 * 60_000,
+    });
+    const ok = r.code === 0;
+    out.steps.push({ name, ok, code: r.code, ms: r.ms, log });
+    if (!ok)
+      try {
+        fs.writeFileSync(
+          path.join(CFG.dir, log + '.tail.txt'),
+          tail(fs.readFileSync(path.join(CFG.dir, log), 'utf8'), 150),
+        );
+      } catch {
+        // The whole log is still there.
+      }
+    say(`integration ${name}: ${ok ? 'ok' : `failed (${r.code})`}`);
+    return ok;
+  };
+  const env = {
+    AUTH_SECRET: 'ci-only-secret-ci-only-secret-ci-only-secret',
+    AUTH_URL: 'http://localhost:3100',
+    NEXT_PUBLIC_APP_URL: 'http://localhost:3100',
+    WEATHER_PROVIDER: 'fixture',
+    GEOCODER_PROVIDER: 'fixture',
+    BUILDINGS_PROVIDER: 'none',
+    IMAGERY_PROVIDER: 'natural-earth',
+    AUTH_DEV_LOGIN: 'true',
+    NEXT_TELEMETRY_DISABLED: '1',
+  };
+  const configFile = path.join(CHECK, 'apps', 'web', E2E_CONFIG);
+  try {
+    if (!(await step('docker', ['docker', 'version'], { cwd: CFG.dir, timeoutMs: 60_000 }))) {
+      out.reason = 'Docker is not answering: start Docker Desktop, then ask again';
+      return;
+    }
+    if (!(await step('pull', ['docker', 'pull', PG_IMAGE], { cwd: CFG.dir }))) {
+      out.reason = `could not pull ${PG_IMAGE}`;
+      return;
+    }
+    await run(['docker', 'rm', '-f', PG_NAME], { cwd: CFG.dir, timeoutMs: 60_000 });
+    const started = await step(
+      'postgres',
+      [
+        'docker',
+        'run',
+        '-d',
+        '--name',
+        PG_NAME,
+        '-e',
+        'POSTGRES_USER=lightmap',
+        '-e',
+        'POSTGRES_PASSWORD=lightmap',
+        '-e',
+        'POSTGRES_DB=lightmap_e2e',
+        '-p',
+        '127.0.0.1::5432',
+        PG_IMAGE,
+      ],
+      { cwd: CFG.dir, timeoutMs: 120_000 },
+    );
+    if (!started) {
+      out.reason = 'the database container did not start';
+      return;
+    }
+    let ready = false;
+    for (let i = 0; i < 60 && !ready; i++) {
+      const r = await run(
+        ['docker', 'exec', PG_NAME, 'pg_isready', '-U', 'lightmap', '-d', 'lightmap_e2e'],
+        {
+          cwd: CFG.dir,
+          timeoutMs: 20_000,
+        },
+      );
+      ready = r.code === 0;
+      if (!ready) await sleep(2000);
+    }
+    if (!ready) {
+      out.reason = 'the database did not become ready';
+      return;
+    }
+    // The port Docker gave it ("127.0.0.1:NNNNN").
+    const portLog = path.join(LOGS, 'integration-port.log');
+    await run(['docker', 'port', PG_NAME, '5432'], { cwd: CFG.dir, log: portLog, header: false });
+    const port = /:(\d+)\s*$/m.exec(fs.readFileSync(portLog, 'utf8'))?.[1];
+    if (!port) {
+      out.reason = 'could not read the database port';
+      return;
+    }
+    env.DATABASE_URL = `postgres://lightmap:lightmap@127.0.0.1:${port}/lightmap_e2e`;
+    say(`integration: database on 127.0.0.1:${port}`);
+    mustGit(CHECK, 'checkout', '--quiet', '--force', '--detach', head.sha);
+    mustGit(CHECK, 'clean', '-fd', '--quiet');
+    const inst = await install(CHECK, `integration-${head.tree.slice(0, 10)}`);
+    out.steps.push({ name: 'install', ok: inst.code === 0, code: inst.code, ms: inst.ms });
+    if (inst.code !== 0) return;
+    const pnpm = await findPnpm();
+    if (!(await step('migrate', [...pnpm, 'db:migrate'], { env }))) return;
+    await step('db-integration', [...pnpm, '--filter', '@lightmap/database', 'test:integration'], {
+      env,
+    });
+    fs.writeFileSync(configFile, E2E_CONFIG_TEXT);
+    await step(
+      'e2e',
+      [
+        ...pnpm,
+        '--filter',
+        '@lightmap/web',
+        'exec',
+        'playwright',
+        'test',
+        '--config',
+        E2E_CONFIG,
+        ...(only.grep ? ['--grep', only.grep] : []),
+        ...(only.project ? ['--project', only.project] : []),
+      ],
+      { env, timeoutMs: 60 * 60_000 },
+    );
+  } catch (error) {
+    out.reason = error.message;
+  } finally {
+    // What Playwright left of each failing test (its page snapshot, error-context.md), beside
+    // the logs: the work tree is not where anyone looks.
+    const results = path.join(CHECK, 'apps', 'web', 'test-results');
+    const keep = path.join(CFG.dir, 'e2e-results');
+    fs.rmSync(keep, { recursive: true, force: true });
+    try {
+      for (const d of fs.readdirSync(results)) {
+        const ctx = path.join(results, d, 'error-context.md');
+        if (!exists(ctx)) continue;
+        fs.mkdirSync(keep, { recursive: true });
+        fs.copyFileSync(ctx, path.join(keep, `${d}.md`));
+        // The first failure's trace too (its console, network and DOM): a few MB.
+        const trace = path.join(results, d, 'trace.zip');
+        if (exists(trace) && !exists(path.join(keep, 'first-trace.zip')))
+          fs.copyFileSync(trace, path.join(keep, 'first-trace.zip'));
+      }
+    } catch {
+      // No results: nothing failed, or the suite never ran.
+    }
+    fs.rmSync(configFile, { force: true });
+    clearE2eOutput();
+    await run(['docker', 'rm', '-f', PG_NAME], { cwd: CFG.dir, timeoutMs: 60_000 });
+    finish();
+  }
+}
+
 async function main() {
   fs.mkdirSync(LOGS, { recursive: true });
   fs.mkdirSync(INBOX, { recursive: true });
@@ -1042,6 +1267,12 @@ async function main() {
       } catch (error) {
         say(`error: ${error.message}`);
         setStatus({ state: 'error', error: error.message, message: 'waiting for a new patch' });
+      }
+      const asked = pending.find((r) => r.cmd === 'integration');
+      if (asked) {
+        pending = pending.filter((r) => r.cmd !== 'integration');
+        await runIntegration(asked);
+        setStatus({ state: 'idle', message: 'integration done' });
       }
       if (CFG.once) shutdown(status.error || status.checks.failing.length ? 1 : 0);
     }

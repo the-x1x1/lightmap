@@ -4,6 +4,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **The local runner can run CI's integration job**: asked through its inbox, it starts
+  PostgreSQL 16 in Docker, runs the migrations, the database's integration tests and the
+  Playwright suite (in the machine's own Edge), and removes the database afterwards.
 - **Alpenglow**: high ground keeps the Sun after it has set where you stand, and catches it
   first at dawn - Sun-facing slopes above the place glow red, then orange, toward their crests.
 - **Cirrus in strands**: thin high cloud is drawn out into filaments along the wind, in parts of
