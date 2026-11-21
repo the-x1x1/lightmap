@@ -50,3 +50,17 @@ export function streetLampPositions(
   const d = (p: [number, number]) => ((p[0] - centreLon) * k) ** 2 + (p[1] - centreLat) ** 2;
   return out.sort((a, b) => d(a) - d(b)).slice(0, max);
 }
+
+/**
+ * How a street lamp fades with distance in a haze or fog of visibility `visibilityM` (the
+ * scene's, `2 / fogDensity`): whole out to a quarter of it, gone at one and a half times it. A
+ * lamp is bright and shows a little past the visibility, where the ground under it has gone;
+ * but not from a hillside the fog has taken whole. The lamps write no depth, so the grade's
+ * haze does not take them by their own distance: the far side of a sound showed every street
+ * lit through a fog that had taken its hills (V&V: Tromsø at night in a drizzle, 1.6 km). For
+ * a billboard's `translucencyByDistance`; null in clear air (over 60 km).
+ */
+export function lampFogFade(visibilityM: number): { nearM: number; farM: number } | null {
+  if (!(visibilityM > 0) || visibilityM > 60_000) return null;
+  return { nearM: 0.25 * visibilityM, farM: 1.5 * visibilityM };
+}

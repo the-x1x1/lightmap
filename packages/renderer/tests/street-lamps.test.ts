@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { streetLampPositions } from '../src/street-lamps.ts';
+import { lampFogFade, streetLampPositions } from '../src/street-lamps.ts';
 import type { StreetLine } from '../src/vector-cover.ts';
 
 const M = 111_320;
@@ -41,5 +41,15 @@ describe('street lamps', () => {
     const lamps = streetLampPositions([road], 35, 3, 350 / M, 0);
     expect(lamps).toHaveLength(3);
     for (const l of lamps) expect(l[0] * M).toBeGreaterThan(240);
+  });
+});
+
+describe('lampFogFade', () => {
+  it('fades the lamps out a little past the visibility, and not at all in clear air', () => {
+    // Tromsø in a drizzle: whole to 400 m, gone at 2.4 km.
+    expect(lampFogFade(1600)).toEqual({ nearM: 400, farM: 2400 });
+    expect(lampFogFade(80_000)).toBeNull();
+    expect(lampFogFade(Infinity)).toBeNull();
+    expect(lampFogFade(0)).toBeNull();
   });
 });

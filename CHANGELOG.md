@@ -14,6 +14,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   them - a mackerel sky, lit warm from the side at sunset - instead of a torn grey sheet.
 - **Peaks in cloud**: ground that stands above the cloud base disappears into the low cloud -
   wholly under an overcast, through the gaps under broken cloud - at the forecast's cloud base.
+- **Street lamps fade into the fog**: the lamps drew at full strength however thick the
+  weather, so a town across the water showed every street lit through a fog that had taken the
+  hills behind it. They now fade a little past the visibility.
 - **Trees and buildings fade into fog with the ground**: Cesium fogs the terrain it draws but
   not the town's trees and buildings, so in thick weather they stood out sharper than the
   ground beside them. They now take the same fog as the ground does.

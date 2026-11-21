@@ -25,7 +25,7 @@ import {
 } from '../shaders/grade.frag.ts';
 import { OsmBuildingsLayer, PRIMITIVE_NORMAL_SHADING_SMOOTH } from './osm-buildings-layer.ts';
 import { coverShapesFromTile, streetLinesFromTile } from '../vector-cover.ts';
-import { streetLampPositions } from '../street-lamps.ts';
+import { lampFogFade, streetLampPositions } from '../street-lamps.ts';
 import { lonLatToTile, tilePointToLonLat } from '../vector-tile.ts';
 import { createDetailTexture, createNoiseTexture, type DetailTileCesium } from './detail-tiles.ts';
 import { NOISE_TEXTURE_SIZE, makeNoiseTexture } from '../noise-texture.ts';
@@ -266,6 +266,9 @@ export class CesiumSceneHost implements SceneHost {
   /** The street lamps along the mapped roads near the place, lit from the dusk. */
   private streetLamps: Cesium.BillboardCollection | null = null;
   private streetLampsShownAt = -1;
+  /** The visibility the lamps last faded by (`fogLamps`), and the scene's now. */
+  private streetLampsFoggedAt = -1;
+  private visibilityM = Infinity;
   /** The sky the water reflects (`setSeaSky`), kept for a material made later. */
   private seaSky: HostSeaSky | null = null;
   private buildings: Cesium.Cesium3DTileset | null = null;
@@ -1292,6 +1295,8 @@ export class CesiumSceneHost implements SceneHost {
     scene.atmosphere.saturationShift = a.saturationShift;
     scene.atmosphere.brightnessShift = a.brightnessShift;
     scene.fog.density = a.fogDensity;
+    this.visibilityM = a.fogDensity > 0 ? 2 / a.fogDensity : Infinity;
+    this.fogLamps();
     if (a.mieCoefficient !== this.mieCoefficient) {
       // Same aerosol density for the dome and the ground atmosphere (wavelength-independent);
       // Cesium's own value comes back when a scene stops asking for one.
@@ -2314,7 +2319,28 @@ export class CesiumSceneHost implements SceneHost {
     });
     lampsOut.show = false;
     this.streetLamps = this.scene.primitives.add(lampsOut) as Cesium.BillboardCollection;
+    this.streetLampsFoggedAt = -1;
+    this.fogLamps();
     this.showStreetLamps();
+  }
+
+  /**
+   * The lamps fade into the haze or fog by the scene's visibility (`lampFogFade`), set again
+   * when it changes by more than a tenth.
+   */
+  private fogLamps(): void {
+    const lamps = this.streetLamps;
+    if (!lamps) return;
+    const v = this.visibilityM;
+    const was = this.streetLampsFoggedAt;
+    if (was > 0 && Math.abs(Math.min(v, 1e6) - was) <= 0.1 * was) return;
+    this.streetLampsFoggedAt = Math.min(v, 1e6);
+    const fade = lampFogFade(v);
+    const scalar = fade ? new this.C.NearFarScalar(fade.nearM, 1, fade.farM, 0) : undefined;
+    for (let i = 0; i < lamps.length; i++) {
+      lamps.get(i).translucencyByDistance = scalar as Cesium.NearFarScalar;
+    }
+    this.scene.requestRender();
   }
 
   /** The lamps on as far as the town's lights are (in tenths, so the colours are set a few times a dusk). */
