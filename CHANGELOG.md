@@ -14,6 +14,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   them - a mackerel sky, lit warm from the side at sunset - instead of a torn grey sheet.
 - **Peaks in cloud**: ground that stands above the cloud base disappears into the low cloud -
   wholly under an overcast, through the gaps under broken cloud - at the forecast's cloud base.
+- **The forecast comes back after a network drop**: if the weather service failed once, the
+  planner kept "Live forecast unavailable" and a scenario sky until the place or date changed.
+  It now asks again every minute until the forecast arrives.
 - **Streets are grey from the air, not black**: mapped roads were painted as fresh tarmac, a
   near-black line on the map. They are now weathered asphalt, as most streets are: a mid grey
   about as bright as a lawn.

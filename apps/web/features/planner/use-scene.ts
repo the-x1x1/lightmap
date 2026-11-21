@@ -18,7 +18,7 @@ import {
 import { decideWeatherMode, type WeatherCapabilities, type WeatherFrame } from '@lightmap/weather';
 import { gridKey } from '@lightmap/geospatial';
 import { effectiveTimeZone, selectedUtc, usePlannerStore } from './store.ts';
-import { weatherQueryOptions } from './weather-query.ts';
+import { weatherQueryOptions, weatherRecoveryInterval } from './weather-query.ts';
 import { ApiRequestError, fetchJson } from '@/lib/client/api';
 import { useSettled } from '@/lib/use-settled';
 import type { CapabilitiesResponse, WeatherResponse } from '@/lib/api-types';
@@ -117,6 +117,8 @@ export function useScene(
   const weatherQuery = useQuery({
     ...weatherQueryOptions(location?.point ?? { latitude: 0, longitude: 0 }, settledDate, timeZone),
     enabled: Boolean(location && cell && horizon?.fetchWorthwhile && dateSettled),
+    // Back by itself after an outage (weather-query.ts says why).
+    refetchInterval: weatherRecoveryInterval,
   });
 
   // Day events depend only on place + date + zone; cache them so scrubbing does not recompute.
