@@ -19,6 +19,11 @@ const ROUTES = [
   '/api/weather?lat=21.397&lng=-157.727&date=2026-05-31&tz=Pacific%2FHonolulu',
   '/api/climatology?lat=21.397&lng=-157.727&month=5&tz=Pacific%2FHonolulu',
   '/api/account/entitlements',
+  // The analytics beacon: sent when a place is chosen wherever the server records events; its
+  // first compile mid-test rebuilt the client and a Cesium object in the old module threw, so
+  // Fast Refresh reloaded the page and the chosen place was gone (seen on the local runner, which
+  // records analytics).
+  '/api/analytics',
   '/api/auth/session',
   '/api/auth/providers',
   '/api/auth/csrf',
