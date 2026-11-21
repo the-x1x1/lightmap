@@ -49,6 +49,12 @@ not to draw one) and read every roof within 1.5 m of its mapped height through
 `sampleSurfaceHeights` (`town-street`, `town-street-dusk`, `town-above`). `SMOKE_ONLY=town` starts
 the run at this stage.
 
+**The clear sky by height.** Before the first stage, the clear sky is measured from the beach in
+linear light at 1-70 deg above the horizon, away from the Sun, square to it and toward it, with
+the Sun high, at 34 deg and at 14 deg, and toward it in golden hour (`sky` in the result, shots `sky-*`). Away from the Sun
+and square to it, 15 deg up must keep at least 0.4 of the horizon's luminance: a real clear sky
+keeps about 0.7, the bare single-scattering dome 0.18-0.27. `SMOKE_ONLY=sky` runs only this.
+
 **A short flight stays near the ground.** From the street to the map over the town the camera
 flies a few hundred metres. The flight is stepped through by its tweens' own clock, so it is
 measured the same on any machine, and must stay under 5 km (`hop` in the result): given a

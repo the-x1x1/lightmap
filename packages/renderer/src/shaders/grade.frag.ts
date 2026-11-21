@@ -304,6 +304,44 @@ void main() {
       float aureole = 0.22 * exp(-a / 9.0) + 0.10 * exp(-a / 22.0);
       dome += glareTint * aureole * lowGlow * (1.0 - clamp(dot(dome, vec3(0.2126, 0.7152, 0.0722)), 0.0, 1.0));
     }
+    // The day sky's brightness by height above the horizon - after the glare round the Sun has
+    // taken the Sun's colour, which judges the glare by how white the dome is: lifted first, the
+    // pale sky round a low Sun's glow counted as glare and turned salmon. Seen from the ground, the
+    // single-scattering dome falls away from its horizon several times faster than a real sky:
+    // measured in the harness (linear light, as a share of the sky 1 deg up) it kept 0.5 at
+    // 7 deg, 0.2 at 15, 0.08 at 25 and 0.04 at 50 - a navy that only a polariser gives - where
+    // the CIE standard clear sky keeps about 0.9, 0.7, 0.5 and 0.3. Light scattered more than
+    // once fills the real one in. The shortfall is close to the same whatever the Sun's height
+    // and bearing, so it is made up by height alone: nothing at the horizon, 1.9 times at
+    // 7 deg, 3.4 at 15, 5.3 at 35, toward 6 at the zenith (in linear light; the harness's sky stage,
+    // SMOKE_ONLY=sky, measures the result). Not on the Sun's disc, and let in gently over its
+    // glow's first 12 deg (sharper, the glow's tint lifted pale drew a ring round a low Sun's
+    // disc; spread to 40 deg, a dark ring round a high Sun). Faded out as the Sun goes down (the twilight below is graded from
+    // the dome as it comes), and from above the weather (underDecks).
+    {
+      float elevDeg = degrees(asin(clamp(dot(rayEC, u_eyeUpEC), -1.0, 1.0)));
+      float fromSun = degrees(acos(clamp(dot(rayEC, u_sunDirEC), -1.0, 1.0)));
+      float lift = 5.0 * (1.0 - exp(-pow(max(elevDeg, 0.0) / 22.0, 1.5)));
+      lift *= smoothstep(-3.0, 3.0, u_sunElevation) * underDecks * smoothstep(1.5, 12.0, fromSun);
+      if (lift > 0.001) {
+        vec3 lin = pow(max(dome, vec3(0.0)), vec3(2.2));
+        float l0 = dot(lin, vec3(0.2126, 0.7152, 0.0722));
+        // The lifted sky bends over toward 0.55 (about 0.76 in the picture), so it never rises
+        // to the glare round the Sun or the horizon's band, which keep the light they have:
+        // brighter stays brighter, with no ring where the lift lets go.
+        float lt = l0 * (1.0 + lift);
+        float l1 = max(l0, lt / pow(1.0 + pow(lt / 0.55, 3.0), 1.0 / 3.0));
+        lin *= l1 / max(l0, 1e-5);
+        // The dome's blue is the deep blue of its own dim zenith; brought up to a real sky's
+        // brightness it would be electric. A real sky pales as it brightens: a fifth of the
+        // colour goes with the full lift, at the same luminance.
+        lin = mix(vec3(l1), lin, 1.0 - 0.2 * smoothstep(0.0, 4.0, lift));
+        // And a channel that would pass white gives its excess to the others.
+        float top = max(lin.r, max(lin.g, lin.b));
+        if (top > 0.92) lin = mix(vec3(l1), lin, clamp((0.92 - l1) / max(top - l1, 1e-5), 0.0, 1.0));
+        dome = pow(lin, vec3(1.0 / 2.2));
+      }
+    }
     // Darken the atmospheric glow but keep bright point sources (stars, moon) readable.
     float domeLum = dot(dome, vec3(0.2126, 0.7152, 0.0722));
     float keep = smoothstep(0.12, 0.5, domeLum);

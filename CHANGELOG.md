@@ -14,6 +14,11 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   them - a mackerel sky, lit warm from the side at sunset - instead of a torn grey sheet.
 - **Peaks in cloud**: ground that stands above the cloud base disappears into the low cloud -
   wholly under an overcast, through the gaps under broken cloud - at the forecast's cloud base.
+- **A clear sky as bright as a real one**: from the ground the sky darkened to navy a few
+  degrees above the horizon, as if through a polariser. It now holds its brightness up the dome
+  as a real clear sky does (measured: 15 degrees up keeps 0.5-0.75 of the horizon's light,
+  where it kept 0.2), and pales a little as it brightens; the glare round the Sun keeps its
+  size.
 - **A Pro button says what it is**: in the desktop app, Export card and the other Pro features
   answered a click with only a note about signing in, as if the button had done something else.
   The note now starts with what was asked for ("Planning-card export is part of Pro.").

@@ -69,6 +69,12 @@ if (process.env.SMOKE_ONLY === 'town')
     window.__synthOnly = true;
     window.__townOnly = true;
   });
+// SMOKE_ONLY=sky: only the clear sky's brightness by height (a couple of minutes).
+if (process.env.SMOKE_ONLY === 'sky')
+  await page.addInitScript(() => {
+    window.__synthOnly = true;
+    window.__skyOnly = true;
+  });
 if (process.env.SMOKE_DEBUG === 'water')
   await page.addInitScript(() => {
     window.__synthDebug = true;
