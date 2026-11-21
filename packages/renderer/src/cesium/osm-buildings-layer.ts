@@ -517,6 +517,9 @@ export const FOLIAGE_TONE_GLSL = `
         color.rgb = mix(color.rgb, color.rgb * vec3(1.12, 1.08, 0.85), smoothstep(0.55, 0.9, leafTex));
     }`;
 
+/** The ids of a tree's parts after its number (`treeInstances`). */
+const TREE_PARTS = ['t', 'c', 'c1', 'c2', 'f0', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6'] as const;
+
 /** Broad-leaf crowns' alpha: the mark `treeFragmentShader` looks for. */
 const BROADLEAF_ALPHA = 0.99;
 
@@ -1080,7 +1083,7 @@ export class OsmBuildingsLayer {
     const C = this.C;
     const show = (prim: Cesium.Primitive, id: number, on: boolean) => {
       if (prim.isDestroyed() || !prim.ready) return false;
-      for (const part of ['t', 'c']) {
+      for (const part of TREE_PARTS) {
         const a = prim.getGeometryInstanceAttributes(`${id}${part}`) as
           { show?: unknown } | undefined;
         if (a) a.show = C.ShowGeometryInstanceAttribute.toValue(on);
@@ -1422,9 +1425,17 @@ export class OsmBuildingsLayer {
   }
 
   /**
-   * The trunk and crown of each tree (a round crown for broad-leaf, a cone for needle-leaf),
-   * placed upright on the ground: plain shapes from Cesium's own geometry, built in its workers;
-   * they cast shadows like the buildings. Ids `<n>t` and `<n>c`, so single trees can be hidden
+   * Each tree, built by its form (`TreeForm`) and placed upright on the ground: plain shapes
+   * from Cesium's own geometry, built in its workers; they cast shadows like the buildings.
+   * - broadleaf: a trunk, and a crown that is not a ball on a stick - its footprint oval and
+   *   turned, set a little off the trunk, its height and spread varied tree by tree; a park
+   *   tree (standing alone, seen whole) gets two more lobes, so its outline is lumpy and its top
+   *   uneven, as an oak's or a mango's is;
+   * - conifer: a cone (the shader tiers its boughs); columnar: a narrow spire over a short
+   *   bare trunk;
+   * - umbrella: a long bare trunk under a wide, flat crown (monkeypod, acacia, stone pine);
+   * - palm: a slim stem, a knot of frond bases, and seven fronds arching out and down.
+   * Ids `<n>t` (trunk) and `<n>` + `TREE_PARTS` for the rest, so single trees can be hidden
    * (`hideTreesNear`) by their attributes.
    */
   private treeInstances(
@@ -1436,57 +1447,218 @@ export class OsmBuildingsLayer {
     const C = this.C;
     const vertexFormat = C.PerInstanceColorAppearance.VERTEX_FORMAT;
     const bark = C.ColorGeometryInstanceAttribute.fromColor(new C.Color(0.32, 0.25, 0.18, 1));
+    const palmBark = C.ColorGeometryInstanceAttribute.fromColor(new C.Color(0.46, 0.41, 0.34, 1));
+    // Fronds take the plain lit path (green no more than their red, so not the foliage cut,
+    // which would eat a blade seen edge-on).
+    const frond = C.ColorGeometryInstanceAttribute.fromColor(new C.Color(0.25, 0.255, 0.1, 1));
+    const shown = () => new C.ShowGeometryInstanceAttribute(true);
     trees.forEach((t, i) => {
       const ground = (grounds[i] ?? 0) - 0.3;
       const base = C.Cartesian3.fromDegrees(t.lon, t.lat, ground);
       const enu = C.Transforms.eastNorthUpToFixedFrame(base);
       const id = ++this.treeIds;
       record.push({ id, base });
-      const at = (up: number) =>
-        C.Matrix4.multiplyByTranslation(enu, new C.Cartesian3(0, 0, up), new C.Matrix4());
-      const crownH = t.conifer ? t.heightM * 0.8 : t.heightM * 0.6;
-      const trunkH = t.heightM - crownH + (t.conifer ? 0.5 : t.radiusM * 0.4);
-      out.push(
-        new C.GeometryInstance({
-          geometry: new C.CylinderGeometry({
-            length: trunkH,
-            topRadius: 0.18,
-            bottomRadius: 0.25,
-            slices: 5,
-            vertexFormat,
+      const s = t.shape;
+      // A local frame: at (east, north, up) metres, turned `turn` about the vertical.
+      const at = (e: number, n: number, up: number, turn = 0) =>
+        C.Matrix4.multiply(
+          enu,
+          C.Matrix4.fromRotationTranslation(
+            C.Matrix3.fromRotationZ(turn),
+            new C.Cartesian3(e, n, up),
+            new C.Matrix4(),
+          ),
+          new C.Matrix4(),
+        );
+      const trunk = (length: number, top: number, bottom: number, colour = bark) =>
+        out.push(
+          new C.GeometryInstance({
+            geometry: new C.CylinderGeometry({
+              length,
+              topRadius: top,
+              bottomRadius: bottom,
+              slices: 5,
+              vertexFormat,
+            }),
+            modelMatrix: at(0, 0, length / 2),
+            id: `${id}t`,
+            attributes: { color: colour, show: shown() },
           }),
-          modelMatrix: at(trunkH / 2),
-          id: `${id}t`,
-          attributes: { color: bark, show: new C.ShowGeometryInstanceAttribute(true) },
-        }),
-      );
+        );
       const g = 0.27 + 0.12 * t.tone;
-      const leaf = C.ColorGeometryInstanceAttribute.fromColor(
-        t.conifer
-          ? new C.Color(0.12 + 0.05 * t.tone, g - 0.05, 0.13, 1)
-          : new C.Color(0.2 + 0.08 * t.tone, g, 0.12 + 0.03 * t.tone, BROADLEAF_ALPHA),
+      const broadLeaf = C.ColorGeometryInstanceAttribute.fromColor(
+        new C.Color(0.2 + 0.08 * t.tone, g, 0.12 + 0.03 * t.tone, BROADLEAF_ALPHA),
       );
-      const crownBase = t.heightM - crownH;
-      out.push(
-        new C.GeometryInstance({
-          geometry: t.conifer
-            ? new C.CylinderGeometry({
-                length: crownH,
-                topRadius: 0,
-                bottomRadius: t.radiusM,
-                slices: 7,
-                vertexFormat,
-              })
-            : new C.EllipsoidGeometry({
-                radii: new C.Cartesian3(t.radiusM, t.radiusM, crownH / 2),
-                stackPartitions: 5,
-                slicePartitions: 7,
+      const needle = C.ColorGeometryInstanceAttribute.fromColor(
+        t.form === 'columnar'
+          ? new C.Color(0.1 + 0.04 * t.tone, g - 0.08, 0.12, 1)
+          : new C.Color(0.12 + 0.05 * t.tone, g - 0.05, 0.13, 1),
+      );
+      const blob = (
+        part: string,
+        rx: number,
+        ry: number,
+        rz: number,
+        e: number,
+        n: number,
+        up: number,
+        turn: number,
+        colour = broadLeaf,
+        stacks = 5,
+        slices = 7,
+      ) =>
+        out.push(
+          new C.GeometryInstance({
+            geometry: new C.EllipsoidGeometry({
+              radii: new C.Cartesian3(rx, ry, rz),
+              stackPartitions: stacks,
+              slicePartitions: slices,
+              vertexFormat,
+            }),
+            modelMatrix: at(e, n, up, turn),
+            id: `${id}${part}`,
+            attributes: { color: colour, show: shown() },
+          }),
+        );
+      const turn = s * Math.PI * 2;
+      if (t.form === 'conifer' || t.form === 'columnar') {
+        const crownH = t.heightM * (t.form === 'columnar' ? 0.88 : 0.8);
+        const trunkH = t.heightM - crownH + 0.5;
+        trunk(trunkH, 0.18, 0.25);
+        out.push(
+          new C.GeometryInstance({
+            geometry: new C.CylinderGeometry({
+              length: crownH,
+              topRadius: 0,
+              bottomRadius: t.radiusM,
+              slices: t.form === 'columnar' ? 6 : 7,
+              vertexFormat,
+            }),
+            modelMatrix: at(0, 0, t.heightM - crownH / 2),
+            id: `${id}c`,
+            attributes: { color: needle, show: shown() },
+          }),
+        );
+        return;
+      }
+      if (t.form === 'palm') {
+        const top = t.heightM - 0.6;
+        trunk(top, 0.14, 0.2, palmBark);
+        blob('c', 0.55, 0.55, 0.7, 0, 0, top, 0, frond, 4, 6);
+        const len = t.radiusM;
+        // A wood's palms, many and seen among the canopy, get five fronds; a park's seven.
+        const fronds = t.park ? 7 : 5;
+        for (let k = 0; k < fronds; k++) {
+          const a = turn + (k * 2 * Math.PI) / fronds + 0.3 * Math.sin(k * 2.1 + s * 9);
+          // Arching out and down: the older, lower fronds droop most.
+          const droop = 0.25 + (0.35 * ((k * 3) % fronds)) / fronds;
+          const m = C.Matrix4.multiply(
+            at(0, 0, top, a),
+            C.Matrix4.fromRotationTranslation(
+              C.Matrix3.fromRotationY(droop),
+              new C.Cartesian3(Math.cos(droop) * len * 0.5, 0, -Math.sin(droop) * len * 0.5),
+              new C.Matrix4(),
+            ),
+            new C.Matrix4(),
+          );
+          out.push(
+            new C.GeometryInstance({
+              geometry: new C.EllipsoidGeometry({
+                radii: new C.Cartesian3(len * 0.5, 0.42, 0.07),
+                stackPartitions: 3,
+                slicePartitions: 6,
                 vertexFormat,
               }),
-          modelMatrix: at(crownBase + crownH / 2),
-          id: `${id}c`,
-          attributes: { color: leaf, show: new C.ShowGeometryInstanceAttribute(true) },
-        }),
+              modelMatrix: m,
+              id: `${id}f${k}`,
+              attributes: { color: frond, show: shown() },
+            }),
+          );
+        }
+        return;
+      }
+      if (t.form === 'umbrella') {
+        const crownH = t.heightM * 0.3;
+        const crownBase = t.heightM - crownH;
+        trunk(crownBase + crownH * 0.4, 0.22, 0.32);
+        blob(
+          'c',
+          t.radiusM,
+          t.radiusM * (0.8 + 0.2 * s),
+          crownH / 2,
+          0,
+          0,
+          crownBase + crownH / 2,
+          turn,
+        );
+        if (t.park) {
+          const a = turn + 1.3;
+          blob(
+            'c1',
+            t.radiusM * 0.55,
+            t.radiusM * 0.5,
+            crownH * 0.45,
+            Math.cos(a) * t.radiusM * 0.45,
+            Math.sin(a) * t.radiusM * 0.45,
+            crownBase + crownH * 0.75,
+            a,
+          );
+        }
+        return;
+      }
+      // Broad-leaf: an oval footprint, turned, set off the trunk, its height its own.
+      const crownH = t.heightM * (0.55 + 0.2 * s);
+      const crownBase = t.heightM - crownH;
+      const r = t.radiusM;
+      const off = 0.18 * r;
+      const ox = Math.cos(turn * 1.7) * off;
+      const oy = Math.sin(turn * 1.7) * off;
+      trunk(crownBase + crownH * 0.35, 0.18, 0.26);
+      if (!t.park) {
+        blob(
+          'c',
+          r * (0.85 + 0.3 * s),
+          r * (1.15 - 0.3 * s),
+          crownH / 2,
+          ox,
+          oy,
+          crownBase + crownH / 2,
+          turn,
+        );
+        return;
+      }
+      // Standing alone: a main mass and two lobes, one high on one side, one low on the other.
+      blob(
+        'c',
+        r * 0.82,
+        r * (0.95 - 0.2 * s),
+        crownH * 0.42,
+        ox,
+        oy,
+        crownBase + crownH * 0.45,
+        turn,
+      );
+      const a1 = turn + 0.9;
+      blob(
+        'c1',
+        r * 0.6,
+        r * 0.55,
+        crownH * 0.34,
+        ox + Math.cos(a1) * r * 0.45,
+        oy + Math.sin(a1) * r * 0.45,
+        crownBase + crownH * 0.64,
+        a1,
+      );
+      const a2 = a1 + 2.5;
+      blob(
+        'c2',
+        r * 0.55,
+        r * 0.5,
+        crownH * 0.3,
+        ox + Math.cos(a2) * r * 0.5,
+        oy + Math.sin(a2) * r * 0.5,
+        crownBase + crownH * 0.36,
+        a2,
       );
     });
   }

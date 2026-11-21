@@ -16,6 +16,7 @@ import {
   tilePointToLonLat,
   type VectorValue,
 } from './vector-tile.ts';
+import { inMediterraneanClimate } from './leaf-season.ts';
 
 /** The zoom OpenMapTiles carries every building at (its tiles' maximum). */
 export const BUILDING_TILE_ZOOM = 14;
@@ -156,8 +157,105 @@ export interface TreeSpot {
   radiusM: number;
   /** 0..1, for the crown's shade. */
   tone: number;
-  /** Needle-leaf (a cone) rather than broad-leaf (a round crown). */
+  /** Needle-leaf (a cone or a column) rather than broad-leaf. */
   conifer: boolean;
+  /** The tree's build (`TREE_FORMS`). */
+  form: TreeForm;
+  /** In a park or garden (a tree standing on its own, drawn in more detail) rather than a wood. */
+  park: boolean;
+  /** 0..1, for the crown's shape: its lean, its lobes, its footprint's turn. */
+  shape: number;
+}
+
+/**
+ * How a tree is built. `broadleaf`: a crown wider than its trunk's height, in lobes (oak, maple,
+ * beech, mango). `conifer`: a cone (pine, fir). `columnar`: a narrow spire (spruce, cypress).
+ * `umbrella`: a wide flat crown on a bare trunk (monkeypod and rain tree, acacia, stone pine).
+ * `palm`: a bare stem under a crown of fronds.
+ */
+export type TreeForm = 'broadleaf' | 'conifer' | 'columnar' | 'umbrella' | 'palm';
+export const TREE_FORMS: readonly TreeForm[] = [
+  'broadleaf',
+  'conifer',
+  'columnar',
+  'umbrella',
+  'palm',
+];
+
+/**
+ * The share of each build among a place's trees, by climate - a rule of thumb, not a species
+ * map: the woods outside a window are not a lollipop of one shape the world over. The tropics
+ * (Hawaii, the Caribbean): no conifers; palms and spreading umbrella trees in parks and along
+ * streets, broad-leaf canopy in the woods. The subtropics and the Mediterranean: cypresses,
+ * umbrella pines, some palms in parks; pine woods. The temperate belt: broad-leaf, conifers in
+ * the forests. The boreal north (past 55 degrees): spruce spires and pines, some birch.
+ */
+export function treeMix(
+  latitudeDeg: number,
+  longitudeDeg: number,
+  park: boolean,
+  forest: boolean,
+): Record<TreeForm, number> {
+  const a = Math.abs(latitudeDeg);
+  const mix = (b: number, c: number, col: number, u: number, p: number) => ({
+    broadleaf: b,
+    conifer: c,
+    columnar: col,
+    umbrella: u,
+    palm: p,
+  });
+  if (a < 23.5) return park ? mix(0.3, 0, 0, 0.35, 0.35) : mix(0.6, 0, 0, 0.25, 0.15);
+  if (a < 32 || inMediterraneanClimate(latitudeDeg, longitudeDeg))
+    return park ? mix(0.45, 0.05, 0.2, 0.15, 0.15) : mix(0.45, 0.3, 0.05, 0.2, 0);
+  if (a < 55)
+    return park
+      ? mix(0.85, 0.1, 0.05, 0, 0)
+      : forest
+        ? mix(0.5, 0.35, 0.15, 0, 0)
+        : mix(0.85, 0.1, 0.05, 0, 0);
+  return park ? mix(0.65, 0.2, 0.15, 0, 0) : mix(0.25, 0.3, 0.45, 0, 0);
+}
+
+/** The build a share `r` (0..1) falls on in a mix. */
+export function pickForm(mix: Record<TreeForm, number>, r: number): TreeForm {
+  let acc = 0;
+  for (const f of TREE_FORMS) {
+    acc += mix[f];
+    if (r < acc) return f;
+  }
+  return 'broadleaf';
+}
+
+/** Height range (m) and crown radius as a share of the height, by build; a park's a little lower. */
+function treeSize(
+  form: TreeForm,
+  wood: boolean,
+  h: number,
+  s: number,
+): { heightM: number; radiusM: number } {
+  const lerp = (lo: number, hi: number) => lo + (hi - lo) * h;
+  switch (form) {
+    case 'conifer': {
+      const heightM = lerp(10, 22);
+      return { heightM, radiusM: heightM * (0.19 + 0.06 * s) };
+    }
+    case 'columnar': {
+      const heightM = lerp(11, 24);
+      return { heightM, radiusM: heightM * (0.11 + 0.04 * s) };
+    }
+    case 'umbrella': {
+      const heightM = lerp(7, 14);
+      return { heightM, radiusM: heightM * (0.6 + 0.2 * s) };
+    }
+    case 'palm': {
+      const heightM = lerp(8, 18);
+      return { heightM, radiusM: 3.5 + 1.5 * s };
+    }
+    case 'broadleaf': {
+      const heightM = wood ? lerp(9, 18) : lerp(7, 16);
+      return { heightM, radiusM: heightM * (0.34 + 0.16 * s) };
+    }
+  }
 }
 
 /** OpenMapTiles `landcover` subclasses that are parkland: a scattering of trees, not a forest. */
@@ -224,7 +322,8 @@ export function treesFromTile(
     const park = cls === 'grass' && typeof sub === 'string' && PARK_SUBCLASSES.has(sub);
     if (!wood && !park) continue;
     const spacing = (wood ? WOOD_SPACING_M : PARK_SPACING_M) * unitsPerM;
-    const conifers = sub === 'forest' ? 0.5 : 0.15;
+    const lonDeg = ((x + 0.5) / 2 ** z) * 360 - 180;
+    const mix = treeMix(latDeg, lonDeg, park, sub === 'forest');
     for (const poly of classifyRings(f.geometry)) {
       const outer = clipRing(poly.outer, 0, e);
       if (outer.length < 6) continue;
@@ -249,17 +348,19 @@ export function treesFromTile(
           if (px < 0 || py < 0 || px > e || py > e) continue;
           if (!inRing(outer, px, py)) continue;
           if (poly.holes.some((h) => inRing(h, px, py))) continue;
-          const r = hash2(gx * 31 + 7, gy * 17 + 3, x ^ y);
-          const conifer = r < conifers;
-          const heightM = (wood ? 9 : 7) + 9 * hash2(gx + 101, gy + 57, 3);
+          const form = pickForm(mix, hash2(gx * 31 + 7, gy * 17 + 3, x ^ y));
+          const shape = hash2(gx + 211, gy + 97, 9);
+          const size = treeSize(form, wood, hash2(gx + 101, gy + 57, 3), shape);
           const [lon, lat] = tilePointToLonLat(z, x, y, e, px, py);
           out.push({
             lon,
             lat,
-            heightM,
-            radiusM: conifer ? heightM * 0.22 : heightM * 0.33,
+            ...size,
             tone: hash2(gx + 11, gy + 23, 5),
-            conifer,
+            conifer: form === 'conifer' || form === 'columnar',
+            form,
+            park,
+            shape,
           });
         }
     }

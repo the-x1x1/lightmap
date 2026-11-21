@@ -232,9 +232,43 @@ describe('trees from land cover', () => {
     expect(park.length).toBeLessThan(500);
     expect(farm).toEqual([]);
     for (const t of wood.slice(0, 50)) {
-      expect(t.heightM).toBeGreaterThanOrEqual(9);
-      expect(t.heightM).toBeLessThanOrEqual(18);
+      expect(t.heightM).toBeGreaterThanOrEqual(7);
+      expect(t.heightM).toBeLessThanOrEqual(24);
       expect(lonLatToTile(z, t.lon, t.lat)).toEqual({ x: 4093, y: 7277 });
+    }
+  });
+
+  it('grows the trees of the climate, not one round crown everywhere', () => {
+    const z = 14;
+    const share = (trees: { form: string }[], form: string) =>
+      trees.filter((t) => t.form === form).length / trees.length;
+    // Honolulu (21 N): a park of palms and spreading umbrella trees, no conifers.
+    const tropicPark = treesFromTile(
+      landcover('grass', 'park', square(0, 0, 4096)),
+      z,
+      4093,
+      7277,
+      21.3,
+    );
+    expect(share(tropicPark, 'palm')).toBeGreaterThan(0.25);
+    expect(share(tropicPark, 'umbrella')).toBeGreaterThan(0.25);
+    expect(tropicPark.some((t) => t.conifer)).toBe(false);
+    expect(tropicPark.every((t) => t.park)).toBe(true);
+    // The boreal north (Tromso, 69.6 N): a forest mostly of spruce spires and pines.
+    const boreal = treesFromTile(
+      landcover('wood', 'forest', square(0, 0, 4096)),
+      z,
+      9054,
+      3712,
+      69.6,
+    );
+    expect(share(boreal, 'columnar') + share(boreal, 'conifer')).toBeGreaterThan(0.65);
+    expect(boreal.some((t) => t.form === 'palm')).toBe(false);
+    // Each build keeps its proportions: a spire is narrow, an umbrella wide, a palm's crown its fronds.
+    for (const t of [...tropicPark, ...boreal].slice(0, 400)) {
+      if (t.form === 'columnar') expect(t.radiusM / t.heightM).toBeLessThan(0.16);
+      if (t.form === 'umbrella') expect(t.radiusM / t.heightM).toBeGreaterThan(0.55);
+      if (t.form === 'palm') expect(t.radiusM).toBeLessThanOrEqual(5);
     }
   });
 

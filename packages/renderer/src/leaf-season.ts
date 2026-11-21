@@ -107,6 +107,13 @@ const MEDITERRANEAN: readonly (readonly [number, number, number, number])[] = [
   [32, 35, -121, -116.5], // southern California
 ];
 
+/** Whether a place is in the Mediterranean-climate lowlands (`MEDITERRANEAN`'s rough boxes). */
+export function inMediterraneanClimate(latitudeDeg: number, longitudeDeg: number): boolean {
+  return MEDITERRANEAN.some(
+    (b) => latitudeDeg >= b[0] && latitudeDeg < b[1] && longitudeDeg >= b[2] && longitudeDeg < b[3],
+  );
+}
+
 /**
  * How maritime a place's seasons are, 0 (continental) to 1, and how many days later than its
  * latitude its leaves turn. A rule of thumb by region, not a climate map.
