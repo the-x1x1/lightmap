@@ -51,7 +51,8 @@ export function DateControl({
           {location ? effectiveTimeZone({ location, timeZoneMode }) : 'device time zone'}
         </span>
       </div>
-      {/* Wraps on the narrowest phones (320 px): Now and Tonight drop under the date. */}
+      {/* Wraps on phones: Now and Tonight drop under the date together (one at a time, Tonight
+          sat alone on a line of its own at 375 px). */}
       <div className="flex flex-wrap items-center gap-1">
         <Button
           variant="ghost"
@@ -81,23 +82,25 @@ export function DateControl({
         >
           ›
         </Button>
-        <Button
-          variant="ghost"
-          size="md"
-          onClick={() => setNow()}
-          title="Jump to now at this place"
-        >
-          Now
-        </Button>
-        <Button
-          variant="ghost"
-          size="md"
-          onClick={() => setTonight()}
-          title="Tonight: today at the start of astronomical night here"
-          data-testid="date-tonight"
-        >
-          Tonight
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="md"
+            onClick={() => setNow()}
+            title="Jump to now at this place"
+          >
+            Now
+          </Button>
+          <Button
+            variant="ghost"
+            size="md"
+            onClick={() => setTonight()}
+            title="Tonight: today at the start of astronomical night here"
+            data-testid="date-tonight"
+          >
+            Tonight
+          </Button>
+        </div>
       </div>
       <p id="lm-date-human" className="mt-1 text-xs text-[var(--lm-text-muted)]">
         {human}

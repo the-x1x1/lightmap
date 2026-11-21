@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import { usePreferences, useUpdatePreferences } from '@/features/account/use-preferences';
 import { useAccount } from '@/features/account/use-account';
+import { useCapabilities } from '@/features/planner/use-scene';
 import {
   DEFAULT_LENS_MAX_MM,
   DEFAULT_LENS_MIN_MM,
@@ -23,6 +24,12 @@ export function Preferences() {
   const prefs = usePreferences();
   const update = useUpdatePreferences();
   const account = useAccount();
+  const caps = useCapabilities();
+  // Whether there is anything to sign in to here (the desktop app before its service opens,
+  // or a server with no accounts configured, has none: no point inviting it).
+  const methods = caps.data?.authMethods;
+  const anyMethod = Boolean(methods && (methods.email || methods.google || methods.devLogin));
+  const canSignIn = Boolean(caps.data?.desktopAccounts) || anyMethod;
   // The lens box shows what is being typed; the preference changes when the box is left.
   const [lensText, setLensText] = useState<string | null>(null);
   const lensValue = lensText ?? String(prefs.defaultLensEquivalentMm);
@@ -42,7 +49,8 @@ export function Preferences() {
   else if (update.isSuccess)
     status = account.signedIn ? 'Saved to your account.' : 'Saved on this device.';
   else if (account.signedIn) status = 'Changes save to your account.';
-  else status = 'Kept on this device. Sign in to carry them to your other devices.';
+  else if (canSignIn) status = 'Kept on this device. Sign in to carry them to your other devices.';
+  else status = 'Kept on this device.';
 
   return (
     <section className="space-y-3" aria-labelledby="lm-prefs-title" data-testid="preferences">
