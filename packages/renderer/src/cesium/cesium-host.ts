@@ -24,8 +24,12 @@ import {
   GRADE_RAYS_FRAGMENT_SHADER,
 } from '../shaders/grade.frag.ts';
 import { OsmBuildingsLayer, PRIMITIVE_NORMAL_SHADING_SMOOTH } from './osm-buildings-layer.ts';
-import { coverShapesFromTile, streetLinesFromTile } from '../vector-cover.ts';
-import { lampFogFade, streetLampPositions } from '../street-lamps.ts';
+import {
+  buildingPointsFromTile,
+  coverShapesFromTile,
+  streetLinesFromTile,
+} from '../vector-cover.ts';
+import { builtUpTest, lampFogFade, streetLampPositions } from '../street-lamps.ts';
 import { lonLatToTile, tilePointToLonLat } from '../vector-tile.ts';
 import { createDetailTexture, createNoiseTexture, type DetailTileCesium } from './detail-tiles.ts';
 import { NOISE_TEXTURE_SIZE, makeNoiseTexture } from '../noise-texture.ts';
@@ -2176,6 +2180,7 @@ export class CesiumSceneHost implements SceneHost {
     const b = lonLatToTile(z, east / DEG, latOf(south));
     const lines: ReturnType<typeof streetLinesFromTile> = [];
     const water: [number, number][][][] = [];
+    const buildingsAt: [number, number][] = [];
     const known: { x: number; y: number }[] = [];
     const jobs: Promise<void>[] = [];
     for (let x = a.x; x <= b.x; x++)
@@ -2190,6 +2195,7 @@ export class CesiumSceneHost implements SceneHost {
               if (!data || data.length === 0) return;
               known.push({ x, y });
               lines.push(...streetLinesFromTile(data, z, x, y));
+              buildingsAt.push(...buildingPointsFromTile(data, z, x, y));
               for (const shape of coverShapesFromTile(data, z, x, y))
                 if (shape.cls === 'water') water.push(shape.rings);
             })
@@ -2204,7 +2210,9 @@ export class CesiumSceneHost implements SceneHost {
       this.setStreetLamps([]);
       return;
     }
-    this.setStreetLamps(streetLampPositions(lines, 35, 6000, p.longitude, p.latitude));
+    this.setStreetLamps(
+      streetLampPositions(lines, 35, 6000, p.longitude, p.latitude, builtUpTest(buildingsAt)),
+    );
     const canvas = document.createElement('canvas');
     canvas.width = SIZE;
     canvas.height = SIZE;

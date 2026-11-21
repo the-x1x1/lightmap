@@ -9,7 +9,8 @@ const M_PER_DEG_LAT = 111_320;
  * get none (most are unlit), nor service roads (yards and car parks: lit, but not as a street
  * is). The spacing runs on along a line across its vertices, so a curving street keeps its
  * rhythm. At most `max` lamps, the nearest to (`centreLon`, `centreLat`) kept when there are
- * more.
+ * more. With `lit` (`builtUpTest`), only where it says the road runs through a built-up place:
+ * an open road is dark.
  */
 export function streetLampPositions(
   lines: readonly StreetLine[],
@@ -17,6 +18,7 @@ export function streetLampPositions(
   max = 6000,
   centreLon?: number,
   centreLat?: number,
+  lit?: (lon: number, lat: number) => boolean,
 ): [number, number][] {
   const out: [number, number][] = [];
   for (const l of lines) {
@@ -38,7 +40,8 @@ export function streetLampPositions(
       for (; s <= len; s += spacingM) {
         const ex = (dx * s) / len + nx * setBack * side;
         const ny2 = (dy * s) / len + ny * setBack * side;
-        out.push([lon0 + ex / mPerDegLon, lat0 + ny2 / M_PER_DEG_LAT]);
+        const lamp: [number, number] = [lon0 + ex / mPerDegLon, lat0 + ny2 / M_PER_DEG_LAT];
+        if (!lit || lit(lamp[0], lamp[1])) out.push(lamp);
         side = -side;
       }
       carry = s - len;
@@ -63,4 +66,51 @@ export function streetLampPositions(
 export function lampFogFade(visibilityM: number): { nearM: number; farM: number } | null {
   if (!(visibilityM > 0) || visibilityM > 60_000) return null;
   return { nearM: 0.25 * visibilityM, farM: 1.5 * visibilityM };
+}
+
+/**
+ * Whether a place is built up: at least `minBuildings` buildings or addresses
+ * (`buildingPointsFromTile`) within `radiusM`. Street lamps stand along a town's streets, not
+ * along the open road between towns: a desert highway was drawn as a string of lamps to the
+ * horizon (V&V: Monument Valley at night, US 163). The z14 tiles keep a point every few dozen
+ * metres of a city block at best - a big block in Paris has a handful - so the reach is wide
+ * and two are enough; scattered single buildings (a ranch, a trading post) are not.
+ * Checked on the real tiles: Paris (Trocadéro) keeps 89-96 % of its lamps, Tromsø all, a
+ * village in the Beauce 12 of 20, Monument Valley none. Counted on a grid of `radiusM` cells,
+ * the cell and its eight neighbours.
+ */
+export function builtUpTest(
+  buildings: readonly (readonly [number, number])[],
+  radiusM = 200,
+  minBuildings = 2,
+): (lon: number, lat: number) => boolean {
+  if (buildings.length === 0) return () => false;
+  const lat0 = buildings[0]![1];
+  const mPerDegLon = M_PER_DEG_LAT * Math.cos(lat0 * (Math.PI / 180));
+  const cells = new Map<string, [number, number][]>();
+  const cellOf = (lon: number, lat: number) =>
+    [
+      Math.floor((lon * mPerDegLon) / radiusM),
+      Math.floor((lat * M_PER_DEG_LAT) / radiusM),
+    ] as const;
+  for (const [lon, lat] of buildings) {
+    const [cx, cy] = cellOf(lon, lat);
+    const key = `${cx},${cy}`;
+    const list = cells.get(key) ?? [];
+    list.push([lon, lat]);
+    cells.set(key, list);
+  }
+  const r2 = radiusM * radiusM;
+  return (lon, lat) => {
+    const [cx, cy] = cellOf(lon, lat);
+    let n = 0;
+    for (let dx = -1; dx <= 1; dx++)
+      for (let dy = -1; dy <= 1; dy++)
+        for (const [bl, bt] of cells.get(`${cx + dx},${cy + dy}`) ?? []) {
+          const ex = (bl - lon) * mPerDegLon;
+          const ey = (bt - lat) * M_PER_DEG_LAT;
+          if (ex * ex + ey * ey <= r2 && ++n >= minBuildings) return true;
+        }
+    return false;
+  };
 }

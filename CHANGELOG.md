@@ -14,6 +14,9 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
   them - a mackerel sky, lit warm from the side at sunset - instead of a torn grey sheet.
 - **Peaks in cloud**: ground that stands above the cloud base disappears into the low cloud -
   wholly under an overcast, through the gaps under broken cloud - at the forecast's cloud base.
+- **Open roads are dark at night**: every road five metres wide and more got a lamp every 35 m,
+  so a desert highway ran to the horizon as a string of street lights. Lamps now stand only where
+  the road runs among buildings and addresses.
 - **No tree crowns hung in the sky on arrival**: reaching a hilly town, its woods stood on the
   terrain's finest heights while the globe still drew its coarse first tiles, often tens of
   metres lower, and hung over the rooftops as dark crowns. A tile's trees now show once the

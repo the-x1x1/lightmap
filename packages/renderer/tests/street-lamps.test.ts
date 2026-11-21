@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lampFogFade, streetLampPositions } from '../src/street-lamps.ts';
+import { builtUpTest, lampFogFade, streetLampPositions } from '../src/street-lamps.ts';
 import type { StreetLine } from '../src/vector-cover.ts';
 
 const M = 111_320;
@@ -51,5 +51,44 @@ describe('lampFogFade', () => {
     expect(lampFogFade(80_000)).toBeNull();
     expect(lampFogFade(Infinity)).toBeNull();
     expect(lampFogFade(0)).toBeNull();
+  });
+});
+
+describe('builtUpTest', () => {
+  // About 11 m a 0.0001 deg at the equator.
+  const town: [number, number][] = [
+    [0, 0],
+    [0.0003, 0],
+    [0, 0.0003],
+    [0.0003, 0.0003],
+  ];
+
+  it('lights a street among houses, not the open road beyond them', () => {
+    const lit = builtUpTest(town);
+    expect(lit(0.0001, 0.0001)).toBe(true);
+    expect(lit(0.01, 0)).toBe(false); // 1.1 km out
+    expect(lit(0.002, 0)).toBe(true); // 190 m from the two nearer houses
+    // One farmhouse by the highway does not light it.
+    expect(builtUpTest([[0, 0]])(0, 0.0001)).toBe(false);
+    expect(builtUpTest([])(0, 0)).toBe(false);
+  });
+
+  it('leaves an open highway dark and lamps the stretch through town', () => {
+    const highway = [
+      {
+        kind: 'road' as const,
+        widthM: 14,
+        points: [
+          [-0.02, 0.0001],
+          [0.02, 0.0001],
+        ] as [number, number][],
+      },
+    ];
+    const all = streetLampPositions(highway, 35);
+    const inTown = streetLampPositions(highway, 35, 6000, undefined, undefined, builtUpTest(town));
+    expect(all.length).toBeGreaterThan(100);
+    expect(inTown.length).toBeGreaterThan(0);
+    expect(inTown.length).toBeLessThan(20);
+    for (const [lon] of inTown) expect(Math.abs(lon)).toBeLessThan(0.0025);
   });
 });

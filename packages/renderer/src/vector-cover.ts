@@ -110,6 +110,32 @@ export interface StreetLine {
   points: [number, number][];
 }
 
+/**
+ * Where a vector tile's buildings stand: each address point (the `housenumber` layer: in
+ * OpenMapTiles' z14 tiles a town keeps its addresses where most of its building footprints
+ * are dropped - Tromsø's centre tile has 13 footprints) and the first corner of each footprint
+ * left (`building`). For telling a built-up street from an open road that is near enough.
+ */
+export function buildingPointsFromTile(
+  data: Uint8Array,
+  z: number,
+  x: number,
+  y: number,
+): [number, number][] {
+  const layers = readVectorTile(data, ['building', 'housenumber']);
+  const out: [number, number][] = [];
+  for (const layer of [layers['building'], layers['housenumber']]) {
+    if (!layer) continue;
+    for (const f of layer.features) {
+      if (f.type !== 1 && f.type !== 3) continue;
+      const first = f.geometry[0];
+      if (!first || first.length < 2) continue;
+      out.push(tilePointToLonLat(z, x, y, layer.extent, first[0] as number, first[1] as number));
+    }
+  }
+  return out;
+}
+
 /** Width on the ground by OpenMapTiles `transportation` class, metres. */
 const ROAD_WIDTH_M: Record<string, number> = {
   motorway: 22,
