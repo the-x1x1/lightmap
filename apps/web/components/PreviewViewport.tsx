@@ -164,7 +164,13 @@ export function PreviewViewport({
         <Stat
           label={scene.atmosphere.mode === 'SCENARIO' ? 'Scenario' : 'Weather'}
           value={scenarioById(scene.atmosphere.scenario).label}
-          sub={`${Math.round(scene.atmosphere.parameters.sunTransmittance * 100)} % direct`}
+          sub={
+            // With the Sun down there is no direct light to give: the cloud is what a night
+            // shoot turns on (the stars, the Moon), so show that instead of "73 % direct".
+            s.elevationDegrees > -0.833
+              ? `${Math.round(scene.atmosphere.parameters.sunTransmittance * 100)} % direct`
+              : `${Math.round(scene.atmosphere.parameters.cloudCover * 100)} % cloud`
+          }
           testId="preview-scenario"
         />
         <Stat
