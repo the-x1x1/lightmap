@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { PAST_DUE_GRACE_DAYS, PLANS, can, deriveEntitlements, planForPrice } from '../src/index.ts';
+import {
+  PAST_DUE_GRACE_DAYS,
+  PLANS,
+  can,
+  deriveEntitlements,
+  describeDaysAway,
+  planForPrice,
+} from '../src/index.ts';
 
 const now = new Date('2026-06-01T00:00:00Z');
 const future = '2026-07-01T00:00:00Z';
@@ -139,5 +146,14 @@ describe('can()', () => {
     expect(planForPrice('price_other', map)).toBeNull();
     expect(planForPrice(undefined, map)).toBeNull();
     expect(Object.keys(PLANS)).toEqual(['free', 'pro', 'studio']);
+  });
+});
+
+describe('describeDaysAway', () => {
+  it('reads days, then months, then years', () => {
+    expect(describeDaysAway(1)).toBe('1 day');
+    expect(describeDaysAway(18)).toBe('18 days');
+    expect(describeDaysAway(200)).toBe('about 7 months');
+    expect(describeDaysAway(136447)).toBe('about 374 years');
   });
 });

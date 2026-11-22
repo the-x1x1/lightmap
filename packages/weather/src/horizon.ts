@@ -57,7 +57,7 @@ export function decideWeatherMode(
       return {
         mode: 'RECENT_PAST',
         leadHours,
-        reason: `Observed conditions ${days} days ago from the reanalysis archive (coarse grid; no visibility)`,
+        reason: `Observed conditions ${describeDaysAway(days)} ago from the reanalysis archive (coarse grid; no visibility)`,
         fetchWorthwhile: true,
         weatherConfidence: 'MEDIUM',
       };
@@ -65,7 +65,7 @@ export function decideWeatherMode(
     return {
       mode: 'PAST',
       leadHours,
-      reason: `Historical weather for ${days} days ago is not loaded — showing a scenario`,
+      reason: `Historical weather for ${describeDaysAway(days)} ago is not loaded — showing a scenario`,
       fetchWorthwhile: false,
       weatherConfidence: 'SCENARIO',
     };
@@ -92,7 +92,7 @@ export function decideWeatherMode(
   return {
     mode: 'SCENARIO',
     leadHours,
-    reason: `Forecast unavailable this far ahead (${days} days) — compare scenarios`,
+    reason: `Forecast unavailable this far ahead (${describeDaysAway(days)}) — compare scenarios`,
     fetchWorthwhile: false,
     weatherConfidence: 'SCENARIO',
   };
@@ -111,4 +111,12 @@ export function forecastCacheKey(
   providerVersion = 4,
 ): string {
   return `weather:${providerId}:v${providerVersion}:${gridKey}:${dayIso}`;
+}
+
+/** A gap in days as a reader takes it: days up to two months, then months, then years. */
+function describeDaysAway(days: number): string {
+  const d = Math.abs(days);
+  if (d <= 60) return `${d} day${d === 1 ? '' : 's'}`;
+  if (d < 730) return `about ${Math.round(d / 30.44)} months`;
+  return `about ${Math.round(d / 365.25)} years`;
 }

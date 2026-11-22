@@ -295,7 +295,7 @@ export function can(
           return {
             allowed: false,
             key,
-            reason: `Free plans can plan up to ${maxAhead} days ahead. This date is ${ahead} days away.`,
+            reason: `Free plans can plan up to ${maxAhead} days ahead. This date is ${describeDaysAway(ahead)} away.`,
             upgradeTo,
           };
         if (maxBack !== null && -ahead > maxBack)
@@ -406,4 +406,12 @@ export function planForPrice(
     if (ids?.includes(priceId)) return plan;
   }
   return null;
+}
+
+/** A gap in days as a reader takes it: days up to two months, then months, then years. */
+export function describeDaysAway(days: number): string {
+  const d = Math.abs(days);
+  if (d <= 60) return `${d} day${d === 1 ? '' : 's'}`;
+  if (d < 730) return `about ${Math.round(d / 30.44)} months`;
+  return `about ${Math.round(d / 365.25)} years`;
 }

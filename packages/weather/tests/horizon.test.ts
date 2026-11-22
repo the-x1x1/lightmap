@@ -6,6 +6,18 @@ const now = new Date('2026-05-01T00:00:00Z');
 const h = (hours: number) => new Date(now.getTime() + hours * 3_600_000);
 
 describe('decideWeatherMode', () => {
+  it('gives a far gap in months or years, not thousands of days', () => {
+    expect(decideWeatherMode(h(24 * 30), now, OPEN_METEO_CAPABILITIES).reason).toContain(
+      '(30 days)',
+    );
+    expect(decideWeatherMode(h(24 * 200), now, OPEN_METEO_CAPABILITIES).reason).toContain(
+      '(about 7 months)',
+    );
+    expect(decideWeatherMode(h(24 * 365 * 374), now, OPEN_METEO_CAPABILITIES).reason).toContain(
+      '(about 374 years)',
+    );
+  });
+
   it('is FORECAST inside the reliable horizon, HIGH confidence within 48 h', () => {
     expect(decideWeatherMode(h(12), now, OPEN_METEO_CAPABILITIES)).toMatchObject({
       mode: 'FORECAST',
