@@ -307,14 +307,11 @@ export function MapShell() {
             <span className="hidden sm:inline">{brand.name}</span>
           </a>
           <div className="pointer-events-auto flex-1 max-w-xl">
-            {/* With no pin yet the search box carries the invitation; nothing sits over the globe. */}
-            <LocationSearch
-              placeholder={
-                location
-                  ? undefined
-                  : 'Where will you shoot? Search, paste coordinates or tap the globe'
-              }
-            />
+            {/* With no pin yet the search box carries the invitation; nothing sits over the globe.
+                Short enough to show whole in a phone's box (the long "Search, paste coordinates
+                or tap the globe" was cut to "Where will you sho" there, and to "...paste
+                coordinate" on a desktop); the box's accessible name still says what it takes. */}
+            <LocationSearch placeholder={location ? undefined : 'Where will you shoot?'} />
           </div>
           <div className="pointer-events-auto">
             <AccountMenu />

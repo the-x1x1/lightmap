@@ -219,7 +219,12 @@ export function LocationSearch({
             autoComplete="off"
             autoFocus={autoFocus}
             data-testid="location-search"
-            className="h-11 w-full rounded-[var(--lm-radius-sm)] border border-[var(--lm-panel-border)] bg-[var(--lm-panel-raised)] px-3 pr-9 text-sm text-[var(--lm-text)] placeholder:text-[var(--lm-text-faint)] focus:outline-none focus-visible:[box-shadow:var(--lm-focus)]"
+            // Room on the right for the clear button or the busy mark only when one shows, so
+            // an empty box gives its placeholder the whole width (a phone cut it short).
+            className={cx(
+              'h-11 w-full rounded-[var(--lm-radius-sm)] border border-[var(--lm-panel-border)] bg-[var(--lm-panel-raised)] px-3 text-sm text-[var(--lm-text)] placeholder:text-[var(--lm-text-faint)] focus:outline-none focus-visible:[box-shadow:var(--lm-focus)]',
+              (query !== '' || busy) && 'pr-9',
+            )}
           />
           {busy ? (
             <span
