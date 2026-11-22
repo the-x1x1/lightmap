@@ -324,7 +324,9 @@ export function MapShell() {
       {!previewExpanded ? (
         <aside
           className={cx(
-            'lm-sheet-in absolute inset-x-0 bottom-0 z-30 flex max-h-[62dvh] flex-col rounded-t-2xl border-t border-[var(--lm-panel-border)] bg-[var(--lm-panel)]/95 shadow-[var(--lm-shadow)] backdrop-blur',
+            // Opaque on a phone, where the sheet lies over the globe and its place names showed
+            // through the 5 % ("UNITED STATES OF AMERICA" behind the tabs); see-through beside it.
+            'lm-sheet-in absolute inset-x-0 bottom-0 z-30 flex max-h-[62dvh] flex-col rounded-t-2xl border-t border-[var(--lm-panel-border)] bg-[var(--lm-panel)] shadow-[var(--lm-shadow)] backdrop-blur lg:bg-[var(--lm-panel)]/95',
             'lg:inset-y-0 lg:left-auto lg:right-0 lg:max-h-none lg:w-[420px] lg:rounded-none lg:border-l lg:border-t-0',
             !sheetOpen && 'lm-sheet-collapsed lg:max-h-none',
           )}
