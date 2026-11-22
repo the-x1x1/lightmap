@@ -973,6 +973,10 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
             // The paint's own albedo (\`lit\` carries the scene's dimming of the basemap, which a
             // lamp's light does not take), lit by the lamp.
             vec3 lampLit = lit / max(u_brightness, 1e-3) * vec3(1.0, 0.82, 0.62) * (0.6 * pool * u_lampsOn);
+            // A wet street under its lamps shines: the film and the puddles mirror the lamp heads
+            // (wetR - more at a grazing look, all of a puddle), so a rained-on street at night is
+            // a sheen of warm light running away from the eye, not the dry street's matt glow.
+            lampLit += vec3(1.0, 0.82, 0.62) * (1.5 * wetR * pool * u_lampsOn);
 #ifdef ENABLE_VERTEX_LIGHTING
             material.diffuse += lmUnlit(lampLit, materialInput.normalEC, materialInput.positionToEyeEC.z)
                 / max(alpha, 0.05);
