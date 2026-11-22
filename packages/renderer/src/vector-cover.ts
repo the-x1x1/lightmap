@@ -6,7 +6,7 @@
  * cover map a WorldCover raster would fill; later entries paint over earlier ones.
  */
 import type { CoverClass } from './land-cover.ts';
-import { classifyRings, tilePointToLonLat } from './vector-tile.ts';
+import { classifyRings, clipRing, tilePointToLonLat } from './vector-tile.ts';
 import { readVectorTile } from './vector-tile.ts';
 
 export interface CoverShape {
@@ -114,7 +114,8 @@ export interface StreetLine {
  * Where a vector tile's buildings stand: each address point (the `housenumber` layer: in
  * OpenMapTiles' z14 tiles a town keeps its addresses where most of its building footprints
  * are dropped - Tromsø's centre tile has 13 footprints) and the first corner of each footprint
- * left (`building`). For telling a built-up street from an open road that is near enough.
+ * left (`building`), and points over the residential, commercial and retail land use. For
+ * telling a built-up street from an open road that is near enough.
  */
 export function buildingPointsFromTile(
   data: Uint8Array,
@@ -122,7 +123,7 @@ export function buildingPointsFromTile(
   x: number,
   y: number,
 ): [number, number][] {
-  const layers = readVectorTile(data, ['building', 'housenumber']);
+  const layers = readVectorTile(data, ['building', 'housenumber', 'landuse']);
   const out: [number, number][] = [];
   for (const layer of [layers['building'], layers['housenumber']]) {
     if (!layer) continue;
@@ -133,7 +134,59 @@ export function buildingPointsFromTile(
       out.push(tilePointToLonLat(z, x, y, layer.extent, first[0] as number, first[1] as number));
     }
   }
+  // Built-up land use: a town whose houses are not mapped (nor its addresses) is still mapped
+  // as a residential, commercial or retail area, and it is lit at night. Points on an 80 m grid
+  // inside those areas count as built-up, so its streets get their lamps (they had none: the
+  // lamps went only where footprints or addresses were).
+  const landuse = layers['landuse'];
+  if (landuse) {
+    const e = landuse.extent;
+    const latDeg = tilePointToLonLat(z, x, y, e, e / 2, e / 2)[1];
+    const tileM = (40_075_016 * Math.cos((latDeg * Math.PI) / 180)) / 2 ** z;
+    const step = (BUILT_UP_GRID_M * e) / tileM;
+    for (const f of landuse.features) {
+      if (f.type !== 3 || !BUILT_UP_LANDUSE.has(String(f.properties['class']))) continue;
+      for (const poly of classifyRings(f.geometry)) {
+        const outer = clipRing(poly.outer, 0, e);
+        if (outer.length < 6) continue;
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        for (let k = 0; k + 1 < outer.length; k += 2) {
+          minX = Math.min(minX, outer[k] as number);
+          maxX = Math.max(maxX, outer[k] as number);
+          minY = Math.min(minY, outer[k + 1] as number);
+          maxY = Math.max(maxY, outer[k + 1] as number);
+        }
+        for (let px = (Math.floor(minX / step) + 0.5) * step; px <= maxX; px += step)
+          for (let py = (Math.floor(minY / step) + 0.5) * step; py <= maxY; py += step) {
+            if (!inRing(outer, px, py) || poly.holes.some((h) => inRing(h, px, py))) continue;
+            out.push(tilePointToLonLat(z, x, y, e, px, py));
+          }
+      }
+    }
+  }
   return out;
+}
+
+/** The land uses that are built up and lit at night (OpenMapTiles `landuse` classes). */
+const BUILT_UP_LANDUSE: ReadonlySet<string> = new Set(['residential', 'commercial', 'retail']);
+/** Spacing of the built-up points laid over those areas, metres. */
+const BUILT_UP_GRID_M = 80;
+
+/** Whether (x, y) lies inside a ring of [x, y, x, y, ...] (even-odd). */
+function inRing(ring: readonly number[], x: number, y: number): boolean {
+  let inside = false;
+  const n = ring.length / 2;
+  for (let i = 0, j = n - 1; i < n; j = i++) {
+    const xi = ring[2 * i] as number;
+    const yi = ring[2 * i + 1] as number;
+    const xj = ring[2 * j] as number;
+    const yj = ring[2 * j + 1] as number;
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
 }
 
 /** Width on the ground by OpenMapTiles `transportation` class, metres. */

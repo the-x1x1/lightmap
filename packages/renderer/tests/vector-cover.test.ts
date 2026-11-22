@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   bridgeAt,
   bridgeLinesFromTile,
+  buildingPointsFromTile,
   coverShapesFromTile,
   streetLinesFromTile,
 } from '../src/vector-cover.ts';
@@ -183,5 +184,29 @@ describe('bridges (V&V: Waterloo Bridge stood the eye at the river)', () => {
     expect(
       bridgeAt([b], -0.11685 + 30 / (111_320 * Math.cos((51.508 * Math.PI) / 180)), 51.508),
     ).toBe(null);
+  });
+});
+
+describe('built-up points', () => {
+  // One square of land use, 2000 x 2000 tile units (at z14 near 45 N, ~0.42 m a unit: ~850 m).
+  const bigLayer = (cls: string) =>
+    bytes(3, [
+      ...key(15, 0),
+      2,
+      ...str(1, 'landuse'),
+      ...bytes(2, [...packed(2, [0, 0]), ...key(3, 0), 3, ...packed(4, square(100, 100, 2000))]),
+      ...str(3, 'class'),
+      ...bytes(4, str(1, cls)),
+      ...key(5, 0),
+      ...varint(4096),
+    ]);
+  it('lays points over a residential area with no buildings mapped, none over farmland', () => {
+    const res = buildingPointsFromTile(new Uint8Array(bigLayer('residential')), 14, 8300, 5900);
+    // An ~850 m square on an 80 m grid: some 100 points.
+    expect(res.length).toBeGreaterThan(80);
+    expect(res.length).toBeLessThan(130);
+    expect(buildingPointsFromTile(new Uint8Array(bigLayer('farmland')), 14, 8300, 5900)).toEqual(
+      [],
+    );
   });
 });
