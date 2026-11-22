@@ -155,7 +155,11 @@ export function PreviewViewport({
           label="Sun"
           value={
             s.elevationDegrees > -0.833
-              ? `${s.elevationDegrees.toFixed(0)}° up`
+              ? // Up (the disc's top over the horizon, refraction allowed) to -0.833: at -0.6
+                // "-1° up" read as a contradiction, so the last degree is "on horizon".
+                Math.round(s.elevationDegrees) >= 1
+                ? `${Math.round(s.elevationDegrees)}° up`
+                : 'on horizon'
               : `${Math.abs(s.elevationDegrees).toFixed(0)}° below`
           }
           sub={`${Math.round(s.azimuthDegrees)}° ${compassLabel(s.azimuthDegrees)}`}

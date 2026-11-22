@@ -291,7 +291,7 @@ export function FieldView({ scene, onClose }: { scene: SceneState; onClose: () =
           <div className="text-xs text-[var(--lm-text-muted)]" data-testid="field-view-time">
             {formatWallTime(scene.utc, tz)} · {scene.localTime.date} ·{' '}
             {sunUp
-              ? `sun ${Math.round(scene.solar.azimuthDegrees)}° ${compassLabel(scene.solar.azimuthDegrees)}, ${Math.round(sunEl)}° up`
+              ? `sun ${Math.round(scene.solar.azimuthDegrees)}° ${compassLabel(scene.solar.azimuthDegrees)}, ${Math.round(sunEl) >= 1 ? `${Math.round(sunEl)}° up` : 'on the horizon'}`
               : `sun ${Math.abs(Math.round(sunEl))}° below the horizon`}
           </div>
           <div
