@@ -527,6 +527,14 @@ export const FOLIAGE_TONE_GLSL = `
         color.rgb = mix(color.rgb, color.rgb * vec3(1.12, 1.08, 0.85), smoothstep(0.55, 0.9, leafTex));
     }`;
 
+/**
+ * How far a trunk runs below the finest terrain's ground. The globe draws coarser terrain until
+ * it refines, and keeps it coarse some way off: within 800 m of the eye at Tromso it stood up to
+ * 6 m off the finest, so trees on the low side hung over the drawn ground on a gap - the
+ * "stray crowns" seen on arrival. A trunk sunk this far still meets the ground there.
+ */
+const TRUNK_SINK_M = 4;
+
 /** The ids of a tree's parts after its number (`treeInstances`). */
 const TREE_PARTS = [
   't',
@@ -1501,17 +1509,19 @@ export class OsmBuildingsLayer {
           ),
           new C.Matrix4(),
         );
+      // A trunk runs TRUNK_SINK_M into the ground, so a tree still meets the ground the globe
+      // draws where that is coarser and lower than the finest terrain it stands on.
       const trunk = (length: number, top: number, bottom: number, colour = bark) =>
         out.push(
           new C.GeometryInstance({
             geometry: new C.CylinderGeometry({
-              length,
+              length: length + TRUNK_SINK_M,
               topRadius: top,
               bottomRadius: bottom,
               slices: 5,
               vertexFormat,
             }),
-            modelMatrix: at(0, 0, length / 2),
+            modelMatrix: at(0, 0, (length - TRUNK_SINK_M) / 2),
             id: `${id}t`,
             attributes: { color: colour, show: shown() },
           }),
@@ -1622,7 +1632,7 @@ export class OsmBuildingsLayer {
         const lean = 0.04 + 0.2 * s * s;
         const lx = Math.cos(turn * 2.3) * Math.sin(lean) * top;
         const ly = Math.sin(turn * 2.3) * Math.sin(lean) * top;
-        limb('t', 0, lx, ly, top, 0.2, palmBark);
+        limb('t', -TRUNK_SINK_M, lx, ly, top, 0.2, palmBark);
         blob('c', 0.55, 0.55, 0.7, lx, ly, top, 0, frond, 4, 6);
         const len = t.radiusM;
         // A wood's palms, many and seen among the canopy, get five fronds; a park's seven.
