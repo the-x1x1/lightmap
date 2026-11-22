@@ -243,7 +243,7 @@ describe('trees from land cover', () => {
     const z = 14;
     const share = (trees: { form: string }[], form: string) =>
       trees.filter((t) => t.form === form).length / trees.length;
-    // Honolulu (21 N): a park of palms and spreading umbrella trees, no conifers.
+    // Honolulu (21 N): a park of palms, spreading umbrella trees and ironwoods, no conifers.
     const tropicPark = treesFromTile(
       landcover('grass', 'park', square(0, 0, 4096)),
       z,
@@ -254,6 +254,7 @@ describe('trees from land cover', () => {
     expect(share(tropicPark, 'palm')).toBeGreaterThan(0.25);
     expect(share(tropicPark, 'umbrella')).toBeGreaterThan(0.25);
     expect(tropicPark.some((t) => t.conifer)).toBe(false);
+    expect(share(tropicPark, 'ironwood')).toBeGreaterThan(0.08);
     expect(tropicPark.every((t) => t.park)).toBe(true);
     // The boreal north (Tromso, 69.6 N): a forest mostly of spruce spires and pines.
     const boreal = treesFromTile(
@@ -290,6 +291,7 @@ describe('trees from land cover', () => {
       if (t.form === 'columnar') expect(t.radiusM / t.heightM).toBeLessThan(0.16);
       if (t.form === 'umbrella') expect(t.radiusM / t.heightM).toBeGreaterThan(0.55);
       if (t.form === 'palm') expect(t.radiusM).toBeLessThanOrEqual(5);
+      if (t.form === 'ironwood') expect(t.heightM).toBeGreaterThanOrEqual(12);
     }
   });
 

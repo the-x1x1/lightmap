@@ -171,22 +171,25 @@ export interface TreeSpot {
  * How a tree is built. `broadleaf`: a crown wider than its trunk's height, in lobes (oak, maple,
  * beech, mango). `conifer`: a cone (pine, fir). `columnar`: a narrow spire (spruce, cypress).
  * `umbrella`: a wide flat crown on a bare trunk (monkeypod and rain tree, acacia, stone pine).
- * `palm`: a bare stem under a crown of fronds.
+ * `palm`: a bare stem under a crown of fronds. `ironwood`: the tropics' casuarina (ironwood,
+ * she-oak) - a tall, open, ragged spire of drooping grey-green needles, along shores and in
+ * parks.
  */
-export type TreeForm = 'broadleaf' | 'conifer' | 'columnar' | 'umbrella' | 'palm';
+export type TreeForm = 'broadleaf' | 'conifer' | 'columnar' | 'umbrella' | 'palm' | 'ironwood';
 export const TREE_FORMS: readonly TreeForm[] = [
   'broadleaf',
   'conifer',
   'columnar',
   'umbrella',
   'palm',
+  'ironwood',
 ];
 
 /**
  * The share of each build among a place's trees, by climate - a rule of thumb, not a species
  * map: the woods outside a window are not a lollipop of one shape the world over. The tropics
- * (Hawaii, the Caribbean): no conifers; palms and spreading umbrella trees in parks and along
- * streets, broad-leaf canopy in the woods. The subtropics and the Mediterranean: cypresses,
+ * (Hawaii, the Caribbean): no true conifers; palms, spreading umbrella trees and casuarina
+ * (ironwood) in parks and along shores and streets, broad-leaf canopy in the woods. The subtropics and the Mediterranean: cypresses,
  * umbrella pines, some palms in parks; pine woods. The temperate belt: broad-leaf, conifers in
  * the forests, but mostly conifers in the Pacific Northwest, the Rockies, the Alps and
  * Carpathians, and half pine on the US south-east's coastal plain. The boreal north (past 55 degrees): spruce spires and pines, some birch.
@@ -198,14 +201,15 @@ export function treeMix(
   forest: boolean,
 ): Record<TreeForm, number> {
   const a = Math.abs(latitudeDeg);
-  const mix = (b: number, c: number, col: number, u: number, p: number) => ({
+  const mix = (b: number, c: number, col: number, u: number, p: number, iw = 0) => ({
     broadleaf: b,
     conifer: c,
     columnar: col,
     umbrella: u,
     palm: p,
+    ironwood: iw,
   });
-  if (a < 23.5) return park ? mix(0.3, 0, 0, 0.35, 0.35) : mix(0.6, 0, 0, 0.25, 0.15);
+  if (a < 23.5) return park ? mix(0.25, 0, 0, 0.3, 0.3, 0.15) : mix(0.55, 0, 0, 0.2, 0.1, 0.15);
   if (a < 32 || inMediterraneanClimate(latitudeDeg, longitudeDeg))
     return park ? mix(0.45, 0.05, 0.2, 0.15, 0.15) : mix(0.45, 0.3, 0.05, 0.2, 0);
   if (a < 55 && inConiferBelt(latitudeDeg, longitudeDeg))
@@ -272,6 +276,10 @@ function treeSize(
     case 'umbrella': {
       const heightM = lerp(7, 14);
       return { heightM, radiusM: heightM * (0.6 + 0.2 * s) };
+    }
+    case 'ironwood': {
+      const heightM = lerp(12, 24);
+      return { heightM, radiusM: heightM * (0.28 + 0.1 * s) };
     }
     case 'palm': {
       const heightM = lerp(8, 18);

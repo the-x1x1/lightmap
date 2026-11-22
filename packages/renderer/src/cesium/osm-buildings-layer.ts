@@ -523,6 +523,7 @@ const TREE_PARTS = [
   'c',
   'c1',
   'c2',
+  'c3',
   'b0',
   'b1',
   'b2',
@@ -1450,10 +1451,11 @@ export class OsmBuildingsLayer {
    *   bare trunk;
    * - umbrella: a short stout bole forking into three limbs under a deep, wide dome
    *   (monkeypod, rain tree, stone pine);
+   * - ironwood (casuarina): a tall bole under four ragged tufts on their own branches;
    * - palm: a slim stem, leaning a little or a lot, a knot of frond bases, and seven fronds
    *   arching out and down.
    * Trunks thicken with height. Ids are the tree's number and a part (`TREE_PARTS`: `t` the
-   * trunk, `c..c2` crowns, `b0..b2` limbs, `f0..f6` fronds), so single trees can be hidden
+   * trunk, `c..c3` crowns, `b0..b2` limbs, `f0..f6` fronds), so single trees can be hidden
    * (`hideTreesNear`) by their attributes.
    */
   private treeInstances(
@@ -1642,6 +1644,36 @@ export class OsmBuildingsLayer {
             }),
           );
         }
+        return;
+      }
+      if (t.form === 'ironwood') {
+        // A casuarina: a tall straight bole and an open, ragged crown of drooping grey-green
+        // needles - four tufts, each smaller and higher, thrown out to different sides on
+        // their own branches (the shader's tiers and outline cut break them up).
+        const iron = C.ColorGeometryInstanceAttribute.fromColor(
+          new C.Color(0.2 + 0.04 * t.tone, 0.26 + 0.05 * t.tone, 0.21, 1),
+        );
+        const crownBase = t.heightM * (0.25 + 0.08 * s);
+        const crownH = t.heightM - crownBase;
+        trunk(crownBase + crownH * 0.75, girth * 0.55, girth);
+        const r = t.radiusM;
+        // Four tufts up the bole, each thrown to its own side on a branch and overlapping the
+        // next only a little: a ragged, uneven outline, never a stack of discs.
+        const tufts: [string, number, number, number, number][] = [
+          // part, height in the crown (centre), half-height, width (x r), reach (x r)
+          ['c', 0.28, 0.24, 0.6, 0.5],
+          ['c1', 0.5, 0.24, 0.55, 0.45],
+          ['c2', 0.7, 0.2, 0.45, 0.3],
+          ['c3', 0.88, 0.14, 0.3, 0.1],
+        ];
+        tufts.forEach(([part, up, half, wide, reach], k) => {
+          const a = turn + k * 2.1;
+          const e = Math.cos(a) * r * reach;
+          const n = Math.sin(a) * r * reach;
+          const z = crownBase + crownH * up;
+          blob(part, r * wide, r * wide * (0.75 + 0.25 * s), crownH * half, e, n, z, a, iron, 5, 7);
+          if (k < 3) limb(`b${k}`, z - crownH * 0.2, e * 0.8, n * 0.8, z, girth * 0.35);
+        });
         return;
       }
       if (t.form === 'umbrella') {
