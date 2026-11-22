@@ -290,68 +290,73 @@ export function Timeline({
         </div>
       </div>
       <div className="relative">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute left-0 right-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full opacity-90"
-          style={{ background: track }}
-          data-testid="timeline-track"
-          data-terrain-shade={shade ? 'true' : undefined}
-          data-dark-sky={band ? 'true' : undefined}
-        />
-        <input
-          id={id}
-          type="range"
-          className="lm-range relative"
-          style={{ ['--lm-range-track' as string]: 'transparent' }}
-          min={0}
-          // A fall-back day has 1 500 minutes and a spring-forward day 1 380: the slider spans
-          // the day it shows.
-          max={total - 1}
-          step={1}
-          value={Math.min(minutes, total - 1)}
-          onChange={(e) => setMinutes(Number(e.target.value))}
-          // While the thumb is held the playing clock waits, so a drag lands where the finger stops.
-          onPointerDown={() => play.hold(true)}
-          onPointerUp={() => play.hold(false)}
-          onPointerCancel={() => play.hold(false)}
-          onKeyDown={(e) => {
-            // Page keys jump an hour, Shift+arrows ten minutes; Home/End go to sunrise/sunset.
-            if ((e.key === 'ArrowRight' || e.key === 'ArrowUp') && e.shiftKey) {
-              e.preventDefault();
-              setMinutes(minutes + 10);
-            } else if ((e.key === 'ArrowLeft' || e.key === 'ArrowDown') && e.shiftKey) {
-              e.preventDefault();
-              setMinutes(minutes - 10);
-            } else if (e.key === 'PageUp') {
-              e.preventDefault();
-              setMinutes(minutes + 60);
-            } else if (e.key === 'PageDown') {
-              e.preventDefault();
-              setMinutes(minutes - 60);
-            } else if (e.key === 'Home' && dayEvents?.sunrise) {
-              e.preventDefault();
-              setMinutes(minutesOf(dayEvents.sunrise, dayEvents.dayStart)!);
-            } else if (e.key === 'End' && dayEvents?.sunset) {
-              e.preventDefault();
-              setMinutes(minutesOf(dayEvents.sunset, dayEvents.dayStart)!);
-            } else if (e.key === '[' || e.key === ']') {
-              // Jump to the previous / next day event (dawn, golden hour, noon, dusk…), so every
-              // marker is reachable from the keyboard, not only by mouse (plan §28).
-              const sorted = markers.map((m) => m.minutes).sort((a, b) => a - b);
-              const next =
-                e.key === ']'
-                  ? sorted.find((m) => m > minutes)
-                  : [...sorted].reverse().find((m) => m < minutes);
-              if (next !== undefined) {
+        {/* The painted track and the slider in a box of their own, so the track centres on the
+            slider and not on the slider plus the marker row under it (it sat 19 px low, under
+            the thumb's foot). */}
+        <div className="relative">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-0 right-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full opacity-90"
+            style={{ background: track }}
+            data-testid="timeline-track"
+            data-terrain-shade={shade ? 'true' : undefined}
+            data-dark-sky={band ? 'true' : undefined}
+          />
+          <input
+            id={id}
+            type="range"
+            className="lm-range relative"
+            style={{ ['--lm-range-track' as string]: 'transparent' }}
+            min={0}
+            // A fall-back day has 1 500 minutes and a spring-forward day 1 380: the slider spans
+            // the day it shows.
+            max={total - 1}
+            step={1}
+            value={Math.min(minutes, total - 1)}
+            onChange={(e) => setMinutes(Number(e.target.value))}
+            // While the thumb is held the playing clock waits, so a drag lands where the finger stops.
+            onPointerDown={() => play.hold(true)}
+            onPointerUp={() => play.hold(false)}
+            onPointerCancel={() => play.hold(false)}
+            onKeyDown={(e) => {
+              // Page keys jump an hour, Shift+arrows ten minutes; Home/End go to sunrise/sunset.
+              if ((e.key === 'ArrowRight' || e.key === 'ArrowUp') && e.shiftKey) {
                 e.preventDefault();
-                setMinutes(next);
+                setMinutes(minutes + 10);
+              } else if ((e.key === 'ArrowLeft' || e.key === 'ArrowDown') && e.shiftKey) {
+                e.preventDefault();
+                setMinutes(minutes - 10);
+              } else if (e.key === 'PageUp') {
+                e.preventDefault();
+                setMinutes(minutes + 60);
+              } else if (e.key === 'PageDown') {
+                e.preventDefault();
+                setMinutes(minutes - 60);
+              } else if (e.key === 'Home' && dayEvents?.sunrise) {
+                e.preventDefault();
+                setMinutes(minutesOf(dayEvents.sunrise, dayEvents.dayStart)!);
+              } else if (e.key === 'End' && dayEvents?.sunset) {
+                e.preventDefault();
+                setMinutes(minutesOf(dayEvents.sunset, dayEvents.dayStart)!);
+              } else if (e.key === '[' || e.key === ']') {
+                // Jump to the previous / next day event (dawn, golden hour, noon, dusk…), so every
+                // marker is reachable from the keyboard, not only by mouse (plan §28).
+                const sorted = markers.map((m) => m.minutes).sort((a, b) => a - b);
+                const next =
+                  e.key === ']'
+                    ? sorted.find((m) => m > minutes)
+                    : [...sorted].reverse().find((m) => m < minutes);
+                if (next !== undefined) {
+                  e.preventDefault();
+                  setMinutes(next);
+                }
               }
-            }
-          }}
-          aria-valuetext={`${timeLabel}${phase ? `, ${phase.replace('-', ' ')}` : ''}${inDarkSky ? ', dark sky: Milky Way core up' : ''}`}
-          aria-describedby={`${id}-desc`}
-          data-testid="timeline-range"
-        />
+            }}
+            aria-valuetext={`${timeLabel}${phase ? `, ${phase.replace('-', ' ')}` : ''}${inDarkSky ? ', dark sky: Milky Way core up' : ''}`}
+            aria-describedby={`${id}-desc`}
+            data-testid="timeline-range"
+          />
+        </div>
         <p id={`${id}-desc`} className="sr-only">
           Drag to scrub through the day. Arrow keys move one minute, Shift with an arrow ten, Page
           Up and Page Down one hour
