@@ -188,8 +188,54 @@ describe('Open-Meteo normalisation', () => {
     ).rejects.toThrow('bad');
     const fetch500 = (async () => new Response('x', { status: 500 })) as unknown as typeof fetch;
     await expect(
-      new OpenMeteoProvider({ fetchImpl: fetch500 }).getForecast(0, 0, new Date(), new Date()),
+      new OpenMeteoProvider({ fetchImpl: fetch500, retryDelayMs: 0 }).getForecast(
+        0,
+        0,
+        new Date(),
+        new Date(),
+      ),
     ).rejects.toThrow('500');
+  });
+
+  it('retries once after a 5xx or a dropped connection, never after a 4xx', async () => {
+    const run = async (answers: (number | 'drop')[]) => {
+      let calls = 0;
+      const fetchImpl = (async () => {
+        const a = answers[calls++] ?? 200;
+        if (a === 'drop') throw new TypeError('fetch failed');
+        return new Response(JSON.stringify(sample), { status: a });
+      }) as unknown as typeof fetch;
+      const p = new OpenMeteoProvider({ fetchImpl, retryDelayMs: 0 });
+      const out = await p
+        .getForecast(0, 0, new Date(), new Date())
+        .then(() => 'ok')
+        .catch((e: Error) => e.message);
+      return { out, calls };
+    };
+    expect(await run([502, 200])).toEqual({ out: 'ok', calls: 2 });
+    expect(await run(['drop', 200])).toEqual({ out: 'ok', calls: 2 });
+    expect(await run([502, 503])).toEqual({ out: 'Open-Meteo 503', calls: 2 });
+    expect(await run([400])).toEqual({ out: 'Open-Meteo 400', calls: 1 });
+  });
+
+  it('does not retry a request its caller aborted', async () => {
+    let calls = 0;
+    const ac = new AbortController();
+    const fetchImpl = (async () => {
+      calls++;
+      ac.abort();
+      throw new DOMException('aborted', 'AbortError');
+    }) as unknown as typeof fetch;
+    await expect(
+      new OpenMeteoProvider({ fetchImpl, retryDelayMs: 0 }).getForecast(
+        0,
+        0,
+        new Date(),
+        new Date(),
+        { signal: ac.signal },
+      ),
+    ).rejects.toThrow('aborted');
+    expect(calls).toBe(1);
   });
 });
 

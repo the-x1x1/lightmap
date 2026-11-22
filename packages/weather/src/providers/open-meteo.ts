@@ -90,6 +90,8 @@ export interface OpenMeteoOptions {
   apiKey?: string;
   fetchImpl?: typeof fetch;
   now?: () => Date;
+  /** The pause before the one retry of a failed request, ms (default 600). */
+  retryDelayMs?: number;
 }
 
 export class OpenMeteoProvider implements WeatherProvider {
@@ -98,6 +100,7 @@ export class OpenMeteoProvider implements WeatherProvider {
   private readonly apiKey: string | undefined;
   private readonly fetchImpl: typeof fetch;
   private readonly now: () => Date;
+  private readonly retryDelayMs: number;
 
   constructor(opts: OpenMeteoOptions = {}) {
     this.apiKey = opts.apiKey;
@@ -113,6 +116,7 @@ export class OpenMeteoProvider implements WeatherProvider {
     ).replace(/\/$/, '');
     this.fetchImpl = opts.fetchImpl ?? fetch;
     this.now = opts.now ?? (() => new Date());
+    this.retryDelayMs = opts.retryDelayMs ?? 600;
   }
 
   getCapabilities(): WeatherCapabilities {
@@ -179,12 +183,49 @@ export class OpenMeteoProvider implements WeatherProvider {
   ): Promise<WeatherSeries> {
     const init: RequestInit = { headers: { Accept: 'application/json' } };
     if (signal !== undefined) init.signal = signal;
-    const res = await this.fetchImpl(url, init);
+    // One retry, after a short pause, when the service answers 5xx or the network drops: the
+    // public API now and then answers a single 502 (V&V), which left the weather tile empty
+    // until the next change of place or day. A 4xx is the request's fault and an abort is the
+    // caller's, so neither is retried.
+    let res: Response;
+    try {
+      res = await this.fetchImpl(url, init);
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      await pause(this.retryDelayMs, signal);
+      res = await this.fetchImpl(url, init);
+    }
+    if (res.status >= 500) {
+      await pause(this.retryDelayMs, signal);
+      res = await this.fetchImpl(url, init);
+    }
     if (!res.ok) throw new Error(`Open-Meteo ${res.status}`);
     const body = (await res.json()) as OpenMeteoResponse;
     if (body.error) throw new Error(`Open-Meteo: ${body.reason ?? 'error'}`);
     return normalizeOpenMeteo(body, lat, lng, this.now(), this.getCapabilities());
   }
+}
+
+/** Waits `ms`, or rejects as soon as the signal aborts. */
+function pause(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) return reject(abortError(signal));
+    const t = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(t);
+      reject(abortError(signal));
+    };
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
+/** The signal's own reason when it is an Error (an AbortError), else one in its place. */
+function abortError(signal?: AbortSignal): Error {
+  const reason: unknown = signal?.reason;
+  return reason instanceof Error ? reason : new DOMException('aborted', 'AbortError');
 }
 
 function isoDate(d: Date): string {
