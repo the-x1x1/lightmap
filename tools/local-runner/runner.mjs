@@ -577,6 +577,13 @@ const MIME = {
 };
 let harnessServer = null;
 let harnessRoot = null;
+/**
+ * Cesium's build, served at the smoke page's `/cesium-build/` straight from where it lies (its
+ * real path), not through a junction in the page's folder: the junction went missing after a
+ * build that had made it (11-22: every `/cesium-build/...` answered 404 and the page stopped at
+ * its first import), and nothing put it back until the next build.
+ */
+let harnessCesium = null;
 let harnessOut = null;
 
 /** Where a request's path lands under `root`, or null when it would leave it. */
@@ -642,7 +649,13 @@ function startHarnessServer() {
       return undefined;
     }
     if (req.method !== 'GET' && req.method !== 'HEAD') return send(405, 'no');
-    let file = safeJoin(harnessRoot, req.url === '/' ? '/index.html' : (req.url ?? '/'));
+    const url = req.url === '/' ? '/index.html' : (req.url ?? '/');
+    const cesiumPath = /^\/cesium-build(\/.*)$/.exec(url.split('?')[0]);
+    if (cesiumPath && !harnessCesium) return send(503, "Cesium's build is not there yet");
+    let file =
+      cesiumPath && harnessCesium
+        ? safeJoin(harnessCesium, cesiumPath[1])
+        : safeJoin(harnessRoot, url);
     if (!file) return send(400, 'bad path');
     fs.stat(file, (error, st) => {
       if (!error && st.isDirectory()) file = path.join(file, 'index.html');
@@ -687,13 +700,11 @@ async function buildHarness(head) {
       log: 'logs/serve-harness.log',
     };
   const cesium = path.join(SERVE, 'node_modules', 'cesium', 'Build', 'Cesium');
-  const link = path.join(www, 'cesium-build');
-  if (!exists(path.join(link, 'index.js'))) {
-    if (!exists(path.join(cesium, 'index.js')))
-      return { ok: false, reason: `no Cesium build at ${cesium}` };
-    unlinkLink(link);
-    fs.symlinkSync(cesium, link, 'junction');
-  }
+  if (!exists(path.join(cesium, 'index.js')))
+    return { ok: false, reason: `no Cesium build at ${cesium}` };
+  harnessCesium = fs.realpathSync(cesium);
+  // An old junction in the page's folder is no longer used (the server maps the path itself).
+  unlinkLink(path.join(www, 'cesium-build'));
   const atlas = path.join(SERVE, 'apps', 'web', 'public', 'textures', 'ground-detail.png');
   if (exists(atlas)) {
     fs.mkdirSync(path.join(www, 'textures'), { recursive: true });
