@@ -1450,7 +1450,8 @@ export class OsmBuildingsLayer {
    *   bare trunk;
    * - umbrella: a short stout bole forking into three limbs under a deep, wide dome
    *   (monkeypod, rain tree, stone pine);
-   * - palm: a slim stem, a knot of frond bases, and seven fronds arching out and down.
+   * - palm: a slim stem, leaning a little or a lot, a knot of frond bases, and seven fronds
+   *   arching out and down.
    * Trunks thicken with height. Ids are the tree's number and a part (`TREE_PARTS`: `t` the
    * trunk, `c..c2` crowns, `b0..b2` limbs, `f0..f6` fronds), so single trees can be hidden
    * (`hideTreesNear`) by their attributes.
@@ -1467,7 +1468,8 @@ export class OsmBuildingsLayer {
     const palmBark = C.ColorGeometryInstanceAttribute.fromColor(new C.Color(0.46, 0.41, 0.34, 1));
     // Fronds take the plain lit path (green no more than their red, so not the foliage cut,
     // which would eat a blade seen edge-on).
-    const frond = C.ColorGeometryInstanceAttribute.fromColor(new C.Color(0.25, 0.255, 0.1, 1));
+    // A sunlit coconut frond's olive, not a shadow's.
+    const frond = C.ColorGeometryInstanceAttribute.fromColor(new C.Color(0.36, 0.37, 0.14, 1));
     const shown = () => new C.ShowGeometryInstanceAttribute(true);
     trees.forEach((t, i) => {
       const ground = (grounds[i] ?? 0) - 0.3;
@@ -1510,6 +1512,7 @@ export class OsmBuildingsLayer {
         n: number,
         toUp: number,
         radius: number,
+        colour = bark,
       ) => {
         const flat = Math.hypot(e, n);
         const length = Math.hypot(flat, toUp - fromUp);
@@ -1538,7 +1541,7 @@ export class OsmBuildingsLayer {
               new C.Matrix4(),
             ),
             id: `${id}${part}`,
-            attributes: { color: bark, show: shown() },
+            attributes: { color: colour, show: shown() },
           }),
         );
       };
@@ -1601,9 +1604,14 @@ export class OsmBuildingsLayer {
         return;
       }
       if (t.form === 'palm') {
+        // A coconut palm's stem is seldom plumb: it leans a little or a lot, most often out
+        // toward open light; the crown sits on its top, wherever that lands.
         const top = t.heightM - 0.6;
-        trunk(top, 0.14, 0.2, palmBark);
-        blob('c', 0.55, 0.55, 0.7, 0, 0, top, 0, frond, 4, 6);
+        const lean = 0.04 + 0.2 * s * s;
+        const lx = Math.cos(turn * 2.3) * Math.sin(lean) * top;
+        const ly = Math.sin(turn * 2.3) * Math.sin(lean) * top;
+        limb('t', 0, lx, ly, top, 0.2, palmBark);
+        blob('c', 0.55, 0.55, 0.7, lx, ly, top, 0, frond, 4, 6);
         const len = t.radiusM;
         // A wood's palms, many and seen among the canopy, get five fronds; a park's seven.
         const fronds = t.park ? 7 : 5;
@@ -1612,7 +1620,7 @@ export class OsmBuildingsLayer {
           // Arching out and down: the older, lower fronds droop most.
           const droop = 0.25 + (0.35 * ((k * 3) % fronds)) / fronds;
           const m = C.Matrix4.multiply(
-            at(0, 0, top, a),
+            at(lx, ly, top, a),
             C.Matrix4.fromRotationTranslation(
               C.Matrix3.fromRotationY(droop),
               new C.Cartesian3(Math.cos(droop) * len * 0.5, 0, -Math.sin(droop) * len * 0.5),
