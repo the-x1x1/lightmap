@@ -963,7 +963,11 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
     // Trocadero, before dawn).
     if (u_lampsOn > 0.0 && roadsKnown > 0.0)
     {
-        float pool = texture(u_lampMap, roadUv).r * roadsKnown;
+        // A street lamp's head throws its light down and along the carriageway and pavement
+        // under it; the verge, a lawn or a yard past the kerb gets the spill only. So the pools
+        // follow the street (they run on into a lit band along it, lamps 35 m apart) and fall
+        // away beyond its edge, rather than lying as round discs across lawns and roofs alike.
+        float pool = texture(u_lampMap, roadUv).r * roadsKnown * mix(0.35, 1.0, roadPaint);
         if (pool > 0.002)
         {
             // The paint's own albedo (\`lit\` carries the scene's dimming of the basemap, which a
