@@ -399,12 +399,15 @@ export function treeFragmentShader(
         if (leaves < 1.0) {
             color.rgb = mix(czm_gammaCorrect(vec4(0.30, 0.26, 0.22, 1.0)).rgb, color.rgb, leaves);
             // Twigs are densest where the line of sight crosses most of the crown (its middle)
-            // and thin out to a feathered edge; white-noise dither, which reads as twigs where
-            // a structured pattern read as netting (V&V: Boston Common in January).
+            // and thin out to a feathered edge; from afar a white-noise dither, which reads as
+            // twigs where a regular pattern read as netting (V&V: Boston Common in January), but
+            // near the eye that dither sparkled and swam as a grain (V&V: Seattle in November),
+            // so there the twigs are knots fixed to the tree.
             float facing = abs(dot(normalize(v_normalEC), normalize(-v_positionEC)));
             float keep = leaves + (1.0 - leaves) * (0.08 + 0.55 * facing * facing);
             float dither = fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453);
-            if (dither > keep) discard;
+            // Near the eye the twigs are the tree's own (FOLIAGE_GLSL's twigTex), not the screen's.
+            if (mix(dither, twigTex, twigSeen) > keep) discard;
         }
         color.a = 1.0;
     }`;
@@ -468,6 +471,8 @@ float lmLeafNoise(vec3 p, float n)
 export const FOLIAGE_GLSL = `
     float leafTex = 0.5;
     float leafShade = 1.0;
+    float twigTex = 0.5;
+    float twigSeen = 0.0;
     if (v_color.g > v_color.r + 0.01) {
         vec3 leafRel = (czm_inverseModelView * vec4(v_positionEC, 0.0)).xyz;
         float leafPx = max(length(dFdx(leafRel)), length(dFdy(leafRel)));
@@ -477,6 +482,11 @@ export const FOLIAGE_GLSL = `
         float clumpTex = (lmLeafNoise(leafP / 1.6, 32.0) - 0.5) * clumpSeen;
         float fineTex = (lmLeafNoise(leafP / 0.4 + 7.0, 128.0) - 0.5) * leafSeen;
         leafTex = 0.5 + 0.6 * clumpTex + 0.4 * fineTex;
+        // Twigs for a bare crown: knots of them 0.2 m and 0.8 m across, fixed to the tree, so
+        // a crown near the eye thins to a still tangle rather than a sparkle (spread out from
+        // the noise's bunching about its mean to nearly even, as the dither it stands in for).
+        twigSeen = 1.0 - smoothstep(0.03, 0.09, leafPx);
+        twigTex = smoothstep(0.22, 0.78, 0.6 * lmLeafNoise(leafP / 0.2 + 3.0, 256.0) + 0.4 * lmLeafNoise(leafP / 0.8 + 5.0, 64.0));
         // The relief, in metres, and the slope it gives the surface.
         float leafH = 2.0 * clumpTex + 0.2 * fineTex;
         vec3 leafDx = dFdx(v_positionEC);
