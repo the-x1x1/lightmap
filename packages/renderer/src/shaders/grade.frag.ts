@@ -913,7 +913,15 @@ void main() {
 
   // Global grade.
   color = saturate3(color, u_saturation);
-  color = (color - 0.5) * u_contrast + 0.5;
+  // Contrast about mid-grey. By day a straight line, (c - 0.5) * k + 0.5, whose lift of the
+  // darks stands for the soft fill of a grey day (the day's look is tuned to it). By night a
+  // power curve, 0.5 * (c / 0.5)^k, which keeps black black: the line lifted black itself to
+  // (1 - k) / 2 - an overcast night's 0.75 put a floor of 0.125 under everything, so the night
+  // ground was one flat grey whatever lit it (V&V: Paris at midnight under cloud, the ground
+  // 40/255 near and far) - with the dusk between them.
+  vec3 contrastDay = (color - 0.5) * u_contrast + 0.5;
+  vec3 contrastNight = 0.5 * pow(max(color, vec3(0.0)) / 0.5, vec3(u_contrast));
+  color = mix(contrastDay, contrastNight, u_nightFactor);
   // Colour temperature tint of the whole frame, strongest in direct light, weak in overcast.
   float tintAmount = mix(0.35, 0.12, u_cloudOpacity);
   color *= mix(vec3(1.0), u_tint, tintAmount);
