@@ -91,6 +91,8 @@ export const GROUND_UNIFORM_DEFAULTS = {
   u_coverOn: 0,
   /** 1 when the street map near the viewer is loaded (OpenStreetMap roads and paths). */
   u_roadOn: 0,
+  /** How far the street lamps are on (the town's lights, 0..1); their pools of light on the ground. */
+  u_lampsOn: 0,
   /** 1 when the detail tiles are loaded: the near field takes its grain from them instead of the noise. */
   u_detailOn: 0,
   /**
@@ -170,6 +172,8 @@ export const GROUND_COVER_BOUNDS_UNIFORM = 'u_coverBounds';
 export const GROUND_ROAD_IMAGE_UNIFORM = 'u_roadMap';
 /** The street map's bounds, as the cover map's. */
 export const GROUND_ROAD_BOUNDS_UNIFORM = 'u_roadBounds';
+/** The street lamps' light on the ground (R), on the street map's square: an image uniform. */
+export const GROUND_LAMP_IMAGE_UNIFORM = 'u_lampMap';
 
 /**
  * Cesium's shadow map also fades terrain by its own angle to the light (its terrain bias:
@@ -222,6 +226,8 @@ uniform sampler2D u_coverMap;
 uniform float u_roadOn;
 uniform vec4 u_roadBounds;
 uniform sampler2D u_roadMap;
+uniform sampler2D u_lampMap;
+uniform float u_lampsOn;
 uniform float u_detailOn;
 uniform float u_coarseBasemap;
 uniform float u_shore;
@@ -950,6 +956,27 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
         material.diffuse += lmUnlit(vegGlow * cloudK, materialInput.normalEC, materialInput.positionToEyeEC.z)
             / max(alpha, 0.05);
     ${SUN_IMAGE_GLOBAL} += (snowGlint + vegGlow) * cloudK;
+    // The street lamps' light on the ground: a pool round the foot of each, from the lamp map
+    // (summed pools, drawn on the street map's square, 1 at a lamp's foot), in the warm white
+    // of a mix of sodium and LED lamps. The lamps' own light, not the scene's: at night the
+    // globe goes nearly black, and a lit street stayed black round its lamps (V&V: Paris,
+    // Trocadero, before dawn).
+    if (u_lampsOn > 0.0 && roadsKnown > 0.0)
+    {
+        float pool = texture(u_lampMap, roadUv).r * roadsKnown;
+        if (pool > 0.002)
+        {
+            // The paint's own albedo (\`lit\` carries the scene's dimming of the basemap, which a
+            // lamp's light does not take), lit by the lamp.
+            vec3 lampLit = lit / max(u_brightness, 1e-3) * vec3(1.0, 0.82, 0.62) * (0.6 * pool * u_lampsOn);
+#ifdef ENABLE_VERTEX_LIGHTING
+            material.diffuse += lmUnlit(lampLit, materialInput.normalEC, materialInput.positionToEyeEC.z)
+                / max(alpha, 0.05);
+#else
+            material.diffuse += lampLit / max(alpha, 0.05);
+#endif
+        }
+    }
 #ifdef ENABLE_VERTEX_LIGHTING
     // Alpenglow, and first and last light: ground above the place sees past the place's horizon -
     // by the horizon's dip, sqrt(2 h / R): 1 deg at 1 km up, 1.6 deg at 2.5 km - so the Sun is

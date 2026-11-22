@@ -15,6 +15,7 @@ import {
   GROUND_NOISE_WRAP_M,
   GROUND_ROAD_BOUNDS_UNIFORM,
   GROUND_ROAD_IMAGE_UNIFORM,
+  GROUND_LAMP_IMAGE_UNIFORM,
   GROUND_TOWN_GRID,
   GROUND_UNIFORM_DEFAULTS,
 } from '../shaders/ground.frag.ts';
@@ -33,6 +34,7 @@ export function groundMaterialUniforms(C: C, coarseBasemap: number): Record<stri
     [GROUND_COVER_IMAGE_UNIFORM]: C.Material.DefaultImageId,
     [GROUND_ROAD_BOUNDS_UNIFORM]: new C.Cartesian4(0, 0, 0, 0),
     [GROUND_ROAD_IMAGE_UNIFORM]: C.Material.DefaultImageId,
+    [GROUND_LAMP_IMAGE_UNIFORM]: C.Material.DefaultImageId,
     [GROUND_DETAIL_UNIFORM]: C.Material.DefaultImageId,
     [GROUND_NOISE_UNIFORM]: C.Material.DefaultImageId,
     u_detailOn: 0,

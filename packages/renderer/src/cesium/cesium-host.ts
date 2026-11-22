@@ -66,6 +66,7 @@ import {
   GROUND_COVER_IMAGE_UNIFORM,
   GROUND_ROAD_BOUNDS_UNIFORM,
   GROUND_ROAD_IMAGE_UNIFORM,
+  GROUND_LAMP_IMAGE_UNIFORM,
   GROUND_DETAIL_UNIFORM,
   GROUND_MATERIAL_SOURCE,
   GROUND_NOISE_UNIFORM,
@@ -320,6 +321,8 @@ export class CesiumSceneHost implements SceneHost {
   private osmLean = false;
   /** The street map near the place (`u_roadMap`) and its bounds. */
   private roadCanvas: HTMLCanvasElement | null = null;
+  /** The street lamps' pools of light on the same square (`u_lampMap`), or null. */
+  private lampCanvas: HTMLCanvasElement | null = null;
   private roadBounds: [number, number, number, number] | null = null;
   private roadLoadSeq = 0;
   /** Where the street map is centred, and the vector tiles' template it was drawn from. */
@@ -758,6 +761,9 @@ export class CesiumSceneHost implements SceneHost {
       if (!m) return;
       const cam = scene.camera.positionWC;
       const u = m.uniforms as Record<string, unknown>;
+      // The street lamps' pools on the ground, as far as the lamps are on (a rebuilt material
+      // starts from its defaults, so this is set every frame rather than when the lamps change).
+      u['u_lampsOn'] = this.streetLamps?.show ? this.streetLampsShownAt : 0;
       // Ease the detail level toward the rung's, two levels per second.
       const now = performance.now();
       // A gap after a frame that eased is that frame's own time and counts in full (up to a
@@ -2167,6 +2173,7 @@ export class CesiumSceneHost implements SceneHost {
       const [w, e, n, so] = this.roadBounds;
       u[GROUND_ROAD_BOUNDS_UNIFORM] = new C.Cartesian4(w, e, n, so);
       u[GROUND_ROAD_IMAGE_UNIFORM] = this.roadCanvas;
+      u[GROUND_LAMP_IMAGE_UNIFORM] = this.lampCanvas ?? C.Material.DefaultImageId;
       const canvas = this.roadCanvas;
       this.afterUpload(() => {
         if (this.roadCanvas === canvas) u['u_roadOn'] = 1;
@@ -2174,6 +2181,7 @@ export class CesiumSceneHost implements SceneHost {
     } else {
       u['u_roadOn'] = 0;
       u[GROUND_ROAD_IMAGE_UNIFORM] = C.Material.DefaultImageId;
+      u[GROUND_LAMP_IMAGE_UNIFORM] = C.Material.DefaultImageId;
     }
     this.scene.requestRender();
   }
@@ -2231,14 +2239,21 @@ export class CesiumSceneHost implements SceneHost {
     if (this.destroyed || seq !== this.roadLoadSeq) return;
     if (known.length === 0) {
       this.roadCanvas = null;
+      this.lampCanvas = null;
       this.roadBounds = null;
       this.applyRoadMap();
       this.setStreetLamps([]);
       return;
     }
-    this.setStreetLamps(
-      streetLampPositions(lines, 35, 6000, p.longitude, p.latitude, builtUpTest(buildingsAt)),
+    const lamps = streetLampPositions(
+      lines,
+      35,
+      6000,
+      p.longitude,
+      p.latitude,
+      builtUpTest(buildingsAt),
     );
+    this.setStreetLamps(lamps);
     const canvas = document.createElement('canvas');
     canvas.width = SIZE;
     canvas.height = SIZE;
@@ -2297,6 +2312,7 @@ export class CesiumSceneHost implements SceneHost {
     };
     draw('path', 'rgb(0,255,0)');
     draw('road', 'rgb(255,0,0)');
+    this.lampCanvas = lampPoolCanvas(lamps, SIZE, toPx, mPerPx);
     this.roadCanvas = canvas;
     this.roadBounds = [west, east, north, south];
     this.applyRoadMap();
@@ -3635,4 +3651,46 @@ export function groundShadowMode(
   return !lit || terrain instanceof C.EllipsoidTerrainProvider
     ? C.ShadowMode.RECEIVE_ONLY
     : C.ShadowMode.ENABLED;
+}
+
+/**
+ * The street lamps' pools of light on the ground, on the street map's square (`size` pixels,
+ * `mPerPx` metres each): each lamp lays a soft disc of light 18 m across its foot - full at
+ * the foot, falling off as the square of the distance's complement - summed where pools meet
+ * and capped at 1. In R; null with no lamps or no canvas.
+ */
+function lampPoolCanvas(
+  lamps: readonly [number, number][],
+  size: number,
+  toPx: (lon: number, lat: number) => [number, number],
+  mPerPx: number,
+): HTMLCanvasElement | null {
+  if (lamps.length === 0 || typeof document === 'undefined') return null;
+  const r = Math.max(2, Math.round(18 / mPerPx));
+  const sprite = document.createElement('canvas');
+  sprite.width = 2 * r;
+  sprite.height = 2 * r;
+  const sctx = sprite.getContext('2d');
+  if (!sctx) return null;
+  const g = sctx.createRadialGradient(r, r, 0, r, r, r);
+  for (let i = 0; i <= 8; i++) {
+    const t = i / 8;
+    const v = Math.round(255 * (1 - t) * (1 - t));
+    g.addColorStop(t, `rgb(${v},0,0)`);
+  }
+  sctx.fillStyle = g;
+  sctx.fillRect(0, 0, 2 * r, 2 * r);
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  ctx.fillStyle = 'rgb(0,0,0)';
+  ctx.fillRect(0, 0, size, size);
+  ctx.globalCompositeOperation = 'lighter';
+  for (const [lon, lat] of lamps) {
+    const [x, y] = toPx(lon, lat);
+    ctx.drawImage(sprite, Math.round(x - r), Math.round(y - r));
+  }
+  return canvas;
 }
