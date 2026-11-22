@@ -246,8 +246,10 @@ function Stat({
         {value}
       </div>
       {sub ? (
+        // Wraps rather than truncates: on a phone "behind ridge 17:34" was cut to "behind
+        // ridge 17:...", losing the one figure the line is there for.
         <div
-          className="truncate text-[11px] text-[var(--lm-text-muted)]"
+          className="text-[11px] leading-tight text-[var(--lm-text-muted)] [overflow-wrap:anywhere]"
           data-testid={testId ? `${testId}-sub` : undefined}
         >
           {sub}
