@@ -69,6 +69,20 @@ export function lampFogFade(visibilityM: number): { nearM: number; farM: number 
 }
 
 /**
+ * How much of a street lamp's glow shows (its sprite's opacity, 0..1), from how far the town's
+ * lights are on (`LightingParameters.cityLights`, 1 - smooth(-4, 2) of the Sun's elevation).
+ * The lights are switched on from a Sun 2 deg up, but a lamp's glow cannot be seen against a
+ * daylit sky: drawn faintly over one it came out as a dark ring, not a light (V&V: Tromsø at
+ * noon in late November, the Sun on the horizon and the lights at a fifth). So the glow comes in
+ * only as the sky darkens: none until the lights are half on (the Sun about 1 deg down), whole
+ * when they are fully on (4 deg down).
+ */
+export function streetLampGlow(cityLights: number): number {
+  const t = Math.min(1, Math.max(0, (cityLights - 0.5) / 0.5));
+  return t * t * (3 - 2 * t);
+}
+
+/**
  * Whether a place is built up: at least `minBuildings` buildings or addresses
  * (`buildingPointsFromTile`) within `radiusM`. Street lamps stand along a town's streets, not
  * along the open road between towns: a desert highway was drawn as a string of lamps to the

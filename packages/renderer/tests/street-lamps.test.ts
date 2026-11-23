@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { builtUpTest, lampFogFade, streetLampPositions } from '../src/street-lamps.ts';
+import {
+  builtUpTest,
+  lampFogFade,
+  streetLampGlow,
+  streetLampPositions,
+} from '../src/street-lamps.ts';
 import type { StreetLine } from '../src/vector-cover.ts';
 
 const M = 111_320;
@@ -41,6 +46,17 @@ describe('street lamps', () => {
     const lamps = streetLampPositions([road], 35, 3, 350 / M, 0);
     expect(lamps).toHaveLength(3);
     for (const l of lamps) expect(l[0] * M).toBeGreaterThan(240);
+  });
+});
+
+describe('streetLampGlow', () => {
+  it('shows no glow until the lights are half on, all of it when they are fully on', () => {
+    expect(streetLampGlow(0)).toBe(0);
+    expect(streetLampGlow(0.2)).toBe(0);
+    expect(streetLampGlow(0.5)).toBe(0);
+    expect(streetLampGlow(0.75)).toBeCloseTo(0.5, 6);
+    expect(streetLampGlow(1)).toBe(1);
+    expect(streetLampGlow(0.6)).toBeLessThan(streetLampGlow(0.9));
   });
 });
 

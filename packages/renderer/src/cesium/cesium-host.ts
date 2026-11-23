@@ -33,7 +33,7 @@ import {
   coverShapesFromTile,
   streetLinesFromTile,
 } from '../vector-cover.ts';
-import { builtUpTest, lampFogFade, streetLampPositions } from '../street-lamps.ts';
+import { builtUpTest, lampFogFade, streetLampGlow, streetLampPositions } from '../street-lamps.ts';
 import { lonLatToTile, tilePointToLonLat } from '../vector-tile.ts';
 import { createDetailTexture, createNoiseTexture, type DetailTileCesium } from './detail-tiles.ts';
 import { NOISE_TEXTURE_SIZE, makeNoiseTexture } from '../noise-texture.ts';
@@ -2464,7 +2464,7 @@ export class CesiumSceneHost implements SceneHost {
   private showStreetLamps(): void {
     const lamps = this.streetLamps;
     if (!lamps) return;
-    const on = Math.round(this.cityLights * 10) / 10;
+    const on = Math.round(streetLampGlow(this.cityLights) * 10) / 10;
     if (on === this.streetLampsShownAt) return;
     this.streetLampsShownAt = on;
     lamps.show = on > 0 && this.streetLampsWait === null;
