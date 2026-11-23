@@ -190,7 +190,7 @@ function inRing(ring: readonly number[], x: number, y: number): boolean {
 }
 
 /** Width on the ground by OpenMapTiles `transportation` class, metres. */
-const ROAD_WIDTH_M: Record<string, number> = {
+export const ROAD_WIDTH_M: Record<string, number> = {
   motorway: 22,
   trunk: 16,
   primary: 14,

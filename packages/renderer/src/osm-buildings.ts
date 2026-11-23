@@ -14,9 +14,12 @@ import {
   readVectorTile,
   readVectorTileLazy,
   tilePointToLonLat,
+  type VectorFeature,
+  type VectorLayer,
   type VectorValue,
 } from './vector-tile.ts';
 import { inMediterraneanClimate } from './leaf-season.ts';
+import { ROAD_WIDTH_M } from './vector-cover.ts';
 
 /** The zoom OpenMapTiles carries every building at (its tiles' maximum). */
 export const BUILDING_TILE_ZOOM = 14;
@@ -305,6 +308,16 @@ const PARK_SUBCLASSES = new Set([
 /** Metres between trees in a wood (a jittered grid) and in a park. */
 export const WOOD_SPACING_M = 11;
 export const PARK_SPACING_M = 30;
+/**
+ * Yard and street trees in a residential area: a jittered grid this far apart, of which only
+ * `YARD_KEEP` of the spots grow one (in clumps by the hash, not a row). Not past `YARD_MAX_LAT`
+ * (the far north's towns stand above the tree line).
+ */
+export const YARD_SPACING_M = 32;
+export const YARD_KEEP = 0.5;
+export const YARD_MAX_LAT = 70;
+/** A yard tree's trunk stands at least this far beyond a road's edge, metres. */
+export const YARD_ROAD_CLEAR_M = 1.5;
 /** At most this many trees per tile; a forested tile is thinned evenly to fit. */
 export const MAX_TREES_PER_TILE = 6000;
 
@@ -341,7 +354,25 @@ export function treesFromTile(
   y: number,
   latDeg: number,
 ): TreeSpot[] {
-  const layer = readVectorTile(data, ['landcover'])['landcover'];
+  const layers = readVectorTile(data, ['landcover', 'landuse', 'building', 'transportation']);
+  const out = coverTrees(layers['landcover'], z, x, y, latDeg);
+  out.push(...yardTrees(layers, z, x, y, latDeg));
+  if (out.length <= MAX_TREES_PER_TILE) return out;
+  // Thin evenly.
+  const step = out.length / MAX_TREES_PER_TILE;
+  const thinned: TreeSpot[] = [];
+  for (let i = 0; i < out.length; i += step) thinned.push(out[Math.floor(i)] as TreeSpot);
+  return thinned;
+}
+
+/** The mapped woods and parks' trees. */
+function coverTrees(
+  layer: VectorLayer | undefined,
+  z: number,
+  x: number,
+  y: number,
+  latDeg: number,
+): TreeSpot[] {
   if (!layer) return [];
   const e = layer.extent;
   // Tile units per metre at this latitude.
@@ -399,12 +430,214 @@ export function treesFromTile(
         }
     }
   }
-  if (out.length <= MAX_TREES_PER_TILE) return out;
-  // Thin evenly.
-  const step = out.length / MAX_TREES_PER_TILE;
-  const thinned: TreeSpot[] = [];
-  for (let i = 0; i < out.length; i += step) thinned.push(out[Math.floor(i)] as TreeSpot);
-  return thinned;
+  return out;
+}
+
+/** A polygon's outer ring and holes, with the outer ring's bounds for a quick reject. */
+interface Area {
+  outer: number[];
+  holes: number[][];
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
+function areasOf(features: readonly VectorFeature[], keep: (f: VectorFeature) => boolean): Area[] {
+  const out: Area[] = [];
+  for (const f of features) {
+    if (f.type !== 3 || !keep(f)) continue;
+    for (const poly of classifyRings(f.geometry)) {
+      const outer = poly.outer;
+      if (outer.length < 6) continue;
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+      for (let i = 0; i + 1 < outer.length; i += 2) {
+        minX = Math.min(minX, outer[i] as number);
+        maxX = Math.max(maxX, outer[i] as number);
+        minY = Math.min(minY, outer[i + 1] as number);
+        maxY = Math.max(maxY, outer[i + 1] as number);
+      }
+      out.push({ outer, holes: poly.holes, minX, minY, maxX, maxY });
+    }
+  }
+  return out;
+}
+
+/** Buildings' outlines, each its first ring alone (a courtyard is not a yard to plant in). */
+function footprintsOf(features: readonly VectorFeature[]): Area[] {
+  const out: Area[] = [];
+  for (const f of features) {
+    const outer = f.type === 3 ? f.geometry[0] : undefined;
+    if (!outer || outer.length < 6) continue;
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (let i = 0; i + 1 < outer.length; i += 2) {
+      minX = Math.min(minX, outer[i] as number);
+      maxX = Math.max(maxX, outer[i] as number);
+      minY = Math.min(minY, outer[i + 1] as number);
+      maxY = Math.max(maxY, outer[i + 1] as number);
+    }
+    out.push({ outer, holes: [], minX, minY, maxX, maxY });
+  }
+  return out;
+}
+
+function inArea(a: Area, px: number, py: number): boolean {
+  if (px < a.minX || px > a.maxX || py < a.minY || py > a.maxY) return false;
+  return inRing(a.outer, px, py) && !a.holes.some((h) => inRing(h, px, py));
+}
+
+/**
+ * Yard and street trees: where OpenStreetMap maps no wood or park, a town's houses still stand
+ * among trees (V&V: Fairbanks, whose streets are lined with birch and spruce, drew none). Spots on
+ * a jittered grid inside `landuse=residential`, about half of them kept, as park trees (standing
+ * on their own); none on a mapped building's footprint, and none where the land cover already
+ * grows its own (a wood or a park inside the area).
+ */
+function yardTrees(
+  layers: Record<string, VectorLayer>,
+  z: number,
+  x: number,
+  y: number,
+  latDeg: number,
+): TreeSpot[] {
+  const { landuse, landcover, building, transportation } = layers;
+  if (!landuse || Math.abs(latDeg) > YARD_MAX_LAT) return [];
+  const e = landuse.extent;
+  const areas = areasOf(landuse.features, (f) => f.properties['class'] === 'residential');
+  if (areas.length === 0) return [];
+  // The other layers share the tile's extent in OpenMapTiles; scaled in case they do not.
+  const scaleOf = (l: VectorLayer | undefined) => (l ? l.extent / e : 1);
+  const covered = landcover
+    ? areasOf(landcover.features, (f) => {
+        const cls = f.properties['class'];
+        const sub = f.properties['subclass'];
+        return (
+          cls === 'wood' || (cls === 'grass' && typeof sub === 'string' && PARK_SUBCLASSES.has(sub))
+        );
+      })
+    : [];
+  const tileM = (40_075_016 * Math.cos((latDeg * Math.PI) / 180)) / 2 ** z;
+  // The footprints by a coarse grid (a town's tile holds thousands): a spot is tested against
+  // the few whose bounds touch its cell.
+  const HOUSE_CELL = 256;
+  const houses = new Map<number, Area[]>();
+  for (const h of building ? footprintsOf(building.features) : []) {
+    for (let cx = Math.floor(h.minX / HOUSE_CELL); cx <= Math.floor(h.maxX / HOUSE_CELL); cx++)
+      for (let cy = Math.floor(h.minY / HOUSE_CELL); cy <= Math.floor(h.maxY / HOUSE_CELL); cy++) {
+        const k = (cx + 64) * 1024 + (cy + 64);
+        const list = houses.get(k);
+        if (list) list.push(h);
+        else houses.set(k, [h]);
+      }
+  }
+  // The streets: a residential area takes in its own, and a tree stands beside the road, not
+  // in it - its trunk a road's half-width plus YARD_ROAD_CLEAR_M from the line. Segments by the
+  // same coarse grid, each in every cell its widened bounds touch.
+  const roads = new Map<number, number[]>();
+  if (transportation) {
+    const st = transportation.extent / e;
+    for (const f of transportation.features) {
+      if (f.type !== 2) continue;
+      const cls = f.properties['class'];
+      const brunnel = f.properties['brunnel'];
+      if (typeof cls !== 'string' || brunnel === 'bridge' || brunnel === 'tunnel') continue;
+      const w = ROAD_WIDTH_M[cls];
+      if (w === undefined) continue;
+      const reach = ((w / 2 + YARD_ROAD_CLEAR_M) * e) / tileM;
+      for (const line of f.geometry)
+        for (let i = 0; i + 3 < line.length; i += 2) {
+          const ax = (line[i] as number) / st;
+          const ay = (line[i + 1] as number) / st;
+          const bx = (line[i + 2] as number) / st;
+          const by = (line[i + 3] as number) / st;
+          const seg = [ax, ay, bx, by, reach];
+          const cx0 = Math.floor((Math.min(ax, bx) - reach) / HOUSE_CELL);
+          const cx1 = Math.floor((Math.max(ax, bx) + reach) / HOUSE_CELL);
+          const cy0 = Math.floor((Math.min(ay, by) - reach) / HOUSE_CELL);
+          const cy1 = Math.floor((Math.max(ay, by) + reach) / HOUSE_CELL);
+          for (let cx = cx0; cx <= cx1; cx++)
+            for (let cy = cy0; cy <= cy1; cy++) {
+              const k = (cx + 64) * 1024 + (cy + 64);
+              const list = roads.get(k);
+              if (list) list.push(...seg);
+              else roads.set(k, [...seg]);
+            }
+        }
+    }
+  }
+  const onRoad = (px: number, py: number) => {
+    const list = roads.get(
+      (Math.floor(px / HOUSE_CELL) + 64) * 1024 + (Math.floor(py / HOUSE_CELL) + 64),
+    );
+    if (!list) return false;
+    for (let i = 0; i + 4 < list.length; i += 5) {
+      const ax = list[i] as number;
+      const ay = list[i + 1] as number;
+      const dx = (list[i + 2] as number) - ax;
+      const dy = (list[i + 3] as number) - ay;
+      const r = list[i + 4] as number;
+      const len2 = dx * dx + dy * dy;
+      const t = len2 > 0 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2)) : 0;
+      const ex = ax + t * dx - px;
+      const ey = ay + t * dy - py;
+      if (ex * ex + ey * ey < r * r) return true;
+    }
+    return false;
+  };
+  const onHouse = (hx: number, hy: number) =>
+    (
+      houses.get((Math.floor(hx / HOUSE_CELL) + 64) * 1024 + (Math.floor(hy / HOUSE_CELL) + 64)) ??
+      []
+    ).some((h) => inArea(h, hx, hy));
+  const sc = scaleOf(landcover);
+  const sb = scaleOf(building);
+  const spacing = (YARD_SPACING_M * e) / tileM;
+  const lonDeg = ((x + 0.5) / 2 ** z) * 360 - 180;
+  const mix = treeMix(latDeg, lonDeg, true, false);
+  const out: TreeSpot[] = [];
+  const seen = new Set<number>();
+  for (const a of areas) {
+    const gx0 = Math.floor(Math.max(0, a.minX) / spacing);
+    const gy0 = Math.floor(Math.max(0, a.minY) / spacing);
+    const gx1 = Math.floor(Math.min(e, a.maxX) / spacing);
+    const gy1 = Math.floor(Math.min(e, a.maxY) / spacing);
+    for (let gx = gx0; gx <= gx1; gx++)
+      for (let gy = gy0; gy <= gy1; gy++) {
+        // Overlapping residential areas share the grid: a spot grows at most one tree.
+        const cell = gx * 4099 + gy;
+        if (seen.has(cell)) continue;
+        if (hash2(gx * 13 + 5, gy * 7 + 11, x * 3 + y * 5 + 17) >= YARD_KEEP) continue;
+        const px = (gx + 0.1 + 0.8 * hash2(gx, gy, x * 11 + y + 29)) * spacing;
+        const py = (gy + 0.1 + 0.8 * hash2(gy, gx, x + y * 7 + 31)) * spacing;
+        if (px < 0 || py < 0 || px > e || py > e) continue;
+        if (!inArea(a, px, py)) continue;
+        if (covered.some((c) => inArea(c, px * sc, py * sc))) continue;
+        if (onHouse(px * sb, py * sb)) continue;
+        if (onRoad(px, py)) continue;
+        seen.add(cell);
+        const form = pickForm(mix, hash2(gx * 37 + 3, gy * 19 + 1, x ^ (y + 41)));
+        const shape = hash2(gx + 307, gy + 89, 13);
+        const size = treeSize(form, false, hash2(gx + 131, gy + 61, 7), shape);
+        const [lon, lat] = tilePointToLonLat(z, x, y, e, px, py);
+        out.push({
+          lon,
+          lat,
+          ...size,
+          tone: hash2(gx + 19, gy + 29, 11),
+          conifer: form === 'conifer' || form === 'columnar',
+          form,
+          park: true,
+          shape,
+        });
+      }
+  }
+  return out;
 }
 
 /** The z14 tiles whose area comes within `radiusM` of a point, nearest first. */

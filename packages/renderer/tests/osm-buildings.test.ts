@@ -45,7 +45,7 @@ const doubleValue = (v: number) => {
 };
 
 /** Geometry commands for closed rings given as absolute [x, y] lists. */
-function ringCommands(rings: [number, number][][]): number[] {
+function ringCommands(rings: [number, number][][], close = true): number[] {
   const out: number[] = [];
   let cx = 0;
   let cy = 0;
@@ -60,7 +60,7 @@ function ringCommands(rings: [number, number][][]): number[] {
       cx = x;
       cy = y;
     }
-    out.push((1 << 3) | 7);
+    if (close) out.push((1 << 3) | 7);
   }
   return out;
 }
@@ -70,6 +70,7 @@ function tile(
   keys: string[],
   values: number[][],
   name = 'building',
+  geomType = 3,
 ): Uint8Array {
   const layer = [
     ...key(15, 0),
@@ -79,8 +80,8 @@ function tile(
       bytes(2, [
         ...packed(2, f.tags),
         ...key(3, 0),
-        ...varint(3),
-        ...packed(4, ringCommands(f.rings)),
+        ...varint(geomType),
+        ...packed(4, ringCommands(f.rings, geomType === 3)),
       ]),
     ),
     ...keys.flatMap((k) => str(3, k)),
@@ -311,6 +312,96 @@ describe('trees from land cover', () => {
     const [hx1, hy0] = tilePointToLonLat(14, 10, 10, 4096, 1480, 560);
     expect(a.some((p) => p.lon > hx0 && p.lon < hx1 && p.lat > hy1 && p.lat < hy0)).toBe(false);
     expect(a.some((p) => p.conifer)).toBe(true);
+  });
+});
+
+describe('yard trees in a town', () => {
+  const area = (name: string, cls: string, ring: [number, number][]) =>
+    tile([{ rings: [ring], tags: [0, 0] }], ['class'], [str(1, cls)], name);
+  const join = (...parts: Uint8Array[]) => {
+    const all = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+    let at = 0;
+    for (const p of parts) {
+      all.set(p, at);
+      at += p.length;
+    }
+    return all;
+  };
+  const z = 14;
+  const lat = 64.84; // Fairbanks
+
+  it('scatters trees through a residential area with no wood or park mapped', () => {
+    const t = area('landuse', 'residential', square(0, 0, 2048));
+    const trees = treesFromTile(t, z, 1900, 2000, lat);
+    // A quarter tile at 65 N is ~520 m square: ~260 spots at 32 m, about half kept.
+    expect(trees.length).toBeGreaterThan(80);
+    expect(trees.length).toBeLessThan(200);
+    expect(trees.every((p) => p.park)).toBe(true);
+    expect(treesFromTile(t, z, 1900, 2000, lat)).toEqual(trees);
+    // Not on farmland, not past the tree line, not in a commercial block.
+    expect(
+      treesFromTile(area('landuse', 'farmland', square(0, 0, 2048)), z, 1900, 2000, lat),
+    ).toEqual([]);
+    expect(treesFromTile(t, z, 1900, 2000, 71)).toEqual([]);
+    expect(
+      treesFromTile(area('landuse', 'commercial', square(0, 0, 2048)), z, 1900, 2000, lat),
+    ).toEqual([]);
+  });
+
+  it('keeps the street clear', () => {
+    const res = area('landuse', 'residential', square(0, 0, 2048));
+    // A minor street (7 m) across the middle of the square, west to east.
+    const street = tile(
+      [
+        {
+          rings: [
+            [
+              [0, 1024],
+              [2048, 1024],
+            ],
+          ],
+          tags: [0, 0],
+        },
+      ],
+      ['class'],
+      [str(1, 'minor')],
+      'transportation',
+      2,
+    );
+    const alone = treesFromTile(res, z, 1900, 2000, lat);
+    const withStreet = treesFromTile(join(res, street), z, 1900, 2000, lat);
+    // Within 3.5 + 1.5 m of the street's line (in tile units at this latitude).
+    const tileM = (40_075_016 * Math.cos((lat * Math.PI) / 180)) / 2 ** z;
+    const [, yLine] = tilePointToLonLat(z, 1900, 2000, 4096, 0, 1024);
+    const [, yOff] = tilePointToLonLat(z, 1900, 2000, 4096, 0, 1024 + (5 * 4096) / tileM);
+    const near = (p: { lat: number }) => Math.abs(p.lat - yLine) < Math.abs(yOff - yLine);
+    expect(alone.some(near)).toBe(true);
+    expect(withStreet.some(near)).toBe(false);
+    expect(withStreet.length).toBe(alone.filter((p) => !near(p)).length);
+  });
+
+  it('grows none on a house, and none over again where a wood already stands', () => {
+    const res = area('landuse', 'residential', square(0, 0, 2048));
+    const alone = treesFromTile(res, z, 1900, 2000, lat);
+    const house = area('building', 'house', square(0, 0, 1024));
+    const withHouse = treesFromTile(join(res, house), z, 1900, 2000, lat);
+    const [hx0, hy1] = tilePointToLonLat(z, 1900, 2000, 4096, 0, 1024);
+    const [hx1, hy0] = tilePointToLonLat(z, 1900, 2000, 4096, 1024, 0);
+    const inHouse = (p: { lon: number; lat: number }) =>
+      p.lon > hx0 && p.lon < hx1 && p.lat > hy1 && p.lat < hy0;
+    expect(alone.some(inHouse)).toBe(true);
+    expect(withHouse.some(inHouse)).toBe(false);
+    const wood = tile(
+      [{ rings: [square(0, 0, 1024)], tags: [0, 0, 1, 1] }],
+      ['class', 'subclass'],
+      [str(1, 'wood'), str(1, 'wood')],
+      'landcover',
+    );
+    const both = treesFromTile(join(res, wood), z, 1900, 2000, lat);
+    const woodOnly = treesFromTile(wood, z, 1900, 2000, lat);
+    // The wood's own trees, plus the yard trees outside it: none of the yard's inside it.
+    expect(both.filter((p) => p.park && inHouse(p))).toEqual([]);
+    expect(both.length).toBe(woodOnly.length + alone.filter((p) => !inHouse(p)).length);
   });
 });
 
