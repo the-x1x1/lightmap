@@ -2,7 +2,7 @@
 
 All notable changes. Versions follow semver; `pnpm release <version>` prepends entries from commits.
 
-## Unreleased
+## v0.4.0 — 2026-11-23
 
 - **Trees that look like the place**: a wood or park grows its climate's forms instead of one
   round crown on a stem - conifers in the Pacific Northwest, the Rockies and the Alps, pine in
