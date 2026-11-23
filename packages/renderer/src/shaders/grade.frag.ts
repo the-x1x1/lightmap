@@ -279,6 +279,58 @@ void main() {
     float underSun = (1.0 - smoothstep(-1.0, 0.5, u_sunElevation)) * smoothstep(-9.0, -5.0, u_sunElevation);
     float whiteness = smoothstep(0.7, 0.95, min(dome.r, min(dome.g, dome.b)));
     dome = mix(dome, dome * vec3(1.0, 0.8, 0.52), whiteness * underSun * 0.85);
+    // The twilight band. Cesium's single-scattering dome lights a Sun just under the horizon as a
+    // round lump over its bearing, as tall as it is wide (V&V: Santa Monica with the Sun 6 deg
+    // down - warm across 33 deg of azimuth 3 deg up, only 20 deg by 8 deg up, then a rim into the
+    // blue). A real twilight glow is a band along the horizon: deep orange at the horizon, yellow
+    // above, a few degrees tall and spread a long way either side of the Sun's bearing (most of
+    // a quadrant each way), dimming as the Sun sinks. That band is laid over the dome here, from
+    // a Sun 1 deg down to 12 deg (gone by 15), under the decks only; it adds what the
+    // dome lacks and colours what it has, so the lump reads as the band's core.
+    {
+      float bandSun = smoothstep(-15.0, -12.0, u_sunElevation) * (1.0 - smoothstep(-1.0, 0.5, u_sunElevation));
+      float sinE = dot(rayEC, u_eyeUpEC);
+      if (bandSun > 0.0 && sinE > -0.02 && sinE < 0.5) {
+        vec3 rH = rayEC - sinE * u_eyeUpEC;
+        vec3 sH = u_sunDirEC - dot(u_sunDirEC, u_eyeUpEC) * u_eyeUpEC;
+        float lenR = length(rH);
+        float lenS = length(sH);
+        if (lenR > 1e-4 && lenS > 1e-4) {
+          float dAz = degrees(acos(clamp(dot(rH / lenR, sH / lenS), -1.0, 1.0)));
+          float eDeg = degrees(asin(clamp(sinE, -1.0, 1.0)));
+          // Taller and brighter with the Sun just down; low and dim toward -12 deg.
+          float depth = clamp(-u_sunElevation, 0.0, 12.0);
+          float tall = mix(7.0, 3.0, depth / 12.0);
+          float strength = mix(0.55, 0.12, depth / 12.0) * bandSun * underDecks;
+          float across = exp(-pow(dAz / 75.0, 2.0));
+          float up = exp(-max(eDeg, 0.0) / tall);
+          vec3 bandCol = mix(vec3(1.0, 0.42, 0.14), vec3(1.0, 0.74, 0.38), smoothstep(0.0, tall * 1.5, eDeg));
+          // Deeper in the dusk the band reddens, and no part of it is brighter than the light left:
+          // at nautical dusk the dome still lit a pale lavender lump over the Sun's bearing,
+          // near white (V&V: Santa Monica, Sun 10 deg down, (252,228,250) at the horizon) where a
+          // real sky keeps only a dim orange-red strip. Full brightness to 4 deg down, 28 % by 12.
+          float dusk = smoothstep(4.0, 12.0, depth);
+          bandCol = mix(bandCol, vec3(1.0, 0.32, 0.12), dusk * 0.7);
+          float cap = mix(1.0, 0.28, dusk);
+          float w = strength * across * up;
+          // Where the dome is already bright there (the lump, pale and pinkish-white), it takes
+          // the band's colour at its own brightness; where it is dim, the band's light is added.
+          // Its colour is scaled to the dome's brightest channel (at most white): scaled to its
+          // luminance it went past 1 in every channel where the dome comes in brighter than white,
+          // and stood as a white stripe 3-4 deg up in the glow (V&V: Santa Monica, Sun 3 deg
+          // down). Where the dome is clipped white the band's colour takes it the more.
+          float l = dot(dome, vec3(0.2126, 0.7152, 0.0722));
+          float rawPeak = max(dome.r, max(dome.g, dome.b));
+          float peak = min(rawPeak, cap);
+          float clipped = smoothstep(0.8, 1.0, min(dome.r, min(dome.g, dome.b)));
+          float over = smoothstep(0.0, 0.25, rawPeak - cap);
+          float region = across * up * bandSun * underDecks;
+          float take = clamp(w * 1.6 + (clipped * 0.7 + over) * region, 0.0, 0.9);
+          dome = mix(dome, bandCol * peak, take);
+          dome += bandCol * w * 0.35 * (1.0 - clamp(l, 0.0, 1.0));
+        }
+      }
+    }
     // The Sun's disc and its glow take the colour of its light: Cesium draws them one white-yellow
     // at every height, so a setting Sun was a white disc in an orange sky. Within a few degrees of
     // it the sky is tinted by the direct-light colour for its elevation (white from 20 deg up,
