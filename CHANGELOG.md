@@ -4,6 +4,35 @@ All notable changes. Versions follow semver; `pnpm release <version>` prepends e
 
 ## Unreleased
 
+- **Trees that look like the place**: a wood or park grows its climate's forms instead of one
+  round crown on a stem - conifers in the Pacific Northwest, the Rockies and the Alps, pine in
+  the US south-east, palms (leaning, with sunlit olive fronds), umbrella crowns forking into
+  limbs, columnar spires, broad-leaf trees spreading their lobes on limbs, and ironwood in the
+  tropics. A bare winter crown near the eye thins to still twigs instead of a sparkling grain,
+  and trunks run into the ground so no tree hangs over a coarse first tile.
+- **Yard and street trees**: a town whose woods and parks are not mapped (Fairbanks) no longer
+  stands bare - its residential streets get trees about every 30 m, never on a house or in the
+  road.
+- **The twilight glow is a band along the horizon**: after sunset (and before sunrise) the glow
+  is a wide orange-to-yellow band hugging the horizon, reddening and dimming as the Sun sinks,
+  instead of a pale round lump over the Sun with a white stripe in it; by nautical dusk only a
+  dim orange-red strip is left.
+- **Street lamps light the street**: their pools of light fall on the road and away past the
+  kerb, a wet street shines under them, and towns whose houses are not mapped get their lamps
+  from the mapped residential and commercial areas. A lamp's glow shows only once the sky has
+  darkened (it drew as a dark ring by day), and new lamps wait until the terrain under them has
+  loaded (they hung in the sky after arriving in a hilly town).
+- **Black stays black at night**: the grade's contrast no longer lifts the night ground to a
+  flat grey.
+- **A Sun on the horizon reads "on horizon"**, not "-1° up", in the preview and the field view.
+- **With the Sun down the weather tile gives the cloud cover**, not a share of direct light.
+- **Far dates read as months or years away**, not thousands of days.
+- **Fixes to the planning panel**: the time slider's track sits under its thumb, the search
+  box's invitation fits it, the preview tiles' second lines wrap instead of losing their figure,
+  and on a phone the planning sheet is opaque, so the globe's place names no longer show through.
+- **The live forecast retries once** after a server error or a dropped connection before falling
+  back to the chosen scenario.
+- **The local runner serves Cesium's build to the smoke page** from wherever it is installed.
 - **Choosing a place no longer crashes the development build**: the towns' night glow was handed
   to a renderer React had already torn down, and its scene threw. Found by running the
   end-to-end suite on the local runner.
