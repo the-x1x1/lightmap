@@ -2446,7 +2446,13 @@ export class CesiumSceneHost implements SceneHost {
             distanceM: C.Cartesian3.distance(eye, C.Cartographic.toCartesian(c)),
           })),
         );
-      if (caught || over) {
+      // And only once the globe has every tile it wants: until then Cesium clamps each lamp to
+      // whatever tile it holds there, and where that is still a coarse one (the mainland's
+      // mountains averaged into a town's tile) lamps hung in the open sky, dozens of them, up
+      // to 30 deg over a street, until the fine tiles came (V&V: Tromsø, just after load). The
+      // dozen sampled lamps had caught up; the rest had not.
+      const settled = !globe || globe.tilesLoaded;
+      if ((caught && settled) || over) {
         this.streetLampsWait = null;
         this.streetLampsShownAt = -1;
         this.showStreetLamps();
